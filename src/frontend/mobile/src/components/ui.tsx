@@ -78,7 +78,7 @@ export function ArticleRow(p: { article: Article }) {
       <div class="row-top">
         <h2>{p.article.title}</h2>
       </div>
-      <p class={`row-summary${p.article.summary ? "" : " empty"}`}>
+      <p class={`row-summary${p.article.summary ? "" : " is-empty"}`}>
         {p.article.summary || "暂无摘要"}
       </p>
       <div class="row-meta">
@@ -106,7 +106,7 @@ export function ShelfIndex(p: {
           <button
             class={
               p.activeSectionId === section.id
-                ? "shelf-index-tab active"
+                ? "shelf-index-tab is-active"
                 : "shelf-index-tab"
             }
             type="button"
@@ -126,7 +126,7 @@ const ShelfCard = (p: { article: ShelfArticle }) => {
   return (
     <a class="shelf-card" href={`/m/articles/detail.html?id=${p.article.id}`}>
       <h3>{p.article.title}</h3>
-      <p class={`shelf-summary${p.article.summary ? "" : " empty"}`}>
+      <p class={`shelf-summary${p.article.summary ? "" : " is-empty"}`}>
         {p.article.summary || "暂无摘要"}
       </p>
       <div class="shelf-card-meta">
@@ -169,7 +169,7 @@ export function StateMessage(p: {
 }) {
   return (
     <div
-      class={`state-message ${p.kind}`}
+      class={`state-message is-${p.kind}`}
       role={p.kind === "error" ? "alert" : "status"}
     >
       <span>{p.kind === "loading" ? "◌" : p.kind === "empty" ? "○" : "!"}</span>

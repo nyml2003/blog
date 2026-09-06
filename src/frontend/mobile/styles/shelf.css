@@ -1,0 +1,175 @@
+/* C Mobile shelf module. Depends on tokens.css, base.css, shell.css,
+   layout.css and, only when needed, components.css.
+   Shelf layout, index, sections, cards, sticky offsets, scrollspy visuals and
+   Shelf-private state. This module never changes scrollspy logic and never
+   becomes a generic grid or link card. */
+.shelf-layout {
+  display: grid;
+  grid-template-columns: minmax(72px, 21%) minmax(0, 1fr);
+  column-gap: 14px;
+  align-items: start;
+}
+.shelf-index {
+  position: sticky;
+  top: var(--shell-header-sticky-top);
+  display: grid;
+  gap: 4px;
+  max-height: calc(100vh - 178px);
+  padding-right: 9px;
+  overflow-y: auto;
+  border-right: 1px solid var(--border);
+}
+.shelf-index-tab {
+  position: relative;
+  min-height: var(--touch-target);
+  padding: 8px 7px 8px 2px;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.25;
+  text-align: left;
+  text-overflow: ellipsis;
+  transition:
+    color 180ms ease,
+    transform 220ms var(--motion-emphasized);
+  white-space: nowrap;
+}
+.shelf-index-tab::before {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 0;
+  width: 3px;
+  content: "";
+  background: var(--coral);
+  opacity: 0;
+  transform: scaleY(0.2);
+  transform-origin: center;
+  transition:
+    opacity 140ms ease,
+    transform 220ms var(--motion-emphasized);
+}
+.shelf-index-tab.is-active {
+  color: var(--ink);
+  transform: translateX(2px);
+}
+.shelf-index-tab.is-active::before {
+  opacity: 1;
+  transform: scaleY(1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .shelf-index-tab,
+  .shelf-index-tab::before {
+    transition: none;
+  }
+}
+.shelf-content {
+  display: grid;
+  min-width: 0;
+  gap: 34px;
+}
+.shelf-section {
+  min-width: 0;
+  scroll-margin-top: var(--shell-nav-reserve);
+  contain: layout style;
+}
+.shelf-section-heading {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  column-gap: 8px;
+  min-height: 48px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--ink);
+}
+.shelf-section-heading p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--teal);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+}
+.shelf-section-heading h2 {
+  min-width: 0;
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.shelf-section-heading span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.shelf-cards {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+.shelf-card {
+  display: grid;
+  grid-template-rows: minmax(48px, auto) 40px 24px;
+  min-width: 0;
+  min-height: 134px;
+  padding: 14px 0 12px;
+  border-bottom: 1px solid var(--border);
+  contain: layout style;
+  transition: background-color 160ms ease;
+}
+.shelf-card:active {
+  background: var(--surface-pressed);
+}
+.shelf-card h3 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 720;
+  line-height: 1.42;
+  overflow-wrap: anywhere;
+}
+.shelf-summary {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  align-self: start;
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.48;
+}
+.shelf-summary.is-empty {
+  color: var(--foreground-empty);
+}
+.shelf-card-meta {
+  display: flex;
+  align-items: end;
+  gap: 6px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+.shelf-card-meta time {
+  margin-left: auto;
+  font-family: ui-monospace, monospace;
+  white-space: nowrap;
+}
+.shelf-card-tags {
+  display: flex;
+  gap: 5px;
+  min-width: 0;
+  overflow: hidden;
+}
+.shelf-card-tags span {
+  max-width: 8em;
+  overflow: hidden;
+  color: var(--blue);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

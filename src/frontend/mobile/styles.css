@@ -153,11 +153,11 @@ select {
     opacity 140ms ease,
     transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
-.shelf-index-tab.active {
+.shelf-index-tab.is-active {
   color: var(--ink);
   transform: translateX(2px);
 }
-.shelf-index-tab.active::before {
+.shelf-index-tab.is-active::before {
   opacity: 1;
   transform: scaleY(1);
 }
@@ -244,7 +244,7 @@ select {
   font-size: 13px;
   line-height: 1.48;
 }
-.shelf-summary.empty {
+.shelf-summary.is-empty {
   color: #89919a;
 }
 .shelf-card-meta {
@@ -325,7 +325,7 @@ select {
   font-size: 13px;
   line-height: 1.5;
 }
-.row-summary.empty {
+.row-summary.is-empty {
   color: #89919a;
 }
 .row-meta {
@@ -411,7 +411,7 @@ select {
   place-items: center;
   font-size: 22px;
 }
-.state-message.loading span {
+.state-message.is-loading span {
   animation: state-spin 1s linear infinite;
 }
 .state-message p {
@@ -424,7 +424,7 @@ select {
   border-radius: 3px;
   background: transparent;
 }
-.state-message.error {
+.state-message.is-error {
   color: var(--danger);
 }
 @keyframes state-spin {
