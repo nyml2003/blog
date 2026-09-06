@@ -1,0 +1,66 @@
+[workspace]
+resolver = "2"
+# 本期交付的四个 crate：`protocol`（Product↔Data 层间类型）、`data`、`product`、
+# `mock`（Mock Product API binary，WORKSTREAM-MOCK 交付）。
+members = [
+    "crates/article-html-core",
+    "crates/article-html-wasm",
+    "crates/protocol",
+    "crates/data",
+    "crates/product",
+    "crates/mock",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+publish = false
+
+[workspace.dependencies]
+# Tokio：本期运行时为 `current_thread`，因此只启用 `rt`（不含 `rt-multi-thread`），
+# 其余 feature 按需：net(TcpListener)、signal(SIGTERM/SIGINT)、time(deadline/timeout)、
+# sync(oneshot 回程)、macros(#[tokio::main] 等价物/事件等待)。
+tokio = { version = "1.47", default-features = false, features = [
+    "rt",
+    "macros",
+    "net",
+    "signal",
+    "time",
+    "sync",
+    "io-util",
+    "fs",
+] }
+# axum 只承载 HTTP 语义；default 里会带入 tracing/tower-log 等未用依赖，故关闭，
+# 显式保留 http1 + json + query + tokio。
+axum = { version = "0.8", default-features = false, features = [
+    "http1",
+    "json",
+    "query",
+    "tokio",
+] }
+# hyper 仅 product 用作 Data client（与 axum 同一 HTTP 栈，避免再引入 reqwest）。
+hyper = { version = "1", default-features = false, features = ["client", "http1"] }
+# `TokioIo` 适配器（hyper-util 已在 axum 依赖树内，声明后复用，不新增编译成本）。
+hyper-util = { version = "0.1", default-features = false, features = ["tokio"] }
+http-body-util = "0.1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# SQLx：PLAN 约定 runtime-tokio + SqlitePool + sqlx::migrate!()；运行期查询统一用
+# `sqlx::query` API（不用 `query!` 编译期校验宏）。`migrate!` 是 proc macro，需要
+# `macros` feature（仅编译期依赖），`_sqlx_migrations` 表与版本推进由它提供。
+sqlx = { version = "0.8", default-features = false, features = [
+    "runtime-tokio",
+    "sqlite",
+    "migrate",
+    "macros",
+] }
+# Data 同步线程池的有界任务通道（`try_send` 背压语义是契约的一部分）。
+crossbeam-channel = "0.5"
+
+[profile.release]
+# 交付 binary 以体积与常驻内存为先（FACT-RUNTIME-001：2C/2GB 目标环境）。
+opt-level = "z"
+lto = "thin"
+strip = true
+codegen-units = 1

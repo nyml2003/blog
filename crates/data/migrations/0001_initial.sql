@@ -1,0 +1,8 @@
+CREATE TABLE article_types (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+CREATE TABLE articles (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, article_type_id INTEGER NOT NULL, content_html TEXT NOT NULL, status TEXT NOT NULL CHECK (status IN ('draft', 'published')), created_at TEXT NOT NULL, updated_at TEXT NOT NULL, published_at TEXT, FOREIGN KEY (article_type_id) REFERENCES article_types(id));
+CREATE INDEX idx_articles_status_updated ON articles(status, updated_at DESC, id DESC);
+CREATE TABLE terms (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, kind TEXT NOT NULL CHECK (kind IN ('topic', 'tag')), created_at TEXT NOT NULL, updated_at TEXT NOT NULL, UNIQUE(kind, name));
+CREATE TABLE article_terms (article_id INTEGER NOT NULL, term_id INTEGER NOT NULL, PRIMARY KEY (article_id, term_id), FOREIGN KEY (article_id) REFERENCES articles(id), FOREIGN KEY (term_id) REFERENCES terms(id));
+CREATE TABLE recommendation_sets (id INTEGER PRIMARY KEY AUTOINCREMENT, created_at TEXT NOT NULL, is_active INTEGER NOT NULL DEFAULT 0 CHECK (is_active IN (0, 1)));
+CREATE UNIQUE INDEX idx_recommendation_sets_active ON recommendation_sets(is_active) WHERE is_active = 1;
+CREATE TABLE recommendation_items (recommendation_set_id INTEGER NOT NULL, article_id INTEGER NOT NULL, position INTEGER NOT NULL, PRIMARY KEY (recommendation_set_id, article_id), UNIQUE (recommendation_set_id, position), FOREIGN KEY (recommendation_set_id) REFERENCES recommendation_sets(id), FOREIGN KEY (article_id) REFERENCES articles(id));

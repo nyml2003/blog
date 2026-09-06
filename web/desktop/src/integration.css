@@ -1,0 +1,72 @@
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid #93c5fd;
+  outline-offset: 2px;
+}
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.status-draft {
+  color: #b45309;
+  font-weight: 700;
+}
+.status-published {
+  color: #15803d;
+  font-weight: 700;
+}
+.filters {
+  margin-bottom: 16px;
+}
+.term-filter,
+.term-picker {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.term-filter legend,
+.term-picker legend {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.check-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+.check-list label,
+.term-picker label {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  min-height: 44px;
+}
+.term-picker {
+  margin-top: 18px;
+}
+.term-picker label small {
+  color: #64748b;
+}
+.editor-grid {
+  grid-template-columns: 320px minmax(0, 1fr);
+}
+.taxonomy-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.state {
+  min-height: 100px;
+}
+.article-body {
+  overflow-wrap: anywhere;
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

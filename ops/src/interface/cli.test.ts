@@ -1,0 +1,140 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { main } from './cli.ts';
+
+async function capture(args: readonly string[]) {
+  const output: string[] = [];
+  const errors: string[] = [];
+  const originalLog = console.log;
+  const originalError = console.error;
+  console.log = (...values) => output.push(values.join(' '));
+  console.error = (...values) => errors.push(values.join(' '));
+  try {
+    const code = await main(args);
+    return { code, output: output.join('\n'), errors: errors.join('\n') };
+  } finally {
+    console.log = originalLog;
+    console.error = originalError;
+  }
+}
+
+test('root help lists every leaf in a stable group order', async () => {
+  const result = await capture(['help']);
+  assert.equal(result.code, 0);
+  assert.ok(result.output.indexOf('workspace') < result.output.indexOf('quality'));
+  assert.ok(result.output.indexOf('quality') < result.output.indexOf('runtime'));
+  assert.ok(result.output.indexOf('runtime') < result.output.indexOf('delivery'));
+  for (const command of ['workspace doctor', 'quality check', 'quality lint', 'quality format', 'delivery build', 'runtime dev', 'runtime backend', 'runtime integration']) {
+    assert.match(result.output, new RegExp(`ops ${command}`));
+  }
+  assert.doesNotMatch(result.output, /runtime serve|database migrate|database\s{2}/);
+});
+
+test('help spellings and direct group navigation are equivalent', async () => {
+  const fromHelp = await capture(['help', 'quality']);
+  const fromFlag = await capture(['quality', '--help']);
+  const fromSuffix = await capture(['quality', 'help']);
+  const direct = await capture(['quality']);
+  assert.equal(fromHelp.code, 0);
+  assert.equal(fromFlag.code, 0);
+  assert.equal(fromSuffix.code, 0);
+  assert.equal(direct.code, 0);
+  assert.equal(fromHelp.output, fromFlag.output);
+  assert.equal(fromHelp.output, fromSuffix.output);
+  assert.equal(fromHelp.output, direct.output);
+});
+
+test('usage errors explain the correction, show the nearest help and exit 10', async () => {
+  const unknownOption = await capture(['help', 'quality', '--wat']);
+  assert.equal(unknownOption.code, 10);
+  assert.match(unknownOption.errors, /未知选项: --wat/);
+  assert.match(unknownOption.errors, /如何修正/);
+  assert.match(unknownOption.errors, /ops quality --help/);
+  assert.match(unknownOption.output, /命令分组: quality/);
+
+  const typo = await capture(['quality', 'chcek']);
+  assert.equal(typo.code, 10);
+  assert.match(typo.errors, /未知命令/);
+  assert.match(typo.errors, /ops quality check/);
+  assert.match(typo.output, /用法: ops quality check/);
+});
+
+test('leaf argument errors exit 10 and point at leaf help', async () => {
+  const missingValue = await capture(['runtime', 'dev', '--web-port']);
+  assert.equal(missingValue.code, 10);
+  assert.match(missingValue.errors, /选项缺少值: --web-port/);
+  assert.match(missingValue.errors, /查看帮助: ops runtime dev --help/);
+  assert.match(missingValue.output, /示例:/);
+});
+
+test('port overrides are validated as usage errors before any process starts', async () => {
+  for (const value of ['1023', '65536', '0', 'abc']) {
+    const result = await capture(['runtime', 'backend', '--data-port', value]);
+    assert.equal(result.code, 10, value);
+    assert.match(result.output, /用法: ops runtime backend/);
+  }
+  assert.match((await capture(['runtime', 'backend', '--data-port', '1023'])).errors, /1023/);
+});
+
+test('unknown scenario names and invalid data modes are usage errors', async () => {
+  const scenario = await capture(['runtime', 'dev', '--scenario', 'nope']);
+  assert.equal(scenario.code, 10);
+  assert.match(scenario.errors, /未知场景: nope/);
+  assert.match(scenario.errors, /default, empty, slow/);
+
+  const data = await capture(['runtime', 'backend', '--data', 'prod']);
+  assert.equal(data.code, 10);
+  assert.match(data.errors, /非法的 --data 取值: prod/);
+});
+
+test('integration refuses --data and the retired --host/--listen options', async () => {
+  const data = await capture(['runtime', 'integration', '--data', 'mock']);
+  assert.equal(data.code, 10);
+  assert.match(data.errors, /未知选项: --data/);
+  assert.doesNotMatch(data.output, /^ {2,6}--data\s/m);
+
+  const listen = await capture(['runtime', 'integration', '--listen', '127.0.0.1:8080']);
+  assert.equal(listen.code, 10);
+  assert.match(listen.errors, /未知选项: --listen/);
+});
+
+test('deleted commands point at their migration target and exit 10', async () => {
+  const serve = await capture(['runtime', 'serve', '--listen', '127.0.0.1:8080']);
+  assert.equal(serve.code, 10);
+  assert.match(serve.errors, /命令已删除: runtime serve/);
+  assert.match(serve.errors, /ops runtime integration/);
+
+  const migrate = await capture(['database', 'migrate']);
+  assert.equal(migrate.code, 10);
+  assert.match(migrate.errors, /命令已删除: database migrate/);
+  assert.match(migrate.errors, /ops runtime backend/);
+});
+
+test('dry run prints the plan without binding ports or spawning processes', async () => {
+  const dev = await capture(['runtime', 'dev', '--dry-run']);
+  assert.equal(dev.code, 0);
+  assert.match(dev.output, /dry-run: runtime dev/);
+  assert.match(dev.output, /\[mock\] 候选端口 9090/);
+  assert.match(dev.output, /\[web\] 候选端口 5173/);
+  assert.match(dev.output, /入口: http:\/\/127\.0\.0\.1:5173/);
+  assert.doesNotMatch(dev.output, /就绪/);
+
+  const backend = await capture(['runtime', 'backend', '--dry-run']);
+  assert.equal(backend.code, 0);
+  assert.match(backend.output, /\[data\] 候选端口 8081/);
+  assert.match(backend.output, /\[product\] 候选端口 8080/);
+  assert.match(backend.output, /无（API-only/);
+
+  const build = await capture(['delivery', 'build', '--dry-run']);
+  assert.equal(build.code, 0);
+  assert.match(build.output, /pnpm --filter blog-web run build/);
+  assert.match(build.output, /cargo build --release/);
+  assert.doesNotMatch(build.output, /(^|\s)go build/);
+});
+
+test('dry run honours port overrides in the printed plan', async () => {
+  const result = await capture(['runtime', 'integration', '--product-port', '18080', '--data-port', '18081', '--dry-run']);
+  assert.equal(result.code, 0);
+  assert.match(result.output, /\[product\] 候选端口 18080/);
+  assert.match(result.output, /\[data\] 候选端口 18081/);
+});

@@ -1,0 +1,27 @@
+{
+  "name": "blog-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "test:core": "tsx --test common/client/client.test.ts common/client/mock-session.test.ts common/data/core.test.ts common/data/resource.test.ts common/validation/article-html.test.ts solid/data/use-data-resource.test.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint --deny-warnings desktop mobile common vite.config.ts",
+    "format": "biome format --write . ../package.json ../biome.json ../.oxlintrc.json",
+    "format:check": "biome format . ../package.json ../biome.json ../.oxlintrc.json"
+  },
+  "dependencies": {
+    "solid-js": "1.9.15",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.12",
+    "@types/node": "26.4.1",
+    "oxlint": "1.81.0",
+    "tsx": "^4.23.13",
+    "typescript": "7.0.2",
+    "vite": "8.2.2",
+    "vite-plugin-solid": "2.11.14"
+  }
+}

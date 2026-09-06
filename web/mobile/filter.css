@@ -1,0 +1,14 @@
+.date-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+}
+.date-grid label {
+  margin: 0;
+}
+
+@media (max-width: 360px) {
+  .date-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,177 @@
+/* Standalone Mobile atomic layer. Imported only by a future Mobile composition entry. */
+
+.m-atom-text {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.m-atom-text--body {
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.m-atom-text--meta {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.m-atom-text--default {
+  color: var(--ink);
+}
+
+.m-atom-text--muted {
+  color: var(--muted);
+}
+
+.m-atom-heading {
+  color: var(--ink);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.m-atom-heading--page {
+  font-size: 28px;
+  line-height: 1.25;
+}
+
+.m-atom-heading--section {
+  font-size: 21px;
+  line-height: 1.35;
+}
+
+.m-atom-heading--card {
+  font-size: 17px;
+  line-height: 1.45;
+}
+
+.m-atom-button,
+.m-atom-icon-button {
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 9px 15px;
+}
+
+.m-atom-button:focus-visible,
+.m-atom-icon-button:focus-visible,
+.m-atom-link:focus-visible,
+.m-atom-input:focus-visible,
+.m-atom-select:focus-visible,
+.m-atom-checkbox:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
+}
+
+.m-atom-button--primary,
+.m-atom-icon-button--primary {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.m-atom-button--secondary,
+.m-atom-icon-button--secondary {
+  background: var(--paper);
+  border-color: var(--border);
+  color: var(--ink);
+}
+
+.m-atom-button.is-block {
+  display: flex;
+  width: 100%;
+}
+
+.m-atom-button:disabled,
+.m-atom-icon-button:disabled,
+.m-atom-input:disabled,
+.m-atom-select:disabled,
+.m-atom-checkbox:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.m-atom-button.is-loading,
+.m-atom-icon-button.is-loading {
+  cursor: progress;
+}
+
+.m-atom-icon-button {
+  padding: 9px;
+}
+
+.m-atom-icon-button__icon {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+}
+
+.m-atom-link {
+  align-items: center;
+  color: var(--blue);
+  display: inline-flex;
+  min-height: 44px;
+  overflow-wrap: anywhere;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+.m-atom-link--action {
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  justify-content: center;
+  padding: 9px 15px;
+  text-decoration: none;
+}
+
+.m-atom-label {
+  color: var(--ink);
+  display: inline-block;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.m-atom-input,
+.m-atom-select {
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  box-sizing: border-box;
+  color: var(--ink);
+  font: inherit;
+  min-height: 44px;
+  padding: 9px 11px;
+  width: 100%;
+}
+
+.m-atom-input.is-invalid,
+.m-atom-select.is-invalid,
+.m-atom-checkbox.is-invalid {
+  border-color: var(--danger);
+}
+
+.m-atom-checkbox {
+  accent-color: var(--blue);
+  border: 1px solid var(--border);
+  box-sizing: border-box;
+  cursor: pointer;
+  height: 44px;
+  margin: 0;
+  width: 44px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .m-atom-button,
+  .m-atom-icon-button,
+  .m-atom-link,
+  .m-atom-input,
+  .m-atom-select,
+  .m-atom-checkbox {
+    scroll-behavior: auto;
+    transition: none;
+  }
+}

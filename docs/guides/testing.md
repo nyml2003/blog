@@ -1,0 +1,33 @@
+---
+kind: guide
+id: GUIDE-TESTING
+status: current
+owner: quality
+last_reviewed: 2026-09-05
+---
+
+# 测试指南
+
+## 分层策略
+
+- Rust 领域、存储、API（`crates/`）和 `web/common`：严格 red-green-refactor；
+- Desktop/Mobile UI 早期：使用稳定、可重复的人工验收场景；
+- 推荐、预览、发布和公开可见性稳定后，再补浏览器自动化测试。
+
+## 测试优先级
+
+先验证可观察行为和跨边界契约，再验证实现细节。每个正式 Spec 至少关联一个自动化测试或人工证据。
+
+## 基础门禁
+
+```text
+cargo fmt --all --check
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace
+pnpm --filter blog-web run typecheck
+pnpm --filter blog-web run lint
+pnpm --filter blog-web run format:check
+pnpm --filter blog-web run build
+```
+
+`ops quality check` 负责汇总上述门禁与 ops 契约测试。runtime 全栈端到端测试由 `OPS_RUNTIME_E2E` 环境变量门控（`ops/src/application/runtime.stack.test.ts`）：默认跳过保持快速反馈，`1` 跑进程级，`full` 追加构建级。

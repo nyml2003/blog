@@ -1,0 +1,25 @@
+[package]
+name = "mock"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+description = "Mock Product API：dev 模式的独立 Rust HTTP mock（有限命名场景 + 显式 session 状态）"
+
+[[bin]]
+name = "mock"
+path = "src/main.rs"
+
+[lib]
+name = "mock"
+path = "src/lib.rs"
+
+[dependencies]
+article-html-core = { path = "../article-html-core" }
+# 只复用 `protocol` 的层间类型与分页归一化（该 crate 零运行时依赖，PLAN 明确允许
+# Mock 复用）；HTTP 面与运行时形态与 product/data 同一组合，不新增任何依赖。
+protocol = { path = "../protocol" }
+tokio = { workspace = true }
+axum = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
