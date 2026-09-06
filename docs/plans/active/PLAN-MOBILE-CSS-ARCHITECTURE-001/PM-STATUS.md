@@ -134,3 +134,7 @@ Web typecheck、Oxlint、production build、依赖边界和 9 个 core/resource 
 交接入口为 [`HANDOVER.md`](HANDOVER.md)。本轮完成的是原子库的独立交付和 CSS 架构的可执行文档闭环：模块职责、class inventory、原子契约、调用方文档、迁移顺序、回滚门和回归验收已经冻结。没有以“文档已完成”冒充 CSS 拆分、浏览器回归或业务页面接入已经完成。
 
 下一位负责人只能按以下顺序恢复：先满足 `REGRESSION-BASELINE.md` 的 fixture/证据/浏览器开工 gate，再按 `MIGRATION-RUNBOOK.md` 的 R0-R5 拆分 CSS 并完成回归，最后才可以单独立项 R6 原子消费迁移。任何新增原子 Props、分子或业务组件边界都需要 PM 再审定。
+
+## 承接记录（2026-09-06）
+
+新 PM 承接。核实：九原子、`config.test.ts` 6/6 通过、`atoms.css` 177 行独立、业务零消费、`styles.css` 721 行 / `filter.css` 14 行未拆分——与 HANDOVER 状态一致。注意：仓库已于 2026-09-06 重构为 `src/{core,backend,frontend}` 布局，本文档及交接文档中的 `web/mobile/...` 路径与 `pnpm --dir web ...` 命令均对应现在的 `src/frontend/mobile/...` 与 `pnpm -C src/frontend ...`；Go 门禁记录已随 Go 退场过时。恢复顺序不变：先满足回归开工 gate，再 R0-R5 拆分 CSS，R6 消费迁移单独审批。
