@@ -1,7 +1,7 @@
 ---
 kind: spec
 id: SPEC-CLIENT-ARTICLE-LIST-001
-status: draft
+status: accepted
 owner: frontend-desktop
 plan_id: PLAN-CLIENT-ARTICLE-LIST-001
 last_reviewed: 2026-09-06
@@ -83,4 +83,4 @@ Then Mobile 行为零变化（`mobileShelf` / 详情消费路径不改动）
 - 2026-09-06，001 / 002：真实 Rust Product + Data（8180/8181）与实际构建产物，Playwright Chromium 1440x1000 验证公开默认 9 条、类型与标签组合筛选 2 条、Admin 12 条（含草稿与已发布），列表标题及数量与真实 wire 一致，公开 total 文案正确；截图人工检查正常。
 - 2026-09-06，005：390x844 Mobile 首页 6 条推荐、文章库 total 9 / 含推荐重复展示 12 张卡片、详情正文正常；Desktop 详情同样通过。浏览器 pageerror 为 0。本次未修改 Mobile 消费路径。
 - 标准 build / lint / test:core 通过（32 tests + 287 Native/WASM parity cases），改动文件格式检查通过。全量 typecheck 和 format:check 仍被 Mobile 在途文件的基线问题阻塞，Spec 保留 draft，待整体质量门禁解除后最终验收。
-- 复现命令、截图路径、人工 Review 和限制见 [RESULT.md](../plans/active/PLAN-CLIENT-ARTICLE-LIST-001/RESULT.md)。
+- 复现命令、截图路径、人工 Review 和限制见 [RESULT.md](../plans/archive/PLAN-CLIENT-ARTICLE-LIST-001/RESULT.md)。

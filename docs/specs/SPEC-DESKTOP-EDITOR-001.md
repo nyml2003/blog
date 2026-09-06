@@ -93,6 +93,18 @@ Then 编辑器进入只读（保留可视内容与诊断），操作按钮禁用
 
 And CodeMirror 可经键盘聚焦与操作，屏幕阅读器对校验状态的播报不劣于现状
 
+### SPEC-DESKTOP-EDITOR-001-008
+
+Given 用户需要了解编辑器的正文格式与操作流程
+
+Then Admin 主导航提供一个“指南”入口，指南页面通过页签呈现快速开始、正文格式、校验与预览、保存与发布
+
+And 指南内容与 HTML 示例全部由 Desktop 前端静态定义，不请求文章 API、不写入后端，也不出现在文章列表
+
+When 用户从编辑器标题区打开“使用指南”
+
+Then 指南在新标签页打开，当前编辑页和未保存输入保持原位
+
 ## 边界与失败
 
 - WASM 模块加载失败：编辑器可输入，校验状态显示失败可重试（沿用现状语义），发布按钮因无法确认 `valid` 而禁用。
@@ -102,6 +114,7 @@ And CodeMirror 可经键盘聚焦与操作，屏幕阅读器对校验状态的�
 
 ## 测试/验收证据
 
-- 自动化测试：`desktop/src/pages/admin/editor-codemirror.test.ts` 覆盖中文与 emoji 多字节诊断跨度映射、待校验状态；与 `common/validation/article-html.test.ts` 合计 9 tests 通过。桌面编辑器相关 Oxlint 通过；全量 typecheck 当前被 `mobile-ui/atoms/define.ts` 既有错误阻断。
-- PM 集成验证：`nix develop ./nix -c pnpm --dir src/frontend test:core` 29 tests + 287 native/WASM parity cases 通过；同环境标准 build/lint 通过，本计划 Desktop 文件 Biome 检查通过；源码扫描与构建产物均无旧预览入口。标准 typecheck 仍由 `mobile-ui/atoms/define.ts:48` TS2345 阻断，Spec 保持 draft。
+- 自动化测试：`desktop/src/pages/admin/editor-codemirror.test.ts` 覆盖中文与 emoji 多字节诊断跨度映射、待校验状态；与 `common/validation/article-html.test.ts` 合计 9 tests 通过。桌面编辑器相关 Oxlint 通过。
+- PM 集成验证：`nix develop ./nix -c pnpm --dir src/frontend test:core` 29 tests + 287 native/WASM parity cases 通过；同环境标准 build/lint 通过，本计划 Desktop 文件 Biome 检查通过；源码扫描与构建产物均无旧预览入口。
+- 指南补充验证：标准 typecheck/build 与指南相关 Oxlint/Biome 通过，构建产物包含 `desktop/pages/admin-editor-guide/index.html`。`cargo test -p product` 全部通过，Product 契约覆盖指南 200 与旧预览 404。Spec 继续保持 draft，等待用户浏览器验收。
 - 人工验收：待补充（新建 / 编辑全流程、中文文档编辑与诊断定位、分屏同步流畅度、发布门禁、preview 页面确实移除）。

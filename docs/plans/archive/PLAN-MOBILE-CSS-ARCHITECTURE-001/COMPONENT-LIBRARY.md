@@ -12,21 +12,26 @@ depends_on: [ATOM-CONTRACT.md]
 
 ## 状态与范围
 
-这是 C Mobile 第一批原子组件的调用方契约。API 已由
+这是 C Mobile 原子组件库的调用方契约。第一批 API 已由
 [`ATOM-CONTRACT.md`](ATOM-CONTRACT.md) 冻结，独立源码、导出入口和
-`atoms.css` 已完成并通过独立验证；本阶段仍然**不得在业务组件或页面中接入**。
+`atoms.css` 已完成并通过独立验证；batch 2 和首批分子按扩量计划的轮次门禁接入。
 
 组件库只服务 `web/mobile`。Desktop 不得导入、复制或反向约束它；跨端可共享的
 仍只有数据语义和无界面契约。文章正文 `.article-body`、页面 layout、Filter Panel、
 Shelf、导航、文章卡片和状态块都不属于本库。
 
-第一期只有已经在 Mobile 现有页面中出现的九个原子：
+第一期的九个原子继续保持 API 稳定；`PLAN-MOBILE-ATOM-EXPANSION-001` 在其上增加五个已核对消费证据的 batch 2 原子和首批三个分子：
 
 | 分类 | 组件 | 解决的问题 | 不解决的问题 |
 | --- | --- | --- | --- |
 | 排版 | `Text`、`Heading` | 原生文字和标题的尺度、色调、换行与语义。 | 文章摘要截断、日期格式化、标签、页面布局或目录。 |
 | 操作与导航 | `Button`、`IconButton`、`Link` | 原生 button/anchor 语义、受控状态、焦点与触控反馈。 | 路由、请求、自动防抖、重试、业务动作或图标库。 |
 | 表单 | `Label`、`Input`、`Select`、`Checkbox` | 当前 Filter 已使用的受控原生表单控件。 | 表单读取、校验、提交、跨字段关系或 Filter 的本地状态。 |
+
+| 扩量原子 | `Tag`、`Tab`、`Chip`、`Text` 的 `accent` tone、`Link` 的 `cta` variant | 已存在的标签、Shelf 目录单选、横向筛选胶囊、eyebrow 和主页行动链接视觉。 | 业务数据读取、scrollspy、筛选状态、路由。 |
+| 首批分子 | `TabGroup`、`ChipGroup`、`StateMessage` | 受控分组、键盘 roving、状态反馈和可选重试按钮。 | 请求、筛选状态机、路由、滚动定位和错误归一化。 |
+
+`TabGroup` 的 `ariaLabel`、`items`、`selectedId` 和 `onChange` 由调用方提供；方向键在水平/垂直模式下循环并保留 `Home`/`End`。`ChipGroup` 的 `ariaLabel` 与受控单值同样由调用方提供，横向滚动与左右键导航不改变 URL。`StateMessage` 只根据 `kind` 选择稳定图形槽和语义 role，重试回调由业务层传入。
 
 未来的 `FormField`、按钮组、状态块只能作为分子另行立项；不能为方便接入而扩张
 原子 API。

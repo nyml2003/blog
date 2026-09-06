@@ -5,6 +5,27 @@
 .page-heading {
   margin-bottom: 28px;
 }
+
+.settings-fields {
+  display: grid;
+  gap: 24px;
+}
+
+.page-heading .m-atom-text--accent {
+  display: block;
+  margin-bottom: 9px;
+}
+
+.page-heading .m-atom-heading--page {
+  margin-bottom: 11px;
+  font-size: 32px;
+  line-height: 1.16;
+}
+
+.page-heading .m-atom-text--muted {
+  font-size: 14px;
+  line-height: 1.55;
+}
 /* Eyebrow is a shared text role across the three pages. STYLE-INVENTORY
    targets it at the `Text` atom; the atom layer is frozen in this migration,
    so the rule is parked here until that consumption migration (R6). */
@@ -44,19 +65,11 @@
    and the Filter button no longer share one declaration list. Parked here
    until the Link atom consumption migration (R6). */
 .primary-action {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  min-height: 50px;
-  padding: 12px 16px;
-  border: 1px solid var(--blue);
-  border-radius: var(--radius-control);
-  background: var(--blue);
-  color: var(--foreground-on-accent);
-  font-weight: 700;
   margin-top: 28px;
+}
+
+.primary-action .m-atom-link {
+  width: 100%;
 }
 /* Orphan: no JSX, template or static-page consumer was found (see the
    migration class map). Kept, not deleted, pending the deletion decision. */

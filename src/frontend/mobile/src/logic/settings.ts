@@ -1,52 +1,21 @@
-export type MobileTheme = "paper" | "dark" | "sepia";
-export type MobileFont = "sans" | "serif" | "mono";
-export type MobileSettings = {
-  theme: MobileTheme;
-  font: MobileFont;
-};
+import { createSignal } from "solid-js";
+import { browserMobileSettingsClient } from "../../../common/client/mobile-settings-browser";
+import {
+  normalizeMobileSettings,
+  type MobileFont,
+  type MobileSettings,
+  type MobileSettingsClient,
+  type MobileTheme,
+} from "../../../common/client/mobile-settings";
+import type { Result } from "../../../common/data/result";
+import type { StorageFailure } from "../../../common/data/storage";
+import { mobileNavigationItems } from "./navigation";
 
-export const mobileSettingsKeys = {
-  theme: "blog.mobile.theme",
-  font: "blog.mobile.font",
-} as const;
-
-type SettingsStorage = Pick<Storage, "getItem" | "setItem">;
-type StorageProvider = () => SettingsStorage;
 type SettingsRoot = Pick<HTMLElement, "getAttribute" | "setAttribute">;
-
-export function isMobileTheme(value: unknown): value is MobileTheme {
-  return value === "paper" || value === "dark" || value === "sepia";
-}
-
-export function isMobileFont(value: unknown): value is MobileFont {
-  return value === "sans" || value === "serif" || value === "mono";
-}
-
-function readStoredValue(storage: StorageProvider, key: string) {
-  try {
-    return storage().getItem(key) ?? undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-function normalizeSettings(theme: unknown, font: unknown): MobileSettings {
-  return {
-    theme: isMobileTheme(theme) ? theme : "paper",
-    font: isMobileFont(font) ? font : "sans",
-  };
-}
-
-export function readStoredSettings(storage: StorageProvider): MobileSettings {
-  return normalizeSettings(
-    readStoredValue(storage, mobileSettingsKeys.theme),
-    readStoredValue(storage, mobileSettingsKeys.font),
-  );
-}
 
 // The head script owns initial storage reads. Respect its fallback if blocked.
 export function readAppliedSettings(root: SettingsRoot): MobileSettings {
-  return normalizeSettings(
+  return normalizeMobileSettings(
     root.getAttribute("data-theme") ?? undefined,
     root.getAttribute("data-font") ?? undefined,
   );
@@ -57,20 +26,53 @@ export function applySettings(root: SettingsRoot, settings: MobileSettings) {
   root.setAttribute("data-font", settings.font);
 }
 
-function persistValue(storage: StorageProvider, key: string, value: string) {
-  try {
-    storage().setItem(key, value);
-  } catch {
-    // Applying the current selection does not depend on storage availability.
+export function createMobileSettingsAdapter(
+  client: MobileSettingsClient,
+  root: SettingsRoot,
+) {
+  const [settings, setSettings] = createSignal(readAppliedSettings(root));
+  const [persistence, setPersistence] = createSignal<
+    Result<void, StorageFailure> | undefined
+  >(undefined);
+
+  function selectTheme(theme: MobileTheme) {
+    const next = { ...settings(), theme };
+    setSettings(next);
+    applySettings(root, next);
+    setPersistence(client.saveTheme(theme));
   }
+
+  function selectFont(font: MobileFont) {
+    const next = { ...settings(), font };
+    setSettings(next);
+    applySettings(root, next);
+    setPersistence(client.saveFont(font));
+  }
+
+  return {
+    settings,
+    persistence,
+    options: client.options,
+    selectTheme,
+    selectFont,
+  };
 }
 
-export function persistTheme(storage: StorageProvider, theme: MobileTheme) {
-  if (!isMobileTheme(theme)) return;
-  persistValue(storage, mobileSettingsKeys.theme, theme);
+export function useMobileSettings() {
+  return createMobileSettingsAdapter(
+    browserMobileSettingsClient,
+    document.documentElement,
+  );
 }
 
-export function persistFont(storage: StorageProvider, font: MobileFont) {
-  if (!isMobileFont(font)) return;
-  persistValue(storage, mobileSettingsKeys.font, font);
-}
+export const mobileSettingsPageContent = {
+  title: "设置",
+  brand: "技术知识库",
+  brandHref: "/m/",
+  skipLinkLabel: "跳到主要内容",
+  navigationLabel: "页面导航",
+  activeNavigationId: "settings",
+  themeLabel: "主题风格",
+  fontLabel: "正文字体",
+  navigation: mobileNavigationItems,
+} as const;

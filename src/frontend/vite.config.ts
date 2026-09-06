@@ -1,6 +1,7 @@
+import { resolve } from "node:path";
 import { defineConfig } from "vite";
 import solid from "vite-plugin-solid";
-import { resolve } from "node:path";
+import { mobileSettingsBootstrap } from "./build/mobile-settings-bootstrap";
 
 const root = resolve(import.meta.dirname);
 const apiOrigin = process.env.BLOG_API_ORIGIN ?? "http://127.0.0.1:8080";
@@ -18,6 +19,8 @@ const routes: Record<string, string> = {
   "/admin/index.html": "/desktop/pages/admin-home/index.html",
   "/admin/articles/new.html": "/desktop/pages/admin-article-new/index.html",
   "/admin/articles/edit.html": "/desktop/pages/admin-article-edit/index.html",
+  "/admin/editor-guide/index.html":
+    "/desktop/pages/admin-editor-guide/index.html",
   "/admin/article-types/index.html":
     "/desktop/pages/admin-article-types/index.html",
   "/admin/terms/index.html": "/desktop/pages/admin-terms/index.html",
@@ -25,6 +28,7 @@ const routes: Record<string, string> = {
 
 export default defineConfig({
   plugins: [
+    mobileSettingsBootstrap(root),
     {
       name: "mvp-page-routes",
       configureServer(server) {
@@ -50,6 +54,10 @@ export default defineConfig({
         admin: resolve(root, "desktop/pages/admin-home/index.html"),
         adminNew: resolve(root, "desktop/pages/admin-article-new/index.html"),
         adminEdit: resolve(root, "desktop/pages/admin-article-edit/index.html"),
+        adminEditorGuide: resolve(
+          root,
+          "desktop/pages/admin-editor-guide/index.html",
+        ),
         adminTypes: resolve(
           root,
           "desktop/pages/admin-article-types/index.html",

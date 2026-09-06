@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { ButtonProps } from "./button";
+import type { ChipProps } from "./chip";
 import type { CheckboxProps } from "./checkbox";
 import type { HeadingProps } from "./heading";
 import type { IconButtonProps } from "./icon-button";
@@ -8,6 +9,8 @@ import type { InputProps } from "./input";
 import type { LabelProps } from "./label";
 import type { LinkProps } from "./link";
 import type { SelectProps } from "./select";
+import type { TabProps } from "./tab";
+import type { TagProps } from "./tag";
 import type { TextProps } from "./text";
 import { defineAtom, type AtomDefaults, type AtomRenderProps } from "./define";
 
@@ -22,6 +25,7 @@ import { defineAtom, type AtomDefaults, type AtomRenderProps } from "./define";
 /** 每个原子一条合法受控组合：这些对象必须能通过类型检查。 */
 const validSamples: {
   Button: ButtonProps;
+  Chip: ChipProps;
   Checkbox: CheckboxProps;
   Heading: HeadingProps;
   IconButton: IconButtonProps;
@@ -29,6 +33,8 @@ const validSamples: {
   Label: LabelProps;
   Link: LinkProps;
   Select: SelectProps;
+  Tab: TabProps;
+  Tag: TagProps;
   Text: TextProps;
 } = {
   Button: {
@@ -40,6 +46,12 @@ const validSamples: {
       variant: "primary",
       width: "block",
     },
+  },
+  Chip: {
+    content: "Rust",
+    onSelect: () => undefined,
+    selected: false,
+    options: { id: "chip-rust" },
   },
   Checkbox: {
     checked: true,
@@ -69,11 +81,18 @@ const validSamples: {
     options: { variant: "action" },
   },
   Select: {
-    content: "全部类型",
+    items: [{ value: "", label: "全部类型" }],
     onChange: () => undefined,
     options: { id: "article-type", state: "enabled", validation: "invalid" },
     value: "",
   },
+  Tab: {
+    content: "全部",
+    onSelect: () => undefined,
+    selected: true,
+    options: { orientation: "horizontal" },
+  },
+  Tag: { content: "Rust", options: {} },
   Text: {
     content: "正文",
     options: { as: "p", size: "body", tone: "muted" },
@@ -149,16 +168,16 @@ const invalidSamples: {
     options: { variant: "action" },
   },
   selectBusinessDataSource: {
-    content: "全部类型",
+    items: [{ value: "", label: "全部类型" }],
     onChange: () => undefined,
-    // @ts-expect-error Select 不接收业务数据源：选项只能由 content 提供。
+    // @ts-expect-error Select 只接收归一化 items，不接收领域数据源。
     articleTypes: [{ id: "essay", name: "随笔" }],
     options: {},
     value: "",
   },
   // @ts-expect-error 受控值协议要求 Select 必须提供 onChange。
   selectOnChange: {
-    content: "全部类型",
+    items: [{ value: "", label: "全部类型" }],
     options: {},
     value: "",
   },
@@ -173,6 +192,7 @@ const invalidSamples: {
 
 const atomNames = [
   "Button",
+  "Chip",
   "Checkbox",
   "Heading",
   "IconButton",
@@ -180,6 +200,8 @@ const atomNames = [
   "Label",
   "Link",
   "Select",
+  "Tab",
+  "Tag",
   "Text",
 ] as const;
 

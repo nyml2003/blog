@@ -38,7 +38,8 @@
    duplicate `.page-heading h1` on purpose: pages.css is imported last, so a
    shared cross-page selector here would let the page module win the cascade
    and flip the detail title back to 32px. */
-.detail-header h1 {
+.detail-header h1,
+.detail-header .m-atom-heading--page {
   margin: 0 0 11px;
   font-size: 30px;
   line-height: 1.2;
@@ -46,6 +47,13 @@
   overflow-wrap: anywhere;
 }
 .detail-summary {
+  margin: 0;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.detail-header .m-atom-text--body {
   margin: 0;
   color: var(--muted);
   font-size: 16px;

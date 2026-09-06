@@ -3,7 +3,7 @@ import { defineAtom, type AtomDefaults } from "./define";
 
 type TextAs = "span" | "p";
 type TextSize = "body" | "meta";
-type TextTone = "default" | "muted";
+type TextTone = "default" | "muted" | "accent";
 
 type TextOptions = {
   as: TextAs;

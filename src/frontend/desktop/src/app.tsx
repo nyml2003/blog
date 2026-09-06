@@ -2,8 +2,8 @@ import { createSignal, For } from "solid-js";
 import { browserClient as client } from "../../common/client";
 import type {
   Article,
-  ArticleListItem,
   ArticleFilter,
+  ArticleListItem,
   ArticleType,
   Term,
 } from "../../common/contracts/domain";
@@ -71,6 +71,14 @@ export function Header(props: { admin?: boolean }) {
                 href="/admin/terms/index.html"
               >
                 主题/标签
+              </a>
+              <a
+                aria-current={
+                  active("/admin/editor-guide/index.html") ? "page" : undefined
+                }
+                href="/admin/editor-guide/index.html"
+              >
+                指南
               </a>
             </>
           ) : (

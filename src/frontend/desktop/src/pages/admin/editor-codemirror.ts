@@ -1,4 +1,4 @@
-import { defaultKeymap, history, indentWithTab } from "@codemirror/commands";
+import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { html } from "@codemirror/lang-html";
 import {
   defaultHighlightStyle,
@@ -71,9 +71,10 @@ export function createCodeMirrorEditor(
     indentOnInput(),
     syntaxHighlighting(defaultHighlightStyle),
     history(),
-    keymap.of([...defaultKeymap, indentWithTab]),
+    keymap.of([...defaultKeymap, ...historyKeymap]),
     updateListener,
     EditorView.contentAttributes.of({
+      id: "html",
       "aria-label": "HTML 正文",
       "aria-describedby": "html-diagnostics",
       spellcheck: "false",

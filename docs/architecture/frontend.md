@@ -22,15 +22,18 @@ last_reviewed: 2026-09-05
 src/frontend/
 ├── common/       # 无 UI 的契约和逻辑
 ├── desktop/      # C Desktop + B Desktop
-└── mobile/       # C Mobile
+├── mobile/       # C Mobile 页面与适配
+└── mobile-ui/    # Mobile 独立原子、组合组件与页面容器
 ```
 
 `src/frontend/common` 不得依赖 JSX、CSS、Desktop 或 Mobile。Desktop 与 Mobile 不互相导入 UI。
 
+`mobile-ui/atoms` 提供独立控件，`molecules` 提供 Field、PageHeader、BottomNav、TabGroup、ChipGroup 和 StateMessage，`containers` 提供 PageContainer；样式由对应层负责。Field 管理标签与 Select 的关联，Select 消费 `{ value, label }` 列表并回调选中值；Tab/Chip 分组保持受控，StateMessage 不读取资源状态。mobile-ui 不访问 Client、存储或业务路由状态，页面提供已归一化的数据和命令。
+
 ## 页面入口
 
 - Desktop 首页、文章列表、详情和 Admin 页面使用独立 HTML 入口；
-- Mobile 推荐、文章列表和详情使用独立 HTML 入口；
+- Mobile 推荐、文章列表、详情和设置使用独立 HTML 入口；
 - URL 使用静态页面入口和 query 参数，不依赖动态路由库。
 
 ## 状态
@@ -38,6 +41,14 @@ src/frontend/
 页面至少处理 `loading`、`success`、`empty`、`error`。编辑器至少处理 `idle`、`dirty`、`saving`、`saved`、`save_error`。
 
 HTML 正文由各端独立实现 `ArticleBody`，输入遵守同一正文片段契约。
+
+## Mobile 设置
+
+`common/data/storage.ts` 提供可注入的同步存储适配，以 Result 处理存储对象获取、读写失败和边界空值。`common/client/mobile-settings.ts` 负责主题与字体选项、默认值、键名和保存语义；独立浏览器组合根注入 localStorage。Mobile 适配层连接页面状态、Client 与 html 的主题属性，页面只组合 UI、绑定值和选择命令。
+
+移动页面统一使用 `mobile-shell`、`MobileNav` 和 `mobile-ui` 的 BottomNav；设置页继续使用 `Field` + `Select`，并与其他 Mobile 页面共享顶部、主体和底部布局。主题变量覆盖 `.mobile-shell`，所有 Mobile HTML 入口的同步首绘脚本都由 Vite 插件从同一套 Data / Client 源码装配，避免在 HTML 中另写存储规则。
+
+行为与验收契约见 [SPEC-MOBILE-THEME-SETTINGS-001](../specs/SPEC-MOBILE-THEME-SETTINGS-001.md)；入口的 Vite 注册和 Product 静态白名单为两处独立接线，不能互相替代。
 
 ## 正文校验
 

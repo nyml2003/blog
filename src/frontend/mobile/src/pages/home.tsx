@@ -1,16 +1,17 @@
 import { For, Show } from "solid-js";
 import { render } from "solid-js/web";
+import { Heading, Link, Text } from "../../../mobile-ui/atoms";
 import { browserClient as client } from "../../../common/client";
 import { useDataResource } from "../../../solid/data";
 import {
   ArticleRow,
-  BottomNav,
   MobileNav,
   pageStyles,
   StateMessage,
 } from "../components/ui";
-// Fixed Mobile CSS entry order. Keep tokens first and pages last; the atom
-// layer stays unimported until the separate atom consumption migration.
+import { BottomNav } from "../../../mobile-ui/molecules";
+import { mobileNavigationItems } from "../logic/navigation";
+// Keep the shared Mobile foundation first, then component-library styles.
 import "../../styles/tokens.css";
 import "../../styles/base.css";
 import "../../styles/shell.css";
@@ -21,6 +22,9 @@ import "../../styles/filter.css";
 import "../../styles/detail.css";
 import "../../styles/article-body.css";
 import "../../styles/pages.css";
+import "../../../mobile-ui/styles/themes.css";
+import "../../../mobile-ui/styles/atoms.css";
+import "../../../mobile-ui/styles/molecules.css";
 
 const App = () => {
   const recommendations = useDataResource(
@@ -33,9 +37,15 @@ const App = () => {
       <MobileNav active="home" />
       <main id="main" class="mobile-main">
         <header class="page-heading">
-          <p class="eyebrow">技术知识库</p>
-          <h1>推荐阅读</h1>
-          <p class="subtle">从最近沉淀的实践中，挑选值得反复阅读的内容。</p>
+          <Text
+            content="技术知识库"
+            options={{ tone: "accent", size: "meta" }}
+          />
+          <Heading content="推荐阅读" options={{ as: "h1", size: "page" }} />
+          <Text
+            content="从最近沉淀的实践中，挑选值得反复阅读的内容。"
+            options={{ as: "p", tone: "muted", size: "meta" }}
+          />
         </header>
         <Show
           when={recommendations.status() !== "loading"}
@@ -63,11 +73,24 @@ const App = () => {
             </Show>
           </Show>
         </Show>
-        <a class="primary-action" href="/m/articles/index.html">
-          浏览全部文章 <span aria-hidden="true">→</span>
-        </a>
+        <div class="primary-action">
+          <Link
+            content={
+              <>
+                <span>浏览全部文章</span>
+                <span aria-hidden="true">→</span>
+              </>
+            }
+            href="/m/articles/index.html"
+            options={{ variant: "cta" }}
+          />
+        </div>
       </main>
-      <BottomNav active="home" />
+      <BottomNav
+        items={mobileNavigationItems}
+        activeId="home"
+        ariaLabel="页面导航"
+      />
     </div>
   );
 };

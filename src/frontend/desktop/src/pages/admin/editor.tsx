@@ -48,7 +48,6 @@ function CodeMirrorEditor(props: {
     controller: ReturnType<typeof createCodeMirrorEditor> | undefined,
   ) => void;
 }) {
-  let host: HTMLDivElement | undefined;
   const [controller, setController] = createSignal<
     ReturnType<typeof createCodeMirrorEditor> | undefined
   >();
@@ -56,27 +55,23 @@ function CodeMirrorEditor(props: {
     props.onReady(undefined);
     controller()?.destroy();
     setController(undefined);
-    host = undefined;
   });
   return (
-    <div
-      ref={(element) => {
-        host = element;
-        const editor = createCodeMirrorEditor(
-          element,
-          props.value(),
-          props.onChange,
-        );
-        setController(editor);
-        props.onReady(editor);
-      }}
-      id="html"
-      class="editor-codemirror"
-      aria-describedby="html-diagnostics"
-      aria-invalid={props.inspection()?.valid === false}
-    >
+    <>
+      <div
+        ref={(element) => {
+          const editor = createCodeMirrorEditor(
+            element,
+            props.value(),
+            props.onChange,
+          );
+          setController(editor);
+          props.onReady(editor);
+        }}
+        class="editor-codemirror"
+      />
       <CodeMirrorEffects controller={controller} {...props} />
-    </div>
+    </>
   );
 }
 
@@ -256,6 +251,16 @@ export function Editor() {
           <div>
             <p class="eyebrow">ARTICLE SOURCE</p>
             <h1>{currentId() ? "编辑文章" : "新建文章"}</h1>
+          </div>
+          <div class="actions">
+            <a
+              class="button"
+              href="/admin/editor-guide/index.html"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              使用指南
+            </a>
           </div>
         </header>
         <Show

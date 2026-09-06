@@ -1,4 +1,10 @@
 import { For, Show, createSignal, onCleanup, onMount } from "solid-js";
+import { Heading, Link, Tag, Text } from "../../../mobile-ui/atoms";
+import {
+  StateMessage,
+  TabGroup,
+  type TabItem,
+} from "../../../mobile-ui/molecules";
 import type {
   Article,
   ArticleFilter,
@@ -27,48 +33,23 @@ export function MobileNav(_p: { active: string }) {
         跳到主要内容
       </a>
       <header class="mobile-header">
-        <a class="mobile-brand" href="/m/">
-          <span>FIELD NOTES</span>
-          <strong>技术知识库</strong>
-        </a>
+        <div class="mobile-brand">
+          <Link
+            content={
+              <>
+                <Text
+                  content="FIELD NOTES"
+                  options={{ tone: "accent", size: "meta" }}
+                />
+                <strong>技术知识库</strong>
+              </>
+            }
+            href="/m/"
+            options={{}}
+          />
+        </div>
       </header>
     </>
-  );
-}
-export function BottomNav(p: { active: "home" | "articles" | "settings" }) {
-  return (
-    <nav class="bottom-nav" aria-label="页面导航">
-      <a
-        class={p.active === "home" ? "is-active" : ""}
-        aria-current={p.active === "home" ? "page" : undefined}
-        href="/m/"
-      >
-        <span aria-hidden="true" class="nav-mark">
-          荐
-        </span>
-        <span>推荐</span>
-      </a>
-      <a
-        class={p.active === "articles" ? "is-active" : ""}
-        aria-current={p.active === "articles" ? "page" : undefined}
-        href="/m/articles/index.html"
-      >
-        <span aria-hidden="true" class="nav-mark">
-          库
-        </span>
-        <span>文章库</span>
-      </a>
-      <a
-        class={p.active === "settings" ? "is-active" : ""}
-        aria-current={p.active === "settings" ? "page" : undefined}
-        href="/m/settings/index.html"
-      >
-        <span aria-hidden="true" class="nav-mark">
-          设
-        </span>
-        <span>设置</span>
-      </a>
-    </nav>
   );
 }
 const shortDate = (value?: string) =>
@@ -84,19 +65,32 @@ export function ArticleRow(p: { article: Article }) {
   const extraTags = () => Math.max(0, (p.article.terms?.length ?? 0) - 2);
   return (
     <a class="article-row" href={`/m/articles/detail.html?id=${p.article.id}`}>
-      <div class="row-anchor">{p.article.articleType?.name ?? "文章"}</div>
+      <div class="row-anchor">
+        <Text
+          content={p.article.articleType?.name ?? "文章"}
+          options={{ tone: "accent", size: "meta" }}
+        />
+      </div>
       <div class="row-top">
-        <h2>{p.article.title}</h2>
+        <Heading
+          content={p.article.title}
+          options={{ as: "h2", size: "card" }}
+        />
       </div>
       <p class={`row-summary${p.article.summary ? "" : " is-empty"}`}>
-        {p.article.summary || "暂无摘要"}
+        <Text
+          content={p.article.summary || "暂无摘要"}
+          options={{ as: "span", tone: "muted", size: "meta" }}
+        />
       </p>
       <div class="row-meta">
         <span class="row-tags">
-          <For each={tags()}>{(t) => <span>{t.name}</span>}</For>
+          <For each={tags()}>
+            {(t) => <Tag content={t.name} options={{}} />}
+          </For>
           <Show when={extraTags()}>
             {" "}
-            <span>+{extraTags()}</span>
+            <Tag content={`+${extraTags()}`} options={{}} />
           </Show>
         </span>
         <time>{shortDate(p.article.updatedAt)}</time>
@@ -111,22 +105,15 @@ export function ShelfIndex(p: {
 }) {
   return (
     <nav class="shelf-index" aria-label="文章分区">
-      <For each={p.sections}>
-        {(section) => (
-          <button
-            class={
-              p.activeSectionId === section.id
-                ? "shelf-index-tab is-active"
-                : "shelf-index-tab"
-            }
-            type="button"
-            aria-current={p.activeSectionId === section.id ? "true" : undefined}
-            onClick={() => p.onSelect(section.id)}
-          >
-            {section.title}
-          </button>
+      <TabGroup
+        items={p.sections.map(
+          (section): TabItem => ({ id: section.id, label: section.title }),
         )}
-      </For>
+        onChange={p.onSelect}
+        selectedId={p.activeSectionId}
+        ariaLabel="文章分区"
+        options={{ orientation: "vertical" }}
+      />
     </nav>
   );
 }
@@ -135,15 +122,20 @@ const ShelfCard = (p: { article: ShelfArticle }) => {
   const extraTags = () => Math.max(0, p.article.terms.length - 2);
   return (
     <a class="shelf-card" href={`/m/articles/detail.html?id=${p.article.id}`}>
-      <h3>{p.article.title}</h3>
+      <Heading content={p.article.title} options={{ as: "h3", size: "card" }} />
       <p class={`shelf-summary${p.article.summary ? "" : " is-empty"}`}>
-        {p.article.summary || "暂无摘要"}
+        <Text
+          content={p.article.summary || "暂无摘要"}
+          options={{ as: "span", tone: "muted", size: "meta" }}
+        />
       </p>
       <div class="shelf-card-meta">
         <span class="shelf-card-tags">
-          <For each={tags()}>{(term) => <span>{term.name}</span>}</For>
+          <For each={tags()}>
+            {(term) => <Tag content={term.name} options={{}} />}
+          </For>
           <Show when={extraTags() > 0}>
-            <span>+{extraTags()}</span>
+            <Tag content={`+${extraTags()}`} options={{}} />
           </Show>
         </span>
         <time>{shortDate(p.article.updatedAt)}</time>
@@ -160,8 +152,18 @@ export function ShelfSection(p: { section: ArticleShelfSection }) {
       aria-labelledby={`shelf-title-${p.section.id}`}
     >
       <header class="shelf-section-heading">
-        <p>分区</p>
-        <h2 id={`shelf-title-${p.section.id}`}>{p.section.title}</h2>
+        <Text
+          content="分区"
+          options={{ as: "p", tone: "accent", size: "meta" }}
+        />
+        <Heading
+          content={p.section.title}
+          options={{
+            as: "h2",
+            id: `shelf-title-${p.section.id}`,
+            size: "section",
+          }}
+        />
         <span>{p.section.articles.length} 篇</span>
       </header>
       <div class="shelf-cards">
@@ -172,26 +174,7 @@ export function ShelfSection(p: { section: ArticleShelfSection }) {
     </section>
   );
 }
-export function StateMessage(p: {
-  kind: "loading" | "empty" | "error";
-  text: string;
-  onRetry?: () => void;
-}) {
-  return (
-    <div
-      class={`state-message is-${p.kind}`}
-      role={p.kind === "error" ? "alert" : "status"}
-    >
-      <span>{p.kind === "loading" ? "◌" : p.kind === "empty" ? "○" : "!"}</span>
-      <p>{p.text}</p>
-      <Show when={p.onRetry}>
-        <button class="retry-button" onClick={p.onRetry}>
-          重试
-        </button>
-      </Show>
-    </div>
-  );
-}
+export { StateMessage };
 export function ArticleBody(p: { html: string }) {
   return <div class="article-body" innerHTML={p.html} />;
 }
@@ -263,7 +246,10 @@ export function FilterPanel(p: {
         aria-labelledby="filter-title"
       >
         <div class="panel-head">
-          <h2 id="filter-title">筛选文章</h2>
+          <Heading
+            content="筛选文章"
+            options={{ as: "h2", id: "filter-title", size: "section" }}
+          />
           <button
             ref={(element) => {
               closeButton = element;

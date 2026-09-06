@@ -1,9 +1,4 @@
-/* Mobile atomic layer. Theme variables are scoped to each native atom root. */
-
-.m-atom {
-  background-color: var(--paper);
-  font-family: var(--font-body);
-}
+/* Mobile atoms inherit semantic theme values from their container. */
 
 .m-atom-text {
   margin: 0;
@@ -26,6 +21,29 @@
 
 .m-atom-text--muted {
   color: var(--muted);
+}
+
+.m-atom-text--accent {
+  color: var(--coral);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.m-atom-tag {
+  background: color-mix(in srgb, var(--coral) 14%, var(--paper));
+  border: 1px solid color-mix(in srgb, var(--coral) 40%, var(--border));
+  border-radius: 999px;
+  color: var(--coral);
+  display: inline-block;
+  font-size: 12px;
+  line-height: 1.35;
+  max-width: 12ch;
+  overflow: hidden;
+  padding: 3px 8px;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  white-space: nowrap;
 }
 
 .m-atom-heading {
@@ -121,6 +139,7 @@
   color: var(--blue);
   display: inline-flex;
   min-height: 44px;
+  min-width: 44px;
   overflow-wrap: anywhere;
   text-decoration-thickness: 1px;
   text-underline-offset: 2px;
@@ -132,6 +151,112 @@
   justify-content: center;
   padding: 9px 15px;
   text-decoration: none;
+}
+
+.m-atom-link--cta {
+  background: var(--blue);
+  border: 1px solid var(--blue);
+  border-radius: 3px;
+  color: var(--foreground-on-accent);
+  font-weight: 700;
+  justify-content: space-between;
+  min-height: 50px;
+  padding: 9px 15px;
+  text-decoration: none;
+  width: 100%;
+}
+
+.m-atom-tab,
+.m-atom-chip {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-family: var(--font-body);
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.m-atom-tab {
+  border-bottom: 2px solid transparent;
+  padding: 9px 12px;
+  position: relative;
+  text-align: left;
+  transition:
+    color 180ms ease,
+    border-color 180ms ease,
+    transform 220ms var(--motion-emphasized);
+}
+
+.m-atom-tab--vertical {
+  border-bottom: 0;
+  border-left: 2px solid transparent;
+  font-size: 12px;
+  font-weight: 700;
+  justify-content: flex-start;
+  line-height: 1.25;
+  overflow: hidden;
+  padding: 8px 7px 8px 2px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.m-atom-tab--vertical::before {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 0;
+  width: 3px;
+  background: var(--coral);
+  content: "";
+  opacity: 0;
+  transform: scaleY(0.2);
+  transform-origin: center;
+  transition:
+    opacity 140ms ease,
+    transform 220ms var(--motion-emphasized);
+}
+
+.m-atom-tab.is-selected {
+  border-color: var(--blue);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.m-atom-tab--vertical.is-selected {
+  border-color: transparent;
+  transform: translateX(2px);
+}
+
+.m-atom-tab--vertical.is-selected::before {
+  opacity: 1;
+  transform: scaleY(1);
+}
+
+.m-atom-chip {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 14px;
+  white-space: nowrap;
+}
+
+.m-atom-chip.is-selected {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+
+.m-atom-tab:focus-visible,
+.m-atom-chip:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
 }
 
 .m-atom-label {
@@ -179,6 +304,15 @@
   .m-atom-select,
   .m-atom-checkbox {
     scroll-behavior: auto;
+    transition: none;
+  }
+
+  .m-atom-tab,
+  .m-atom-chip {
+    transition: none;
+  }
+
+  .m-atom-tab--vertical::before {
     transition: none;
   }
 }

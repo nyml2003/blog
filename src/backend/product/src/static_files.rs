@@ -47,8 +47,8 @@ const PAGES: &[(&str, &str)] = &[
         "desktop/pages/admin-article-edit/index.html",
     ),
     (
-        "/admin/articles/preview.html",
-        "desktop/pages/admin-article-preview/index.html",
+        "/admin/editor-guide/index.html",
+        "desktop/pages/admin-editor-guide/index.html",
     ),
     (
         "/admin/article-types/index.html",
@@ -176,6 +176,7 @@ mod tests {
         for relative in [
             "desktop/pages/public-home/index.html",
             "desktop/pages/admin-home/index.html",
+            "desktop/pages/admin-editor-guide/index.html",
             "mobile/pages/home/index.html",
         ] {
             let path = root.join(relative);
@@ -226,6 +227,15 @@ mod tests {
         }
 
         let (status, content_type, body) =
+            status_of(&files, &Method::GET, "/admin/editor-guide/index.html").await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(content_type.starts_with("text/html"));
+        assert_eq!(
+            body,
+            "<html>desktop/pages/admin-editor-guide/index.html</html>"
+        );
+
+        let (status, content_type, body) =
             status_of(&files, &Method::GET, "/assets/app-abc123.js").await;
         assert_eq!(status, StatusCode::OK);
         assert!(content_type.starts_with("text/javascript"));
@@ -236,6 +246,7 @@ mod tests {
             "/articles/",
             "/articles/detail",
             "/m/articles/unknown",
+            "/admin/articles/preview.html",
             "/assets/",
             "/assets/../desktop/pages/public-home/index.html",
             "/assets/nope.js",

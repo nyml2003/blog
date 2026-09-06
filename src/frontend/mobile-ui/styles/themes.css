@@ -1,25 +1,37 @@
-/* Overrides belong only to atom roots, never to the document or legacy shell. */
-html:not([data-theme]) .m-atom,
-html[data-theme="paper"] .m-atom {
+/* PageContainer owns theme inheritance; document and legacy defaults stay intact. */
+html:not([data-theme]) .m-page-container,
+html:not([data-theme]) .mobile-shell,
+html[data-theme="paper"] .m-page-container,
+html[data-theme="paper"] .mobile-shell {
   color-scheme: light;
 }
 
-html[data-theme="dark"] .m-atom {
+html[data-theme="dark"] .m-page-container,
+html[data-theme="dark"] .mobile-shell {
   --paper: #202124;
   --surface: #292b2f;
+  --surface-header: rgba(32, 33, 36, 0.96);
+  --surface-nav: rgba(41, 43, 47, 0.98);
+  --surface-pressed: rgba(41, 43, 47, 0.8);
+  --surface-field: #292b2f;
   --ink: #f1f3f4;
   --muted: #bec3c9;
   --border: #777d86;
-  --blue: #7185d5;
+  --blue: #9eb7ff;
   --coral: #ffad95;
   --teal: #8ed6c4;
   --danger: #ff9692;
   color-scheme: dark;
 }
 
-html[data-theme="sepia"] .m-atom {
+html[data-theme="sepia"] .m-page-container,
+html[data-theme="sepia"] .mobile-shell {
   --paper: #f1e6cf;
   --surface: #f7eedc;
+  --surface-header: rgba(241, 230, 207, 0.96);
+  --surface-nav: rgba(247, 238, 220, 0.98);
+  --surface-pressed: rgba(247, 238, 220, 0.8);
+  --surface-field: #fff8e9;
   --ink: #352d23;
   --muted: #70614e;
   --border: #98856b;
@@ -30,16 +42,19 @@ html[data-theme="sepia"] .m-atom {
   color-scheme: light;
 }
 
-html[data-font="sans"] .m-atom {
+html[data-font="sans"] .m-page-container,
+html[data-font="sans"] .mobile-shell {
   --font-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
-html[data-font="serif"] .m-atom {
+html[data-font="serif"] .m-page-container,
+html[data-font="serif"] .mobile-shell {
   --font-body:
     ui-serif, Georgia, "Times New Roman", "Songti SC", "SimSun", serif;
 }
 
-html[data-font="mono"] .m-atom {
+html[data-font="mono"] .m-page-container,
+html[data-font="mono"] .mobile-shell {
   --font-body:
     ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }

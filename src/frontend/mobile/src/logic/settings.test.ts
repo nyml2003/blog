@@ -2,16 +2,38 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { runInNewContext } from "node:vm";
+import { fileURLToPath } from "node:url";
+import { mobileSettingsBootstrap } from "../../../build/mobile-settings-bootstrap";
 import {
-  applySettings,
+  createMobileSettingsClient,
   isMobileFont,
   isMobileTheme,
   mobileSettingsKeys,
-  persistFont,
-  persistTheme,
-  readAppliedSettings,
-  readStoredSettings,
-} from "./settings";
+  type MobileFont,
+  type MobileTheme,
+} from "../../../common/client/mobile-settings";
+import {
+  createSynchronousStorage,
+  type StorageProvider,
+} from "../../../common/data/storage";
+import { applySettings, readAppliedSettings } from "./settings";
+
+// Existing scenarios retain their inputs while storage ownership moves to Client.
+function readStoredSettings(provider: StorageProvider) {
+  return createMobileSettingsClient(createSynchronousStorage(provider)).read();
+}
+
+function persistFont(provider: StorageProvider, font: MobileFont) {
+  return createMobileSettingsClient(createSynchronousStorage(provider)).saveFont(
+    font,
+  );
+}
+
+function persistTheme(provider: StorageProvider, theme: MobileTheme) {
+  return createMobileSettingsClient(createSynchronousStorage(provider)).saveTheme(
+    theme,
+  );
+}
 
 function createStorage(initial: Record<string, string>) {
   const values = new Map(Object.entries(initial));
@@ -148,14 +170,28 @@ test("a blocked head bootstrap leaves the page on its default selection", () => 
   });
 });
 
-test("the synchronous head bootstrap agrees with module validation and fallback", () => {
-  const html = readFileSync(
+test("the synchronous head bootstrap agrees with module validation and fallback", async () => {
+  const filename = fileURLToPath(
     new URL("../../pages/settings/index.html", import.meta.url),
+  );
+  const html = readFileSync(
+    filename,
     "utf8",
   );
-  const script = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
-  assert.ok(script, "The head must contain a synchronous inline script");
-  assert.ok(html.indexOf("<script>") < html.indexOf("</head>"));
+  const frontendRoot = fileURLToPath(new URL("../../../", import.meta.url));
+  const plugin = mobileSettingsBootstrap(frontendRoot);
+  const transform = plugin.transformIndexHtml;
+  assert.ok(transform && typeof transform === "object" && "handler" in transform);
+  const transformed = await transform.handler(html, {
+    path: "/m/settings/index.html",
+    filename,
+  });
+  assert.ok(Array.isArray(transformed));
+  const scriptTag = transformed.find((tag) => tag.tag === "script");
+  assert.ok(scriptTag && typeof scriptTag.children === "string");
+  assert.equal(scriptTag.injectTo, "head");
+  assert.equal(scriptTag.attrs?.type, undefined);
+  const script = scriptTag.children;
   const themeValues = [undefined, "paper", "dark", "sepia", "neon", "DARK", ""];
   const fontValues = [undefined, "sans", "serif", "mono", "comic", "SERIF", ""];
   for (const theme of themeValues) {
@@ -174,9 +210,9 @@ test("the synchronous head bootstrap agrees with module validation and fallback"
         readStoredSettings(() => storage),
       );
       if (!isMobileTheme(theme))
-        assert.equal(root.getAttribute("data-theme"), null);
+        assert.equal(root.getAttribute("data-theme"), "paper");
       if (!isMobileFont(font))
-        assert.equal(root.getAttribute("data-font"), null);
+        assert.equal(root.getAttribute("data-font"), "sans");
       assert.deepEqual(storage.writes, []);
     }
   }
@@ -193,4 +229,28 @@ test("the synchronous head bootstrap agrees with module validation and fallback"
     }),
   );
   assert.deepEqual(readAppliedSettings(root), { theme: "paper", font: "sans" });
+});
+
+test("the synchronous head bootstrap is present on every mobile page", async () => {
+  const frontendRoot = fileURLToPath(new URL("../../../", import.meta.url));
+  const plugin = mobileSettingsBootstrap(frontendRoot);
+  const transform = plugin.transformIndexHtml;
+  assert.ok(transform && typeof transform === "object" && "handler" in transform);
+
+  for (const page of [
+    "home/index.html",
+    "articles/index.html",
+    "article-detail/index.html",
+    "settings/index.html",
+  ]) {
+    const filename = fileURLToPath(
+      new URL(`../../pages/${page}`, import.meta.url),
+    );
+    const transformed = await transform.handler(readFileSync(filename, "utf8"), {
+      path: `/m/${page}`,
+      filename,
+    });
+    const scriptTag = transformed?.find((tag) => tag.tag === "script");
+    assert.ok(scriptTag && typeof scriptTag.children === "string");
+  }
 });

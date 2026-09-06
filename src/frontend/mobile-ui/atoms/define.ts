@@ -17,12 +17,13 @@ export type AtomDefaults<P extends { options?: object }> = Readonly<
 >;
 
 /** render 收到的 props：原 Props 去掉 options，加上已合并 defaults 的完整 options。 */
-export type AtomRenderProps<P extends { options?: object }> = Omit<
-  P,
-  "options"
-> & {
+type NormalizedAtomOptions<P extends { options?: object }> = {
   options: CompleteAtomOptions<NonNullable<P["options"]>>;
 };
+
+export type AtomRenderProps<P extends { options?: object }> = ReturnType<
+  typeof mergeProps<[P, NormalizedAtomOptions<P>]>
+>;
 
 export interface AtomDefinition<P extends { options?: object }> {
   name: string;
@@ -32,7 +33,7 @@ export interface AtomDefinition<P extends { options?: object }> {
 }
 
 /**
- * 类型即契约的原子工厂：合并 `Partial` options，并为原生根附加主题作用域。
+ * 类型即契约的原子工厂：合并 `Partial` options，保留 Solid getter。
  * TS 类型是唯一配置防线，不做任何运行时配置校验。
  */
 export function defineAtom<P extends { options?: object }>(
@@ -40,16 +41,11 @@ export function defineAtom<P extends { options?: object }>(
 ): (props: P) => JSX.Element {
   return (props) => {
     // Keep Solid getters lazy so controlled values remain reactive.
-    const renderProps = mergeProps(props, {
+    const normalized: NormalizedAtomOptions<P> = {
       get options() {
         return { ...definition.defaults, ...props.options };
       },
-    });
-    const root = definition.render(renderProps);
-    // Mobile atoms render one native root; strings remain valid in factory tests.
-    if (typeof HTMLElement !== "undefined" && root instanceof HTMLElement) {
-      root.classList.add("m-atom");
-    }
-    return root;
+    };
+    return definition.render(mergeProps(props, normalized));
   };
 }

@@ -220,7 +220,7 @@ fn full_public_admin_contract_and_static_mount() {
         "desktop/pages/admin-home/index.html",
         "desktop/pages/admin-article-new/index.html",
         "desktop/pages/admin-article-edit/index.html",
-        "desktop/pages/admin-article-preview/index.html",
+        "desktop/pages/admin-editor-guide/index.html",
         "desktop/pages/admin-article-types/index.html",
         "desktop/pages/admin-terms/index.html",
         "mobile/pages/home/index.html",
@@ -711,6 +711,10 @@ fn full_public_admin_contract_and_static_mount() {
             "desktop/pages/admin-article-new/index.html",
         ),
         (
+            "/admin/editor-guide/index.html",
+            "desktop/pages/admin-editor-guide/index.html",
+        ),
+        (
             "/admin/terms/index.html",
             "desktop/pages/admin-terms/index.html",
         ),
@@ -732,6 +736,9 @@ fn full_public_admin_contract_and_static_mount() {
     assert_eq!(response.status, 200);
     assert!(response.content_type.starts_with("text/javascript"));
     assert_eq!(response.body, "console.log('app')");
+
+    let response = get(PRODUCT_PORT, "/admin/articles/preview.html");
+    assert_eq!(response.status, 404);
 
     // 未知路径 / 无尾斜杠目录路径 / 深层刷新路径 → 404 text/plain（与 Go 一致）。
     for path in [

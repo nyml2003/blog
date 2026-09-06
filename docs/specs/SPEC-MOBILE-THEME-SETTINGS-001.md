@@ -13,7 +13,7 @@ last_reviewed: 2026-09-06
 
 为 C Mobile 提供设置页，允许用户选择主题风格（纸张 / 暗色 / sepia）与正文字体族（无衬线 / 衬线 / 等宽，均为系统字体栈）。设置持久化在设备本地，于首绘前应用、不闪屏。主题与字体以 mobile-ui 的 PageContainer 为边界，覆盖设置页背景、新页头、主体和新底部导航；未迁移的旧页面保持现状。
 
-本版本按用户已确认的 [迭代决策](../plans/active/PLAN-MOBILE-THEME-SETTINGS-001/DECISIONS.md) 修订首轮 atom 根方案。组件与接线边界见 [COMPONENT-CONTRACT.md](../plans/active/PLAN-MOBILE-THEME-SETTINGS-001/COMPONENT-CONTRACT.md)。Spec 仍为 draft，代码与测试当前暂停。
+本版本按用户已确认的 [迭代决策](../plans/archive/PLAN-MOBILE-THEME-SETTINGS-001/DECISIONS.md) 修订首轮 atom 根方案。组件与接线边界见 [COMPONENT-CONTRACT.md](../plans/archive/PLAN-MOBILE-THEME-SETTINGS-001/COMPONENT-CONTRACT.md)。2026-09-06 新版源码交付后，用户要求按代码交付归档；验证与 Product 路由待办见 [归档结果](../plans/archive/PLAN-MOBILE-THEME-SETTINGS-001/RESULT.md)。测试与验收继续暂停，Spec 保持 draft，不因计划归档自动 accepted。
 
 ## 非目标
 
@@ -147,7 +147,7 @@ Then 当前页面状态、Select 显示与容器主题立即一致地更新，�
 
 ## 测试/验收证据
 
-2026-09-06 当前状态：用户要求先讨论并在本计划内迭代，代码和测试暂停。新组件、容器主题与数据分层已明确，尚未实施；首轮 Select 修复也未由本线程复验。以下结果均为首轮历史记录，不覆盖本版 001-001 至 001-011 场景。Spec 保持 draft。
+2026-09-06 当前状态：用户在讨论收敛后要求开始实施。新组件、容器主题、Data / Client 分层和共享同步首绘已交付源码；PM 完成源码人工审查，并落实 Link 响应性、底栏自然高度、暗色链接色及 charset 顺序修复。具体见 [FRONTEND-RESULT.md](../plans/archive/PLAN-MOBILE-THEME-SETTINGS-001/FRONTEND-RESULT.md)。本轮未执行类型检查、lint、format、构建、测试或浏览器，以下通过结果仍为首轮历史记录，不覆盖本版 001-001 至 001-011 场景。Spec 保持 draft。
 
-- 自动化测试：2026-09-06，`direnv exec /home/nyml/projects/blog pnpm --dir src/frontend exec tsx --test mobile/src/logic/settings.test.ts mobile-ui/atoms/types.test.ts` 退出 0，7 条设置测试与 2 条原子测试通过；覆盖枚举、九种合法组合、缺省 / 非法值不回写、存储 getter / read / write 失败、DOM 属性应用及 head 脚本 49 组输入与模块校验一致性。`typecheck`、`lint`、`format:check`、`build`、`test:core` 均退出 0。详细命令和证据边界见 [FRONTEND-RESULT.md](../plans/active/PLAN-MOBILE-THEME-SETTINGS-001/FRONTEND-RESULT.md)。`test:core` 仍使用原显式列表，设置测试由上述独立命令执行；
+- 自动化测试：2026-09-06，`direnv exec /home/nyml/projects/blog pnpm --dir src/frontend exec tsx --test mobile/src/logic/settings.test.ts mobile-ui/atoms/types.test.ts` 退出 0，7 条设置测试与 2 条原子测试通过；覆盖枚举、九种合法组合、缺省 / 非法值不回写、存储 getter / read / write 失败、DOM 属性应用及 head 脚本 49 组输入与模块校验一致性。`typecheck`、`lint`、`format:check`、`build`、`test:core` 均退出 0。详细命令和证据边界见 [FRONTEND-RESULT.md](../plans/archive/PLAN-MOBILE-THEME-SETTINGS-001/FRONTEND-RESULT.md)。`test:core` 仍使用原显式列表，设置测试由上述独立命令执行；
 - 新版验收：全部待补充。恢复后覆盖 375x812 与 360px 下三主题 × 三字体整页外观、首绘、选中值恢复、Field 关联、数据层边界、存储失败、原生导航与旧页面不变。暂停前的浏览器脚本基于 atom 根断言，需要随新版场景调整后才可复用。

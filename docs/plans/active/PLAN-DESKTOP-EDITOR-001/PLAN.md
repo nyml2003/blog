@@ -20,7 +20,8 @@ last_reviewed: 2026-09-06
 3. 分屏预览在 iframe 沙箱中以与前台一致的正文样式防抖同步渲染；预览不是门禁，`valid()` 仍完全由 WASM 结果决定，发布门禁不回归；
 4. `/admin/articles/preview.html`、跳页预览按钮、`preview-cache` 及其 test:core 条目全部移除，构建产物无该入口；
 5. 保存 / 保存并发布 / 取消发布的成功与失败路径（含服务端校验失败回填诊断）与升级前一致；
-6. `pnpm --dir src/frontend typecheck / lint / build / test:core` 全绿。
+6. Admin 提供一个不进入文章列表、不请求后端的静态编辑器指南入口；指南通过页签讲解快速开始、正文格式、校验与预览、保存与发布，并提供符合当前 HTML Profile 的可复制示例；
+7. `pnpm --dir src/frontend typecheck / lint / build / test:core` 全绿。
 
 ## 非目标
 
@@ -41,6 +42,7 @@ last_reviewed: 2026-09-06
 | 工作流 | Owner | 依赖 | Write set | 状态 |
 | --- | --- | --- | --- | --- |
 | 前端（desktop） | frontend-desktop | - | 见 [WORKSTREAM-FRONTEND-DESKTOP.md](./WORKSTREAM-FRONTEND-DESKTOP.md) | in_progress |
+| Product 静态路由 | backend-product | frontend-desktop | 见 [WORKSTREAM-BACKEND-STATIC.md](./WORKSTREAM-BACKEND-STATIC.md) | completed |
 
 项目经理启动提示见同目录的 [PM-PROMPT.md](./PM-PROMPT.md)。
 
@@ -59,9 +61,10 @@ last_reviewed: 2026-09-06
 - **工作区冲突**：`src/frontend/vite.config.ts` 同时存在 Mobile Theme Settings 计划的未提交改动；本计划不得覆盖该写集，集成时需逐项复核并串行合并。
 - **基线证据**：`pnpm --dir src/frontend lint` 通过；`typecheck`、`build`、`test:core` 在 `wasm:build` 阶段因 Rust Wasm schema `0.2.121` 与本机 wasm-bindgen CLI `0.2.126` 不匹配而阻断。该问题记录为环境基线阻塞，不改变本计划的 Rust/WASM 契约。
 - **环境修正**：项目 Flake 位于 `nix/flake.nix`，使用 `nix develop ./nix -c ...` 后 CLI 为 `0.2.121`，WASM 版本阻塞已消除；未修改全局工具链或 Rust 依赖。
-- **实现状态**：frontend-desktop 已交付 CodeMirror + 诊断适配 + iframe 分屏预览及旧预览删除；PM 集成补充删除 `desktop/src/app.tsx` 中的旧预览链接，`vite.config.ts` 保留 Mobile settings 改动。
-- **验收证据**：Nix shell 下标准 `lint`、`build`、`test:core` 通过（29 tests，287 native/WASM parity cases）；本计划 Desktop 文件 Biome 检查与 `git diff --check` 通过。静态引用与构建产物确认无旧预览入口。
-- **当前阻塞**：标准 `typecheck` 仍在并行 Mobile 文件 `mobile-ui/atoms/define.ts:48` 报 TS2345；真实浏览器新建/编辑、中文光标定位、busy 只读、分屏同步和发布失败路径尚未验收。计划保持 `in_progress`，Spec 不推进 `accepted`。
+- **实现状态**：frontend-desktop 已交付 CodeMirror + 诊断适配 + iframe 分屏预览及旧预览删除；PM 集成补充删除 `desktop/src/app.tsx` 中的旧预览链接，`vite.config.ts` 保留 Mobile settings 改动。Product 静态路由同步移除旧预览映射并登记指南入口。
+- **用户补充范围**：新增前端写死的编辑器使用指南。Admin 主导航只增加一个“指南”入口，页面内部按页签切换四组内容；不调用 API、不写入文章数据，也不出现在文章列表。编辑器标题区的“使用指南”在新标签页打开，避免中断当前编辑。
+- **验收证据**：Nix shell 下标准 `lint`、`build`、`test:core` 通过（29 tests，287 native/WASM parity cases）；指南补充后标准 `typecheck`、`build`、定向 Oxlint/Biome 和 `git diff --check` 通过。Product 包全部测试通过，覆盖指南静态路由 200 与旧预览路由 404；构建产物包含指南且不含旧预览页。
+- **当前阻塞**：真实浏览器的新建/编辑、中文光标定位、busy 只读、分屏同步、指南页签与发布失败路径由用户验收，尚未回填结果。计划保持 `in_progress`，Spec 不推进 `accepted`。
 
 ## 未决项
 

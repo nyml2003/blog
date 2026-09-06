@@ -4,7 +4,7 @@ import { defineAtom, type AtomDefaults } from "./define";
 
 type LinkAriaCurrent = "page" | "step" | "location" | "date" | "time" | "true";
 type LinkTarget = "_self" | "_blank";
-type LinkVariant = "inline" | "action";
+type LinkVariant = "inline" | "action" | "cta";
 
 type LinkOptions = {
   ariaCurrent: LinkAriaCurrent;
@@ -30,18 +30,21 @@ export const Link = defineAtom<LinkProps>({
     target: "_self",
     variant: "inline",
   } as const satisfies AtomDefaults<LinkProps>,
-  render({ content, href, options }) {
+  render(props) {
     return (
       <a
-        aria-current={options.ariaCurrent}
-        class={classNames("m-atom-link", `m-atom-link--${options.variant}`)}
-        href={href}
-        id={options.id}
-        onClick={options.onClick}
-        rel={options.rel}
-        target={options.target}
+        aria-current={props.options.ariaCurrent}
+        class={classNames(
+          "m-atom-link",
+          `m-atom-link--${props.options.variant}`,
+        )}
+        href={props.href}
+        id={props.options.id}
+        onClick={props.options.onClick}
+        rel={props.options.rel}
+        target={props.options.target}
       >
-        {content}
+        {props.content}
       </a>
     );
   },

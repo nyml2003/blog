@@ -1,8 +1,8 @@
 /* C Mobile shared business components: ArticleRow and StateMessage.
    Depends on tokens.css, base.css, shell.css, layout.css.
    No Shelf, Filter, page orchestration or article-body theme rules live here.
-   `.retry-button` stays beside StateMessage until the Button atom consumption
-   migration (R6); it is not an atom style in this phase. */
+   StateMessage and retry controls are owned by mobile-ui/molecules; this file
+   keeps only the ArticleRow business layout during the migration. */
 .article-row {
   position: relative;
   display: grid;
@@ -83,42 +83,4 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--blue);
-}
-.state-message {
-  min-height: 190px;
-  display: grid;
-  place-content: center;
-  justify-items: center;
-  padding: 42px 16px;
-  color: var(--muted);
-  text-align: center;
-  border-block: 1px solid var(--border);
-}
-.state-message span {
-  width: 28px;
-  height: 28px;
-  display: grid;
-  place-items: center;
-  font-size: 22px;
-}
-.state-message.is-loading span {
-  animation: state-spin var(--motion-spin-duration) linear infinite;
-}
-.state-message p {
-  margin: 10px 0;
-}
-.retry-button {
-  min-height: var(--touch-target);
-  padding: 8px 18px;
-  border: 1px solid currentColor;
-  border-radius: var(--radius-control);
-  background: transparent;
-}
-.state-message.is-error {
-  color: var(--danger);
-}
-@keyframes state-spin {
-  to {
-    transform: rotate(360deg);
-  }
 }

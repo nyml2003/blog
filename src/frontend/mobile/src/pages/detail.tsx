@@ -1,5 +1,6 @@
 import { For, Show } from "solid-js";
 import { render } from "solid-js/web";
+import { Heading, Link, Tag, Text } from "../../../mobile-ui/atoms";
 import {
   browserClient as client,
   type Article,
@@ -10,8 +11,7 @@ import { err } from "../../../common/data/result";
 import { createDataTask } from "../../../common/data/task";
 import { useDataResource } from "../../../solid/data";
 import { StateMessage, ArticleBody, pageStyles } from "../components/ui";
-// Fixed Mobile CSS entry order. Keep tokens first and pages last; the atom
-// layer stays unimported until the separate atom consumption migration.
+// Keep the shared Mobile foundation first, then component-library styles.
 import "../../styles/tokens.css";
 import "../../styles/base.css";
 import "../../styles/shell.css";
@@ -22,6 +22,9 @@ import "../../styles/filter.css";
 import "../../styles/detail.css";
 import "../../styles/article-body.css";
 import "../../styles/pages.css";
+import "../../../mobile-ui/styles/themes.css";
+import "../../../mobile-ui/styles/atoms.css";
+import "../../../mobile-ui/styles/molecules.css";
 
 const displayDate = (value?: string) =>
   value
@@ -70,9 +73,11 @@ const App = () => {
     <div class="mobile-shell">
       {pageStyles()}
       <header class="reading-bar">
-        <a href="/m/articles/index.html" onClick={returnToArticleList}>
-          ← 文章库
-        </a>
+        <Link
+          content="← 文章库"
+          href="/m/articles/index.html"
+          options={{ onClick: returnToArticleList }}
+        />
         <span>阅读</span>
       </header>
       <main id="main" class="mobile-main detail-main">
@@ -92,16 +97,23 @@ const App = () => {
           >
             <article class="mobile-article">
               <header class="detail-header">
-                <p class="eyebrow">
-                  {article.snapshot()?.articleType?.name ?? "文章"}
-                </p>
-                <h1>{article.snapshot()?.title}</h1>
+                <Text
+                  content={article.snapshot()?.articleType?.name ?? "文章"}
+                  options={{ tone: "accent", size: "meta" }}
+                />
+                <Heading
+                  content={article.snapshot()?.title ?? ""}
+                  options={{ as: "h1", size: "page" }}
+                />
                 <Show when={article.snapshot()?.summary}>
-                  <p class="detail-summary">{article.snapshot()?.summary}</p>
+                  <Text
+                    content={article.snapshot()?.summary ?? ""}
+                    options={{ as: "p", tone: "muted", size: "body" }}
+                  />
                 </Show>
                 <p class="detail-meta">
                   <For each={article.snapshot()?.terms?.slice(0, 2) ?? []}>
-                    {(term) => <span>{term.name}</span>}
+                    {(term) => <Tag content={term.name} options={{}} />}
                   </For>
                   <Show when={(article.snapshot()?.terms?.length ?? 0) > 2}>
                     <span>
@@ -119,9 +131,11 @@ const App = () => {
               </header>
               <ArticleBody html={article.snapshot()?.contentHtml ?? ""} />
               <footer class="detail-footer">
-                <a href="/m/articles/index.html" onClick={returnToArticleList}>
-                  ← 返回文章库
-                </a>
+                <Link
+                  content="← 返回文章库"
+                  href="/m/articles/index.html"
+                  options={{ onClick: returnToArticleList }}
+                />
               </footer>
             </article>
           </Show>

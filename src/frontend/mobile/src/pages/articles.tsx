@@ -7,21 +7,22 @@ import {
   onMount,
 } from "solid-js";
 import { render } from "solid-js/web";
+import { Heading, Text } from "../../../mobile-ui/atoms";
 import {
   MobileNav,
   StateMessage,
   FilterPanel,
   pageStyles,
-  BottomNav,
   ShelfIndex,
   ShelfSection,
 } from "../components/ui";
+import { BottomNav } from "../../../mobile-ui/molecules";
+import { mobileNavigationItems } from "../logic/navigation";
 import { filterFromSearch, filterSearch } from "../../../common/logic/filter";
 import { browserClient as client } from "../../../common/client";
 import { useDataResource } from "../../../solid/data";
 import { type ArticleFilter } from "../../../common/contracts/domain";
-// Fixed Mobile CSS entry order. Keep tokens first and pages last; the atom
-// layer stays unimported until the separate atom consumption migration.
+// Keep the shared Mobile foundation first, then component-library styles.
 import "../../styles/tokens.css";
 import "../../styles/base.css";
 import "../../styles/shell.css";
@@ -32,6 +33,9 @@ import "../../styles/filter.css";
 import "../../styles/detail.css";
 import "../../styles/article-body.css";
 import "../../styles/pages.css";
+import "../../../mobile-ui/styles/themes.css";
+import "../../../mobile-ui/styles/atoms.css";
+import "../../../mobile-ui/styles/molecules.css";
 
 const App = () => {
   const [filter, setFilter] = createSignal<ArticleFilter>(
@@ -151,11 +155,12 @@ const App = () => {
       <MobileNav active="articles" />
       <main id="main" class="mobile-main">
         <header class="page-heading">
-          <p class="eyebrow">文章库</p>
-          <h1>全部文章</h1>
-          <p class="subtle">
-            共 {shelf.snapshot()?.total ?? "--"} 篇已发布记录
-          </p>
+          <Text content="文章库" options={{ tone: "accent", size: "meta" }} />
+          <Heading content="全部文章" options={{ as: "h1", size: "page" }} />
+          <Text
+            content={`共 ${shelf.snapshot()?.total ?? "--"} 篇已发布记录`}
+            options={{ as: "p", tone: "muted", size: "meta" }}
+          />
           <button
             class="filter-trigger"
             onClick={() => setOpen(true)}
@@ -210,7 +215,11 @@ const App = () => {
           onClose={() => setOpen(false)}
         />
       </Show>
-      <BottomNav active="articles" />
+      <BottomNav
+        items={mobileNavigationItems}
+        activeId="articles"
+        ariaLabel="页面导航"
+      />
     </div>
   );
 };
