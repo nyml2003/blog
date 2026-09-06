@@ -513,7 +513,7 @@ select {
   color: var(--muted);
   font-size: 11px;
 }
-.bottom-nav a.active {
+.bottom-nav a.is-active {
   color: var(--blue);
   font-weight: 800;
 }

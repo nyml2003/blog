@@ -39,7 +39,7 @@ export function BottomNav(p: { active: "home" | "articles" }) {
   return (
     <nav class="bottom-nav" aria-label="页面导航">
       <a
-        class={p.active === "home" ? "active" : ""}
+        class={p.active === "home" ? "is-active" : ""}
         aria-current={p.active === "home" ? "page" : undefined}
         href="/m/"
       >
@@ -49,7 +49,7 @@ export function BottomNav(p: { active: "home" | "articles" }) {
         <span>推荐</span>
       </a>
       <a
-        class={p.active === "articles" ? "active" : ""}
+        class={p.active === "articles" ? "is-active" : ""}
         aria-current={p.active === "articles" ? "page" : undefined}
         href="/m/articles/index.html"
       >
