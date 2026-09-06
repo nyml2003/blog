@@ -152,7 +152,9 @@ const App = () => {
             aria-expanded={open()}
           >
             <span>筛选文章</span>
-            <span>{activeCount() ? `${activeCount()} 项条件` : "全部"}</span>
+            <span class="filter-trigger-count">
+              {activeCount() ? `${activeCount()} 项条件` : "全部"}
+            </span>
           </button>
         </header>
         <Show

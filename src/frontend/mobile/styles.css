@@ -387,7 +387,7 @@ select {
   justify-content: space-between;
   text-align: left;
 }
-.filter-trigger span:last-child {
+.filter-trigger .filter-trigger-count {
   color: var(--blue);
   font-size: 13px;
 }
@@ -639,7 +639,7 @@ select {
   background: transparent;
   font-size: 28px;
 }
-.filter-panel label,
+.filter-panel > label,
 .filter-panel fieldset {
   display: block;
   margin: 17px 0;
@@ -664,10 +664,11 @@ select {
   font-weight: 700;
 }
 .check {
-  display: flex !important;
+  display: flex;
   align-items: center;
   gap: 10px;
   min-height: 44px;
+  margin: 17px 0;
 }
 .check input {
   width: 20px;
