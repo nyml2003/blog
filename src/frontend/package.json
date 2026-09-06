@@ -8,7 +8,7 @@
     "build": "pnpm wasm:build && vite build",
     "test:core": "pnpm wasm:build && node ../../scripts/test-article-html-wasm.mjs && tsx --test common/client/client.test.ts common/client/mock-session.test.ts common/data/core.test.ts common/data/resource.test.ts common/validation/article-html.test.ts solid/data/use-data-resource.test.ts desktop/src/pages/admin/preview-cache.test.ts",
     "typecheck": "pnpm wasm:build && tsc --noEmit",
-    "lint": "oxlint --deny-warnings desktop mobile common vite.config.ts",
+    "lint": "oxlint --deny-warnings desktop mobile mobile-ui common vite.config.ts",
     "format": "biome format --write .",
     "format:check": "biome format ."
   },

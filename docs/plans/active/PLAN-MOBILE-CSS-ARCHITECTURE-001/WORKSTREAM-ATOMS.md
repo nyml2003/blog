@@ -6,7 +6,7 @@ plan_id: PLAN-MOBILE-CSS-ARCHITECTURE-001
 role: frontend-mobile
 owner: frontend-mobile
 depends_on: [WORKSTREAM-MOBILE-CSS-AUDIT]
-write_set: [web/mobile/src/atoms/, web/mobile/styles/atoms.css]
+write_set: [src/frontend/mobile-ui/atoms/, src/frontend/mobile-ui/styles/atoms.css]
 last_reviewed: 2026-09-05
 ---
 
@@ -24,8 +24,8 @@ last_reviewed: 2026-09-05
 
 ## 实现约束
 
-- 源码只能写入本工作流 write set；入口是 `web/mobile/src/atoms/index.ts`，每个原子独立文件；
-- CSS 只能写入 `web/mobile/styles/atoms.css`，且只依赖已批准的 token/base 命名；当前不将它
+- 源码只能写入本工作流 write set；入口是 `src/frontend/mobile-ui/atoms/index.ts`，每个原子独立文件；
+- CSS 只能写入 `src/frontend/mobile-ui/styles/atoms.css`，且只依赖已批准的 token/base 命名；当前不将它
   import 到页面入口，避免隐式接入；
 - 必填 Props 由 TypeScript 表达；`IconButton.ariaLabel`、`Label.controlId`、`Link.href`、
   `Input.value/onInput`、`Select.content/value/onChange`、`Checkbox.checked/onChange` 必须另有

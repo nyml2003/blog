@@ -13,6 +13,7 @@
   "include": [
     "desktop",
     "mobile",
+    "mobile-ui",
     "common",
     "solid",
     "vite-env.d.ts",

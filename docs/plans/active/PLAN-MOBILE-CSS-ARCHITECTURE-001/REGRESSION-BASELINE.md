@@ -160,6 +160,14 @@ last_reviewed: 2026-09-05
 
 本计划不新增测试依赖。后续若引入浏览器自动化，应单独立项并先固定本文件的 fixture、viewport、reduced-motion、等待条件和截图命名；不要把网络不稳定、动态日期或未固定的字体当成视觉差异。
 
+## 环境勘误（2026-09-06 PM 承接更新）
+
+本文件冻结于 Go 时代，以下环境事实已变化（场景表、判定与退出条件不变）：
+
+- `ops runtime dev` 现在**直接启动 Vite + Rust Mock Product API**（单命令），不再需要文档所述的两个手工终端与 `go run`；Go 已于 2026-09-06 退场。
+- 受控本地数据源改用 Mock：`default` 场景固定 seed（9 published + 3 draft、3 类型、4 标签、6 推荐）覆盖推荐/Shelf/Filter/详情；`empty` / `server-error` / `slow` 场景覆盖空/错/延迟状态；`?mock-session=<id>` 提供跨请求会话态注入。「不写入正式 `blog.db`」约束因仓库零状态（数据文件已删）自动满足。
+- 路径前缀 `web/` 现为 `src/frontend/`（证据表格中的行号引用以 `src/frontend/mobile/...` 对应解读）；命令 `pnpm --dir web` / `--filter blog-web` 现为 `pnpm -C src/frontend`。
+
 ## CSS 迁移开工 Gate
 
 在 `WORKSTREAM-MOBILE-CSS-MIGRATION` 从 `ready` 变更为实施中之前，PM 与质量 owner 必须逐项确认：

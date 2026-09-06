@@ -101,7 +101,7 @@ CSS 审计与模块边界
 | 工作流 | Owner | 依赖 | Write set | 状态 |
 | --- | --- | --- | --- | --- |
 | 视觉/前端：样式依赖审计与模块方案 | visual-design + frontend-mobile | - | `docs/architecture/ui-ux.md`, 本计划审计文档 | completed |
-| 前端：独立原子组件库 | frontend-mobile | 审计方案 | `web/mobile/src/atoms/**`, `web/mobile/styles/atoms.css` | completed |
+| 前端：独立原子组件库 | frontend-mobile | 审计方案 | `src/frontend/mobile-ui/atoms/**`, `src/frontend/mobile-ui/styles/atoms.css` | completed |
 | 前端：CSS 文件与 class 迁移 | frontend-mobile | 审计方案、独立原子库 | `web/mobile/styles.css`, 除原子目录外的 `web/mobile/**/*.css`, 现有 Mobile JSX class | ready |
 | 测试：视觉与交互回归 | frontend-mobile | 迁移 | Mobile 测试、验收记录 | ready |
 | 项目管理：写集协调与验收 | project-manager | 全部工作流 | 计划、结果、状态记录 | ready |

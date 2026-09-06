@@ -25,7 +25,7 @@ last_reviewed: 2026-09-05
 | 0 | 旧 `styles.css`、`filter.css` | 建立迁移前快照、selector inventory 和基线截图/手工记录。 | 现有源码与固定 fixture。 | 不改视觉、不补新 class。 | 迁移负责人自己的基线记录。 |
 | 1 | `styles/tokens.css` | 颜色、表面、前景、焦点、边框、圆角、尺寸、层级、安全区、motion 的语义 token。 | 无。 | 不放组件 selector、页面 margin 或领域颜色逻辑。 | `web/mobile/styles/tokens.css`。 |
 | 2 | `styles/base.css` | `box-sizing`、html/body、原生元素 reset、全局 focus-visible、reduced-motion。 | `tokens.css`。 | 不放业务状态、Filter scroll lock 或正文排版。 | `web/mobile/styles/base.css`。 |
-| 3 | `styles/atoms.css` + `src/atoms/**`（已完成、保持隔离） | 九个批准原子的原生语义、受控状态、触控尺寸和独占样式。 | `tokens.css`、`base.css`。 | 不读取 SDK/路由/全局状态，不承担业务布局或页面间距。 | `web/mobile/styles/atoms.css`、`web/mobile/src/atoms/**`；本次 CSS 迁移不得改写。 |
+| 3 | `styles/atoms.css` + `src/atoms/**`（已完成、保持隔离） | 九个批准原子的原生语义、受控状态、触控尺寸和独占样式。 | `tokens.css`、`base.css`。 | 不读取 SDK/路由/全局状态，不承担业务布局或页面间距。 | `src/frontend/mobile-ui/styles/atoms.css`、`src/frontend/mobile-ui/atoms/**`；本次 CSS 迁移不得改写。 |
 | 4 | `styles/shell.css`、`styles/layout.css` | Skip link、Mobile header/brand、主容器、BottomNav，以及不带业务语义的布局原语。 | `tokens.css`、`base.css`；可引用已稳定 atoms，但不覆盖其内部。 | 不放 Shelf、Filter、详情、文章条目规则。 | `web/mobile/styles/shell.css`, `layout.css`。 |
 | 5 | `styles/components.css` | `ArticleRow`、`StateMessage` 等共享业务组件及内部稳定结构。 | token/base/shell/layout。 | 不吸收 Shelf、Filter、页面编排、正文主题或数据读取。 | `web/mobile/styles/components.css`。 |
 | 6 | `styles/shelf.css` | Shelf layout/index/section/card、sticky、scrollspy 视觉和 Shelf 私有状态。 | token/base/shell/layout/components（仅按需）。 | 不修改 scrollspy 逻辑，不变成通用 grid 或 Link 卡。 | `web/mobile/styles/shelf.css`。 |

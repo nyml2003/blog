@@ -58,8 +58,8 @@ last_reviewed: 2026-09-05
 
 ### 审计后实施决定
 
-- 原子 CSS 的唯一文件为 `web/mobile/styles/atoms.css`，不再把按钮或表单控件继续混入业务 `components.css`；它只依赖 `tokens.css`、`base.css`，并在后续 CSS 迁移中早于业务模块加载。
-- 原子源码的唯一入口为 `web/mobile/src/atoms/index.ts`；未来调用方只能通过这个入口具名导入，不深度导入实现文件。实现已包含九个原子、统一配置校验 helper、组件级 fail-fast 单测和独占 `atoms.css`。
+- 原子 CSS 的唯一文件为 `src/frontend/mobile-ui/styles/atoms.css`，不再把按钮或表单控件继续混入业务 `components.css`；它只依赖 `tokens.css`、`base.css`，并在后续 CSS 迁移中早于业务模块加载。
+- 原子源码的唯一入口为 `src/frontend/mobile-ui/atoms/index.ts`；未来调用方只能通过这个入口具名导入，不深度导入实现文件。实现已包含九个原子、统一配置校验 helper、组件级 fail-fast 单测和独占 `atoms.css`。
 - `FilterPanel`、Shelf、ArticleRow、导航、StateMessage、阅读页、文章正文和页面 JSX 在当前工作流中均为冻结消费者。原子库完整实现且独立验证后，才讨论单独的接入任务。
 - 类型检查和运行时 fail-fast 共同保护原子 Props。语义/受控协议配置不完整时，必须在所有环境、DOM 创建前抛出带组件名和字段名的 `Error`；不得用静默默认、warning、fallback 或 no-op 掩盖。
 

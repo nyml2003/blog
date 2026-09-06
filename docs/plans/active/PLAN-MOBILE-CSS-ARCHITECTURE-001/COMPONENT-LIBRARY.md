@@ -53,7 +53,7 @@ web/mobile/
     atoms.css
 ```
 
-消费方只从 `web/mobile/src/atoms/index.ts` 导入具名组件，不能深度导入单个实现文件：
+消费方只从 `src/frontend/mobile-ui/atoms/index.ts` 导入具名组件，不能深度导入单个实现文件：
 
 ```tsx
 import { Button, Input, Label } from "../atoms";

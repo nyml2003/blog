@@ -229,7 +229,7 @@ TypeScript 的必填字段只保护经过类型检查的调用点，不能保护
 
 ## CSS 所有权和 token 依赖
 
-实现时为原子建立独占的 `web/mobile/styles/atoms.css`（或在最终模块图中同等明确、仅由原子拥有的子模块）。该文件只能依赖 `tokens.css` 和 `base.css`；它不读取 shell、layout、filter、shelf、detail、pages、业务组件或文章主题样式。该文件的引入顺序在最终 CSS 审计后冻结，但必须早于业务组件和页面模块。
+实现时为原子建立独占的 `src/frontend/mobile-ui/styles/atoms.css`（或在最终模块图中同等明确、仅由原子拥有的子模块）。该文件只能依赖 `tokens.css` 和 `base.css`；它不读取 shell、layout、filter、shelf、detail、pages、业务组件或文章主题样式。该文件的引入顺序在最终 CSS 审计后冻结，但必须早于业务组件和页面模块。
 
 | CSS 契约 | 要求 |
 | --- | --- |

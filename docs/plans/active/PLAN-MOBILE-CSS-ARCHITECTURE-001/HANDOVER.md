@@ -25,7 +25,7 @@ CSS 文件也**没有**开始拆分。该边界是有意保留的：先让原子
 | [`STYLE-INVENTORY.md`](STYLE-INVENTORY.md) | complete | 当前 selector/class、消费者、目标层级、唯一模块所有者与迁移风险。 |
 | [`ATOM-CONTRACT.md`](ATOM-CONTRACT.md) | approved | 九个原子的 Props、原生语义、a11y、fail-fast 和禁止依赖。 |
 | [`COMPONENT-LIBRARY.md`](COMPONENT-LIBRARY.md) | implemented-not-integrated | 调用方入口、示例、状态矩阵和 CSS 所有权。 |
-| `web/mobile/src/atoms/**`、`web/mobile/styles/atoms.css` | completed | 独立的 `Text`、`Heading`、`Button`、`IconButton`、`Link`、`Label`、`Input`、`Select`、`Checkbox`。 |
+| `src/frontend/mobile-ui/atoms/**`、`src/frontend/mobile-ui/styles/atoms.css` | completed | 独立的 `Text`、`Heading`、`Button`、`IconButton`、`Link`、`Label`、`Input`、`Select`、`Checkbox`。 |
 | [`REGRESSION-BASELINE.md`](REGRESSION-BASELINE.md) | approved | 固定路由、视口、场景、失败等级、证据格式与迁移开工 gate。 |
 | [`MIGRATION-RUNBOOK.md`](MIGRATION-RUNBOOK.md) | ready | CSS 模块顺序、write set、R0-R6 回滚门和禁止职责。 |
 
@@ -42,7 +42,7 @@ CSS 文件也**没有**开始拆分。该边界是有意保留的：先让原子
 
 - 依赖方向是 `Data SDK -> Client SDK -> Solid adapter -> business component -> molecule -> atom`；
   原子只渲染 Props 并通过回调通知，不读取数据、不发请求、不管理异步或复杂状态。
-- 第一批仅有九个已证明的原子。调用方只从 `web/mobile/src/atoms/index.ts` 具名导入；不得深度导入。
+- 第一批仅有九个已证明的原子。调用方只从 `src/frontend/mobile-ui/atoms/index.ts` 具名导入；不得深度导入。
 - 原子 Props 使用完整必填 Props 对象加 `options: Partial<...Options>`。关键语义和受控协议同时
   受 TypeScript 与运行时保护。
 - fail-fast 在所有环境中执行，DOM 创建前抛出 `C Mobile atom:` 前缀、组件名和字段名；不允许
@@ -67,7 +67,7 @@ CSS 文件也**没有**开始拆分。该边界是有意保留的：先让原子
 ```text
 ops workspace doctor
 ops quality check
-pnpm --dir web exec tsx --test mobile/src/atoms/config.test.ts
+pnpm -C src/frontend exec tsx --test mobile-ui/atoms/config.test.ts
 pnpm --dir web typecheck
 pnpm --dir web lint
 pnpm --dir web format:check
