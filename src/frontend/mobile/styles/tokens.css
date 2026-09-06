@@ -15,6 +15,9 @@
   --teal: #2c8c7b;
   --danger: #c94b4b;
 
+  /* Atom typography; legacy modules retain their existing font declarations. */
+  --font-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
   /* Surfaces */
   --surface-header: rgba(244, 241, 234, 0.96);
   --surface-nav: rgba(255, 252, 247, 0.98);

@@ -24,6 +24,8 @@ export type Article = {
   readonly terms?: readonly Term[];
 };
 
+export type ArticleListItem = Omit<Article, "contentHtml">;
+
 export type ArticleFilter = {
   termIds: string[];
   typeId: string;

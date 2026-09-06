@@ -15,13 +15,13 @@ last_reviewed: 2026-09-06
 常用入口：
 
 ```text
-nix develop
+nix develop ./nix
 ops workspace doctor
 ops quality check
 ops delivery build
-ops runtime dev
-ops runtime backend
-ops runtime integration
+ops runtime dev --scenario default --web-port 5173 --mock-port 9090
+ops runtime backend --data mock --product-port 8080 --data-port 8081
+ops runtime integration --product-port 8080 --data-port 8081
 ```
 
 帮助入口等价：`ops help <path>`、`ops <path> --help` 和 `ops <path> help`。直接运行已知分组（例如 `ops quality`）会展示该分组帮助。
@@ -30,14 +30,17 @@ ops runtime integration
 
 | 命令 | 进程 | 数据来源 | 页面入口 |
 | --- | --- | --- | --- |
-| `ops runtime dev [--scenario <NAME>]` | Vite dev + Mock Product API | Mock（`default`/`empty`/`slow`/`server-error`/`malformed-response`） | Vite 地址（默认 `http://127.0.0.1:5173`） |
-| `ops runtime backend [--data mock\|test]` | Rust Product API-only + Rust Data | `mock`（内存夹具，默认）或 `test`（临时 SQLite + 自动迁移 + seed） | 无，API 基址即 Product 地址 |
-| `ops runtime integration [--watch]` | 先构建 `src/frontend/dist`，再启动 Rust Product（挂载 `src/frontend/dist`）+ Rust Data(test) | `test`（固定，不接受 `--data`） | Product 地址，页面与 `/api` 同源 |
+| `ops runtime dev --scenario <NAME> --web-port <PORT> --mock-port <PORT>` | Vite dev + Mock Product API | Mock（`default`/`empty`/`slow`/`server-error`/`malformed-response`） | Vite 实际绑定地址 |
+| `ops runtime backend --data <mock\|test> --product-port <PORT> --data-port <PORT>` | Rust Product API-only + Rust Data | `mock`（内存夹具，显式选择）或 `test`（临时 SQLite + 自动迁移 + seed） | 无，API 基址即 Product 地址 |
+| `ops runtime integration --product-port <PORT> --data-port <PORT> [--watch]` | 先构建 `src/frontend/dist`，再启动 Rust Product（挂载 `src/frontend/dist`）+ Rust Data(test) | `test`（固定，不接受 `--data`） | Product 地址，页面与 `/api` 同源 |
 | `ops delivery build` | 无（只构建 `src/frontend/dist` 与 Rust Product/Data/Mock binary，不编译 Go 目标） | — | — |
 
 约定：
 
-- 端口候选为 Vite `5173`、Product `8080`、Data `8081`、Mock `9090`，可用 `--web-port`/`--product-port`/`--data-port`/`--mock-port`（`1024`–`65535`）覆盖；被占用时从候选值起逐次 +1（最多尝试 10 个端口），实际绑定结果即注入给依赖方的地址。
+- 参数契约见 [SPEC-OPS-PARAMETERS-001](../specs/SPEC-OPS-PARAMETERS-001.md)。有值参数必填且不得重复，禁止环境变量补值；帮助列出全部枚举与范围。`default` 只是需要显式选择的场景名称。
+- `--watch`、`--check`、`--help`、`--dry-run`、`--json` 为 switch：出现 true，缺省 false，重复幂等，不接受 `=true`/`=false`。`ops quality format` 写入，`ops quality format --check` 只检查；dry-run 仍须完整参数。
+
+- 端口候选必须由对应 `--web-port`/`--product-port`/`--data-port`/`--mock-port`（十进制 int32，`1024`–`65535`）显式提供，无默认值；被占用时从候选值起逐次 +1（最多尝试 10 个端口），实际绑定结果即注入给依赖方的地址。
 - 监听地址固定 `127.0.0.1`，不提供 `--host`/`--listen`；`--scenario` 只接受命名场景，通过 CLI 传入，不读取环境变量。
 - 日志每行带来源前缀 `[web]`/`[product]`/`[data]`/`[mock]`/`[ops]`；`[ops]` 的错误与失败摘要输出到 stderr。
 - 顶层退出码全局统一：`0` 成功、`10` 用法/配置错误、`20` 执行失败（端口耗尽、服务启动失败、构建失败或子进程退出）、`130` SIGINT、`143` SIGTERM。运行中的模式没有 `0` 退出路径：正常停止只能通过信号（130/143）；任一服务子进程在运行态自行退出——含 `exit 0`——都算 `CHILD_EXITED`/`20` 并停止其余服务。Ctrl-C 会传播到所有子进程并等待退出（限期 5s，超限 SIGKILL）。

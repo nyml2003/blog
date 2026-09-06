@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { allocatePort, candidatesFor, portOptionError, PORT_ATTEMPTS, PORT_MAX, PORT_MIN } from './port-allocation.ts';
+import { allocatePort, candidatesFor, PORT_ATTEMPTS, PORT_MAX, PORT_MIN } from './port-allocation.ts';
 import { OpsError } from './errors.ts';
-import { dataModeError, planMode, scenarioError, exitCodeForSignal, withLogPrefix } from './runtime.ts';
+import { planMode, exitCodeForSignal, withLogPrefix } from './runtime.ts';
 
 function probeWith(occupied: ReadonlySet<number>) {
   const seen: number[] = [];
@@ -11,16 +11,6 @@ function probeWith(occupied: ReadonlySet<number>) {
     probe: { isFree: async (port: number) => { seen.push(port); return !occupied.has(port); } },
   };
 }
-
-test('port overrides accept the selectable range and reject 0, bounds and non-integers', () => {
-  assert.equal(portOptionError(1024), undefined);
-  assert.equal(portOptionError(65535), undefined);
-  assert.match(portOptionError(0) ?? '', /范围/);
-  assert.match(portOptionError(1023) ?? '', /范围/);
-  assert.match(portOptionError(65536) ?? '', /范围/);
-  assert.match(portOptionError('abc') ?? '', /整数/);
-  assert.match(portOptionError(8080.5) ?? '', /整数/);
-});
 
 test('candidate window is bounded to ten ports and clamped to the range top', () => {
   assert.deepEqual(candidatesFor(8081), [8081, 8082, 8083, 8084, 8085, 8086, 8087, 8088, 8089, 8090]);
@@ -60,31 +50,23 @@ test('exhausting the window raises PORT_EXHAUSTED with every attempted port', as
 });
 
 test('mode plans fix the dependency order, data semantics and candidate ports', () => {
-  assert.deepEqual(planMode('dev').services, ['mock', 'web']);
-  assert.deepEqual(planMode('dev').candidates, { mock: 9090, web: 5173 });
-  assert.deepEqual(planMode('backend').services, ['data', 'product']);
-  assert.deepEqual(planMode('integration').services, ['data', 'product']);
-  assert.equal(planMode('dev').entry, 'web');
-  assert.equal(planMode('backend').entry, null);
-  assert.equal(planMode('integration').entry, 'product');
-  assert.equal(planMode('backend').dataMode, 'mock');
-  assert.equal(planMode('backend', { dataMode: 'test' }).dataMode, 'test');
-  assert.equal(planMode('integration').dataMode, 'test');
-  assert.deepEqual(planMode('dev').builds, []);
-  assert.equal(planMode('integration').builds.length, 1);
-  assert.equal(planMode('integration', { watch: true }).watchBuild?.label, 'pnpm -C src/frontend run build --watch');
-  assert.equal(planMode('dev', { scenario: 'empty' }).scenario, 'empty');
-  assert.equal(planMode('dev', {}).scenario, 'default');
-  assert.deepEqual(planMode('dev', { webPort: 5273, mockPort: 9190 }).candidates, { mock: 9190, web: 5273 });
-  assert.deepEqual(planMode('backend', { productPort: 18080, dataPort: 18081 }).candidates, { data: 18081, product: 18080 });
-});
-
-test('scenario and data values accept only the named sets', () => {
-  for (const name of ['default', 'empty', 'slow', 'server-error', 'malformed-response']) assert.equal(scenarioError(name), undefined);
-  assert.match(scenarioError('production') ?? '', /未知场景/);
-  assert.equal(dataModeError('mock'), undefined);
-  assert.equal(dataModeError('test'), undefined);
-  assert.match(dataModeError('prod') ?? '', /非法的 --data/);
+  assert.deepEqual(planMode({ mode: 'dev', scenario: 'default', webPort: 5173, mockPort: 9090 }).services, ['mock', 'web']);
+  assert.deepEqual(planMode({ mode: 'dev', scenario: 'default', webPort: 5173, mockPort: 9090 }).candidates, { mock: 9090, web: 5173 });
+  assert.deepEqual(planMode({ mode: 'backend', dataMode: 'mock', productPort: 8080, dataPort: 8081 }).services, ['data', 'product']);
+  assert.deepEqual(planMode({ mode: 'integration', watch: false, productPort: 8080, dataPort: 8081 }).services, ['data', 'product']);
+  assert.equal(planMode({ mode: 'dev', scenario: 'default', webPort: 5173, mockPort: 9090 }).entry, 'web');
+  assert.equal(planMode({ mode: 'backend', dataMode: 'mock', productPort: 8080, dataPort: 8081 }).entry, null);
+  assert.equal(planMode({ mode: 'integration', watch: false, productPort: 8080, dataPort: 8081 }).entry, 'product');
+  assert.equal(planMode({ mode: 'backend', dataMode: 'mock', productPort: 8080, dataPort: 8081 }).dataMode, 'mock');
+  assert.equal(planMode({ mode: 'backend', dataMode: 'test', productPort: 8080, dataPort: 8081 }).dataMode, 'test');
+  assert.equal(planMode({ mode: 'integration', watch: false, productPort: 8080, dataPort: 8081 }).dataMode, 'test');
+  assert.deepEqual(planMode({ mode: 'dev', scenario: 'default', webPort: 5173, mockPort: 9090 }).builds, []);
+  assert.equal(planMode({ mode: 'integration', watch: false, productPort: 8080, dataPort: 8081 }).builds.length, 1);
+  assert.equal(planMode({ mode: 'integration', watch: true, productPort: 8080, dataPort: 8081 }).watchBuild?.label, 'pnpm -C src/frontend run build --watch');
+  assert.equal(planMode({ mode: 'dev', scenario: 'empty', webPort: 5173, mockPort: 9090 }).scenario, 'empty');
+  assert.equal(planMode({ mode: 'dev', scenario: 'default', webPort: 5173, mockPort: 9090 }).scenario, 'default');
+  assert.deepEqual(planMode({ mode: 'dev', scenario: 'default', webPort: 5273, mockPort: 9190 }).candidates, { mock: 9190, web: 5273 });
+  assert.deepEqual(planMode({ mode: 'backend', dataMode: 'mock', productPort: 18080, dataPort: 18081 }).candidates, { data: 18081, product: 18080 });
 });
 
 test('forwarding adds a prefix only when the line does not already carry one', () => {
@@ -102,4 +84,16 @@ test('forwarding adds a prefix only when the line does not already carry one', (
 test('signals map to 130 and 143', () => {
   assert.equal(exitCodeForSignal('SIGINT'), 130);
   assert.equal(exitCodeForSignal('SIGTERM'), 143);
+});
+
+test('runtime planning never repairs missing or invalid business input', () => {
+  for (const input of [
+    { mode: 'dev', scenario: 'default', webPort: 5173 },
+    { mode: 'dev', scenario: 'unknown', webPort: 5173, mockPort: 9090 },
+    { mode: 'backend', dataMode: 'unknown', productPort: 8080, dataPort: 8081 },
+    { mode: 'integration', productPort: 8080, dataPort: 8081 },
+    { mode: 'backend', dataMode: 'mock', productPort: 0, dataPort: 8081 },
+  ]) {
+    assert.throws(() => Reflect.apply(planMode, undefined, [input]), /invalid runtime/);
+  }
 });

@@ -1,10 +1,15 @@
-import { createEffect, createSignal, For, Show } from "solid-js";
 import {
-  browserClient as client,
+  type Accessor,
+  createEffect,
+  createSignal,
+  For,
+  onCleanup,
+  Show,
+} from "solid-js";
+import {
   type ArticleId,
+  browserClient as client,
 } from "../../../../common/client";
-import { useDataResource } from "../../../../solid/data";
-import { type Article, Header, qs, Status } from "../../app";
 import type { DataError } from "../../../../common/data/errors";
 import type { DeepReadonly } from "../../../../common/data/readonly";
 import type {
@@ -12,7 +17,13 @@ import type {
   HtmlInspection,
 } from "../../../../common/validation/article-html";
 import { byteOffsetToSelection } from "../../../../common/validation/article-html";
-import { cachedPreviewDraft, previewKey } from "./preview-cache";
+import { useDataResource } from "../../../../solid/data";
+import { type Article, Header, qs, Status } from "../../app";
+import {
+  createCodeMirrorEditor,
+  htmlDiagnosticsToCodeMirror,
+} from "./editor-codemirror";
+import { EditorPreview } from "./editor-preview";
 import { HtmlDiagnostics, useHtmlInspection } from "./html-inspection";
 
 const emptyArticle: Article = {
@@ -27,18 +38,83 @@ const emptyArticle: Article = {
   createdAt: "",
   updatedAt: "",
 };
+
+function CodeMirrorEditor(props: {
+  value: Accessor<string>;
+  busy: Accessor<boolean>;
+  inspection: Accessor<DeepReadonly<HtmlInspection> | undefined>;
+  onChange: (value: string) => void;
+  onReady: (
+    controller: ReturnType<typeof createCodeMirrorEditor> | undefined,
+  ) => void;
+}) {
+  let host: HTMLDivElement | undefined;
+  const [controller, setController] = createSignal<
+    ReturnType<typeof createCodeMirrorEditor> | undefined
+  >();
+  onCleanup(() => {
+    props.onReady(undefined);
+    controller()?.destroy();
+    setController(undefined);
+    host = undefined;
+  });
+  return (
+    <div
+      ref={(element) => {
+        host = element;
+        const editor = createCodeMirrorEditor(
+          element,
+          props.value(),
+          props.onChange,
+        );
+        setController(editor);
+        props.onReady(editor);
+      }}
+      id="html"
+      class="editor-codemirror"
+      aria-describedby="html-diagnostics"
+      aria-invalid={props.inspection()?.valid === false}
+    >
+      <CodeMirrorEffects controller={controller} {...props} />
+    </div>
+  );
+}
+
+function CodeMirrorEffects(props: {
+  controller: Accessor<ReturnType<typeof createCodeMirrorEditor> | undefined>;
+  value: Accessor<string>;
+  busy: Accessor<boolean>;
+  inspection: Accessor<DeepReadonly<HtmlInspection> | undefined>;
+}) {
+  createEffect(() => {
+    const value = props.value();
+    props.controller()?.setValue(value);
+  });
+  createEffect(() => {
+    const busy = props.busy();
+    props.controller()?.setReadOnly(busy);
+  });
+  createEffect(() => {
+    const diagnostics = htmlDiagnosticsToCodeMirror(
+      props.value(),
+      props.inspection(),
+    );
+    props.controller()?.setDiagnostics(diagnostics);
+    props.controller()?.setInvalid(props.inspection()?.valid === false);
+  });
+  return null;
+}
+
 export function Editor() {
   const id = qs().get("id");
-  const cached = cachedPreviewDraft(id);
   const [currentId, setCurrentId] = createSignal(id ? Number(id) : 0);
   const loaded = useDataResource(
     () => id,
     (articleId) =>
-      articleId && !cached
+      articleId
         ? client.adminArticles.get(Number(articleId) as ArticleId)
         : {
-            start: () =>
-              Promise.resolve({ ok: true, value: cached ?? emptyArticle }),
+            start: () => Promise.resolve({ ok: true, value: emptyArticle }),
             cancel: () => undefined,
           },
   );
@@ -75,10 +151,9 @@ export function Editor() {
     if (failure !== undefined && "message" in failure) return failure.message;
     return "";
   };
-  let htmlField: HTMLTextAreaElement | undefined;
+  let editorController: ReturnType<typeof createCodeMirrorEditor> | undefined;
   const locate = (diagnostic: DeepReadonly<HtmlDiagnostic>) => {
-    htmlField?.focus();
-    htmlField?.setSelectionRange(
+    editorController?.focusAndSelect(
       byteOffsetToSelection(html(), diagnostic.span.start.byte),
       byteOffsetToSelection(html(), diagnostic.span.end.byte),
     );
@@ -101,16 +176,6 @@ export function Editor() {
     initialized = true;
   });
 
-  const draft = (): Article => ({
-    ...(loaded.snapshot() ?? emptyArticle),
-    id: currentId(),
-    title: title(),
-    summary: summary(),
-    articleTypeId: Number(typeId()),
-    termIds: termIds(),
-    contentHtml: html(),
-    status: status(),
-  });
   const save = async (publish = false) => {
     if (busy()) return;
     if (publish && !valid()) return;
@@ -152,11 +217,6 @@ export function Editor() {
         article = published.value;
       }
       setStatus(article.status);
-      try {
-        sessionStorage.removeItem(previewKey);
-      } catch {
-        /* Storage is optional for saving. */
-      }
       setMessage(publish ? "文章已保存并发布" : "文章已保存");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "保存失败，请重试");
@@ -188,18 +248,6 @@ export function Editor() {
       setBusy(false);
     }
   };
-  const preview = () => {
-    if (busy() || !valid()) return;
-    try {
-      sessionStorage.setItem(previewKey, JSON.stringify(draft()));
-      location.assign(
-        `/admin/articles/preview.html${currentId() ? `?id=${currentId()}` : ""}`,
-      );
-    } catch {
-      setError("无法暂存预览，编辑内容仍保留在当前页面");
-    }
-  };
-
   return (
     <div class="shell">
       <Header admin />
@@ -219,17 +267,14 @@ export function Editor() {
             fallback={<div class="error">文章加载失败或不存在</div>}
           >
             <Status busy={busy()} error={error()} ok={message()} />
-            <fieldset
-              class="editor-fields"
-              disabled={busy()}
-              aria-label="文章内容"
-            >
+            <fieldset class="editor-fields" aria-label="文章内容">
               <div class="editor-grid">
                 <aside class="editor-meta">
                   <div class="field">
                     <label for="title">标题</label>
                     <input
                       id="title"
+                      disabled={busy()}
                       value={title()}
                       onInput={(event) => setTitle(event.currentTarget.value)}
                     />
@@ -238,6 +283,7 @@ export function Editor() {
                     <label for="article-type">文章类型</label>
                     <select
                       id="article-type"
+                      disabled={busy()}
                       value={typeId()}
                       onChange={(event) => setTypeId(event.currentTarget.value)}
                     >
@@ -251,6 +297,7 @@ export function Editor() {
                     <label for="summary">摘要</label>
                     <textarea
                       id="summary"
+                      disabled={busy()}
                       value={summary()}
                       maxLength={160}
                       rows={4}
@@ -261,7 +308,7 @@ export function Editor() {
                       可选，{summary().length}/160 字
                     </small>
                   </div>
-                  <fieldset class="term-picker">
+                  <fieldset class="term-picker" disabled={busy()}>
                     <legend>主题/标签</legend>
                     <For each={terms.snapshot() ?? []}>
                       {(term) => (
@@ -292,22 +339,23 @@ export function Editor() {
                   </p>
                 </aside>
                 <section class="editor-source">
-                  <div class="field">
-                    <label for="html">HTML 正文</label>
-                    <textarea
-                      id="html"
-                      ref={(element) => {
-                        htmlField = element;
-                      }}
-                      value={html()}
-                      onInput={(event) => {
-                        setServerInspection(undefined);
-                        setHtml(event.currentTarget.value);
-                      }}
-                      spellcheck={false}
-                      aria-describedby="html-diagnostics"
-                      aria-invalid={inspection()?.valid === false}
-                    />
+                  <div class="editor-split">
+                    <div class="field">
+                      <label for="html">HTML 正文</label>
+                      <CodeMirrorEditor
+                        value={html}
+                        busy={busy}
+                        inspection={inspection}
+                        onReady={(controller) => {
+                          editorController = controller;
+                        }}
+                        onChange={(value) => {
+                          setServerInspection(undefined);
+                          setHtml(value);
+                        }}
+                      />
+                    </div>
+                    <EditorPreview html={html} />
                   </div>
                   <HtmlDiagnostics
                     inspection={inspection()}
@@ -325,9 +373,6 @@ export function Editor() {
             <div class="actions editor-actions">
               <button onClick={() => save(false)} disabled={busy()}>
                 保存
-              </button>
-              <button onClick={preview} disabled={busy() || !valid()}>
-                预览
               </button>
               {status() === "published" ? (
                 <button

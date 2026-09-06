@@ -79,12 +79,12 @@ test('port overrides are validated as usage errors before any process starts', a
 test('unknown scenario names and invalid data modes are usage errors', async () => {
   const scenario = await capture(['runtime', 'dev', '--scenario', 'nope']);
   assert.equal(scenario.code, 10);
-  assert.match(scenario.errors, /未知场景: nope/);
+  assert.match(scenario.errors, /非法值: "nope"/);
   assert.match(scenario.errors, /default, empty, slow/);
 
   const data = await capture(['runtime', 'backend', '--data', 'prod']);
   assert.equal(data.code, 10);
-  assert.match(data.errors, /非法的 --data 取值: prod/);
+  assert.match(data.errors, /非法值: "prod"/);
 });
 
 test('integration refuses --data and the retired --host/--listen options', async () => {
@@ -111,7 +111,7 @@ test('deleted commands point at their migration target and exit 10', async () =>
 });
 
 test('dry run prints the plan without binding ports or spawning processes', async () => {
-  const dev = await capture(['runtime', 'dev', '--dry-run']);
+  const dev = await capture(['runtime', 'dev', '--scenario', 'default', '--web-port', '5173', '--mock-port', '9090', '--dry-run']);
   assert.equal(dev.code, 0);
   assert.match(dev.output, /dry-run: runtime dev/);
   assert.match(dev.output, /\[mock\] 候选端口 9090/);
@@ -119,7 +119,7 @@ test('dry run prints the plan without binding ports or spawning processes', asyn
   assert.match(dev.output, /入口: http:\/\/127\.0\.0\.1:5173/);
   assert.doesNotMatch(dev.output, /就绪/);
 
-  const backend = await capture(['runtime', 'backend', '--dry-run']);
+  const backend = await capture(['runtime', 'backend', '--data', 'mock', '--product-port', '8080', '--data-port', '8081', '--dry-run']);
   assert.equal(backend.code, 0);
   assert.match(backend.output, /\[data\] 候选端口 8081/);
   assert.match(backend.output, /\[product\] 候选端口 8080/);
@@ -137,4 +137,64 @@ test('dry run honours port overrides in the printed plan', async () => {
   assert.equal(result.code, 0);
   assert.match(result.output, /\[product\] 候选端口 18080/);
   assert.match(result.output, /\[data\] 候选端口 18081/);
+});
+
+test('value options are mandatory even for dry runs and switches cannot take values', async () => {
+  for (const mode of ['dev', 'backend', 'integration']) {
+    const result = await capture(['runtime', mode, '--dry-run']);
+    assert.equal(result.code, 10);
+    assert.match(result.errors, /缺少选项/);
+    assert.doesNotMatch(result.output, /\[ops\] dry-run:/);
+  }
+  for (const flag of ['check', 'json', 'dry-run', 'help']) {
+    for (const value of ['true', 'false']) {
+      const result = await capture(['quality', 'format', '--' + flag + '=' + value]);
+      assert.equal(result.code, 10);
+      assert.match(result.errors, /switch 不接受值/);
+    }
+  }
+  assert.equal((await capture(['quality', 'format', '--check', 'false', '--dry-run'])).code, 10);
+  assert.equal((await capture(['quality', 'format', '--', '--help'])).code, 10);
+});
+
+test('format switch chooses write or check without running the formatter in a dry run', async () => {
+  const write = await capture(['quality', 'format', '--dry-run']);
+  const check = await capture(['quality', 'format', '--check', '--check', '--dry-run']);
+  assert.equal(write.code, 0);
+  assert.equal(check.code, 0);
+  assert.match(write.output, /run format$/m);
+  assert.doesNotMatch(write.output, /run format:check/);
+  assert.match(check.output, /run format:check/);
+});
+
+test('watch switch adds the watcher and complete explicit runtime arguments survive parsing', async () => {
+  const args = ['runtime', 'integration', '--product-port', '18080', '--data-port', '18081', '--dry-run'];
+  const once = await capture(args);
+  const watch = await capture([...args, '--watch', '--watch']);
+  assert.equal(once.code, 0);
+  assert.equal(watch.code, 0);
+  assert.doesNotMatch(once.output, /构建监视:/);
+  assert.match(watch.output, /构建监视:/);
+  assert.equal((await capture([...args, '--watch=false'])).code, 10);
+  assert.equal((await capture([...args, '--product-port', '18080'])).code, 10);
+});
+
+test('leaf help remains accessible without mandatory values in all three spellings', async () => {
+  const first = await capture(['help', 'runtime', 'dev']);
+  const second = await capture(['runtime', 'dev', '--help', '--help']);
+  const third = await capture(['runtime', 'dev', 'help']);
+  assert.equal(first.code, 0);
+  assert.equal(second.code, 0);
+  assert.equal(third.code, 0);
+  assert.equal(first.output, second.output);
+  assert.equal(first.output, third.output);
+});
+
+test('global switches retain routing positions without repairing missing argument values', async () => {
+  const bad = await capture(['runtime', 'backend', '--data', '--json', 'mock', '--product-port', '8080', '--data-port', '8081', '--dry-run']);
+  assert.equal(bad.code, 10);
+  assert.match(bad.errors, /选项缺少值: --data/);
+  const good = await capture(['--dry-run', 'runtime', '--json', 'backend', '--data', 'mock', '--product-port', '8080', '--data-port', '8081']);
+  assert.equal(good.code, 0);
+  assert.equal(JSON.parse(good.output).command, 'runtime backend');
 });

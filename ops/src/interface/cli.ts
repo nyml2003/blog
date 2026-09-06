@@ -9,7 +9,7 @@ import { TcpPortProbe, TcpReadiness } from '../infrastructure/net.ts';
 import { WorkspaceBinaries } from '../infrastructure/binaries.ts';
 import { TerminalReporter } from '../infrastructure/reporter.ts';
 import { commandDefinitions, groupDefinitions } from './registry.ts';
-import { parseCommandArgs } from './parser.ts';
+import { extractGlobalSwitches, parseCommandArgs } from './parser.ts';
 import { renderCommandHelp } from './help.ts';
 
 /** Exit codes are globally unified: 0 ok, 10 usage, 20 failure, 130 SIGINT, 143 SIGTERM. */
@@ -42,12 +42,11 @@ function longestKnownPath(raw: readonly string[]): readonly string[] {
   return [];
 }
 
-function helpRequest(raw: readonly string[]): { path: readonly string[]; invalidOption?: string } | undefined {
+function helpRequest(raw: readonly string[], hasHelpFlag: boolean): { path: readonly string[]; invalidOption?: string } | undefined {
   if (raw.length === 0) return { path: [] };
 
   const startsWithHelp = raw[0] === 'help';
-  const hasHelpFlag = raw.includes('--help');
-  const endsWithHelp = raw[raw.length - 1] === 'help';
+  const endsWithHelp = !raw.includes('--') && raw[raw.length - 1] === 'help';
   if (!startsWithHelp && !hasHelpFlag && !endsWithHelp) return undefined;
 
   let path = [...raw];
@@ -118,10 +117,12 @@ function selectCommand(raw: readonly string[]) {
 }
 
 export async function main(args = process.argv.slice(2)): Promise<number> {
-  const dryRun = args.includes('--dry-run');
-  const json = args.includes('--json');
-  const raw = args.filter((part) => part !== '--dry-run' && part !== '--json');
-  const help = helpRequest(raw);
+  const globals = extractGlobalSwitches(args);
+  if ('error' in globals) {
+    return usageError(globals.error.message, longestKnownPath(args), 'switch 只接受 --name，不接受赋值');
+  }
+  const { raw, controls: { dryRun, json, help: hasHelpFlag } } = globals;
+  const help = helpRequest(raw, hasHelpFlag);
 
   if (help) {
     if (help.invalidOption) {
@@ -145,7 +146,9 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
     return unknownCommand(raw);
   }
 
-  const parsed = parseCommandArgs(selected.meta, raw.slice(selectedLength), process.env);
+  // Route on global-free tokens, but parse original adjacency: a global switch cannot repair a missing value.
+  const argumentStart = globals.indices[selectedLength - 1] + 1;
+  const parsed = parseCommandArgs(selected.meta, args.slice(argumentStart));
   if ('error' in parsed) {
     return usageError(parsed.error.message, selected.meta.path, `检查参数后重试: ops ${selected.meta.path.join(' ')} --help`);
   }

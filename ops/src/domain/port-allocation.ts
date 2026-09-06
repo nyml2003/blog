@@ -9,12 +9,6 @@ export const PORT_ATTEMPTS = 10;
 
 export interface PortAllocation { service: ServiceRole; port: number; attempts: readonly number[] }
 
-export function portOptionError(value: string | number | boolean): string | undefined {
-  if (typeof value !== 'number' || !Number.isInteger(value)) return `端口必须是整数: ${String(value)}`;
-  if (value < PORT_MIN || value > PORT_MAX) return `端口超出范围 ${PORT_MIN}-${PORT_MAX}: ${value}`;
-  return undefined;
-}
-
 /** Candidate window for one service, clamped to the selectable range. */
 export function candidatesFor(candidate: number, count = PORT_ATTEMPTS): number[] {
   const ports: number[] = [];

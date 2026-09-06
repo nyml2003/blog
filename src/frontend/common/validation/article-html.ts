@@ -80,6 +80,7 @@ export function parseHtmlInspection(value: unknown): HtmlInspection {
 }
 
 export function byteOffsetToSelection(source: string, byte: number): number {
+  if (byte <= 0) return 0;
   let consumed = 0;
   let selection = 0;
   let previousWasCarriageReturn = false;
@@ -93,5 +94,8 @@ export function byteOffsetToSelection(source: string, byte: number): number {
       selection += scalar.length;
     previousWasCarriageReturn = scalar === "\r";
   }
-  return selection;
+  return Math.max(
+    0,
+    Math.min(selection, source.replaceAll("\r\n", "\n").length),
+  );
 }

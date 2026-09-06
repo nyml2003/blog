@@ -1,13 +1,14 @@
 import { z } from "zod";
 import type {
   Article,
+  ArticleListItem,
   AdminArticle,
   ArticleId,
   ArticleType,
   MobileShelf,
   Term,
 } from "./domain";
-import { articleSchema, adminArticleSchema } from "./domain";
+import { articleSchema, articleListSchema, adminArticleSchema } from "./domain";
 import { inspectHtml } from "../validation/wasm";
 import type { HtmlInspection } from "../validation/article-html";
 import type { DataError } from "../data/errors";
@@ -15,10 +16,6 @@ import { err, ok, type Result } from "../data/result";
 import { createDataTask, type DataTask } from "../data/task";
 import type { Transport } from "../data/transport";
 
-const listSchema = z.object({
-  items: z.array(articleSchema),
-  total: z.number().int().nonnegative(),
-});
 const typeSchema = z.object({
   id: z.number().int().positive(),
   name: z.string(),
@@ -85,7 +82,7 @@ export interface Client {
   articleCatalog: {
     listPublishedArticles(
       input?: ArticleFilterInput,
-    ): DataTask<{ items: Article[]; total: number }>;
+    ): DataTask<{ items: ArticleListItem[]; total: number }>;
     getPublishedArticle(id: ArticleId): DataTask<Article>;
   };
   recommendationFeed: { getHomeRecommendations(): DataTask<Article[]> };
@@ -103,7 +100,7 @@ export interface Client {
   adminArticles: {
     list(
       input?: ArticleFilterInput,
-    ): DataTask<{ items: Article[]; total: number }>;
+    ): DataTask<{ items: ArticleListItem[]; total: number }>;
     get(id: ArticleId): DataTask<AdminArticle>;
     publish(id: ArticleId): DataTask<AdminArticle>;
     unpublish(id: ArticleId): DataTask<AdminArticle>;
@@ -143,10 +140,10 @@ export function createClient(transport: Transport): Client {
   return {
     articleCatalog: {
       listPublishedArticles: (input = {}) =>
-        request<{ items: Article[]; total: number }>(
+        request<{ items: ArticleListItem[]; total: number }>(
           `/api/public/articles?${query({ sceneCode: "public.article_list", term_ids: input.termIds?.join(","), type_id: input.typeId?.toString(), created_from: input.createdFrom, created_to: input.createdTo, updated_from: input.updatedFrom, updated_to: input.updatedTo })}`,
-          listSchema as unknown as z.ZodType<{
-            items: Article[];
+          articleListSchema as unknown as z.ZodType<{
+            items: ArticleListItem[];
             total: number;
           }>,
         ),
@@ -220,10 +217,10 @@ export function createClient(transport: Transport): Client {
     },
     adminArticles: {
       list: (input = {}) =>
-        request<{ items: Article[]; total: number }>(
+        request<{ items: ArticleListItem[]; total: number }>(
           `/api/admin/articles?${query({ sceneCode: "admin.article_list", term_ids: input.termIds?.join(","), type_id: input.typeId?.toString(), created_from: input.createdFrom, created_to: input.createdTo, updated_from: input.updatedFrom, updated_to: input.updatedTo })}`,
-          listSchema as unknown as z.ZodType<{
-            items: Article[];
+          articleListSchema as unknown as z.ZodType<{
+            items: ArticleListItem[];
             total: number;
           }>,
         ),

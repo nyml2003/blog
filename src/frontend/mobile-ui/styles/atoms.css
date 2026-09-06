@@ -1,4 +1,9 @@
-/* Standalone Mobile atomic layer. Imported only by a future Mobile composition entry. */
+/* Mobile atomic layer. Theme variables are scoped to each native atom root. */
+
+.m-atom {
+  background-color: var(--paper);
+  font-family: var(--font-body);
+}
 
 .m-atom-text {
   margin: 0;
@@ -52,6 +57,7 @@
   cursor: pointer;
   display: inline-flex;
   font: inherit;
+  font-family: var(--font-body);
   justify-content: center;
   min-height: 44px;
   min-width: 44px;
@@ -143,6 +149,7 @@
   box-sizing: border-box;
   color: var(--ink);
   font: inherit;
+  font-family: var(--font-body);
   min-height: 44px;
   padding: 9px 11px;
   width: 100%;

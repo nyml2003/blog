@@ -25,22 +25,23 @@ export const Select = defineAtom<SelectProps>({
     state: "enabled",
     validation: "valid",
   } as const satisfies AtomDefaults<SelectProps>,
-  render({ content, onChange, options, value }) {
+  render(props) {
     return (
       <select
-        aria-describedby={options.describedById}
-        aria-invalid={options.validation === "invalid" ? "true" : undefined}
+        aria-describedby={props.options.describedById}
+        aria-invalid={props.options.validation === "invalid" ? "true" : undefined}
         class={classNames(
+          "m-atom",
           "m-atom-select",
-          options.validation === "invalid" && "is-invalid",
+          props.options.validation === "invalid" && "is-invalid",
         )}
-        disabled={options.state !== "enabled"}
-        id={options.id}
-        name={options.name}
-        onChange={onChange}
-        value={value}
+        disabled={props.options.state !== "enabled"}
+        id={props.options.id}
+        name={props.options.name}
+        onChange={props.onChange}
+        value={props.value}
       >
-        {content}
+        {props.content}
       </select>
     );
   },

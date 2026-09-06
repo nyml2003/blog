@@ -35,7 +35,7 @@ export function MobileNav(_p: { active: string }) {
     </>
   );
 }
-export function BottomNav(p: { active: "home" | "articles" }) {
+export function BottomNav(p: { active: "home" | "articles" | "settings" }) {
   return (
     <nav class="bottom-nav" aria-label="页面导航">
       <a
@@ -57,6 +57,16 @@ export function BottomNav(p: { active: "home" | "articles" }) {
           库
         </span>
         <span>文章库</span>
+      </a>
+      <a
+        class={p.active === "settings" ? "is-active" : ""}
+        aria-current={p.active === "settings" ? "page" : undefined}
+        href="/m/settings/index.html"
+      >
+        <span aria-hidden="true" class="nav-mark">
+          设
+        </span>
+        <span>设置</span>
       </a>
     </nav>
   );

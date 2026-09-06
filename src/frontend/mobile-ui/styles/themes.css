@@ -1,0 +1,45 @@
+/* Overrides belong only to atom roots, never to the document or legacy shell. */
+html:not([data-theme]) .m-atom,
+html[data-theme="paper"] .m-atom {
+  color-scheme: light;
+}
+
+html[data-theme="dark"] .m-atom {
+  --paper: #202124;
+  --surface: #292b2f;
+  --ink: #f1f3f4;
+  --muted: #bec3c9;
+  --border: #777d86;
+  --blue: #7185d5;
+  --coral: #ffad95;
+  --teal: #8ed6c4;
+  --danger: #ff9692;
+  color-scheme: dark;
+}
+
+html[data-theme="sepia"] .m-atom {
+  --paper: #f1e6cf;
+  --surface: #f7eedc;
+  --ink: #352d23;
+  --muted: #70614e;
+  --border: #98856b;
+  --blue: #374fb1;
+  --coral: #a6442c;
+  --teal: #256b5e;
+  --danger: #ab3535;
+  color-scheme: light;
+}
+
+html[data-font="sans"] .m-atom {
+  --font-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+html[data-font="serif"] .m-atom {
+  --font-body:
+    ui-serif, Georgia, "Times New Roman", "Songti SC", "SimSun", serif;
+}
+
+html[data-font="mono"] .m-atom {
+  --font-body:
+    ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}

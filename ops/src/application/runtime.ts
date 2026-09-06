@@ -8,7 +8,7 @@ import {
   type ErrorDetail,
   type ServiceAddress,
 } from '../domain/errors.ts';
-import { allocatePort, type PortProbe } from '../domain/port-allocation.ts';
+import { allocatePort, PORT_MIN, PORT_MAX, type PortProbe } from '../domain/port-allocation.ts';
 import type {
   BinaryResolver,
   FsPort,
@@ -24,7 +24,7 @@ import type {
   SignalPort,
   SpawnRequest,
 } from '../domain/ports.ts';
-import { DEFAULT_SCENARIO, exitCodeForSignal, INJECTION_ENV, SERVICE_BINARIES, type BuildStep, type ModePlan } from '../domain/runtime.ts';
+import { exitCodeForSignal, INJECTION_ENV, SERVICE_BINARIES, type BuildStep, type ModePlan } from '../domain/runtime.ts';
 
 /** Ports handed to the runtime modes; `process.run()` keeps serving builds and checks unchanged. */
 export interface RuntimePorts {
@@ -50,6 +50,13 @@ const DEFAULT_READINESS_MS = 15_000;
 const TEST_DB_DIR = ['target', 'test-dbs'] as const;
 const frontendBuild: BuildStep = { label: 'pnpm -C src/frontend run build', command: 'pnpm', args: ['-C', 'src/frontend', 'run', 'build'], role: 'web' };
 const cargoBuild: BuildStep = { label: 'cargo build --release', command: 'cargo', args: ['build', '--release'], role: 'ops', cwd: 'src' };
+
+function requiredPort(port: number | undefined, role: ServiceRole): number {
+  if (port === undefined || !Number.isInteger(port) || port < PORT_MIN || port > PORT_MAX) {
+    throw new Error(`runtime plan missing or invalid port: ${role}`);
+  }
+  return port;
+}
 
 export function runtimeCommand(plan: ModePlan): string { return `runtime ${plan.mode}`; }
 
@@ -129,7 +136,7 @@ async function startServices(plan: ModePlan, ports: RuntimePorts, group: Process
   const allocated = new Map<ServiceRole, number>();
   const addresses: ServiceAddress[] = [];
   for (const role of plan.services) {
-    const candidate = plan.candidates[role];
+    const candidate = requiredPort(plan.candidates[role], role);
     const allocation = await allocatePort({ service: role, candidate, probe: ports.probe, excluded: new Set(allocated.values()) });
     allocated.set(role, allocation.port);
     ports.log.info(`${role}: 候选端口 ${candidate}, 实际绑定 ${allocation.port}` + (allocation.attempts.length > 1 ? `（递增尝试: ${allocation.attempts.join(', ')}）` : ''));
@@ -214,14 +221,14 @@ function recentOutput(text: string): string[] {
 }
 
 async function spawnRequest(plan: ModePlan, ports: RuntimePorts, role: ServiceRole, allocated: ReadonlyMap<ServiceRole, number>): Promise<SpawnRequest> {
-  const port = allocated.get(role) ?? 0;
+  const port = requiredPort(allocated.get(role), role);
   const env: Record<string, string> = {};
   const listen = (value: number) => `${LISTEN_HOST}:${value}`;
   const origin = (value: number) => `http://${LISTEN_HOST}:${value}`;
 
   if (role === 'web') {
-    const mock = allocated.get('mock');
-    if (mock !== undefined) env[INJECTION_ENV.apiOrigin] = origin(mock);
+    const mock = requiredPort(allocated.get('mock'), 'mock');
+    env[INJECTION_ENV.apiOrigin] = origin(mock);
     return { role, command: 'pnpm', args: ['-C', 'src/frontend', 'run', 'dev', '--port', String(port)], cwd: ports.root, env };
   }
 
@@ -233,15 +240,17 @@ async function spawnRequest(plan: ModePlan, ports: RuntimePorts, role: ServiceRo
   const args: string[] = ['--listen', listen(port)];
   if (role === 'mock') {
     // WORKSTREAM-OPS-RUNTIME-MOCK owns the mock binary contract; the scenario stays CLI-only.
-    args.push('--scenario', plan.scenario ?? DEFAULT_SCENARIO);
+    if (plan.scenario === null) throw new Error('runtime plan missing scenario');
+    args.push('--scenario', plan.scenario);
   }
   if (role === 'data') {
-    args.push('--data-semantics', plan.dataMode ?? 'mock');
+    if (plan.dataMode === null) throw new Error('runtime plan missing data mode');
+    args.push('--data-semantics', plan.dataMode);
     if (plan.dataMode === 'test') env[INJECTION_ENV.databasePath] = await testDatabasePath(ports);
   }
   if (role === 'product') {
-    const data = allocated.get('data');
-    if (data !== undefined) env[INJECTION_ENV.dataAddr] = origin(data);
+    const data = requiredPort(allocated.get('data'), 'data');
+    env[INJECTION_ENV.dataAddr] = origin(data);
     if (plan.mode === 'integration') {
       env[INJECTION_ENV.webDir] = join(ports.root, 'src', 'frontend', 'dist');
       args.push('--web-dir', env[INJECTION_ENV.webDir]);
@@ -282,7 +291,7 @@ function reportFailure(ports: RuntimePorts, options: RunOptions, command: string
 function printPlan(ports: RuntimePorts, options: RunOptions, command: string, plan: ModePlan): void {
   const entry = plan.entry ? `http://${LISTEN_HOST}:${plan.candidates[plan.entry]}` : null;
   if (options.json) {
-    ports.log.json({ ok: true, command, dryRun: true, services: plan.services.map((role) => serviceAddress(role, plan.candidates[role] ?? 0)), entry, builds: plan.builds.map((step) => step.label) });
+    ports.log.json({ ok: true, command, dryRun: true, services: plan.services.map((role) => serviceAddress(role, requiredPort(plan.candidates[role], role))), entry, builds: plan.builds.map((step) => step.label) });
     return;
   }
   ports.log.info(`dry-run: ${command}（不启动进程、不绑定端口、不写文件）`);

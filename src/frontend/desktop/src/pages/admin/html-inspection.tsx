@@ -11,6 +11,18 @@ import { createDataTask } from "../../../../common/data/task";
 export function useHtmlInspection(source: Accessor<string>) {
   const resource = useDataResource(source, (html) =>
     createDataTask(async (signal) => {
+      await new Promise<void>((resolve) => {
+        const timer = window.setTimeout(resolve, 260);
+        signal.addEventListener(
+          "abort",
+          () => {
+            window.clearTimeout(timer);
+            resolve();
+          },
+          { once: true },
+        );
+      });
+      if (signal.aborted) return { ok: false, error: { kind: "cancelled" } };
       const inspection = client.draftEditor.inspectHtml(html);
       const cancel = () => inspection.cancel();
       signal.addEventListener("abort", cancel, { once: true });

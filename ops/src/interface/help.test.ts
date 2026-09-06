@@ -47,3 +47,18 @@ test('every leaf advertises the unified exit codes, never the retired 1 and 2', 
     assert.doesNotMatch(codes, /^\s*1  /m);
   }
 });
+
+test('field models generate required values, complete choices and switch semantics', () => {
+  const dev = renderCommandHelp(registry, ['runtime', 'dev']);
+  assert.match(dev, /--scenario <enum>/);
+  assert.match(dev, /--web-port <int32>/);
+  assert.match(dev, /必填/);
+  assert.match(dev, /1024-65535/);
+  assert.match(dev, /default, empty, slow, server-error, malformed-response/);
+  assert.doesNotMatch(dev, /\[默认:|env:/);
+  const format = renderCommandHelp(registry, ['quality', 'format']);
+  assert.match(format, /\[--check\]/);
+  assert.match(format, /出现=true, 未出现=false/);
+  assert.doesNotMatch(format, /--check </);
+  for (const flag of ['help', 'dry-run', 'json']) assert.match(format, new RegExp('--' + flag));
+});

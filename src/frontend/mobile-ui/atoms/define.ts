@@ -1,4 +1,4 @@
-import type { JSX } from "solid-js";
+import { mergeProps, type JSX } from "solid-js";
 
 /**
  * options 包的完整渲染模型：`Options` 的每个键都必须出现。
@@ -32,15 +32,24 @@ export interface AtomDefinition<P extends { options?: object }> {
 }
 
 /**
- * 类型即契约的原子工厂：TS 类型是唯一防线，这里只负责把 `Partial` options
- * 合并成 render 需要的完整渲染模型，不做任何运行时校验。
+ * 类型即契约的原子工厂：合并 `Partial` options，并为原生根附加主题作用域。
+ * TS 类型是唯一配置防线，不做任何运行时配置校验。
  */
 export function defineAtom<P extends { options?: object }>(
   definition: AtomDefinition<P>,
 ): (props: P) => JSX.Element {
-  return (props) =>
-    definition.render({
-      ...props,
-      options: { ...definition.defaults, ...props.options },
+  return (props) => {
+    // Keep Solid getters lazy so controlled values remain reactive.
+    const renderProps = mergeProps(props, {
+      get options() {
+        return { ...definition.defaults, ...props.options };
+      },
     });
+    const root = definition.render(renderProps);
+    // Mobile atoms render one native root; strings remain valid in factory tests.
+    if (typeof HTMLElement !== "undefined" && root instanceof HTMLElement) {
+      root.classList.add("m-atom");
+    }
+    return root;
+  };
 }

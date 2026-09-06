@@ -30,8 +30,9 @@ export const articleSchema = z.object({
   termIds: z.array(id),
   terms: z.array(termSchema).optional(),
 });
+export const articleListItemSchema = articleSchema.omit({ contentHtml: true });
 export const articleListSchema = z.object({
-  items: z.array(articleSchema),
+  items: z.array(articleListItemSchema),
   total: z.number().int().nonnegative(),
 });
 export const adminArticleSchema = articleSchema.extend({
@@ -55,6 +56,8 @@ export type Article = {
   termIds: TermId[];
   terms?: Term[];
 };
+
+export type ArticleListItem = Omit<Article, "contentHtml">;
 
 export type MobileShelfArticle = {
   id: number;
@@ -81,11 +84,11 @@ export function parseArticle(value: unknown): Article {
   return articleSchema.parse(value) as unknown as Article;
 }
 export function parseArticleList(value: unknown): {
-  items: Article[];
+  items: ArticleListItem[];
   total: number;
 } {
   return articleListSchema.parse(value) as unknown as {
-    items: Article[];
+    items: ArticleListItem[];
     total: number;
   };
 }

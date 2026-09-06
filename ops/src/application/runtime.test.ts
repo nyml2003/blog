@@ -138,7 +138,7 @@ function options(overrides: Record<string, unknown> = {}) {
 
 test('dev starts mock before vite and injects the mock address vite must use', async () => {
   const harness = new Harness();
-  const pending = runRuntimeMode(planMode('dev'), harness.ports(), options());
+  const pending = runRuntimeMode(planMode({ mode: 'dev', scenario: 'default', webPort: 5173, mockPort: 9090 }), harness.ports(), options());
   await tick();
   const specs = harness.spawns;
   assert.deepEqual(specs.map((process) => process.role), ['mock', 'web']);
@@ -162,7 +162,7 @@ test('dev starts mock before vite and injects the mock address vite must use', a
 test('backend allocates data first and points product at the actual data address', async () => {
   const harness = new Harness();
   harness.freePorts = new Set([8081]);
-  const pending = runRuntimeMode(planMode('backend', { dataMode: 'test', productPort: 18080 }), harness.ports(), options());
+  const pending = runRuntimeMode(planMode({ mode: 'backend', dataMode: 'test', productPort: 18080, dataPort: 8081 }), harness.ports(), options());
   await tick();
   assert.deepEqual(harness.spawns.map((process) => process.role), ['data', 'product']);
   const data = harness.spawns[0]!;
@@ -179,7 +179,7 @@ test('backend allocates data first and points product at the actual data address
 
 test('integration builds the frontend first and mounts web/dist into product', async () => {
   const harness = new Harness();
-  const pending = runRuntimeMode(planMode('integration'), harness.ports(), options({ json: true }));
+  const pending = runRuntimeMode(planMode({ mode: 'integration', watch: false, productPort: 8080, dataPort: 8081 }), harness.ports(), options({ json: true }));
   await tick();
   assert.deepEqual(harness.runs.map((run) => run.args.join(' ')), ['-C src/frontend run build']);
   assert.deepEqual(harness.spawns.map((process) => process.role), ['data', 'product']);
@@ -197,7 +197,7 @@ test('integration builds the frontend first and mounts web/dist into product', a
 test('a failed frontend build never starts the stack and reports BUILD_FAILED', async () => {
   const harness = new Harness();
   harness.runCode = 1;
-  const code = await runRuntimeMode(planMode('integration'), harness.ports(), options({ json: true }));
+  const code = await runRuntimeMode(planMode({ mode: 'integration', watch: false, productPort: 8080, dataPort: 8081 }), harness.ports(), options({ json: true }));
   assert.equal(code, 20);
   assert.equal(harness.spawns.length, 0);
   assert.match(harness.errors.join('\n'), /构建失败/);
@@ -211,7 +211,7 @@ test('a failed frontend build never starts the stack and reports BUILD_FAILED', 
 test('a missing service binary is a SERVICE_START_FAILED without spawning anything else', async () => {
   const harness = new Harness();
   harness.binaries = new Set();
-  const code = await runRuntimeMode(planMode('dev'), harness.ports(), options({ json: true }));
+  const code = await runRuntimeMode(planMode({ mode: 'dev', scenario: 'default', webPort: 5173, mockPort: 9090 }), harness.ports(), options({ json: true }));
   assert.equal(code, 20);
   assert.equal(harness.spawns.length, 0);
   assert.match(harness.errors.join('\n'), /mock/);
@@ -223,7 +223,7 @@ test('a missing service binary is a SERVICE_START_FAILED without spawning anythi
 test('port exhaustion stops the already started service and lists the attempted ports', async () => {
   const harness = new Harness();
   harness.freePorts = new Set([8080, 8081, 8082, 8083, 8084, 8085, 8086, 8087, 8088, 8089]);
-  const code = await runRuntimeMode(planMode('backend'), harness.ports(), options({ json: true }));
+  const code = await runRuntimeMode(planMode({ mode: 'backend', dataMode: 'mock', productPort: 8080, dataPort: 8081 }), harness.ports(), options({ json: true }));
   assert.equal(code, 20);
   assert.deepEqual(harness.spawns.map((process) => process.role), ['data']);
   assert.deepEqual(harness.killed, ['data'], 'the surviving service is stopped and cleaned up');
@@ -238,7 +238,7 @@ test('port exhaustion stops the already started service and lists the attempted 
 test('a service that dies during startup stops the rest and reports its name and logs', async () => {
   const harness = new Harness();
   harness.readyWhen = (role) => role === 'data';
-  const pending = runRuntimeMode(planMode('backend'), harness.ports(), options({ json: true }));
+  const pending = runRuntimeMode(planMode({ mode: 'backend', dataMode: 'mock', productPort: 8080, dataPort: 8081 }), harness.ports(), options({ json: true }));
   await tick();
   const data = harness.group.members[0] as FakeProcess;
   const product = harness.group.members[1] as FakeProcess;
@@ -260,7 +260,7 @@ test('a service that dies during startup stops the rest and reports its name and
 test('a service that never becomes ready fails without being reported as reachable', async () => {
   const harness = new Harness();
   harness.readyWhen = () => false;
-  const code = await runRuntimeMode(planMode('dev'), harness.ports(), options({ json: true }));
+  const code = await runRuntimeMode(planMode({ mode: 'dev', scenario: 'default', webPort: 5173, mockPort: 9090 }), harness.ports(), options({ json: true }));
   assert.equal(code, 20);
   assert.deepEqual(harness.killed, ['mock']);
   assert.match(harness.errors.join('\n'), /服务启动失败: mock 未在期限内监听 127\.0\.0\.1:9090/);
@@ -270,7 +270,7 @@ test('a service that never becomes ready fails without being reported as reachab
 
 test('a child that leaves after a healthy start stops the mode with CHILD_EXITED', async () => {
   const harness = new Harness();
-  const pending = runRuntimeMode(planMode('dev'), harness.ports(), options({ json: true }));
+  const pending = runRuntimeMode(planMode({ mode: 'dev', scenario: 'default', webPort: 5173, mockPort: 9090 }), harness.ports(), options({ json: true }));
   await tick();
   (harness.group.members[1] as FakeProcess).finish({ code: 7, signal: null });
   const code = await pending;
@@ -285,7 +285,7 @@ test('a child that leaves after a healthy start stops the mode with CHILD_EXITED
 
 test('a service that exits 0 on its own is still CHILD_EXITED and stops the rest', async () => {
   const harness = new Harness();
-  const pending = runRuntimeMode(planMode('backend'), harness.ports(), options({ json: true }));
+  const pending = runRuntimeMode(planMode({ mode: 'backend', dataMode: 'mock', productPort: 8080, dataPort: 8081 }), harness.ports(), options({ json: true }));
   await tick();
   assert.deepEqual(harness.spawns.map((process) => process.role), ['data', 'product']);
   (harness.group.members[0] as FakeProcess).finish({ code: 0, signal: null });
@@ -303,7 +303,7 @@ test('a service that exits 0 on its own is still CHILD_EXITED and stops the rest
 test('a mode never reports success from its own run loop, only through a signal', async () => {
   for (const [signal, expected] of [['SIGINT', 130], ['SIGTERM', 143]] as const) {
     const harness = new Harness();
-    const pending = runRuntimeMode(planMode('dev'), harness.ports(), options());
+    const pending = runRuntimeMode(planMode({ mode: 'dev', scenario: 'default', webPort: 5173, mockPort: 9090 }), harness.ports(), options());
     await tick();
     harness.emit(signal);
     assert.equal(await pending, expected);
@@ -315,7 +315,7 @@ test('a mode never reports success from its own run loop, only through a signal'
 
 test('addresses are only reported once every service passed its readiness check', async () => {
   const harness = new Harness();
-  const pending = runRuntimeMode(planMode('dev'), harness.ports(), options());
+  const pending = runRuntimeMode(planMode({ mode: 'dev', scenario: 'default', webPort: 5173, mockPort: 9090 }), harness.ports(), options());
   await tick();
   const readyLines = harness.logLines.filter((line) => line.includes('就绪'));
   assert.match(readyLines.join('\n'), /mock 就绪: http:\/\/127\.0\.0\.1:9090/);
@@ -332,7 +332,7 @@ test('a signal stops every child and maps to 130 or 143', async () => {
     const harness = new Harness();
     let listener: ((signal: NodeJS.Signals) => void) | undefined;
     const ports = { ...harness.ports(), signals: { onSignal: (handler: (signal: NodeJS.Signals) => void) => { listener = handler; return () => { listener = undefined; }; } } };
-    const pending = runRuntimeMode(planMode('dev'), ports, options());
+    const pending = runRuntimeMode(planMode({ mode: 'dev', scenario: 'default', webPort: 5173, mockPort: 9090 }), ports, options());
     await tick();
     listener?.(signal);
     assert.equal(await pending, expected);
@@ -344,7 +344,7 @@ test('a signal stops every child and maps to 130 or 143', async () => {
 
 test('dry run describes the plan and performs no side effect', async () => {
   const harness = new Harness();
-  const code = await runRuntimeMode(planMode('dev', { mockPort: 9190 }), harness.ports(), { dryRun: true, json: false });
+  const code = await runRuntimeMode(planMode({ mode: 'dev', scenario: 'default', webPort: 5173, mockPort: 9190 }), harness.ports(), { dryRun: true, json: false });
   assert.equal(code, 0);
   assert.equal(harness.spawns.length, 0);
   assert.equal(harness.runs.length, 0);
@@ -357,7 +357,7 @@ test('dry run describes the plan and performs no side effect', async () => {
 
 test('watch mode starts the rebuild watcher and treats its death as BUILD_FAILED', async () => {
   const harness = new Harness();
-  const pending = runRuntimeMode(planMode('integration', { watch: true }), harness.ports(), options({ json: true }));
+  const pending = runRuntimeMode(planMode({ mode: 'integration', watch: true, productPort: 8080, dataPort: 8081 }), harness.ports(), options({ json: true }));
   await tick();
   assert.match(harness.spawns[0]!.args.join(' '), /build --watch/);
   assert.deepEqual(harness.spawns.map((process) => process.role), ['web', 'data', 'product']);

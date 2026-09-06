@@ -1,14 +1,14 @@
 import type { LogSource, ServiceRole } from './ports.ts';
+import { isModelValue } from './parameters.ts';
+import { PORT_MIN, PORT_MAX } from './port-allocation.ts';
 
 export type RuntimeMode = 'dev' | 'backend' | 'integration';
-export type DataMode = 'mock' | 'test';
+export const DATA_MODES = ['mock', 'test'] as const;
+export type DataMode = (typeof DATA_MODES)[number];
 
 /** Named mock scenarios (WORKSTREAM-OPS-RUNTIME-MOCK); selection is CLI-only, never env or file. */
 export const MOCK_SCENARIOS = ['default', 'empty', 'slow', 'server-error', 'malformed-response'] as const;
 export type MockScenario = (typeof MOCK_SCENARIOS)[number];
-export const DEFAULT_SCENARIO: MockScenario = 'default';
-
-export const DEFAULT_PORTS: Readonly<Record<ServiceRole, number>> = { web: 5173, product: 8080, data: 8081, mock: 9090 };
 
 /**
  * Rust binary names, matching the `[[bin]] name` entries of the workspace crates
@@ -45,7 +45,7 @@ export interface ModePlan {
   mode: RuntimeMode;
   /** Services in dependency order; port allocation and spawn follow the same order. */
   services: readonly ServiceRole[];
-  candidates: Readonly<Record<ServiceRole, number>>;
+  candidates: Readonly<Partial<Record<ServiceRole, number>>>;
   /** Blocking build steps that must succeed before any service is spawned. */
   builds: readonly BuildStep[];
   /** Long-running rebuild process for `--watch`; its exit is a `BUILD_FAILED`, never a normal end. */
@@ -57,73 +57,59 @@ export interface ModePlan {
   watch: boolean;
 }
 
-export interface ModeOptions {
-  scenario?: string;
-  dataMode?: string;
-  webPort?: number;
-  productPort?: number;
-  dataPort?: number;
-  mockPort?: number;
-  watch?: boolean;
-}
+export type ModeOptions =
+  | { mode: 'dev'; scenario: MockScenario; webPort: number; mockPort: number }
+  | { mode: 'backend'; dataMode: DataMode; productPort: number; dataPort: number }
+  | { mode: 'integration'; watch: boolean; productPort: number; dataPort: number };
 
-export function scenarioError(value: string | number | boolean): string | undefined {
-  const name = String(value);
-  return (MOCK_SCENARIOS as readonly string[]).includes(name) ? undefined : `未知场景: ${name}（可选: ${MOCK_SCENARIOS.join(', ')}）`;
-}
-
-export function dataModeError(value: string | number | boolean): string | undefined {
-  const name = String(value);
-  return name === 'mock' || name === 'test' ? undefined : `非法的 --data 取值: ${name}（可选: mock, test）`;
-}
-
-function candidateFor(role: ServiceRole, options: ModeOptions): number {
-  switch (role) {
-    case 'web': return options.webPort ?? DEFAULT_PORTS.web;
-    case 'product': return options.productPort ?? DEFAULT_PORTS.product;
-    case 'data': return options.dataPort ?? DEFAULT_PORTS.data;
-    case 'mock': return options.mockPort ?? DEFAULT_PORTS.mock;
+function requirePort(port: number): number {
+  if (!isModelValue({ kind: 'int32', min: PORT_MIN, max: PORT_MAX }, port)) {
+    throw new Error('invalid runtime candidate port: ' + String(port));
   }
+  return port;
 }
 
 const frontendBuild: BuildStep = { label: 'pnpm -C src/frontend run build', command: 'pnpm', args: ['-C', 'src/frontend', 'run', 'build'], role: 'web' };
 const frontendWatchBuild: BuildStep = { label: 'pnpm -C src/frontend run build --watch', command: 'pnpm', args: ['-C', 'src/frontend', 'run', 'build', '--watch'], role: 'web' };
 
 /** Pure mode → {services, candidate ports, builds} mapping; the matrix in SPEC-OPS-RUNTIME-001. */
-export function planMode(mode: RuntimeMode, options: ModeOptions = {}): ModePlan {
-  if (mode === 'dev') {
+export function planMode(options: ModeOptions): ModePlan {
+  if (options.mode === 'dev') {
+    if (!isModelValue({ kind: 'enum', values: MOCK_SCENARIOS }, options.scenario)) {
+      throw new Error('invalid runtime scenario');
+    }
     return {
-      mode,
+      mode: options.mode,
       services: ['mock', 'web'],
-      candidates: { mock: candidateFor('mock', options), web: candidateFor('web', options) },
+      candidates: { mock: requirePort(options.mockPort), web: requirePort(options.webPort) },
       builds: [],
       entry: 'web',
       dataMode: null,
-      scenario: toScenario(options.scenario),
+      scenario: options.scenario,
       watch: false,
     };
   }
-  const watch = mode === 'integration' && options.watch === true;
+  if (options.mode !== 'backend' && options.mode !== 'integration') {
+    throw new Error('invalid runtime mode');
+  }
+  if (options.mode === 'backend' && !isModelValue({ kind: 'enum', values: DATA_MODES }, options.dataMode)) {
+    throw new Error('invalid runtime data mode');
+  }
+  if (options.mode === 'integration' && typeof options.watch !== 'boolean') {
+    throw new Error('invalid runtime watch switch');
+  }
+  const watch = options.mode === 'integration' && options.watch;
   return {
-    mode,
+    mode: options.mode,
     services: ['data', 'product'],
-    candidates: { data: candidateFor('data', options), product: candidateFor('product', options) },
-    builds: mode === 'integration' ? [frontendBuild] : [],
+    candidates: { data: requirePort(options.dataPort), product: requirePort(options.productPort) },
+    builds: options.mode === 'integration' ? [frontendBuild] : [],
     watchBuild: watch ? frontendWatchBuild : undefined,
-    entry: mode === 'integration' ? 'product' : null,
-    dataMode: mode === 'integration' ? 'test' : toDataMode(options.dataMode),
+    entry: options.mode === 'integration' ? 'product' : null,
+    dataMode: options.mode === 'integration' ? 'test' : options.dataMode,
     scenario: null,
     watch,
   };
-}
-
-function toScenario(value: string | undefined): MockScenario {
-  const name = value ?? DEFAULT_SCENARIO;
-  return (MOCK_SCENARIOS as readonly string[]).includes(name) ? name as MockScenario : DEFAULT_SCENARIO;
-}
-
-function toDataMode(value: string | undefined): DataMode {
-  return value === 'test' ? 'test' : 'mock';
 }
 
 /** `130` for SIGINT, `143` for SIGTERM; any other signal is treated like SIGTERM. */

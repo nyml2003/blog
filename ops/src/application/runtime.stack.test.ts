@@ -20,7 +20,7 @@ import { promisify } from 'node:util';
  * 默认跳过，不拖慢 `node --test` 与 `ops quality check`；按层用环境变量打开：
  *   OPS_RUNTIME_E2E=1     进程级（backend / dev / 端口 / 信号 / N+1 指标）
  *   OPS_RUNTIME_E2E=full  额外执行会触发构建的用例（runtime integration、delivery build）
- * 运行：OPS_RUNTIME_E2E=full node --experimental-strip-types --test ops/src/application/runtime.stack.test.ts
+ * 运行：OPS_RUNTIME_E2E=full ops quality check
  */
 
 const execFileAsync = promisify(execFile);
@@ -440,7 +440,7 @@ test('PORT-002/PORT-005 + ENV-001 + MODE-001: dev injects the incremented mock a
   const mockActual = base + 2;
   const blocker = await hold(mockPort);
   const before = await testDbFiles();
-  const run = OpsRun.start(['runtime', 'dev', '--web-port', String(webPort), '--mock-port', String(mockPort), '--json'], {
+  const run = OpsRun.start(['runtime', 'dev', '--scenario', 'default', '--web-port', String(webPort), '--mock-port', String(mockPort), '--json'], {
     BLOG_API_ORIGIN: 'http://127.0.0.1:9999',
   });
   t.after(async () => { blocker.close(); await run.dispose(); });
@@ -587,7 +587,7 @@ test('FAIL-003 + CMD-008: a missing service binary is a real 20/SERVICE_START_FA
   await mkdir(join(home, 'ops'), { recursive: true });
   await cp(join(root, 'ops', 'src'), join(home, 'ops', 'src'), { recursive: true });
 
-  const child = spawn(process.execPath, ['--experimental-strip-types', join(home, 'ops', 'src', 'interface', 'cli.ts'), 'runtime', 'backend', '--json'], {
+  const child = spawn(process.execPath, ['--experimental-strip-types', join(home, 'ops', 'src', 'interface', 'cli.ts'), 'runtime', 'backend', '--data', 'mock', '--product-port', '8080', '--data-port', '8081', '--json'], {
     cwd: home, stdio: ['ignore', 'pipe', 'pipe'],
   });
   let out = '';

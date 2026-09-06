@@ -18,7 +18,7 @@ test('web quality runs pnpm with -C src/frontend', async () => {
   const h = harness();
   assert.equal(await runWebQuality(workspace, h.process, h.reporter, 'lint'), true);
   assert.deepEqual(h.calls[0], { command: 'pnpm', args: ['-C', 'src/frontend', 'run', 'lint'], cwd: '/repo' });
-  assert.equal(await runWebQuality(workspace, h.process, h.reporter, 'format', true), true);
+  assert.equal(await runWebQuality(workspace, h.process, h.reporter, 'format:check'), true);
   assert.deepEqual(h.calls[1], { command: 'pnpm', args: ['-C', 'src/frontend', 'run', 'format:check'], cwd: '/repo' });
 });
 

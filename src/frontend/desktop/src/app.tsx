@@ -1,11 +1,12 @@
 import { createSignal, For } from "solid-js";
+import { browserClient as client } from "../../common/client";
 import type {
   Article,
+  ArticleListItem,
   ArticleFilter,
   ArticleType,
   Term,
 } from "../../common/contracts/domain";
-import { browserClient as client } from "../../common/client";
 import { useDataResource } from "../../solid/data";
 import "./styles.css";
 import "./integration.css";
@@ -121,7 +122,7 @@ export function ArticleBody(props: { html: string }) {
 }
 
 export function Shelf(props: {
-  items: readonly Article[];
+  items: readonly ArticleListItem[];
   variant?: "archive" | "recommended" | "admin";
 }) {
   const isAdmin = () => props.variant === "admin";
@@ -154,9 +155,6 @@ export function Shelf(props: {
               <time>{shortDate(article.updatedAt)}</time>
               <div class="row-actions">
                 <a href={`/admin/articles/edit.html?id=${article.id}`}>编辑</a>
-                <a href={`/admin/articles/preview.html?id=${article.id}`}>
-                  预览
-                </a>
               </div>
             </article>
           ) : (

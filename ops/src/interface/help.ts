@@ -1,3 +1,4 @@
+import { globalSwitches, modelDescription, type ParameterSpec } from '../domain/parameters.ts';
 import type { CommandDefinition, GroupDefinition } from '../domain/commands.ts';
 
 export interface HelpRegistry {
@@ -32,6 +33,12 @@ function rootGroups(registry: HelpRegistry): readonly GroupDefinition[] {
   });
 }
 
+function parameterHelp(spec: ParameterSpec): string {
+  const suffix = spec.model.kind === 'switch' ? '' : ` <${spec.model.kind}>`;
+  const required = spec.model.kind === 'switch' ? '' : '必填; ';
+  return `      --${spec.name}${suffix}  ${spec.description} (${required}${modelDescription(spec.model)})`;
+}
+
 function leafExitCodes(command: CommandDefinition): readonly { code: number; meaning: string }[] {
   const codes = [...(command.meta.exitCodes ?? [])];
   if (!codes.some((entry) => entry.code === 10)) {
@@ -60,7 +67,7 @@ export function renderCommandHelp(registry: HelpRegistry, path: readonly string[
         lines.push(`  ops ${child.meta.path.join(' ')}  ${child.meta.summary}`);
       }
     }
-    lines.push('', '常用入口:', '  ops workspace doctor', '  ops runtime dev', '  ops quality check', '  ops delivery build');
+    lines.push('', '常用入口:', '  ops workspace doctor', '  ops runtime dev --scenario default --web-port 5173 --mock-port 9090', '  ops quality check', '  ops delivery build');
     return lines.join('\n');
   }
 
@@ -80,11 +87,11 @@ export function renderCommandHelp(registry: HelpRegistry, path: readonly string[
   const meta = command.meta;
   lines.push('', meta.summary);
   if (meta.description) lines.push(meta.description);
-  const usage = ['ops', ...path, ...(meta.positionals ?? []).map((position) => position.required ? `<${position.name}>` : `[${position.name}]`)].join(' ');
+  const usage = ['ops', ...path, ...(meta.positionals ?? []).map((position) => `<${position.name}>`), ...(meta.options ?? []).map((option) => option.model.kind === 'switch' ? `[--${option.name}]` : `--${option.name} <${option.model.kind}>`)].join(' ');
   lines.push('', `用法: ${usage}`);
-  lines.push('', '全局选项:', '      --help      显示帮助', '      --dry-run   只显示操作，不执行副作用');
-  if (meta.positionals?.length) lines.push('', '位置参数:', ...meta.positionals.map((position) => `  ${position.name}  ${position.description}`));
-  if (meta.options?.length) lines.push('', '选项:', ...meta.options.map((option) => `      --${option.name}${option.type === 'boolean' ? '' : ` <${option.valueName ?? option.name}>`}  ${option.description}${option.env ? ` (env: ${option.env})` : ''}${option.default !== undefined ? ` [默认: ${String(option.default)}]` : ''}`));
+  lines.push('', '全局选项:', ...globalSwitches.map(parameterHelp));
+  if (meta.positionals?.length) lines.push('', '位置参数:', ...meta.positionals.map((position) => `  ${position.name}  ${position.description} (必填; ${modelDescription(position.model)})`));
+  if (meta.options?.length) lines.push('', '选项:', ...meta.options.map(parameterHelp));
   if (meta.examples?.length) lines.push('', '示例:', ...meta.examples.map((example) => `  ${example}`));
   lines.push('', '退出码:', ...leafExitCodes(command).map((entry) => `  ${entry.code}  ${entry.meaning}`));
   return lines.join('\n');

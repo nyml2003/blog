@@ -12,13 +12,12 @@ const routes: Record<string, string> = {
   "/m/": "/mobile/pages/home/index.html",
   "/m/articles/index.html": "/mobile/pages/articles/index.html",
   "/m/articles/detail.html": "/mobile/pages/article-detail/index.html",
+  "/m/settings/index.html": "/mobile/pages/settings/index.html",
   "/admin": "/desktop/pages/admin-home/index.html",
   "/admin/": "/desktop/pages/admin-home/index.html",
   "/admin/index.html": "/desktop/pages/admin-home/index.html",
   "/admin/articles/new.html": "/desktop/pages/admin-article-new/index.html",
   "/admin/articles/edit.html": "/desktop/pages/admin-article-edit/index.html",
-  "/admin/articles/preview.html":
-    "/desktop/pages/admin-article-preview/index.html",
   "/admin/article-types/index.html":
     "/desktop/pages/admin-article-types/index.html",
   "/admin/terms/index.html": "/desktop/pages/admin-terms/index.html",
@@ -51,10 +50,6 @@ export default defineConfig({
         admin: resolve(root, "desktop/pages/admin-home/index.html"),
         adminNew: resolve(root, "desktop/pages/admin-article-new/index.html"),
         adminEdit: resolve(root, "desktop/pages/admin-article-edit/index.html"),
-        adminPreview: resolve(
-          root,
-          "desktop/pages/admin-article-preview/index.html",
-        ),
         adminTypes: resolve(
           root,
           "desktop/pages/admin-article-types/index.html",
@@ -63,6 +58,7 @@ export default defineConfig({
         mobileHome: resolve(root, "mobile/pages/home/index.html"),
         mobileArticles: resolve(root, "mobile/pages/articles/index.html"),
         mobileDetail: resolve(root, "mobile/pages/article-detail/index.html"),
+        mobileSettings: resolve(root, "mobile/pages/settings/index.html"),
       },
     },
   },

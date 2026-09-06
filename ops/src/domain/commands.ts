@@ -1,12 +1,6 @@
-export type ValueType = 'string' | 'number' | 'boolean';
-
-export interface PositionalSpec { name: string; type: ValueType; required?: boolean; description: string; validate?: (value: string | number | boolean) => string | undefined }
-export interface OptionSpec {
-  name: string; type: ValueType; required?: boolean;
-  default?: string | number | boolean; env?: string; valueName?: string; description: string;
-  /** Domain-level value rule; a message means the value is a usage error (exit code 10). */
-  validate?: (value: string | number | boolean) => string | undefined
-}
+import { globalSwitches, isModelValue, validateParameter, type ParameterSpec, type PositionalSpec, type ModelValue, type CommandArgs } from './parameters.ts';
+export type { CommandArgs, PositionalSpec } from './parameters.ts';
+export type OptionSpec = ParameterSpec;
 export interface ExitCodeSpec { code: number; meaning: string }
 export interface GroupMeta {
   path: readonly [string, ...string[]];
@@ -20,7 +14,10 @@ export interface CommandMeta {
   positionals?: readonly PositionalSpec[]; options?: readonly OptionSpec[];
   examples?: readonly string[]; exitCodes?: readonly ExitCodeSpec[]
 }
-export type CommandArgs = Record<string, string | number | boolean>;
+type Fields<M extends CommandMeta> =
+  (M extends { options: readonly (infer F extends ParameterSpec)[] } ? F : never)
+  | (M extends { positionals: readonly (infer F extends PositionalSpec)[] } ? F : never);
+export type ParsedArgs<M extends CommandMeta> = { [F in Fields<M> as F['name']]: ModelValue<F['model']> };
 export interface CommandContext {
   workspace: import('./workspace.ts').Workspace;
   process: import('./ports.ts').ProcessPort;
@@ -40,8 +37,27 @@ export type CommandHandler = (context: CommandContext, args: CommandArgs) => Pro
 export interface CommandDefinition { readonly meta: CommandMeta; readonly handler: CommandHandler }
 export interface GroupDefinition { readonly meta: GroupMeta }
 
-export function defineCommand(meta: CommandMeta, handler: CommandHandler): CommandDefinition {
-  return Object.freeze({ meta: Object.freeze({ ...meta, path: Object.freeze([...meta.path]), options: Object.freeze([...(meta.options ?? [])]), positionals: Object.freeze([...(meta.positionals ?? [])]) }), handler });
+function argumentsMatch<M extends CommandMeta>(meta: M, args: CommandArgs): args is ParsedArgs<M> {
+  const fields = [...(meta.options ?? []), ...(meta.positionals ?? [])];
+  return Object.keys(args).length === fields.length
+    && fields.every((field) => Object.hasOwn(args, field.name) && isModelValue(field.model, args[field.name]));
+}
+
+export function defineCommand<const M extends CommandMeta>(meta: M, handler: (context: CommandContext, args: ParsedArgs<M>) => Promise<number> | number): CommandDefinition {
+  for (const field of [...(meta.options ?? []), ...(meta.positionals ?? [])]) {
+    validateParameter(field);
+    if (field.model.kind === 'enum') Object.freeze(field.model.values);
+    Object.freeze(field.model);
+    Object.freeze(field);
+  }
+  Object.freeze(meta.options);
+  Object.freeze(meta.positionals);
+  Object.freeze(meta);
+  const invoke: CommandHandler = (context, args) => {
+    if (!argumentsMatch(meta, args)) throw new Error(`invalid parsed arguments: ${meta.path.join(' ')}`);
+    return handler(context, args);
+  };
+  return Object.freeze({ meta: Object.freeze({ ...meta, path: Object.freeze([...meta.path]), options: Object.freeze([...(meta.options ?? [])]), positionals: Object.freeze([...(meta.positionals ?? [])]) }), handler: invoke });
 }
 
 export function validateRegistry(definitions: readonly CommandDefinition[]): void {
@@ -54,7 +70,15 @@ export function validateRegistry(definitions: readonly CommandDefinition[]): voi
     if (seen.has(key)) throw new Error(`duplicate command path: ${key}`);
     seen.add(key);
     const names = new Set<string>();
-    for (const spec of [...(meta.positionals ?? []), ...(meta.options ?? [])]) { if (names.has(spec.name)) throw new Error(`duplicate argument ${spec.name}: ${key}`); names.add(spec.name); }
+    for (const spec of [...(meta.positionals ?? []), ...(meta.options ?? [])]) {
+      validateParameter(spec);
+      if (globalSwitches.some((field) => field.name === spec.name)) throw new Error(`reserved global switch: ${spec.name}`);
+      if (names.has(spec.name)) throw new Error(`duplicate argument ${spec.name}: ${key}`);
+      names.add(spec.name);
+    }
+    for (const spec of meta.positionals ?? []) {
+      if (String(spec.model.kind) === 'switch') throw new Error(`positional cannot be switch: ${spec.name}`);
+    }
   }
   for (const definition of definitions) for (let i = 1; i < definition.meta.path.length; i++) {
     const parent = definition.meta.path.slice(0, i).join(' ');

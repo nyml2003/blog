@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>设置 - 技术知识库</title>
+    <script>
+      (() => {
+        const root = document.documentElement;
+        try {
+          const theme = window.localStorage.getItem("blog.mobile.theme");
+          if (theme === "paper" || theme === "dark" || theme === "sepia") {
+            root.setAttribute("data-theme", theme);
+          }
+        } catch {}
+        try {
+          const font = window.localStorage.getItem("blog.mobile.font");
+          if (font === "sans" || font === "serif" || font === "mono") {
+            root.setAttribute("data-font", font);
+          }
+        } catch {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/mobile/src/pages/settings.tsx"></script>
+  </body>
+</html>

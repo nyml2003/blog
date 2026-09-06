@@ -11,7 +11,7 @@ last_reviewed: 2026-09-06
 
 ## 目的与范围
 
-本 Spec 把 `PLAN-OPS-RUNTIME-DEV-001` 的运行层固定为可验收契约：三种运行模式、`ops delivery build`、命令参数与默认值、模式 × 服务 × 端口矩阵、环境变量注入、进程生命周期和失败行为。
+本 Spec 把 `PLAN-OPS-RUNTIME-DEV-001` 的运行层固定为可验收契约：三种运行模式、`ops delivery build`、命令参数与显式值、模式 × 服务 × 端口矩阵、环境变量注入、进程生命周期和失败行为。
 
 约束对象是 `ops runtime` / `ops delivery` 的**可观察行为**（命令面、进程组合、端口、注入、日志、退出码），不约束子进程内部实现。
 
@@ -38,14 +38,17 @@ last_reviewed: 2026-09-06
 
 ### 命令面总表
 
-| 命令 | 参数 | 默认值 | 说明 |
+| 命令 | 参数 | 缺省行为 | 说明 |
 | --- | --- | --- | --- |
-| `ops runtime dev` | `[--scenario <NAME>]`、`[--web-port <PORT>]`、`[--mock-port <PORT>]`、全局 `--help`/`--dry-run`/`--json` | `--scenario default`、web `5173`、mock `9090` | Vite dev + Mock Product API；不启动 Product/Data |
-| `ops runtime backend` | `[--data mock\|test]`、`[--product-port <PORT>]`、`[--data-port <PORT>]` | `--data mock`、product `8080`、data `8081` | Product API-only + Data Server；不挂载前端，无 Vite |
-| `ops runtime integration` | `[--watch]`、`[--product-port <PORT>]`、`[--data-port <PORT>]` | 不带 `--watch` 时构建一次；product `8080`、data `8081` | 前端构建（或 build `--watch`）+ Product + Data(test)；Product 挂载 `web/dist` |
+| `ops runtime dev` | `--scenario <NAME>`、`--web-port <PORT>`、`--mock-port <PORT>`、全局 `--help`/`--dry-run`/`--json` | 有值参数全部必填，无默认值 | Vite dev + Mock Product API；不启动 Product/Data |
+| `ops runtime backend` | `--data <mock\|test>`、`--product-port <PORT>`、`--data-port <PORT>` | 有值参数全部必填，无默认值 | Product API-only + Data Server；不挂载前端，无 Vite |
+| `ops runtime integration` | `[--watch]`、`--product-port <PORT>`、`--data-port <PORT>` | watch 缺省 false；端口必填 | 前端构建（或 build `--watch`）+ Product + Data(test)；Product 挂载 `web/dist` |
 | `ops delivery build` | 全局 `--dry-run`、`--json` | — | 构建 `web/dist` 与 Rust Product/Data/Mock 交付 binary，不启动任何服务 |
 
 补充规则：
+
+- 参数遵循 [SPEC-OPS-PARAMETERS-001](./SPEC-OPS-PARAMETERS-001.md)：有值参数全部显式必填，不从默认值或环境变量补齐；switch 出现 true、缺省 false，重复幂等，不接受赋值。帮助完整展示模型、范围和枚举，dry-run 仍须完整参数。
+- 本文场景若只写运行模式名称，表示引用命令；实际执行必须补齐本表的所有必填参数。下方可执行示例均显式给值。
 
 - `integration` 固定 `data=test`，**不提供** `--data`（来源：PLAN「运行模式」中 integration 明确写作 `Rust Data(test)`，而 `--data` 只出现在 `backend` 签名里）。需要 mock 语义时改用 `ops runtime dev` 或 `ops runtime backend --data mock`；不追加 `integration --data mock`（2026-09-06 PM 裁定，关闭 OPEN-7）。
 - 本期**不提供** `--host`/`--listen`。被删除的 `ops runtime serve --listen`（原 env `BLOG_LISTEN_ADDR`）不复活；监听地址固定 `127.0.0.1`（对齐 PLAN 非目标"不做公网监听"）。（2026-09-06 追认为正式契约）
@@ -56,17 +59,17 @@ last_reviewed: 2026-09-06
 ### 示例
 
 ```text
-ops runtime dev
-ops runtime dev --scenario empty
+ops runtime dev --scenario default --web-port 5173 --mock-port 9090
+ops runtime dev --scenario empty --web-port 5173 --mock-port 9090
 ops runtime dev --scenario slow --web-port 5173 --mock-port 9090
-ops runtime backend
-ops runtime backend --data test
+ops runtime backend --data mock --product-port 8080 --data-port 8081
+ops runtime backend --data test --product-port 8080 --data-port 8081
 ops runtime backend --data mock --product-port 18080 --data-port 18081
-ops runtime integration
-ops runtime integration --watch
+ops runtime integration --product-port 8080 --data-port 8081
+ops runtime integration --watch --product-port 8080 --data-port 8081
 ops delivery build
 ops delivery build --dry-run
-ops runtime backend --json
+ops runtime backend --data mock --product-port 8080 --data-port 8081 --json
 ```
 
 ### 已删除命令
@@ -81,10 +84,10 @@ ops runtime backend --json
 
 | 模式 | Vite (`[web]`) | Product (`[product]`) | Data (`[data]`) | Mock (`[mock]`) | 数据来源 | 最终访问地址 |
 | --- | --- | --- | --- | --- | --- | --- |
-| `runtime dev` | 启动，候选 `5173` | 不启动 | 不启动 | 启动，候选 `9090` | Mock（场景由 `--scenario` 选定） | `http://127.0.0.1:<web 实际端口>` |
-| `runtime backend --data mock` | 不启动 | 启动，候选 `8080` | 启动，候选 `8081`（mock 语义，内存夹具） | 不启动 | Data(mock)，无 SQLite 文件 | 无页面入口；API 基址 `http://127.0.0.1:<product 实际端口>` |
-| `runtime backend --data test` | 不启动 | 启动，候选 `8080` | 启动，候选 `8081`（test 语义） | 不启动 | Data(test)，每次运行全新临时 SQLite + 自动迁移 + 稳定 seed | 同上 |
-| `runtime integration [--watch]` | 不启动（先构建产物） | 启动，候选 `8080`，挂载 `web/dist` | 启动，候选 `8081`（test 语义） | 不启动 | Data(test) | `http://127.0.0.1:<product 实际端口>`（页面与 `/api` 同源） |
+| `runtime dev` | 启动，候选由 `--web-port` 显式指定 | 不启动 | 不启动 | 启动，候选由 `--mock-port` 显式指定 | Mock（场景由 `--scenario` 选定） | `http://127.0.0.1:<web 实际端口>` |
+| `runtime backend --data mock` | 不启动 | 启动，候选由 `--product-port` 显式指定 | 启动，候选由 `--data-port` 显式指定（mock 语义，内存夹具） | 不启动 | Data(mock)，无 SQLite 文件 | 无页面入口；API 基址 `http://127.0.0.1:<product 实际端口>` |
+| `runtime backend --data test` | 不启动 | 启动，候选由 `--product-port` 显式指定 | 启动，候选由 `--data-port` 显式指定（test 语义） | 不启动 | Data(test)，每次运行全新临时 SQLite + 自动迁移 + 稳定 seed | 同上 |
+| `runtime integration [--watch]` | 不启动（先构建产物） | 启动，候选由 `--product-port` 显式指定，挂载 `web/dist` | 启动，候选由 `--data-port` 显式指定（test 语义） | 不启动 | Data(test) | `http://127.0.0.1:<product 实际端口>`（页面与 `/api` 同源） |
 | `delivery build` | 不启动 | 不启动 | 不启动 | 不启动 | — | 无；产物在 `web/dist` 与 Rust binary |
 
 规则：
@@ -95,7 +98,7 @@ ops runtime backend --json
 
 ## 端口分配与依赖注入
 
-- **候选与覆盖**：每个服务有默认候选端口（Vite `5173`、Product `8080`、Data `8081`、Mock `9090`），可被对应 `--*-port` 参数覆盖为唯一候选起点。
+- **显式候选**：每个服务必须通过对应 `--*-port` 提供唯一候选起点；参数缺失或非法时退出 10，不启动服务。
 - **有界递增**：候选端口被占用（`EADDRINUSE`）时，从候选值起逐次 +1 重试绑定；每个服务最多尝试 **10 个端口（+0 … +9）**，全部被占用即端口耗尽（2026-09-06 PM 裁定，关闭 OPEN-2）。
 - **分配顺序**：按依赖方向分配——`backend`/`integration` 先 Data 后 Product；`dev` 先 Mock 后 Vite。已分配给本次运行其他服务的端口不再作为后续服务的候选（避免同次运行自撞，例如 Product 递增撞上 Data 已占用的 `8081`）。
 - **实际绑定结果为唯一事实来源**：子进程收到的地址一律是实际绑定成功的地址（含递增后的端口），不允许子进程按默认值自行猜测。递增发生时，打印给用户的访问地址、注入给依赖方的地址、诊断信息三者必须一致。
@@ -113,7 +116,7 @@ ops runtime backend --json
 注入规则：
 
 - **ops 注入值优先于外层环境**：在 ops 启动的子进程环境中，上表变量由 ops 计算后写入并覆盖调用者已有的同名变量。理由：ops 是唯一知道实际绑定端口的角色，沿用用户环境里的旧值必然指向失效端口。需要手工控制环境的开发者不使用 `ops runtime`，直接驱动子进程（`AGENTS.md`、`docs/guides/operations.md` 中 serve/migrate/`go run` 旧条目的清理是 **RUNTIME 工作流实施期的依赖项**，2026-09-06 PM 裁定，关闭 OPEN-8）。
-- **`--scenario` 只走 CLI**：默认 `default`；不读取环境变量、不读取配置文件。Mock 子进程通过命令行参数（而非环境变量）收到场景名。会话头 `X-Blog-Mock-Session` 由前端 Client interceptor 附加（`WORKSTREAM-OPS-RUNTIME-FRONTEND`），不属于 ops 注入面。
+- **`--scenario` 只走 CLI**：必须显式选择，`default` 仅是合法名称；不读取环境变量、不读取配置文件。Mock 子进程通过命令行参数（而非环境变量）收到场景名。会话头 `X-Blog-Mock-Session` 由前端 Client interceptor 附加（`WORKSTREAM-OPS-RUNTIME-FRONTEND`），不属于 ops 注入面。
 - **注入面收敛**：ops 注入的运行配置只在 composition root / 进程启动参数层面被消费；页面与领域模型不出现 Mock 专用类型或 Mock 专用环境变量（对齐 `WORKSTREAM-OPS-RUNTIME-FRONTEND` 约束）。
 - `mock` 语义下 Data 不创建、不打开任何 SQLite 文件；`test` 语义下每次运行使用全新临时 SQLite，自动迁移并加载稳定 seed（PLAN 验收 5）。库文件位于 `target/test-dbs/`、以运行进程 PID 命名：**正常退出即删除，异常退出保留供诊断**（2026-09-06 PM 裁定，关闭 OPEN-3/OPEN-5）。迁移不提供独立命令，由 Data 启动时自动执行。
 
@@ -197,22 +200,22 @@ Then 帮助能区分三种运行模式的目的、是否连接真实后端、是
 
 Given 项目环境已激活
 When 执行 `ops runtime dev`（无参数）
-Then 以 `--scenario default`、候选端口 web `5173` / mock `9090` 启动 Vite 与 Mock 两个进程，不启动 Product 或 Data。
+Then 退出 10，提示缺少必填字段且不启动任何进程；显式提供 `--scenario default --web-port 5173 --mock-port 9090` 后才启动 Vite 与 Mock，不启动 Product 或 Data。
 
 #### SPEC-OPS-RUNTIME-001-CMD-003
 
 强度：Acceptance
 
 Given 项目环境已激活
-When 分别执行 `ops runtime backend`、`ops runtime backend --data mock`、`ops runtime backend --data test`、`ops runtime backend --data prod`
-Then 前两者等价并以 `--data mock` 启动；第三者以 `--data test` 启动；第四者按用法错误处理且不启动任何进程（`prod` 不在本期运行链路）。
+When 执行 `ops runtime backend`，或在显式提供两项端口后分别传 `--data mock`、`--data test`、`--data prod`
+Then 无参数及 prod 均按用法错误退出 10 且不启动进程；完整 mock/test 参数分别选择对应数据语义。
 
 #### SPEC-OPS-RUNTIME-001-CMD-004
 
 强度：Acceptance
 
 Given 项目环境已激活
-When 执行 `ops runtime integration` 或 `ops runtime integration --watch`
+When 显式提供 product/data 两项端口后，分别执行 integration 不带及带 `--watch`
 Then 数据语义固定为 `test`，命令不接受 `--data`（出现即用法错误）；不带 `--watch` 时前端只构建一次，带 `--watch` 时进入构建监视。
 
 #### SPEC-OPS-RUNTIME-001-CMD-005
@@ -350,7 +353,7 @@ Then ops 启动的 Vite 进程收到由 ops 计算的 Mock 实际地址，页面
 
 Given 环境中存在任意 `SCENARIO`/`BLOG_SCENARIO` 类变量，且未传 `--scenario`
 When 执行 `ops runtime dev`
-Then Mock 以 `default` 场景启动；传入未知场景名时按用法错误处理；场景选择不读取任何环境变量或配置文件。
+Then 退出 10 并提示缺少必填参数，不自动选择 default；传入未知场景名也按用法错误处理；场景选择不读取任何环境变量或配置文件。
 
 #### SPEC-OPS-RUNTIME-001-ENV-003
 
@@ -494,6 +497,10 @@ Then 行为遵循「静态挂载路由契约」：①精确映射（`/`、`/m`�
 Given `integration --watch` 在服务运行期间重建 `web/dist`
 When 重建窗口内发起页面与 `/api` 请求
 Then 记录是否出现半写产物、资源 404 或新旧资源混用，以及是否有必要引入"构建完成后原子切换/暂存目录"；观察结果作为是否补充契约的输入。
+
+## 参数契约修订（2026-09-06）
+
+用户确认取消 ops 有值参数的默认值与环境变量补值，使用 int32 / enum / switch 字段模型；watch 与全局控制参数保持无值 switch。命令表、示例、CMD-002/003/004 与 ENV-002 已按新决策更新。以下原始决策记录保留历史背景，参数输入以 SPEC-OPS-PARAMETERS-001 和本文当前命令表为准；Rust 服务独立 CLI 的附录 A 优先级不在本次改造范围。
 
 ## 决策记录（原待决策项，2026-09-06 全部关闭）
 
