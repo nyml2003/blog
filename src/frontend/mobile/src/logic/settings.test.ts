@@ -1,9 +1,13 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import test from "node:test";
 import { runInNewContext } from "node:vm";
 import { fileURLToPath } from "node:url";
-import { mobileSettingsBootstrap } from "../../../build/mobile-settings-bootstrap";
+import { pageBootstrap } from "../../../build/page-bootstrap";
+import {
+  generatedPagePath,
+  renderPageHtml,
+} from "../../../build/page-template";
+import { pageRegistry } from "../../../pages.registry";
 import {
   createMobileSettingsClient,
   isMobileFont,
@@ -171,18 +175,14 @@ test("a blocked head bootstrap leaves the page on its default selection", () => 
 });
 
 test("the synchronous head bootstrap agrees with module validation and fallback", async () => {
-  const filename = fileURLToPath(
-    new URL("../../pages/settings/index.html", import.meta.url),
-  );
-  const html = readFileSync(
-    filename,
-    "utf8",
-  );
   const frontendRoot = fileURLToPath(new URL("../../../", import.meta.url));
-  const plugin = mobileSettingsBootstrap(frontendRoot);
+  const settingsPage = pageRegistry.find((page) => page.id === "mobile-settings");
+  assert.ok(settingsPage);
+  const filename = generatedPagePath(frontendRoot, settingsPage);
+  const plugin = pageBootstrap(frontendRoot);
   const transform = plugin.transformIndexHtml;
   assert.ok(transform && typeof transform === "object" && "handler" in transform);
-  const transformed = await transform.handler(html, {
+  const transformed = await transform.handler(renderPageHtml(settingsPage), {
     path: "/m/settings/index.html",
     filename,
   });
@@ -233,21 +233,14 @@ test("the synchronous head bootstrap agrees with module validation and fallback"
 
 test("the synchronous head bootstrap is present on every mobile page", async () => {
   const frontendRoot = fileURLToPath(new URL("../../../", import.meta.url));
-  const plugin = mobileSettingsBootstrap(frontendRoot);
+  const plugin = pageBootstrap(frontendRoot);
   const transform = plugin.transformIndexHtml;
   assert.ok(transform && typeof transform === "object" && "handler" in transform);
 
-  for (const page of [
-    "home/index.html",
-    "articles/index.html",
-    "article-detail/index.html",
-    "settings/index.html",
-  ]) {
-    const filename = fileURLToPath(
-      new URL(`../../pages/${page}`, import.meta.url),
-    );
-    const transformed = await transform.handler(readFileSync(filename, "utf8"), {
-      path: `/m/${page}`,
+  for (const page of pageRegistry.filter((entry) => entry.bootstrap)) {
+    const filename = generatedPagePath(frontendRoot, page);
+    const transformed = await transform.handler(renderPageHtml(page), {
+      path: page.aliases[0],
       filename,
     });
     const scriptTag = transformed?.find((tag) => tag.tag === "script");

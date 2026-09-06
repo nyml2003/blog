@@ -1,3 +1,3 @@
-import { render } from "solid-js/web";
+import { definePage } from "../../../../common/page";
 import { Editor } from "./editor";
-render(() => <Editor />, document.getElementById("app")!);
+definePage(Editor);

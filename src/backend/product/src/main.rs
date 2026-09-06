@@ -6,6 +6,7 @@
 //! - 收到 SIGTERM/SIGINT：停止 accept → 限期排空在途请求 → 退出。
 
 mod cli;
+mod bff;
 mod data_client;
 mod http;
 mod logging;

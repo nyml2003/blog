@@ -1,5 +1,5 @@
 import { createSignal, Show } from "solid-js";
-import { render } from "solid-js/web";
+import { definePage } from "../../../../common/page";
 import { browserClient as client } from "../../../../common/client";
 import {
   filterFromSearch,
@@ -66,4 +66,4 @@ const App = () => {
     </div>
   );
 };
-render(() => <App />, document.getElementById("app")!);
+definePage(App);

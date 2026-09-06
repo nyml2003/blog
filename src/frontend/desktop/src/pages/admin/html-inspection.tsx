@@ -61,6 +61,7 @@ export function useHtmlInspection(source: Accessor<string>) {
 }
 
 export function HtmlDiagnostics(props: {
+  id?: string;
   inspection: DeepReadonly<HtmlInspection> | undefined;
   pending: boolean;
   error: string;
@@ -69,7 +70,7 @@ export function HtmlDiagnostics(props: {
 }) {
   return (
     <div
-      id="html-diagnostics"
+      id={props.id ?? "html-diagnostics"}
       class="html-diagnostics"
       aria-live="polite"
       aria-atomic="true"

@@ -1,4 +1,4 @@
-import { render } from "solid-js/web";
+import { definePage } from "../../../common/page";
 import { Heading, Select } from "../../../mobile-ui/atoms";
 import { BottomNav, Field } from "../../../mobile-ui/molecules";
 import {
@@ -6,19 +6,7 @@ import {
   useMobileSettings,
 } from "../logic/settings";
 import { MobileNav } from "../components/ui";
-import "../../styles/tokens.css";
-import "../../styles/base.css";
-import "../../styles/shell.css";
-import "../../styles/layout.css";
-import "../../styles/components.css";
-import "../../styles/shelf.css";
-import "../../styles/filter.css";
-import "../../styles/detail.css";
-import "../../styles/article-body.css";
-import "../../styles/pages.css";
-import "../../../mobile-ui/styles/themes.css";
-import "../../../mobile-ui/styles/atoms.css";
-import "../../../mobile-ui/styles/molecules.css";
+import "../../styles/app.css";
 
 function SettingsPage() {
   const settings = useMobileSettings();
@@ -67,5 +55,4 @@ function SettingsPage() {
   );
 }
 
-const app = document.getElementById("app");
-if (app) render(() => <SettingsPage />, app);
+definePage(SettingsPage);

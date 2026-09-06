@@ -13,11 +13,11 @@ use std::time::Duration;
 
 use protocol::envelope::codes;
 use protocol::{
-    ArticleDetail, ArticleGetQuery, ArticleId, ArticleListItem, ArticleListPage, ArticleListQuery,
-    ArticleShelfData, ArticleShelfQuery, ArticleType, ArticleTypeListQuery, ArticleTypeName,
-    ArticleTypeRename, ArticleWrite, DatabaseDiagnostics, MAX_SUMMARY_CHARS, OperationFailure,
-    Term, TermListQuery, TermRef, TermRename, TermWrite, Unit, has_more, normalize_page,
-    normalize_page_size,
+    ArticleBrowseQuery, ArticleDetail, ArticleGetQuery, ArticleId, ArticleListItem,
+    ArticleListPage, ArticleListQuery, ArticleShelfData, ArticleShelfQuery, ArticleType,
+    ArticleTypeListQuery, ArticleTypeName, ArticleTypeRename, ArticleWrite, DatabaseDiagnostics,
+    MAX_SUMMARY_CHARS, OperationFailure, Term, TermListQuery, TermRef, TermRename, TermWrite, Unit,
+    has_more, normalize_page, normalize_page_size,
 };
 use sqlx::sqlite::{
     SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteRow, SqliteSynchronous,
@@ -1204,6 +1204,69 @@ impl DataStore for SqliteStore {
         })
     }
 
+    /// Mobile 平铺页浏览（SPEC-MOBILE-BROWSE-IA-001）。
+    ///
+    /// 固定查询数 3~4：term kind 校验(0/1) + count(1) + 当前页(1) + 批量 terms(1)，
+    /// 与条目数无关。筛选条件与列表排序语义一致（`updated_at DESC, id DESC`）。
+    fn article_browse(
+        &self,
+        query: &ArticleBrowseQuery,
+        ctx: &OpCtx<'_>,
+    ) -> Result<ArticleListPage, OperationFailure> {
+        let page = normalize_page(query.page);
+        let page_size = normalize_page_size(query.page_size);
+        let mut conn = self.connect()?;
+
+        // 0/1 参数校验：topic/tag 必须引用对应 kind 的 term（否则参数错误）。
+        validate_browse_terms(self, &mut conn.conn, query, ctx)?;
+
+        let (where_sql, args) = build_browse_where(true, query);
+
+        // 1/3 count。
+        let count_sql = format!("SELECT COUNT(*) AS total {ARTICLE_FROM}{where_sql}");
+        let row = self
+            .fetch_optional(&mut conn.conn, &count_sql, &args, ctx)?
+            .ok_or_else(|| internal("count query returned no row", &"empty result"))?;
+        let total: i64 = column(&row, "total")?;
+        ctx.meter.record(1);
+        if ctx.canceled() {
+            return Err(OperationFailure::new(
+                codes::CANCELED,
+                "article_browse canceled before page read",
+            ));
+        }
+
+        // 2/3 当前页。
+        let page_sql = format!(
+            "SELECT {ARTICLE_COLUMNS} {ARTICLE_FROM}{where_sql} \
+             ORDER BY a.updated_at DESC, a.id DESC LIMIT ? OFFSET ?"
+        );
+        let mut page_args = args.clone();
+        page_args.push(Bind::Int(i64::from(page_size)));
+        page_args.push(Bind::Int(i64::from(page - 1) * i64::from(page_size)));
+        let rows = self.fetch_all(&mut conn.conn, &page_sql, &page_args, ctx)?;
+        ctx.meter.record(1);
+        let mut items: Vec<ArticleListItem> =
+            rows.iter().map(article_item).collect::<Result<_, _>>()?;
+        if ctx.canceled() {
+            return Err(OperationFailure::new(
+                codes::CANCELED,
+                "article_browse canceled before batch term read",
+            ));
+        }
+
+        // 3/3 批量关联（类型名已在页查询里 JOIN 取回；`attach_relations` 自行计数）。
+        self.attach_relations(&mut conn.conn, &mut items, ctx)?;
+
+        Ok(ArticleListPage {
+            items,
+            page,
+            page_size,
+            total,
+            has_more: has_more(page, page_size, total),
+        })
+    }
+
     fn describe(&self) -> Option<DatabaseDiagnostics> {
         Some(DatabaseDiagnostics {
             path: self.path.display().to_string(),
@@ -1259,6 +1322,63 @@ fn build_article_where(published_only: bool, filter: &ArticleFilter) -> (String,
         }
     }
     (sql, args)
+}
+
+/// 浏览的 WHERE 子构造（SPEC-MOBILE-BROWSE-IA-001）：**每个维度一个独立子句**，
+/// 维度之间 AND。
+///
+/// 刻意不走 [`build_article_where`] 的 `term_ids IN (...)`：那是同一维度 OR 语义，
+/// 被 `public.article_list` / `admin.article_list` 与 Desktop 多选共用（决策记录 #7）。
+/// topic / tag 各自用独立 EXISTS 表达，kind 条件一并写入子句（入口已校验 kind，
+/// 这里再带一次只影响命中面，不改变错误语义）。
+fn build_browse_where(published_only: bool, query: &ArticleBrowseQuery) -> (String, Vec<Bind>) {
+    let mut sql = String::from(" WHERE 1=1");
+    let mut args: Vec<Bind> = Vec::new();
+    if published_only {
+        sql.push_str(" AND a.status = 'published'");
+    }
+    if let Some(type_id) = query.article_type_id {
+        sql.push_str(" AND a.article_type_id = ?");
+        args.push(Bind::Int(type_id));
+    }
+    for (term_id, kind) in query.term_dimensions() {
+        sql.push_str(
+            " AND EXISTS (SELECT 1 FROM article_terms at JOIN terms t ON t.id = at.term_id \
+             WHERE at.article_id = a.id AND at.term_id = ? AND t.kind = ?)",
+        );
+        args.push(Bind::Int(term_id));
+        args.push(Bind::Text(kind.to_owned()));
+    }
+    (sql, args)
+}
+
+/// 浏览参数的 term `kind` 校验：`topic_id` / `tag_id` 必须引用对应 kind 的 term。
+///
+/// 一次 `IN` 查询取回全部相关 id 的 kind（没有维度参数时不发查询），不存在或
+/// kind 不匹配都返回参数错误（错误码与消息由 Data 校验层统一）。
+fn validate_browse_terms(
+    store: &SqliteStore,
+    conn: &mut SqliteConnection,
+    query: &ArticleBrowseQuery,
+    ctx: &OpCtx<'_>,
+) -> Result<(), OperationFailure> {
+    let wanted = query.term_dimensions();
+    if wanted.is_empty() {
+        return Ok(());
+    }
+    let placeholders = placeholders_for(wanted.len());
+    let sql = format!("SELECT id AS id, kind AS kind FROM terms WHERE id IN ({placeholders})");
+    let args: Vec<Bind> = wanted.iter().map(|(id, _)| Bind::Int(*id)).collect();
+    let rows = store.fetch_all(conn, &sql, &args, ctx)?;
+    ctx.meter.record(1);
+    let kinds: HashMap<i64, String> = rows
+        .iter()
+        .map(|row| Ok((column(row, "id")?, column(row, "kind")?)))
+        .collect::<Result<_, _>>()?;
+    super::validation::browse_term_kind_failure(query, |term_id| {
+        kinds.get(&term_id).map(String::as_str)
+    })
+        .map_or(Ok(()), Err)
 }
 
 /// 列读取：集中在此做类型与错误映射，保持查询代码可读。

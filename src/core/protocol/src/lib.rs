@@ -31,11 +31,12 @@ pub use diagnostics::{
 };
 pub use envelope::{Envelope, OperationFailure};
 pub use operation::{
-    ArticleDetail, ArticleGetQuery, ArticleId, ArticleListItem, ArticleListPage, ArticleListQuery,
-    ArticlePublishChecked, ArticleShelfData, ArticleShelfQuery, ArticleType, ArticleTypeListQuery,
-    ArticleTypeName, ArticleTypeRef, ArticleTypeRename, ArticleWrite, DataOperation, DataOutcome,
-    DiagnosticDigest, DiagnosticDigestResult, DiagnosticEcho, DiagnosticEchoResult, DiagnosticSlow,
-    DiagnosticSlowResult, Lane, MAX_SUMMARY_CHARS, OPERATION_NAMES, RECOMMENDATION_LIMIT, Term,
+    ArticleBrowseQuery, ArticleDetail, ArticleGetQuery, ArticleId, ArticleListItem,
+    ArticleListPage, ArticleListQuery, ArticlePublishChecked, ArticleShelfData, ArticleShelfQuery,
+    ArticleType, ArticleTypeListQuery, ArticleTypeName, ArticleTypeRef, ArticleTypeRename,
+    ArticleWrite, DataOperation, DataOutcome, DiagnosticDigest, DiagnosticDigestResult,
+    DiagnosticEcho, DiagnosticEchoResult, DiagnosticSlow, DiagnosticSlowResult, Lane,
+    MAX_SUMMARY_CHARS, OPERATION_NAMES, RECOMMENDATION_LIMIT, TERM_KIND_TAG, TERM_KIND_TOPIC, Term,
     TermListQuery, TermRef, TermRename, TermWrite, Unit,
 };
 pub use paging::{has_more, normalize_page, normalize_page_size};

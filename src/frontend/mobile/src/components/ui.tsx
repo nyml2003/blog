@@ -1,4 +1,4 @@
-import { For, Show, createSignal, onCleanup, onMount } from "solid-js";
+import { For, Show } from "solid-js";
 import { Heading, Link, Tag, Text } from "../../../mobile-ui/atoms";
 import {
   StateMessage,
@@ -7,23 +7,42 @@ import {
 } from "../../../mobile-ui/molecules";
 import type {
   Article,
-  ArticleFilter,
   ArticleType,
   Term,
 } from "../../../common/contracts/domain";
+import { browseHref } from "../logic/browse-filter";
 
-export type ShelfArticle = {
+/** 货架类型分区的截断上限，对齐 wire 的 `SHELF_SECTION_LIMIT`（N = 6）。 */
+const SHELF_SECTION_LIMIT = 6;
+const articleListHref = "/m/articles/list.html";
+
+/**
+ * 卡片渲染所需的展示字段：货架 wire 卡片与公开列表项都满足（渐进归一化视图，
+ * 因此允许 `terms` / `articleType` 可选）。
+ */
+export type ArticleCardArticle = {
   readonly id: number;
   readonly title: string;
   readonly summary: string;
   readonly updatedAt: string;
-  readonly terms: readonly Term[];
+  readonly terms?: readonly Term[];
+  /** 出现时卡片顶部渲染类型眉标；货架 wire 卡片没有该字段，货架卡片因此不显示。 */
+  readonly articleType?: ArticleType;
 };
 
 export type ArticleShelfSection = {
   readonly id: string;
   readonly title: string;
-  readonly articles: readonly ShelfArticle[];
+  /** 截断前该分区的全量条数（类型分区即该类型的全量计数）。 */
+  readonly total: number;
+  readonly articles: readonly ArticleCardArticle[];
+};
+
+/** `type-<id>` 分区 id → 类型 id；推荐区（`recommendation`）没有类型 id。 */
+export const sectionTypeId = (sectionId: string): number | undefined => {
+  if (!sectionId.startsWith("type-")) return undefined;
+  const raw = sectionId.slice("type-".length);
+  return /^\d+$/.test(raw) ? Number.parseInt(raw, 10) : undefined;
 };
 export const pageStyles = () => null;
 export function MobileNav(_p: { active: string }) {
@@ -117,21 +136,33 @@ export function ShelfIndex(p: {
     </nav>
   );
 }
-const ShelfCard = (p: { article: ShelfArticle }) => {
-  const tags = () => p.article.terms.slice(0, 2);
-  const extraTags = () => Math.max(0, p.article.terms.length - 2);
+/** 货架分区与平铺页共用的单一卡片形态（样式在 pages.css 的 `.article-card`）。 */
+export function ArticleCard(p: { article: ArticleCardArticle }) {
+  const terms = () => p.article.terms ?? [];
+  const visibleTags = () => terms().slice(0, 2);
+  const extraTags = () => Math.max(0, terms().length - 2);
   return (
-    <a class="shelf-card" href={`/m/articles/detail.html?id=${p.article.id}`}>
+    <a class="article-card" href={`/m/articles/detail.html?id=${p.article.id}`}>
+      <Show when={p.article.articleType}>
+        {(type) => (
+          <p class="article-card-type">
+            <Text
+              content={type().name}
+              options={{ tone: "accent", size: "meta" }}
+            />
+          </p>
+        )}
+      </Show>
       <Heading content={p.article.title} options={{ as: "h3", size: "card" }} />
-      <p class={`shelf-summary${p.article.summary ? "" : " is-empty"}`}>
+      <p class={`article-card-summary${p.article.summary ? "" : " is-empty"}`}>
         <Text
           content={p.article.summary || "暂无摘要"}
           options={{ as: "span", tone: "muted", size: "meta" }}
         />
       </p>
-      <div class="shelf-card-meta">
-        <span class="shelf-card-tags">
-          <For each={tags()}>
+      <div class="article-card-meta">
+        <span class="article-card-tags">
+          <For each={visibleTags()}>
             {(term) => <Tag content={term.name} options={{}} />}
           </For>
           <Show when={extraTags() > 0}>
@@ -142,8 +173,21 @@ const ShelfCard = (p: { article: ShelfArticle }) => {
       </div>
     </a>
   );
-};
+}
 export function ShelfSection(p: { section: ArticleShelfSection }) {
+  // 「查看全部」只对类型分区渲染，且仅当该类型还有未下发的文章（total > N）。
+  const viewAll = () => {
+    const typeId = sectionTypeId(p.section.id);
+    if (typeId === undefined || p.section.total <= SHELF_SECTION_LIMIT)
+      return undefined;
+    return { href: browseHref(articleListHref, { typeId }, "") };
+  };
+  // 类型分区的 total 是截断前的全量计数；推荐区不是类型分区（wire 里它是推荐
+  // 池大小，可能大于下发的 3 张），因此只展示实际下发条数。
+  const countLabel = () =>
+    sectionTypeId(p.section.id) === undefined
+      ? `${p.section.articles.length} 篇`
+      : `共 ${p.section.total} 篇`;
   return (
     <section
       id={`shelf-${p.section.id}`}
@@ -164,190 +208,33 @@ export function ShelfSection(p: { section: ArticleShelfSection }) {
             size: "section",
           }}
         />
-        <span>{p.section.articles.length} 篇</span>
+        <span>{countLabel()}</span>
       </header>
       <div class="shelf-cards">
         <For each={p.section.articles}>
-          {(article) => <ShelfCard article={article} />}
+          {(article) => <ArticleCard article={article} />}
         </For>
       </div>
+      <Show when={viewAll()} keyed>
+        {(entry) => (
+          <p class="section-more">
+            <Link
+              content={
+                <>
+                  <span>查看全部</span>
+                  <span aria-hidden="true">→</span>
+                </>
+              }
+              href={entry.href}
+              options={{ variant: "action" }}
+            />
+          </p>
+        )}
+      </Show>
     </section>
   );
 }
 export { StateMessage };
 export function ArticleBody(p: { html: string }) {
   return <div class="article-body" innerHTML={p.html} />;
-}
-export function FilterPanel(p: {
-  value: ArticleFilter;
-  terms: readonly Term[];
-  types: readonly ArticleType[];
-  onApply: (f: ArticleFilter) => void;
-  onClose: () => void;
-}) {
-  const [termIds, setTermIds] = createSignal([...p.value.termIds]);
-  const [typeId, setTypeId] = createSignal(p.value.typeId);
-  const [createdFrom, setCreatedFrom] = createSignal(p.value.createdFrom),
-    [createdTo, setCreatedTo] = createSignal(p.value.createdTo),
-    [updatedFrom, setUpdatedFrom] = createSignal(p.value.updatedFrom),
-    [updatedTo, setUpdatedTo] = createSignal(p.value.updatedTo);
-  let closeButton: HTMLButtonElement | undefined;
-  const previousFocus = document.activeElement as HTMLElement | null;
-  const clear = () => {
-    setTermIds([]);
-    setTypeId("");
-    setCreatedFrom("");
-    setCreatedTo("");
-    setUpdatedFrom("");
-    setUpdatedTo("");
-  };
-  onMount(() => {
-    const overflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") p.onClose();
-      if (event.key !== "Tab") return;
-      const panel = closeButton?.closest(".filter-panel");
-      const focusable = panel?.querySelectorAll<HTMLElement>(
-        "button, input, select, [href], [tabindex]:not([tabindex='-1'])",
-      );
-      if (!focusable?.length) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      }
-      if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener("keydown", onKeyDown);
-    closeButton?.focus();
-    onCleanup(() => {
-      document.body.style.overflow = overflow;
-      document.removeEventListener("keydown", onKeyDown);
-      previousFocus?.focus();
-    });
-  });
-  return (
-    <div
-      class="filter-backdrop"
-      role="presentation"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) p.onClose();
-      }}
-    >
-      <section
-        class="filter-panel"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="filter-title"
-      >
-        <div class="panel-head">
-          <Heading
-            content="筛选文章"
-            options={{ as: "h2", id: "filter-title", size: "section" }}
-          />
-          <button
-            ref={(element) => {
-              closeButton = element;
-            }}
-            onClick={p.onClose}
-            aria-label="关闭筛选"
-          >
-            ×
-          </button>
-        </div>
-        <label>
-          文章类型
-          <select
-            value={typeId()}
-            onChange={(e) => setTypeId(e.currentTarget.value)}
-          >
-            <option value="">全部类型</option>
-            <For each={p.types}>
-              {(t) => <option value={t.id}>{t.name}</option>}
-            </For>
-          </select>
-        </label>
-        <fieldset>
-          <legend>主题 / 标签</legend>
-          <For each={p.terms}>
-            {(t) => (
-              <label class="check">
-                <input
-                  type="checkbox"
-                  checked={termIds().includes(String(t.id))}
-                  onChange={(e) =>
-                    setTermIds(
-                      e.currentTarget.checked
-                        ? [...termIds(), String(t.id)]
-                        : termIds().filter((id) => id !== String(t.id)),
-                    )
-                  }
-                />
-                {t.name}
-              </label>
-            )}
-          </For>
-        </fieldset>
-        <div class="date-grid">
-          <label>
-            创建起始
-            <input
-              type="date"
-              value={createdFrom()}
-              onInput={(e) => setCreatedFrom(e.currentTarget.value)}
-            />
-          </label>
-          <label>
-            创建结束
-            <input
-              type="date"
-              value={createdTo()}
-              onInput={(e) => setCreatedTo(e.currentTarget.value)}
-            />
-          </label>
-          <label>
-            更新起始
-            <input
-              type="date"
-              value={updatedFrom()}
-              onInput={(e) => setUpdatedFrom(e.currentTarget.value)}
-            />
-          </label>
-          <label>
-            更新结束
-            <input
-              type="date"
-              value={updatedTo()}
-              onInput={(e) => setUpdatedTo(e.currentTarget.value)}
-            />
-          </label>
-        </div>
-        <div class="panel-actions">
-          <button class="clear-button" onClick={clear}>
-            清除条件
-          </button>
-          <button
-            class="apply-button"
-            onClick={() =>
-              p.onApply({
-                termIds: termIds(),
-                typeId: typeId(),
-                createdFrom: createdFrom(),
-                createdTo: createdTo(),
-                updatedFrom: updatedFrom(),
-                updatedTo: updatedTo(),
-              })
-            }
-          >
-            查看结果
-          </button>
-        </div>
-      </section>
-    </div>
-  );
 }

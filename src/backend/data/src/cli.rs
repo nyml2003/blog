@@ -132,12 +132,12 @@ pub fn usage() -> String {
          \n\
          OPTIONS:\n    \
          --listen <IP:PORT>             Listen address (loopback only, default {DEFAULT_LISTEN})\n    \
-         --data-semantics <SEMANTICS>   mock | test | prod (default mock; prod is reserved)\n    \
-         --data-database-path <PATH>    SQLite path for `test` (default target/test-dbs/<PID>.db)\n    \
+         --data-semantics <SEMANTICS>   mock | test | prod (default mock)\n    \
+         --data-database-path <PATH>    SQLite path (prod requires an explicit path; test defaults to target/test-dbs/<PID>.db)\n    \
          -h, --help                     Print this help\n\
          \n\
          ENVIRONMENT:\n    \
-         {DATABASE_PATH_ENV}   SQLite path for `test` semantics (ops injects target/test-dbs/<PID>)\n\
+         {DATABASE_PATH_ENV}   SQLite path for test/prod (explicit flag takes precedence)\n\
          \n\
          ENDPOINTS:\n    \
          GET  /healthz\n    \

@@ -27,9 +27,9 @@ use protocol::scene;
 use protocol::wire::code;
 use protocol::wire::{self, Envelope};
 use protocol::{
-    ArticleGetQuery, ArticleId, ArticleListQuery, ArticleShelfQuery, ArticleTypeListQuery,
-    ArticleTypeName, ArticleTypeRename, ArticleWrite, DataOperation, TermListQuery, TermRename,
-    TermWrite, has_more,
+    ArticleBrowseQuery, ArticleGetQuery, ArticleId, ArticleListPage, ArticleListQuery,
+    ArticleShelfQuery, ArticleTypeListQuery, ArticleTypeName, ArticleTypeRename, ArticleWrite,
+    DataOperation, TermListQuery, TermRename, TermWrite, has_more,
 };
 
 /// 入口绝对 deadline；Data 收到的是剩余预算（deadline 沿链路传播）。
@@ -114,6 +114,7 @@ async fn public_articles(
     }
     match params.get("sceneCode").map(String::as_str) {
         Some(scene::ARTICLE_LIST) => article_list_handler(&state, &params, true).await,
+        Some(scene::ARTICLE_BROWSE) => article_browse_handler(&state, &params).await,
         Some(scene::ARTICLE_DETAIL) => {
             let id = required_id(&params);
             if id.is_none() {
@@ -313,16 +314,8 @@ fn article_list_handler(
                     trace.elapsed.as_millis(),
                     started.elapsed().as_millis()
                 );
-                let page_number = page.page;
-                let page_size = page.page_size;
                 if published_only {
-                    let body = wire::ArticleListPage {
-                        items: wire::to_list_items(&page.items),
-                        page: page_number,
-                        page_size,
-                        total: page.total,
-                        has_more: has_more(page_number, page_size, page.total),
-                    };
+                    let body = public_list_page(&page);
                     envelope(&Envelope::ok(body), StatusCode::OK)
                 } else {
                     // 管理列表只回 `items`/`total`（Go 参考实现同形态）。
@@ -337,6 +330,67 @@ fn article_list_handler(
             }
             Err(error) => data_failure(&error, "article_list"),
         }
+    }
+}
+
+/// Mobile 平铺页浏览（SPEC-MOBILE-BROWSE-IA-001，决策记录 #7）：type/topic/tag 三个
+/// 维度各单选、维度间 AND；`topic_id` / `tag_id` 需与 term kind 一致，kind 不匹配由
+/// Data 按 `INVALID_PAYLOAD` 返回并映射为 400。分页默认与上限沿用
+/// `public.article_list`（默认 20 / 上限 100，`protocol::paging` 归一化）。
+async fn article_browse_handler(
+    state: &Arc<AppState>,
+    params: &HashMap<String, String>,
+) -> Response {
+    let query = ArticleBrowseQuery {
+        page: parse_u32(params.get("page")),
+        page_size: parse_u32(params.get("pageSize")),
+        article_type_id: parse_i64(params.get("type_id")),
+        topic_id: parse_i64(params.get("topic_id")),
+        tag_id: parse_i64(params.get("tag_id")),
+        published_only: true,
+    };
+    let started = Instant::now();
+    let result = state
+        .data
+        .call(
+            &request_id("browse"),
+            &DataOperation::ArticleBrowse(query),
+            ENTRY_BUDGET,
+        )
+        .await;
+    match result {
+        Ok(trace) => {
+            let protocol::DataOutcome::ArticleList(page) = trace.outcome else {
+                return data_failure(
+                    &DataCallError::Unavailable(unexpected_payload().0),
+                    "article_browse",
+                );
+            };
+            crate::product_info!(
+                "GET /api/public/articles scene={} items={} total={} data_calls=1 data_queries={} data_elapsed_ms={} elapsed_ms={}",
+                scene::ARTICLE_BROWSE,
+                page.items.len(),
+                page.total,
+                trace.query_count.unwrap_or_default(),
+                trace.elapsed.as_millis(),
+                started.elapsed().as_millis()
+            );
+            envelope(&Envelope::ok(public_list_page(&page)), StatusCode::OK)
+        }
+        Err(error) => data_failure(&error, "article_browse"),
+    }
+}
+
+/// 公开列表 / 浏览共用的分页响应体（wire [`wire::ArticleListPage`]，camelCase）。
+fn public_list_page(page: &ArticleListPage) -> wire::ArticleListPage {
+    let page_number = page.page;
+    let page_size = page.page_size;
+    wire::ArticleListPage {
+        items: wire::to_list_items(&page.items),
+        page: page_number,
+        page_size,
+        total: page.total,
+        has_more: has_more(page_number, page_size, page.total),
     }
 }
 
@@ -471,19 +525,21 @@ async fn mutate_article(state: &Arc<AppState>, payload: &AdminArticleBody) -> Re
     let operation = match scene {
         scene::ADMIN_ARTICLE_CREATE => {
             let write = article_write(payload);
-            inspection = Some(article_html_core::inspect(&write.content_html));
+            let result = article_html_core::inspect(&write.content_html);
+            if !result.valid {
+                return invalid_html(result);
+            }
+            inspection = Some(result);
             DataOperation::ArticleCreate(write)
         }
         scene::ADMIN_ARTICLE_UPDATE => {
             let write = article_write(payload);
             let result = article_html_core::inspect(&write.content_html);
-            let valid = result.valid;
-            inspection = Some(result);
-            if valid {
-                DataOperation::ArticleUpdate(write)
-            } else {
-                DataOperation::ArticleUpdateDraft(write)
+            if !result.valid {
+                return invalid_html(result);
             }
+            inspection = Some(result);
+            DataOperation::ArticleUpdate(write)
         }
         scene::ADMIN_ARTICLE_PUBLISH => {
             let id = payload.id.unwrap_or_default();
@@ -559,14 +615,7 @@ async fn mutate_article(state: &Arc<AppState>, payload: &AdminArticleBody) -> Re
                 _ => data_failure(&DataCallError::Unavailable(unexpected_payload().0), scene),
             }
         }
-        Err(error) => {
-            if let (Some(inspection), DataCallError::Failure(failure)) = (inspection, &error) {
-                if !inspection.valid && failure.code == codes::INVALID_STATE_TRANSITION {
-                    return invalid_html(inspection);
-                }
-            }
-            data_failure(&error, scene)
-        }
+        Err(error) => data_failure(&error, scene),
     }
 }
 

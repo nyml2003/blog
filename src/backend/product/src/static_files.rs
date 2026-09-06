@@ -12,68 +12,77 @@
 //! SPIKE-001（回退行为观察）见 `WORKSTREAM-OPS-RUNTIME-BACKEND.md` 交付记录。
 
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Component, Path, PathBuf};
 
 use axum::http::{Method, StatusCode, header};
 use axum::response::{IntoResponse, Response};
-
-/// Go 参考实现的页面映射（Vite 产物在 `web/dist` 下的相对路径）。
-const PAGES: &[(&str, &str)] = &[
-    ("/", "desktop/pages/public-home/index.html"),
-    (
-        "/articles/index.html",
-        "desktop/pages/public-articles/index.html",
-    ),
-    (
-        "/articles/detail.html",
-        "desktop/pages/public-detail/index.html",
-    ),
-    ("/m", "mobile/pages/home/index.html"),
-    ("/m/", "mobile/pages/home/index.html"),
-    ("/m/articles/index.html", "mobile/pages/articles/index.html"),
-    (
-        "/m/articles/detail.html",
-        "mobile/pages/article-detail/index.html",
-    ),
-    ("/admin", "desktop/pages/admin-home/index.html"),
-    ("/admin/", "desktop/pages/admin-home/index.html"),
-    ("/admin/index.html", "desktop/pages/admin-home/index.html"),
-    (
-        "/admin/articles/new.html",
-        "desktop/pages/admin-article-new/index.html",
-    ),
-    (
-        "/admin/articles/edit.html",
-        "desktop/pages/admin-article-edit/index.html",
-    ),
-    (
-        "/admin/editor-guide/index.html",
-        "desktop/pages/admin-editor-guide/index.html",
-    ),
-    (
-        "/admin/article-types/index.html",
-        "desktop/pages/admin-article-types/index.html",
-    ),
-    (
-        "/admin/terms/index.html",
-        "desktop/pages/admin-terms/index.html",
-    ),
-];
+use serde::Deserialize;
 
 const ASSETS_PREFIX: &str = "/assets/";
+const PAGE_ROUTES_MANIFEST: &str = "page-routes.json";
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PageRoute {
+    alias: String,
+    output_path: String,
+}
+
+fn load_page_routes(root: &Path) -> Result<HashMap<String, String>, String> {
+    let filename = root.join(PAGE_ROUTES_MANIFEST);
+    let source = std::fs::read_to_string(&filename)
+        .map_err(|error| format!("read {}: {error}", filename.display()))?;
+    let routes: Vec<PageRoute> = serde_json::from_str(&source)
+        .map_err(|error| format!("parse {}: {error}", filename.display()))?;
+    if routes.is_empty() {
+        return Err(format!("{} contains no page routes", filename.display()));
+    }
+
+    let mut pages = HashMap::with_capacity(routes.len());
+    for route in routes {
+        let valid_alias = route.alias.starts_with('/')
+            && !route.alias.contains('?')
+            && !route.alias.contains('#');
+        if !valid_alias {
+            return Err(format!("invalid page alias: {}", route.alias));
+        }
+        let output_path = Path::new(&route.output_path);
+        let valid_output_path = !route.output_path.is_empty()
+            && !output_path.is_absolute()
+            && output_path
+                .components()
+                .all(|component| matches!(component, Component::Normal(_)));
+        if !valid_output_path {
+            return Err(format!("invalid page output path: {}", route.output_path));
+        }
+        if pages
+            .insert(route.alias.clone(), route.output_path)
+            .is_some()
+        {
+            return Err(format!("duplicate page alias: {}", route.alias));
+        }
+    }
+    Ok(pages)
+}
 
 #[derive(Clone)]
 pub struct StaticFiles {
     root: PathBuf,
-    pages: HashMap<&'static str, &'static str>,
+    pages: HashMap<String, String>,
+    route_manifest_error: Option<String>,
 }
 
 impl StaticFiles {
     /// `root` 为 ops 注入的 `BLOG_WEB_DIR`（仓库内 `web/dist` 绝对路径）。
     pub fn new(root: PathBuf) -> Self {
+        let (pages, route_manifest_error) = match load_page_routes(&root) {
+            Ok(pages) => (pages, None),
+            Err(error) => (HashMap::new(), Some(error)),
+        };
         Self {
             root,
-            pages: PAGES.iter().copied().collect(),
+            pages,
+            route_manifest_error,
         }
     }
 
@@ -95,6 +104,10 @@ impl StaticFiles {
                 return plain(StatusCode::NOT_FOUND, "404 page not found\n");
             }
             return self.read_file(&format!("assets/{asset}"), false).await;
+        }
+        if let Some(error) = &self.route_manifest_error {
+            crate::product_error!("page route manifest unavailable error={error}");
+            return plain(StatusCode::INTERNAL_SERVER_ERROR, "internal server error\n");
         }
         plain(StatusCode::NOT_FOUND, "404 page not found\n")
     }
@@ -177,12 +190,33 @@ mod tests {
             "desktop/pages/public-home/index.html",
             "desktop/pages/admin-home/index.html",
             "desktop/pages/admin-editor-guide/index.html",
+            "desktop/pages/admin-article-preview-desktop/index.html",
             "mobile/pages/home/index.html",
+            "mobile/pages/admin-article-preview-content/index.html",
+            "mobile/pages/settings/index.html",
         ] {
             let path = root.join(relative);
             std::fs::create_dir_all(path.parent().unwrap()).unwrap();
             std::fs::write(path, format!("<html>{relative}</html>")).unwrap();
         }
+        let routes = serde_json::json!([
+            { "alias": "/", "outputPath": "desktop/pages/public-home/index.html" },
+            { "alias": "/m", "outputPath": "mobile/pages/home/index.html" },
+            { "alias": "/m/", "outputPath": "mobile/pages/home/index.html" },
+            { "alias": "/m/settings/index.html", "outputPath": "mobile/pages/settings/index.html" },
+            { "alias": "/admin", "outputPath": "desktop/pages/admin-home/index.html" },
+            { "alias": "/admin/", "outputPath": "desktop/pages/admin-home/index.html" },
+            { "alias": "/admin/index.html", "outputPath": "desktop/pages/admin-home/index.html" },
+            { "alias": "/admin/editor-guide/index.html", "outputPath": "desktop/pages/admin-editor-guide/index.html" },
+            { "alias": "/admin/articles/preview/desktop.html", "outputPath": "desktop/pages/admin-article-preview-desktop/index.html" },
+            { "alias": "/admin/articles/preview/mobile.html", "outputPath": "mobile/pages/admin-article-preview-content/index.html" },
+            { "alias": "/admin/articles/preview/mobile/content.html", "outputPath": "mobile/pages/admin-article-preview-content/index.html" }
+        ]);
+        std::fs::write(
+            root.join(PAGE_ROUTES_MANIFEST),
+            serde_json::to_vec(&routes).unwrap(),
+        )
+        .unwrap();
         std::fs::write(root.join("assets/app-abc123.js"), "console.log(1)").unwrap();
         StaticFiles::new(root)
     }
@@ -219,8 +253,15 @@ mod tests {
         assert!(content_type.starts_with("text/html"));
         assert_eq!(body, "<html>desktop/pages/public-home/index.html</html>");
 
-        // 无尾斜杠目录路径与 `/admin/index.html` 命中同一页面。
-        for path in ["/m", "/m/", "/admin", "/admin/", "/admin/index.html"] {
+        // 无尾斜杠目录路径与显式 index 路径命中同一页面。
+        for path in [
+            "/m",
+            "/m/",
+            "/m/settings/index.html",
+            "/admin",
+            "/admin/",
+            "/admin/index.html",
+        ] {
             let (status, content_type, _) = status_of(&files, &Method::GET, path).await;
             assert_eq!(status, StatusCode::OK, "path={path}");
             assert!(content_type.starts_with("text/html"), "path={path}");
@@ -234,6 +275,26 @@ mod tests {
             body,
             "<html>desktop/pages/admin-editor-guide/index.html</html>"
         );
+
+        for (path, expected) in [
+            (
+                "/admin/articles/preview/desktop.html",
+                "desktop/pages/admin-article-preview-desktop/index.html",
+            ),
+            (
+                "/admin/articles/preview/mobile.html",
+                "mobile/pages/admin-article-preview-content/index.html",
+            ),
+            (
+                "/admin/articles/preview/mobile/content.html",
+                "mobile/pages/admin-article-preview-content/index.html",
+            ),
+        ] {
+            let (status, content_type, body) = status_of(&files, &Method::GET, path).await;
+            assert_eq!(status, StatusCode::OK, "path={path}");
+            assert!(content_type.starts_with("text/html"), "path={path}");
+            assert_eq!(body, format!("<html>{expected}</html>"), "path={path}");
+        }
 
         let (status, content_type, body) =
             status_of(&files, &Method::GET, "/assets/app-abc123.js").await;
@@ -260,6 +321,55 @@ mod tests {
         // 非 GET/HEAD → 405。
         let (status, _, _) = status_of(&files, &Method::POST, "/").await;
         assert_eq!(status, StatusCode::METHOD_NOT_ALLOWED);
+
+        let _ = std::fs::remove_dir_all(files.root());
+    }
+
+    #[test]
+    fn page_route_manifest_rejects_duplicate_and_unsafe_entries() {
+        let root =
+            std::env::temp_dir().join(format!("product-static-manifest-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+
+        for (source, expected) in [
+            (
+                r#"[{"alias":"/same","outputPath":"a.html"},{"alias":"/same","outputPath":"b.html"}]"#,
+                "duplicate page alias",
+            ),
+            (
+                r#"[{"alias":"relative","outputPath":"a.html"}]"#,
+                "invalid page alias",
+            ),
+            (
+                r#"[{"alias":"/safe","outputPath":"../outside.html"}]"#,
+                "invalid page output path",
+            ),
+        ] {
+            std::fs::write(root.join(PAGE_ROUTES_MANIFEST), source).unwrap();
+            let error = load_page_routes(&root).unwrap_err();
+            assert!(error.contains(expected), "error={error}");
+        }
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn missing_route_manifest_fails_closed_but_keeps_assets_available() {
+        let root = std::env::temp_dir().join(format!(
+            "product-static-missing-manifest-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join("assets")).unwrap();
+        std::fs::write(root.join("assets/app.js"), "asset").unwrap();
+        let files = StaticFiles::new(root);
+
+        let (status, _, _) = status_of(&files, &Method::GET, "/").await;
+        assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
+        let (status, _, body) = status_of(&files, &Method::GET, "/assets/app.js").await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(body, "asset");
 
         let _ = std::fs::remove_dir_all(files.root());
     }

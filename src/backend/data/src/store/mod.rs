@@ -7,20 +7,22 @@
 pub mod mock;
 pub mod shared;
 pub mod sqlite;
+mod validation;
 
 use std::sync::Arc;
 
 use protocol::{
-    ArticleDetail, ArticleGetQuery, ArticleId, ArticleListPage, ArticleListQuery, ArticleShelfData,
-    ArticleShelfQuery, ArticleType, ArticleTypeListQuery, ArticleTypeName, ArticleTypeRef,
-    ArticleTypeRename, ArticleWrite, DataOperation, DataOutcome, DatabaseDiagnostics,
-    OperationFailure, Term, TermListQuery, TermRef, TermRename, TermWrite, Unit,
+    ArticleBrowseQuery, ArticleDetail, ArticleGetQuery, ArticleId, ArticleListPage,
+    ArticleListQuery, ArticleShelfData, ArticleShelfQuery, ArticleType, ArticleTypeListQuery,
+    ArticleTypeName, ArticleTypeRef, ArticleTypeRename, ArticleWrite, DataOperation, DataOutcome,
+    DatabaseDiagnostics, OperationFailure, Term, TermListQuery, TermRef, TermRename, TermWrite,
+    Unit,
 };
 
 use crate::data_info;
 use crate::executor::{CancelCheck, JobOutcome};
 use crate::fixture;
-use crate::semantics::{Semantics, StorageLayout, TempDb};
+use crate::semantics::{PersistentDb, Semantics, StorageLayout, TempDb};
 use protocol::dates::exclusive_date_end;
 
 /// 单次操作的执行上下文：预算、取消信号与查询计数。
@@ -148,6 +150,13 @@ pub trait DataStore: Send + Sync + 'static {
         query: &ArticleShelfQuery,
         ctx: &OpCtx<'_>,
     ) -> Result<ArticleShelfData, OperationFailure>;
+    /// Mobile 平铺页浏览（SPEC-MOBILE-BROWSE-IA-001）：type/topic/tag 三维单选 AND
+    /// + 分页，响应形态同 [`ArticleListPage`]。topic/tag 必须引用对应 `kind` 的 term。
+    fn article_browse(
+        &self,
+        query: &ArticleBrowseQuery,
+        ctx: &OpCtx<'_>,
+    ) -> Result<ArticleListPage, OperationFailure>;
     /// mock 语义无数据库对象，返回 `None`。
     fn describe(&self) -> Option<DatabaseDiagnostics>;
     /// 同步资源释放（连接级清理）；异步资源由 [`Store::shutdown`] 负责。
@@ -211,6 +220,10 @@ pub fn dispatch(store: &dyn DataStore, operation: &DataOperation, ctx: &OpCtx<'_
         DataOperation::ArticleShelf(query) => store
             .article_shelf(query, ctx)
             .map(DataOutcome::ArticleShelf),
+        // 浏览与列表共用同一响应形态（wire 亦复用），operation 名已区分两者。
+        DataOperation::ArticleBrowse(query) => store
+            .article_browse(query, ctx)
+            .map(DataOutcome::ArticleList),
     }
 }
 
@@ -366,6 +379,27 @@ impl Store {
         })
     }
 
+    /// `prod` 语义：仓库外持久 SQLite + 自动迁移，不加载 seed。
+    pub async fn open_prod(db: PersistentDb) -> Result<Self, String> {
+        db.prepare()
+            .map_err(|error| format!("prepare prod db dir {}: {error}", db.path().display()))?;
+        let store = sqlite::SqliteStore::open(db.path())
+            .await
+            .map_err(|error| error.to_string())?;
+        data_info!(
+            "prod db ready path={} migrations={} seeded=false",
+            db.path().display(),
+            store.applied_migrations().len()
+        );
+        let sqlite = Arc::new(store);
+        Ok(Self {
+            inner: Arc::clone(&sqlite) as Arc<dyn DataStore>,
+            semantics: Semantics::Prod,
+            sqlite: Some(Arc::clone(&sqlite)),
+            layout: StorageLayout::PersistentFile(db),
+        })
+    }
+
     pub fn handle(&self) -> Arc<dyn DataStore> {
         Arc::clone(&self.inner)
     }
@@ -403,6 +437,9 @@ impl Store {
                     temp.path().display(),
                     removed.len()
                 );
+            }
+            StorageLayout::PersistentFile(db) => {
+                data_info!("persistent db retained path={}", db.path().display());
             }
         }
     }

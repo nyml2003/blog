@@ -5,11 +5,16 @@
 //! 取值集合与已移除的 Go 参考实现行为对齐（2026-09-06 退场）。
 
 pub const ARTICLE_LIST: &str = "public.article_list";
+/// Mobile 平铺页的分页检索（SPEC-MOBILE-BROWSE-IA-001 决策记录 #7）：type/topic/tag
+/// 三个独立维度各单选、维度间 AND；与 `article_list` 的 `term_ids`（同维度 OR）并存。
+pub const ARTICLE_BROWSE: &str = "public.article_browse";
 pub const ARTICLE_DETAIL: &str = "public.article_detail";
 pub const ARTICLE_TYPE_LIST: &str = "public.article_type_list";
 pub const TERM_LIST: &str = "public.term_list";
 pub const RECOMMENDATION_CURRENT: &str = "public.recommendation_current";
 pub const MOBILE_ARTICLE_SHELF: &str = "public.mobile_article_shelf";
+/// 公开端 T 型货架：顶部类型筛选 + 当前类型的有界文章集合。
+pub const T_SHELF: &str = "public.t_shelf";
 pub const ADMIN_ARTICLE_LIST: &str = "admin.article_list";
 pub const ADMIN_ARTICLE_DETAIL: &str = "admin.article_detail";
 pub const ADMIN_ARTICLE_CREATE: &str = "admin.article_create";
@@ -27,11 +32,13 @@ pub const ADMIN_RECOMMENDATION_GENERATE: &str = "admin.recommendation_generate";
 /// 公开端点使用的 `public.*` 场景集合（Mock 场景覆盖的输入来源）。
 pub const PUBLIC: &[&str] = &[
     ARTICLE_LIST,
+    ARTICLE_BROWSE,
     ARTICLE_DETAIL,
     ARTICLE_TYPE_LIST,
     TERM_LIST,
     RECOMMENDATION_CURRENT,
     MOBILE_ARTICLE_SHELF,
+    T_SHELF,
 ];
 
 /// 管理端点使用的 `admin.*` 场景集合。
@@ -63,7 +70,7 @@ mod tests {
         sorted.sort_unstable();
         sorted.dedup();
         assert_eq!(all.len(), sorted.len(), "scene codes must be unique");
-        assert_eq!(all.len(), 19);
+        assert_eq!(all.len(), 21);
         for scene in all {
             assert!(
                 scene.starts_with("public.") || scene.starts_with("admin."),

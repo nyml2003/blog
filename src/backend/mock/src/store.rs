@@ -225,7 +225,13 @@ impl Store {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::seed;
     use protocol::{ArticleListQuery, ArticleWrite};
+
+    /// 当前场景 seed 的文章总数（含 draft）——语义「回到种子状态」用，不写死数字。
+    fn seeded_total() -> i64 {
+        seed::ARTICLES.len() as i64
+    }
 
     fn create(store: &Store, scope: &SessionScope, title: &str) -> i64 {
         store.write(scope, |state| {
@@ -272,7 +278,7 @@ mod tests {
         let second = SessionScope::Named("t2".to_owned());
 
         let seeded = admin_total(&store, &anonymous);
-        assert_eq!(seeded, 12);
+        assert_eq!(seeded, seeded_total());
 
         let created = create(&store, &first, "session one");
         assert_eq!(admin_total(&store, &first), seeded + 1);
@@ -293,7 +299,7 @@ mod tests {
         let fresh = SessionScope::Named("brand-new-session".to_owned());
         assert_eq!(
             admin_total(&store, &fresh),
-            12,
+            seeded_total(),
             "a never-seen session id starts from the scenario seed"
         );
         assert_eq!(
@@ -307,11 +313,11 @@ mod tests {
         let store = Store::with_ttl(Scenario::Default, Duration::from_millis(1));
         let scope = SessionScope::Named("short-lived".to_owned());
         create(&store, &scope, "doomed");
-        assert_eq!(admin_total(&store, &scope), 13);
+        assert_eq!(admin_total(&store, &scope), seeded_total() + 1);
         std::thread::sleep(Duration::from_millis(30));
         assert_eq!(
             admin_total(&store, &scope),
-            12,
+            seeded_total(),
             "an expired session must not keep its writes"
         );
         assert_eq!(
@@ -344,7 +350,8 @@ mod tests {
         // s0 复活时回到种子状态（写入不残留）。
         assert_eq!(
             admin_total(&store, &SessionScope::Named("s0".to_owned())),
-            12
+            seeded_total(),
+            "revived session is re-seeded"
         );
     }
 

@@ -1,113 +1,51 @@
-import {
-  type Accessor,
-  createEffect,
-  createSignal,
-  For,
-  onCleanup,
-  Show,
-} from "solid-js";
+import { createEffect, createSignal, For, Show } from "solid-js";
 import {
   type ArticleId,
+  type AdminArticle,
+  type ArticleTypeId,
   browserClient as client,
 } from "../../../../common/client";
 import type { DataError } from "../../../../common/data/errors";
 import type { DeepReadonly } from "../../../../common/data/readonly";
-import type {
-  HtmlDiagnostic,
-  HtmlInspection,
-} from "../../../../common/validation/article-html";
-import { byteOffsetToSelection } from "../../../../common/validation/article-html";
+import type { HtmlInspection } from "../../../../common/validation/article-html";
 import { useDataResource } from "../../../../solid/data";
 import { type Article, Header, qs, Status } from "../../app";
+import { ArticleSourceEditor } from "./article-source-editor";
 import {
-  createCodeMirrorEditor,
-  htmlDiagnosticsToCodeMirror,
-} from "./editor-codemirror";
-import { EditorPreview } from "./editor-preview";
-import { HtmlDiagnostics, useHtmlInspection } from "./html-inspection";
+  editorSnapshot,
+  editorSnapshotsEqual,
+  type EditorSnapshot,
+} from "./editor-state";
+import { useHtmlInspection } from "./html-inspection";
 
-const emptyArticle: Article = {
-  id: 0,
+const emptyArticle: AdminArticle = {
+  id: 0 as ArticleId,
   title: "",
   summary: "",
-  articleTypeId: 0,
+  articleTypeId: 0 as ArticleTypeId,
   contentHtml: "",
   termIds: [],
   terms: [],
   status: "draft",
   createdAt: "",
   updatedAt: "",
+  htmlInspection: {
+    profileVersion: "article-html/v1",
+    valid: true,
+    diagnostics: [],
+  },
 };
 
-function CodeMirrorEditor(props: {
-  value: Accessor<string>;
-  busy: Accessor<boolean>;
-  inspection: Accessor<DeepReadonly<HtmlInspection> | undefined>;
-  onChange: (value: string) => void;
-  onReady: (
-    controller: ReturnType<typeof createCodeMirrorEditor> | undefined,
-  ) => void;
-}) {
-  const [controller, setController] = createSignal<
-    ReturnType<typeof createCodeMirrorEditor> | undefined
-  >();
-  onCleanup(() => {
-    props.onReady(undefined);
-    controller()?.destroy();
-    setController(undefined);
-  });
-  return (
-    <>
-      <div
-        ref={(element) => {
-          const editor = createCodeMirrorEditor(
-            element,
-            props.value(),
-            props.onChange,
-          );
-          setController(editor);
-          props.onReady(editor);
-        }}
-        class="editor-codemirror"
-      />
-      <CodeMirrorEffects controller={controller} {...props} />
-    </>
-  );
-}
-
-function CodeMirrorEffects(props: {
-  controller: Accessor<ReturnType<typeof createCodeMirrorEditor> | undefined>;
-  value: Accessor<string>;
-  busy: Accessor<boolean>;
-  inspection: Accessor<DeepReadonly<HtmlInspection> | undefined>;
-}) {
-  createEffect(() => {
-    const value = props.value();
-    props.controller()?.setValue(value);
-  });
-  createEffect(() => {
-    const busy = props.busy();
-    props.controller()?.setReadOnly(busy);
-  });
-  createEffect(() => {
-    const diagnostics = htmlDiagnosticsToCodeMirror(
-      props.value(),
-      props.inspection(),
-    );
-    props.controller()?.setDiagnostics(diagnostics);
-    props.controller()?.setInvalid(props.inspection()?.valid === false);
-  });
-  return null;
-}
-
 export function Editor() {
-  const id = qs().get("id");
-  const [currentId, setCurrentId] = createSignal(id ? Number(id) : 0);
-  const loaded = useDataResource(
-    () => id,
-    (articleId) =>
-      articleId
-        ? client.adminArticles.get(Number(articleId) as ArticleId)
+  const initialId = qs().get("id");
+  const [currentId, setCurrentId] = createSignal(
+    initialId ? Number(initialId) : 0,
+  );
+  const loaded = useDataResource<AdminArticle, string | undefined>(
+    () => initialId ?? undefined,
+    (value) =>
+      value
+        ? client.adminArticles.get(Number(value) as ArticleId)
         : {
             start: () => Promise.resolve({ ok: true, value: emptyArticle }),
             cancel: () => undefined,
@@ -130,6 +68,8 @@ export function Editor() {
   const [busy, setBusy] = createSignal(false);
   const [message, setMessage] = createSignal("");
   const [error, setError] = createSignal("");
+  const [previewOpen, setPreviewOpen] = createSignal(false);
+  const [savedSnapshot, setSavedSnapshot] = createSignal<EditorSnapshot>();
   const [serverInspection, setServerInspection] = createSignal<{
     source: string;
     inspection: DeepReadonly<HtmlInspection>;
@@ -137,22 +77,27 @@ export function Editor() {
   const validation = useHtmlInspection(html);
   const inspection = () => {
     const server = serverInspection();
-    if (server?.source === html()) return server.inspection;
-    return validation.current();
+    return server?.source === html() ? server.inspection : validation.current();
   };
-  const valid = () => validation.valid() && inspection()?.valid === true;
   const validationError = () => {
     const failure = validation.resource.error();
-    if (failure !== undefined && "message" in failure) return failure.message;
-    return "";
+    return failure !== undefined && "message" in failure ? failure.message : "";
   };
-  let editorController: ReturnType<typeof createCodeMirrorEditor> | undefined;
-  const locate = (diagnostic: DeepReadonly<HtmlDiagnostic>) => {
-    editorController?.focusAndSelect(
-      byteOffsetToSelection(html(), diagnostic.span.start.byte),
-      byteOffsetToSelection(html(), diagnostic.span.end.byte),
-    );
+  const snapshot = () =>
+    editorSnapshot({
+      title: title(),
+      summary: summary(),
+      typeId: Number(typeId()) || 0,
+      termIds: termIds(),
+      contentHtml: html(),
+    });
+  const dirty = () => !editorSnapshotsEqual(savedSnapshot(), snapshot());
+  const savedInspection = () => {
+    const server = serverInspection();
+    return server?.source === html() ? server.inspection : undefined;
   };
+  const previewDisabled = () =>
+    busy() || !currentId() || dirty() || savedInspection()?.valid !== true;
   const showFailure = (failure: DataError, source: string) => {
     setError("message" in failure ? failure.message : "请求未完成，请重试");
     if (failure.kind === "html-validation")
@@ -168,12 +113,23 @@ export function Editor() {
     setTermIds([...(value.termIds ?? [])]);
     setHtml(value.contentHtml);
     setStatus(value.status);
+    setServerInspection({
+      source: value.contentHtml,
+      inspection: value.htmlInspection,
+    });
+    setSavedSnapshot(
+      editorSnapshot({
+        title: value.title,
+        summary: value.summary ?? "",
+        typeId: value.articleTypeId,
+        termIds: value.termIds ?? [],
+        contentHtml: value.contentHtml,
+      }),
+    );
     initialized = true;
   });
-
   const save = async (publish = false) => {
-    if (busy()) return;
-    if (publish && !valid()) return;
+    if (busy() || (publish && inspection()?.valid !== true)) return;
     setBusy(true);
     setError("");
     setMessage("");
@@ -181,23 +137,34 @@ export function Editor() {
       if (!title().trim() || !Number(typeId()))
         throw new Error("请填写标题并选择文章类型");
       const source = html();
-      const body = {
-        id: currentId() ? (currentId() as ArticleId) : undefined,
-        title: title().trim(),
-        summary: summary().trim(),
-        articleTypeId: Number(typeId()),
-        termIds: termIds(),
-        contentHtml: source,
-      };
-      const saved = await client.draftEditor.saveDraft(body).start();
-      if (!saved.ok) {
-        showFailure(saved.error, source);
+      const result = await client.draftEditor
+        .saveDraft({
+          id: currentId() ? (currentId() as ArticleId) : undefined,
+          title: title().trim(),
+          summary: summary().trim(),
+          articleTypeId: Number(typeId()),
+          termIds: termIds(),
+          contentHtml: source,
+        })
+        .start();
+      if (!result.ok) {
+        showFailure(result.error, source);
         return;
       }
-      let article = saved.value;
+      let article = result.value;
       setCurrentId(article.id);
+      setPreviewOpen(false);
       setServerInspection({ source, inspection: article.htmlInspection });
-      if (!id)
+      setSavedSnapshot(
+        editorSnapshot({
+          title: article.title,
+          summary: article.summary ?? "",
+          typeId: article.articleTypeId,
+          termIds: article.termIds,
+          contentHtml: article.contentHtml,
+        }),
+      );
+      if (!initialId)
         history.replaceState(
           null,
           "",
@@ -220,12 +187,11 @@ export function Editor() {
     }
   };
   const unpublish = async () => {
-    if (busy()) return;
+    if (busy() || !currentId()) return;
     setBusy(true);
     setError("");
     setMessage("");
     try {
-      if (!currentId()) throw new Error("缺少文章 ID");
       const result = await client.draftEditor
         .unpublish(currentId() as ArticleId)
         .start();
@@ -234,6 +200,11 @@ export function Editor() {
         return;
       }
       setStatus(result.value.status);
+      setPreviewOpen(false);
+      setServerInspection({
+        source: result.value.contentHtml,
+        inspection: result.value.htmlInspection,
+      });
       setMessage("文章已取消发布并恢复为草稿");
     } catch (reason) {
       setError(
@@ -273,8 +244,8 @@ export function Editor() {
           >
             <Status busy={busy()} error={error()} ok={message()} />
             <fieldset class="editor-fields" aria-label="文章内容">
-              <div class="editor-grid">
-                <aside class="editor-meta">
+              <div class="editor-form">
+                <div class="editor-form-row">
                   <div class="field">
                     <label for="title">标题</label>
                     <input
@@ -298,6 +269,8 @@ export function Editor() {
                       </For>
                     </select>
                   </div>
+                </div>
+                <div class="editor-form-row editor-form-row-wide">
                   <div class="field">
                     <label for="summary">摘要</label>
                     <textarea
@@ -342,60 +315,85 @@ export function Editor() {
                   <p class={`status-${status()}`}>
                     当前状态：{status() === "published" ? "已发布" : "草稿"}
                   </p>
-                </aside>
-                <section class="editor-source">
-                  <div class="editor-split">
-                    <div class="field">
-                      <label for="html">HTML 正文</label>
-                      <CodeMirrorEditor
-                        value={html}
-                        busy={busy}
-                        inspection={inspection}
-                        onReady={(controller) => {
-                          editorController = controller;
-                        }}
-                        onChange={(value) => {
-                          setServerInspection(undefined);
-                          setHtml(value);
-                        }}
-                      />
-                    </div>
-                    <EditorPreview html={html} />
-                  </div>
-                  <HtmlDiagnostics
-                    inspection={inspection()}
-                    pending={validation.resource.loading()}
-                    error={validationError()}
-                    retry={() => {
-                      setServerInspection(undefined);
-                      void validation.resource.refetch();
-                    }}
-                    locate={locate}
-                  />
-                </section>
+                </div>
               </div>
+              <ArticleSourceEditor
+                value={html}
+                busy={busy}
+                inspection={inspection}
+                pending={() => validation.resource.loading()}
+                error={validationError}
+                onChange={(value) => {
+                  setServerInspection(undefined);
+                  setHtml(value);
+                }}
+                retry={() => {
+                  setServerInspection(undefined);
+                  void validation.resource.refetch();
+                }}
+              />
             </fieldset>
             <div class="actions editor-actions">
-              <button onClick={() => save(false)} disabled={busy()}>
+              <button
+                type="button"
+                onClick={() => save(false)}
+                disabled={busy()}
+              >
                 保存
               </button>
-              {status() === "published" ? (
+              <Show
+                when={status() === "published"}
+                fallback={
+                  <button
+                    type="button"
+                    class="primary"
+                    onClick={() => save(true)}
+                    disabled={busy() || inspection()?.valid !== true}
+                  >
+                    保存并发布
+                  </button>
+                }
+              >
                 <button
+                  type="button"
                   class="danger"
                   onClick={unpublish}
                   disabled={busy() || !currentId()}
                 >
                   取消发布
                 </button>
-              ) : (
+              </Show>
+              <div class="preview-menu">
                 <button
-                  class="primary"
-                  onClick={() => save(true)}
-                  disabled={busy() || !valid()}
+                  type="button"
+                  aria-haspopup="menu"
+                  aria-expanded={previewOpen()}
+                  disabled={previewDisabled()}
+                  onClick={() => setPreviewOpen(!previewOpen())}
                 >
-                  保存并发布
+                  端到端预览
                 </button>
-              )}
+                <div
+                  class="preview-menu-items"
+                  role="menu"
+                  hidden={!previewOpen()}
+                >
+                  <a
+                    href={`/admin/articles/preview/desktop.html?id=${currentId()}`}
+                    role="menuitem"
+                    onClick={() => setPreviewOpen(false)}
+                  >
+                    桌面端预览
+                  </a>
+                  <a
+                    href={`/admin/articles/preview/mobile.html?id=${currentId()}`}
+                    role="menuitem"
+                    onClick={() => setPreviewOpen(false)}
+                  >
+                    移动端预览
+                  </a>
+                </div>
+              </div>
             </div>
           </Show>
         </Show>

@@ -27,9 +27,9 @@ use protocol::envelope::{codes, http_status};
 use protocol::scene;
 use protocol::wire::code;
 use protocol::{
-    ArticleGetQuery, ArticleId, ArticleListQuery, ArticleShelfQuery, ArticleTypeListQuery,
-    ArticleTypeName, ArticleTypeRename, ArticleWrite, OperationFailure, TermListQuery, TermRename,
-    TermWrite, has_more,
+    ArticleBrowseQuery, ArticleGetQuery, ArticleId, ArticleListPage, ArticleListQuery,
+    ArticleShelfQuery, ArticleTypeListQuery, ArticleTypeName, ArticleTypeRename, ArticleWrite,
+    OperationFailure, TermListQuery, TermRename, TermWrite, has_more,
 };
 
 use crate::scenario::{Fault, TRUNCATE_BYTES};
@@ -188,6 +188,7 @@ async fn public_articles(
     }
     match params.get("sceneCode").map(String::as_str) {
         Some(scene::ARTICLE_LIST) => article_list(&state, label, &scope, &params, true, started),
+        Some(scene::ARTICLE_BROWSE) => article_browse(&state, label, &scope, &params, started),
         Some(scene::ARTICLE_DETAIL) => match required_id(&params) {
             Some(id) => article_detail(
                 &state,
@@ -394,14 +395,7 @@ fn article_list(
                 started.elapsed().as_millis()
             );
             let body = if published_only {
-                serde_json::to_value(wire::ArticleListPage {
-                    has_more: has_more(page.page, page.page_size, page.total),
-                    items: wire::to_list_items(&page.items),
-                    page: page.page,
-                    page_size: page.page_size,
-                    total: page.total,
-                })
-                .unwrap_or(Value::Null)
+                public_list_page(&page)
             } else {
                 // 管理列表只回 `items`/`total`（与 Product 相同形态）。
                 serde_json::json!({
@@ -413,6 +407,59 @@ fn article_list(
         }
         Err(failure) => domain_failure(state, label, &failure, started),
     }
+}
+
+/// Mobile 平铺页浏览（SPEC-MOBILE-BROWSE-IA-001）：type/topic/tag 三个维度各单选、
+/// 维度间 AND；`topic_id` / `tag_id` 需与 term kind 一致，否则参数错误。
+fn article_browse(
+    state: &Arc<AppState>,
+    label: &str,
+    scope: &SessionScope,
+    params: &HashMap<String, String>,
+    started: Instant,
+) -> Response {
+    let query = ArticleBrowseQuery {
+        page: parse_u32(params.get("page")),
+        page_size: parse_u32(params.get("pageSize")),
+        article_type_id: parse_i64(params.get("type_id")),
+        topic_id: parse_i64(params.get("topic_id")),
+        tag_id: parse_i64(params.get("tag_id")),
+        published_only: true,
+    };
+    match state
+        .store
+        .read(scope, |domain| domain.article_browse(&query))
+    {
+        Ok(page) => {
+            crate::mock_info!(
+                "{label} scene={} session={} items={} total={} elapsed_ms={}",
+                scene::ARTICLE_BROWSE,
+                describe(scope),
+                page.items.len(),
+                page.total,
+                started.elapsed().as_millis()
+            );
+            finish(
+                state,
+                label,
+                StatusCode::OK,
+                &Envelope::ok(public_list_page(&page)),
+            )
+        }
+        Err(failure) => domain_failure(state, label, &failure, started),
+    }
+}
+
+/// 公开列表 / 浏览共用的响应体（wire [`wire::ArticleListPage`]，camelCase）。
+fn public_list_page(page: &ArticleListPage) -> Value {
+    serde_json::to_value(wire::ArticleListPage {
+        has_more: has_more(page.page, page.page_size, page.total),
+        items: wire::to_list_items(&page.items),
+        page: page.page,
+        page_size: page.page_size,
+        total: page.total,
+    })
+    .unwrap_or(Value::Null)
 }
 
 fn article_detail(

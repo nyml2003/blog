@@ -7,7 +7,7 @@
 use std::time::Duration;
 
 use data::executor::{Executor, JobResult};
-use data::semantics::TempDb;
+use data::semantics::{PersistentDb, TempDb};
 use data::store::Store;
 use protocol::envelope::codes;
 use protocol::{ArticleGetQuery, ArticleListQuery, DataOperation, DataOutcome, Lane};
@@ -51,7 +51,8 @@ fn sqlite_store_keeps_query_count_fixed_while_item_count_grows() {
         .expect("test store opens");
     let executor = Executor::start(store.handle());
 
-    for (page_size, expected_items) in [(1u32, 1usize), (4, 4), (20, 9), (100, 9)] {
+    // 夹具 published = 45（9 篇头部 + 36 篇追加）：20 一页触发「加载更多」。
+    for (page_size, expected_items) in [(1u32, 1usize), (4, 4), (20, 20), (100, 45)] {
         let result = call(
             &executor,
             &runtime,
@@ -74,8 +75,8 @@ fn sqlite_store_keeps_query_count_fixed_while_item_count_grows() {
         };
         assert_eq!(page.items.len(), expected_items);
         assert_eq!(page.page_size, page_size);
-        assert_eq!(page.total, 9, "published only");
-        assert_eq!(page.has_more, page_size < 9);
+        assert_eq!(page.total, 45, "published only");
+        assert_eq!(page.has_more, page_size < 45);
         // 每条记录都带关联数据（批量加载，不允许逐条 detail）。
         for item in &page.items {
             assert!(item.article_type.is_some(), "type joined in page query");
@@ -182,9 +183,10 @@ fn sqlite_store_enforces_public_visibility_and_filter_semantics() {
         panic!("expected list");
     };
     let ids: Vec<i64> = page.items.iter().map(|item| item.id).collect();
-    assert_eq!(ids, vec![12, 11, 10, 9, 8, 7, 6, 5, 4]);
+    // 追加块时间戳随 id 非递减 → 默认排序等价于 id 降序。
+    assert_eq!(ids, (4..=48).rev().collect::<Vec<i64>>());
 
-    // 同一维度 OR：term_ids = [1, 2] 命中任一。
+    // 同一维度 OR：term_ids = [1, 2] 命中任一（topic rust ∪ topic sqlite = 18 篇）。
     let result = call(
         &executor,
         &runtime,
@@ -200,7 +202,13 @@ fn sqlite_store_enforces_public_visibility_and_filter_semantics() {
         panic!("expected list");
     };
     let ids: Vec<i64> = page.items.iter().map(|item| item.id).collect();
-    assert_eq!(ids, vec![11, 10, 4], "OR inside the term dimension");
+    assert_eq!(
+        ids,
+        vec![
+            47, 46, 42, 41, 40, 35, 34, 30, 29, 28, 23, 22, 18, 17, 16, 11, 10, 4
+        ],
+        "OR inside the term dimension"
+    );
 
     // 不同维度 AND：type + term。
     let result = call(
@@ -219,7 +227,7 @@ fn sqlite_store_enforces_public_visibility_and_filter_semantics() {
         panic!("expected list");
     };
     let ids: Vec<i64> = page.items.iter().map(|item| item.id).collect();
-    assert_eq!(ids, vec![11, 9]);
+    assert_eq!(ids, vec![44, 32, 20, 11, 9], "Engineering AND runtime");
 
     // 时间过滤：updated_to 为排他日终点（含当日全天）。
     let result = call(
@@ -304,7 +312,7 @@ fn test_semantics_seeds_are_stable_across_runs() {
         .unwrap();
     let a = published_titles(&first);
     let b = published_titles(&second);
-    assert_eq!(a.len(), 9);
+    assert_eq!(a.len(), 45, "9 篇头部 + 36 篇追加");
     assert_eq!(a, b, "seed must be identical on every fresh temp db");
 
     let diagnostics = first
@@ -347,7 +355,12 @@ fn mock_semantics_matches_sqlite_semantics_without_any_file() {
         panic!("expected list");
     };
     let ids: Vec<i64> = page.items.iter().map(|item| item.id).collect();
-    assert_eq!(ids, vec![12, 11, 10, 9, 8, 7, 6, 5, 4]);
+    assert_eq!(
+        ids,
+        (4..=48).rev().collect::<Vec<i64>>(),
+        "mock 与 test 语义同一批数据、同一排序"
+    );
+    assert_eq!(page.total, 45);
     for item in &page.items {
         assert!(item.article_type.is_some());
         assert_eq!(item.terms.len(), item.term_ids.len());
@@ -363,4 +376,64 @@ fn mock_semantics_matches_sqlite_semantics_without_any_file() {
         }),
     );
     assert_eq!(result.outcome.unwrap_err().code, codes::NOT_FOUND);
+}
+
+#[test]
+fn prod_semantics_keeps_an_unseeded_database_across_reopen() {
+    let runtime = runtime();
+    let path = std::env::temp_dir()
+        .join(format!("data-store-{}-prod", std::process::id()))
+        .join("blog.db");
+    let persistent = PersistentDb::resolve(&path);
+
+    let first = runtime
+        .block_on(Store::open_prod(persistent.clone()))
+        .expect("prod store opens");
+    let diagnostics = first.describe().expect("prod exposes diagnostics");
+    assert!(!diagnostics.seeded, "prod must never load test fixtures");
+    assert!(
+        path.exists(),
+        "prod database is created outside the repository"
+    );
+    let executor = Executor::start(first.handle());
+    let saved = call(
+        &executor,
+        &runtime,
+        "persistent-type",
+        DataOperation::ArticleTypeCreate(protocol::ArticleTypeName {
+            name: "Persistent".to_owned(),
+        }),
+    )
+    .outcome
+    .unwrap();
+    let DataOutcome::ArticleType(saved) = saved else {
+        panic!("expected article type")
+    };
+    let handles = executor.take_join_handles();
+    drop(executor);
+    assert!(data::executor::join_workers(handles, Duration::from_secs(3)).all_exited());
+    runtime.block_on(first.shutdown());
+    first.remove_storage();
+    assert!(path.exists(), "prod database survives normal shutdown");
+
+    let second = runtime
+        .block_on(Store::open_prod(persistent))
+        .expect("prod store reopens");
+    assert!(!second.describe().expect("diagnostics").seeded);
+    let executor = Executor::start(second.handle());
+    let loaded = call(
+        &executor,
+        &runtime,
+        "reopened-types",
+        DataOperation::ArticleTypeList(protocol::ArticleTypeListQuery::default()),
+    )
+    .outcome
+    .unwrap();
+    assert_eq!(loaded, DataOutcome::ArticleTypes(vec![saved]));
+    let handles = executor.take_join_handles();
+    drop(executor);
+    assert!(data::executor::join_workers(handles, Duration::from_secs(3)).all_exited());
+    runtime.block_on(second.shutdown());
+    second.remove_storage();
+    let _ = std::fs::remove_dir_all(path.parent().expect("database parent"));
 }

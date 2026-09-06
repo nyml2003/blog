@@ -9,11 +9,11 @@ use std::sync::Mutex;
 
 use protocol::envelope::codes;
 use protocol::{
-    ArticleDetail, ArticleGetQuery, ArticleId, ArticleListItem, ArticleListPage, ArticleListQuery,
-    ArticleShelfData, ArticleShelfQuery, ArticleType, ArticleTypeListQuery, ArticleTypeName,
-    ArticleTypeRename, ArticleWrite, DatabaseDiagnostics, MAX_SUMMARY_CHARS, OperationFailure,
-    RECOMMENDATION_LIMIT, Term, TermListQuery, TermRef, TermRename, TermWrite, Unit, has_more,
-    normalize_page, normalize_page_size,
+    ArticleBrowseQuery, ArticleDetail, ArticleGetQuery, ArticleId, ArticleListItem,
+    ArticleListPage, ArticleListQuery, ArticleShelfData, ArticleShelfQuery, ArticleType,
+    ArticleTypeListQuery, ArticleTypeName, ArticleTypeRename, ArticleWrite, DatabaseDiagnostics,
+    MAX_SUMMARY_CHARS, OperationFailure, RECOMMENDATION_LIMIT, Term, TermListQuery, TermRef,
+    TermRename, TermWrite, Unit, has_more, normalize_page, normalize_page_size,
 };
 
 use super::{ArticleFilter, DataStore, OpCtx, term_refs, type_ref};
@@ -709,12 +709,101 @@ impl DataStore for MockStore {
         })
     }
 
+    /// Mobile 平铺页浏览（SPEC-MOBILE-BROWSE-IA-001）。
+    ///
+    /// 逻辑读取数与 SQLite 路径同口径：term kind 校验(0/1) + count(1) + 当前页(1)
+    /// + 批量 terms(1)，与条目数无关。
+    fn article_browse(
+        &self,
+        query: &ArticleBrowseQuery,
+        ctx: &OpCtx<'_>,
+    ) -> Result<ArticleListPage, OperationFailure> {
+        let page = normalize_page(query.page);
+        let page_size = normalize_page_size(query.page_size);
+        let state = self.state.lock().expect("mock state mutex");
+
+        // 0/1 参数校验：topic/tag 必须引用对应 kind 的 term（无 term 维度参数时不计数）。
+        if let Some(failure) = super::validation::browse_term_kind_failure(query, |term_id| {
+            state
+                .terms
+                .iter()
+                .find(|term| term.id == term_id)
+                .map(|term| term.kind.as_str())
+        }) {
+            return Err(failure);
+        }
+        if !query.term_dimensions().is_empty() {
+            ctx.meter.record(1);
+        }
+
+        // 1/3 count + 2/3 当前页（排序 `updated_at DESC, id DESC`）。
+        let mut matching: Vec<&MockArticle> = state
+            .articles
+            .iter()
+            .filter(|article| article.status == "published" && matches_browse(query, article))
+            .collect();
+        matching.sort_by(|a, b| (&b.updated_at, b.id).cmp(&(&a.updated_at, a.id)));
+        let total = matching.len() as i64;
+        ctx.meter.record(1);
+        if ctx.canceled() {
+            return Err(canceled("article_browse canceled before page read"));
+        }
+        let offset = (page as usize - 1) * page_size as usize;
+        let mut items: Vec<ArticleListItem> = matching
+            .into_iter()
+            .skip(offset)
+            .take(page_size as usize)
+            .map(|article| self.item(article))
+            .collect();
+        ctx.meter.record(1);
+        if ctx.canceled() {
+            return Err(canceled("article_browse canceled before batch term read"));
+        }
+
+        // 3/3 批量关联加载。
+        let ids: Vec<i64> = items.iter().map(|item| item.id).collect();
+        let terms = self.batch_terms(&state, &ids);
+        ctx.meter.record(1);
+        for item in &mut items {
+            let article_terms = terms.get(&item.id).cloned().unwrap_or_default();
+            item.terms = article_terms;
+            item.term_ids = item.terms.iter().map(|term| term.id).collect();
+        }
+
+        Ok(ArticleListPage {
+            items,
+            page,
+            page_size,
+            total,
+            has_more: has_more(page, page_size, total),
+        })
+    }
+
     fn describe(&self) -> Option<DatabaseDiagnostics> {
         // mock 语义没有数据库对象；诊断里不出现 database 字段（序列化为 null）。
         None
     }
 
     fn shutdown(&self) {}
+}
+
+/// 浏览筛选语义（与 SQLite 的 `build_browse_where` 相同）：每个维度独立子句，
+/// 维度之间 AND；`topic_id` / `tag_id` 的 kind 校验在入口完成。
+fn matches_browse(query: &ArticleBrowseQuery, article: &MockArticle) -> bool {
+    if let Some(type_id) = query.article_type_id {
+        if article.article_type_id != type_id {
+            return false;
+        }
+    }
+    for (term_id, expected_kind) in query.term_dimensions() {
+        let hit = fixture::TERMS.iter().any(|term| {
+            term.id == term_id && term.kind == expected_kind && article.term_ids.contains(&term.id)
+        });
+        if !hit {
+            return false;
+        }
+    }
+    true
 }
 
 use super::FilterableArticle;
@@ -766,15 +855,21 @@ mod tests {
     #[test]
     fn fixture_state_preserves_published_count() {
         let state = MockState::from_fixture();
+        assert_eq!(state.articles.len(), 48, "12 篇头部 + 36 篇追加");
         assert_eq!(
             state
                 .articles
                 .iter()
                 .filter(|article| article.status == "published")
                 .count(),
-            9
+            45
         );
         assert_eq!(state.recommendation.len(), RECOMMENDATION_LIMIT);
+        assert_eq!(
+            state.recommendation,
+            vec![48, 47, 46, 45, 44, 43],
+            "推荐集合 = 最近更新的 6 篇"
+        );
     }
 
     #[test]
@@ -791,5 +886,41 @@ mod tests {
             normalize_summary(&exact).unwrap().chars().count(),
             MAX_SUMMARY_CHARS
         );
+    }
+
+    /// 浏览筛选语义（SPEC-MOBILE-BROWSE-IA-001）：每个 term 维度独立成立，维度间 AND。
+    #[test]
+    fn browse_filters_are_and_across_dimensions() {
+        let state = MockState::from_fixture();
+        // seed: 11 → terms [1(topic), 4(tag)]；term 3 是 tag。
+        let article = state.articles.iter().find(|a| a.id == 11).unwrap();
+        let matches = |topic_id: Option<i64>, tag_id: Option<i64>, type_id: Option<i64>| {
+            matches_browse(
+                &ArticleBrowseQuery {
+                    article_type_id: type_id,
+                    topic_id,
+                    tag_id,
+                    published_only: true,
+                    ..ArticleBrowseQuery::default()
+                },
+                article,
+            )
+        };
+        assert!(matches(None, None, None), "无筛选全命中");
+        assert!(matches(Some(1), None, None), "单维 topic 命中");
+        assert!(
+            !matches(Some(3), None, None),
+            "topic 维度收到 tag id 不命中"
+        );
+        assert!(
+            !matches(None, Some(1), None),
+            "tag 维度收到 topic id 不命中"
+        );
+        assert!(
+            !matches(Some(1), Some(3), None),
+            "11 无 term 3 → AND 不成立"
+        );
+        assert!(!matches(None, None, Some(2)), "类型不匹配");
+        assert!(matches(None, Some(4), Some(1)), "tag 4 + 类型 1 命中");
     }
 }

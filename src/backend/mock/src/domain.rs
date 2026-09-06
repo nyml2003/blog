@@ -16,11 +16,11 @@ use std::time::{Duration, Instant};
 
 use protocol::envelope::codes;
 use protocol::{
-    ArticleDetail, ArticleGetQuery, ArticleId, ArticleListItem, ArticleListPage, ArticleListQuery,
-    ArticleShelfData, ArticleShelfQuery, ArticleType, ArticleTypeListQuery, ArticleTypeName,
-    ArticleTypeRef, ArticleTypeRename, ArticleWrite, MAX_SUMMARY_CHARS, OperationFailure,
-    RECOMMENDATION_LIMIT, Term, TermListQuery, TermRef, TermRename, TermWrite, Unit, has_more,
-    normalize_page, normalize_page_size,
+    ArticleBrowseQuery, ArticleDetail, ArticleGetQuery, ArticleId, ArticleListItem,
+    ArticleListPage, ArticleListQuery, ArticleShelfData, ArticleShelfQuery, ArticleType,
+    ArticleTypeListQuery, ArticleTypeName, ArticleTypeRef, ArticleTypeRename, ArticleWrite,
+    MAX_SUMMARY_CHARS, OperationFailure, RECOMMENDATION_LIMIT, Term, TermListQuery, TermRef,
+    TermRename, TermWrite, Unit, has_more, normalize_page, normalize_page_size,
 };
 
 use crate::scenario::SeedKind;
@@ -148,6 +148,48 @@ impl DomainState {
         })
     }
 
+    /// Mobile 平铺页浏览（SPEC-MOBILE-BROWSE-IA-001）：type/topic/tag 三维单选 AND
+    /// + 分页；`topic_id` / `tag_id` 必须引用对应 kind 的 term，否则参数错误。
+    pub fn article_browse(
+        &self,
+        query: &ArticleBrowseQuery,
+    ) -> Result<ArticleListPage, OperationFailure> {
+        if let Some(failure) = browse_term_kind_failure(query, |term_id| {
+            self.terms
+                .iter()
+                .find(|term| term.id == term_id)
+                .map(|term| term.kind.as_str())
+        }) {
+            return Err(failure);
+        }
+        let page = normalize_page(query.page);
+        let page_size = normalize_page_size(query.page_size);
+        let mut matching: Vec<&ArticleDetail> = self
+            .articles
+            .iter()
+            .filter(|article| {
+                (!query.published_only || article.status == "published")
+                    && matches_browse(query, &self.terms, article)
+            })
+            .collect();
+        matching.sort_by(|a, b| (&b.updated_at, b.id).cmp(&(&a.updated_at, a.id)));
+        let total = matching.len() as i64;
+        let offset = (page as usize - 1) * page_size as usize;
+        let items: Vec<ArticleListItem> = matching
+            .into_iter()
+            .skip(offset)
+            .take(page_size as usize)
+            .map(|article| self.list_item(article))
+            .collect();
+        Ok(ArticleListPage {
+            items,
+            page,
+            page_size,
+            total,
+            has_more: has_more(page, page_size, total),
+        })
+    }
+
     pub fn article_get(&self, query: &ArticleGetQuery) -> Result<ArticleDetail, OperationFailure> {
         let article = self
             .articles
@@ -247,6 +289,7 @@ impl DomainState {
         &mut self,
         write: &ArticleWrite,
     ) -> Result<ArticleDetail, OperationFailure> {
+        require_valid_html(&write.content_html)?;
         let summary = normalize_summary(&write.summary)?;
         let stamp = now_utc_rfc3339();
         let id = self.next_article_id;
@@ -273,6 +316,7 @@ impl DomainState {
         &mut self,
         write: &ArticleWrite,
     ) -> Result<ArticleDetail, OperationFailure> {
+        require_valid_html(&write.content_html)?;
         let summary = normalize_summary(&write.summary)?;
         let stamp = now_utc_rfc3339();
         let article = self
@@ -280,9 +324,6 @@ impl DomainState {
             .iter_mut()
             .find(|article| article.id == write.id)
             .ok_or_else(|| not_found("article", write.id))?;
-        if article.status == "published" {
-            require_valid_html(&write.content_html)?;
-        }
         article.title = write.title.clone();
         article.summary = summary;
         article.article_type_id = write.article_type_id;
@@ -540,6 +581,54 @@ fn matches_query(query: &ArticleListQuery, article: &ArticleDetail) -> bool {
     true
 }
 
+/// 浏览筛选语义（与 Data 的 `build_browse_where` 相同）：type/topic/tag 三个独立
+/// 维度，各单选、维度间 AND。`topic_id` / `tag_id` 的 kind 校验在入口完成。
+fn matches_browse(query: &ArticleBrowseQuery, terms: &[Term], article: &ArticleDetail) -> bool {
+    if let Some(type_id) = query.article_type_id {
+        if article.article_type_id != type_id {
+            return false;
+        }
+    }
+    for (term_id, expected_kind) in query.term_dimensions() {
+        let hit = term_kind_of(terms, term_id) == Some(expected_kind)
+            && article.term_ids.contains(&term_id);
+        if !hit {
+            return false;
+        }
+    }
+    true
+}
+
+/// 当前集合里某个 term 的 kind（不存在时为 `None`）。
+fn term_kind_of(terms: &[Term], term_id: i64) -> Option<&str> {
+    terms
+        .iter()
+        .find(|term| term.id == term_id)
+        .map(|term| term.kind.as_str())
+}
+
+/// Mock Product validates against its session-local taxonomy, independently from Data.
+fn browse_term_kind_failure<'a>(
+    query: &ArticleBrowseQuery,
+    kind_of: impl Fn(i64) -> Option<&'a str>,
+) -> Option<OperationFailure> {
+    for (term_id, expected_kind) in query.term_dimensions() {
+        let failure = match kind_of(term_id) {
+            None => OperationFailure::new(
+                codes::INVALID_PAYLOAD,
+                format!("{expected_kind} term {term_id} not found"),
+            ),
+            Some(kind) if kind != expected_kind => OperationFailure::new(
+                codes::INVALID_PAYLOAD,
+                format!("term {term_id} has kind '{kind}', expected '{expected_kind}'"),
+            ),
+            Some(_) => continue,
+        };
+        return Some(failure);
+    }
+    None
+}
+
 fn normalize_summary(summary: &str) -> Result<String, OperationFailure> {
     let trimmed = summary.trim();
     let chars = trimmed.chars().count();
@@ -634,12 +723,21 @@ mod tests {
                 ..ArticleListQuery::default()
             })
             .unwrap();
-        assert_eq!(public.total, 9);
-        assert_eq!(public.items[0].id, 12, "updated_at DESC, id DESC");
+        assert_eq!(public.total, 45, "9 篇头部 + 36 篇追加");
+        assert_eq!(public.items[0].id, 48, "updated_at DESC, id DESC");
+        let everything = state
+            .article_list(&ArticleListQuery {
+                published_only: true,
+                page_size: Some(100),
+                ..ArticleListQuery::default()
+            })
+            .unwrap();
+        assert_eq!(everything.items.len(), 45);
+        assert_eq!(everything.items[44].id, 4, "排序末位 = 最早的头部文章");
         assert!(public.items.iter().all(|item| item.status == "published"));
 
         let admin = state.article_list(&ArticleListQuery::default()).unwrap();
-        assert_eq!(admin.total, 12);
+        assert_eq!(admin.total, 48);
 
         let detail = state
             .article_get(&ArticleGetQuery {
@@ -662,7 +760,7 @@ mod tests {
         let mut state = full();
         let created = state.article_create(&write("Session local")).unwrap();
         assert_eq!(created.status, "draft");
-        assert_eq!(created.id, 13, "next id continues the seed");
+        assert_eq!(created.id, 49, "next id continues the seed");
 
         let still_hidden = state
             .article_get(&ArticleGetQuery {
@@ -684,7 +782,7 @@ mod tests {
                 ..ArticleListQuery::default()
             })
             .unwrap();
-        assert_eq!(page.total, 10);
+        assert_eq!(page.total, 46);
         assert_eq!(
             page.items[0].id, created.id,
             "newest updated_at sorts first"
@@ -800,21 +898,26 @@ mod tests {
         let mut state = full();
         let current = state.recommendation_current();
         assert_eq!(current.len(), 6);
-        assert_eq!(current[0].id, 12);
+        assert_eq!(
+            current.iter().map(|detail| detail.id).collect::<Vec<_>>(),
+            vec![48, 47, 46, 45, 44, 43],
+            "seed 推荐集合 = 最近更新的 6 篇"
+        );
 
         // 下线一篇推荐内的文章后刷新：集合只保留已发布文章。
-        state.article_unpublish(&ArticleId { id: 12 }).unwrap();
+        state.article_unpublish(&ArticleId { id: 48 }).unwrap();
         let rebuilt = state.recommendation_generate();
         assert_eq!(rebuilt.len(), 6);
         assert!(rebuilt.iter().all(|detail| detail.status == "published"));
-        assert!(!rebuilt.iter().any(|detail| detail.id == 12));
-        assert_eq!(rebuilt[0].id, 11);
+        assert!(!rebuilt.iter().any(|detail| detail.id == 48));
+        assert_eq!(rebuilt[0].id, 47);
     }
 
     #[test]
     fn filters_are_or_within_a_dimension_and_and_across_dimensions() {
         let state = full();
-        // 同一维度 OR：命中任一 term 即可（term 1 → id 11；term 2 → id 10、4）。
+        // 同一维度 OR：命中任一 term 即可（topic 1 命中 10 篇、topic 2 命中 8 篇，
+        // 交集为空 → 并集 18；见 `seed::tests::distribution_matches_the_data_fixture`）。
         let either = state
             .article_list(&ArticleListQuery {
                 published_only: true,
@@ -822,7 +925,7 @@ mod tests {
                 ..ArticleListQuery::default()
             })
             .unwrap();
-        assert_eq!(either.total, 3, "terms 1 or 2: ids 11, 10, 4");
+        assert_eq!(either.total, 18, "terms 1 OR 2");
         // 不同维度 AND：term 1 + 类型 3 → 空。
         let both = state
             .article_list(&ArticleListQuery {
@@ -858,16 +961,25 @@ mod tests {
             .unwrap();
         assert_eq!(page.page, 1, "page < 1 normalizes to 1");
         assert_eq!(page.page_size, 4);
-        assert!(page.has_more);
-        let last = state
+        assert!(page.has_more, "45 篇 / 每页 4 → 还有更多");
+        let mid = state
             .article_list(&ArticleListQuery {
                 published_only: true,
-                page: Some(3),
+                page: Some(2),
                 page_size: Some(4),
                 ..ArticleListQuery::default()
             })
             .unwrap();
-        assert_eq!(last.items.len(), 1);
+        assert_eq!(mid.items.len(), 4);
+        let last = state
+            .article_list(&ArticleListQuery {
+                published_only: true,
+                page: Some(12),
+                page_size: Some(4),
+                ..ArticleListQuery::default()
+            })
+            .unwrap();
+        assert_eq!(last.items.len(), 1, "45 = 11 页 × 4 + 1");
         assert!(!last.has_more);
     }
 }

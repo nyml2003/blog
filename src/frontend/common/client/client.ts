@@ -3,12 +3,19 @@ import type {
   Article,
   ArticleListItem,
   AdminArticle,
+  ArticleBrowsePage,
   ArticleId,
   ArticleType,
   MobileShelf,
+  TShelf,
   Term,
 } from "./domain";
-import { articleSchema, articleListSchema, adminArticleSchema } from "./domain";
+import {
+  articleSchema,
+  articleListSchema,
+  articleBrowsePageSchema,
+  adminArticleSchema,
+} from "./domain";
 import { inspectHtml } from "../validation/wasm";
 import type { HtmlInspection } from "../validation/article-html";
 import type { DataError } from "../data/errors";
@@ -30,6 +37,8 @@ const shelfSchema = z.object({
     z.object({
       id: z.string(),
       title: z.string(),
+      // 分区截断前的全量条数（`type-<id>` 分区即该类型的全量计数）。
+      total: z.number().int().nonnegative(),
       articles: z.array(
         z.object({
           id: z.number().int().positive(),
@@ -44,6 +53,25 @@ const shelfSchema = z.object({
   total: z.number().int().nonnegative(),
   hasFilters: z.boolean(),
   warnings: z.array(z.string()),
+});
+const tShelfSchema = z.object({
+  filters: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+    }),
+  ),
+  selectedFilterId: z.string(),
+  articles: z.array(
+    z.object({
+      id: z.number().int().positive(),
+      title: z.string(),
+      summary: z.string(),
+      updatedAt: z.string(),
+      terms: z.array(termSchema),
+    }),
+  ),
+  total: z.number().int().nonnegative(),
 });
 const decode = <T>(
   schema: z.ZodType<T>,
@@ -69,6 +97,17 @@ export type ArticleFilterInput = {
   updatedFrom?: string;
   updatedTo?: string;
 };
+/** `public.article_browse` 入参：维度间 AND 的三级单选；`page` 缺省取后端默认。 */
+export type ArticleBrowseInput = {
+  typeId?: number;
+  topicId?: number;
+  tagId?: number;
+  page?: number;
+};
+export type TShelfInput = {
+  surface: "recommendation" | "archive";
+  filterId: string;
+};
 export type DraftInput = {
   id?: ArticleId;
   title: string;
@@ -83,11 +122,15 @@ export interface Client {
     listPublishedArticles(
       input?: ArticleFilterInput,
     ): DataTask<{ items: ArticleListItem[]; total: number }>;
+    browseArticles(input?: ArticleBrowseInput): DataTask<ArticleBrowsePage>;
     getPublishedArticle(id: ArticleId): DataTask<Article>;
   };
   recommendationFeed: { getHomeRecommendations(): DataTask<Article[]> };
   mobileShelf: {
     list(input?: ArticleFilterInput): DataTask<MobileShelf>;
+  };
+  tShelf: {
+    get(input: TShelfInput): DataTask<TShelf>;
   };
   taxonomy: {
     listTypes(admin?: boolean): DataTask<ArticleType[]>;
@@ -147,6 +190,17 @@ export function createClient(transport: Transport): Client {
             total: number;
           }>,
         ),
+      browseArticles: (input = {}) =>
+        request<ArticleBrowsePage>(
+          `/api/public/articles?${query({
+            sceneCode: "public.article_browse",
+            type_id: input.typeId?.toString(),
+            topic_id: input.topicId?.toString(),
+            tag_id: input.tagId?.toString(),
+            page: input.page?.toString(),
+          })}`,
+          articleBrowsePageSchema as unknown as z.ZodType<ArticleBrowsePage>,
+        ),
       getPublishedArticle: (id) =>
         request<Article>(
           `/api/public/articles?sceneCode=public.article_detail&id=${encodeURIComponent(String(id))}`,
@@ -173,6 +227,17 @@ export function createClient(transport: Transport): Client {
             updated_to: input.updatedTo,
           })}`,
           shelfSchema as unknown as z.ZodType<MobileShelf>,
+      ),
+    },
+    tShelf: {
+      get: (input) =>
+        request<TShelf>(
+          `/api/public/t-shelf?${query({
+            sceneCode: "public.t_shelf",
+            surface: input.surface,
+            filter_id: input.filterId,
+          })}`,
+          tShelfSchema as unknown as z.ZodType<TShelf>,
         ),
     },
     taxonomy: {

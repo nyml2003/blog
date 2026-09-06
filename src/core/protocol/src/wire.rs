@@ -162,16 +162,41 @@ pub struct ShelfSection {
     /// `recommendation` 或稳定的 `type-<id>`。
     pub id: String,
     pub title: String,
+    /// 截断后的下发卡片（上限由 BFF 规则定义）。
     pub articles: Vec<ShelfCard>,
+    /// 该分区在**全量**筛选结果中的条数（截断前）：类型分区即该类型的全量计数，
+    /// 前端据此判断是否展示「查看全部」（`total > N`）。
+    pub total: usize,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ShelfData {
     pub sections: Vec<ShelfSection>,
+    /// 全量文章数（未截断）；与各分区 `articles` 之和刻意不相等。
     pub total: usize,
     pub has_filters: bool,
     pub warnings: Vec<String>,
+}
+
+/// T 型货架顶部的文章类型筛选项。`all` 是稳定的首项，其余 id 为文章类型 id
+/// 的十进制字符串。
+#[derive(Debug, Serialize)]
+pub struct TShelfFilter {
+    pub id: String,
+    pub name: String,
+}
+
+/// T 型货架读模型：一次请求返回完整筛选项和当前货架。
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TShelfData {
+    pub filters: Vec<TShelfFilter>,
+    pub selected_filter_id: String,
+    /// 有界的列表卡片，不含正文 HTML。
+    pub articles: Vec<ShelfCard>,
+    /// 当前 surface + filter 下的全量条数（截断前）。
+    pub total: usize,
 }
 
 fn article_type_ref(value: &crate::operation::ArticleTypeRef) -> ArticleTypeRef {
@@ -271,70 +296,61 @@ fn shelf_card(item: &InternalArticleListItem) -> ShelfCard {
     }
 }
 
-/// BFF 分组（共享给 Product 与 Mock，保证两侧 section 顺序一致）：
-/// 推荐 section（无筛选时，最多 3 张卡片）→ 按类型的分组 section（空分区隐藏，
-/// 类型按传入顺序，即 `name` 序）→ 类型已删除的文章进入稳定的 `type-<id>` 兜底
-/// section（标题 `未分类`），不静默丢弃。
-pub fn to_shelf(
-    types: &[InternalArticleType],
-    items: &[InternalArticleListItem],
-    recommendation: &[InternalArticleListItem],
-    has_filters: bool,
-) -> ShelfData {
-    let mut sections: Vec<ShelfSection> = Vec::new();
-    if !has_filters && !recommendation.is_empty() {
-        let cards: Vec<ShelfCard> = recommendation.iter().take(3).map(shelf_card).collect();
-        sections.push(ShelfSection {
-            id: "recommendation".to_owned(),
-            title: "推荐".to_owned(),
-            articles: cards,
-        });
-    }
+/// 列表条目 → 货架卡片的纯形状投影。
+pub fn to_shelf_cards(items: &[InternalArticleListItem]) -> Vec<ShelfCard> {
+    items.iter().map(shelf_card).collect()
+}
 
-    let mut grouped: Vec<(i64, Vec<ShelfCard>)> = Vec::new();
-    for item in items {
-        match grouped
-            .iter_mut()
-            .find(|(id, _)| *id == item.article_type_id)
-        {
-            Some((_, cards)) => cards.push(shelf_card(item)),
-            None => grouped.push((item.article_type_id, vec![shelf_card(item)])),
-        }
-    }
+/// 详情条目 → 货架卡片的纯形状投影。
+pub fn to_shelf_cards_from_details(items: &[InternalArticleDetail]) -> Vec<ShelfCard> {
+    items
+        .iter()
+        .map(|item| ShelfCard {
+            id: item.id,
+            title: item.title.clone(),
+            summary: item.summary.clone(),
+            updated_at: item.updated_at.clone(),
+            terms: item.terms.iter().map(term_ref).collect(),
+        })
+        .collect()
+}
 
-    let mut seen: Vec<i64> = Vec::new();
-    for kind in types {
-        let Some((_, cards)) = grouped.iter_mut().find(|(id, _)| *id == kind.id) else {
-            continue;
-        };
-        seen.push(kind.id);
-        sections.push(ShelfSection {
-            id: format!("type-{}", kind.id),
-            title: kind.name.clone(),
-            articles: std::mem::take(cards),
-        });
-    }
-    for (type_id, cards) in grouped {
-        if seen.contains(&type_id) || cards.is_empty() {
-            continue;
-        }
-        let title = types
-            .iter()
-            .find(|kind| kind.id == type_id)
-            .map(|kind| kind.name.clone())
-            .unwrap_or_else(|| "未分类".to_owned());
-        sections.push(ShelfSection {
-            id: format!("type-{type_id}"),
-            title,
-            articles: cards,
-        });
-    }
+/// 文章类型 → T 型货架筛选项的纯形状投影。
+pub fn to_t_shelf_filters(types: &[InternalArticleType]) -> Vec<TShelfFilter> {
+    let mut filters = vec![TShelfFilter {
+        id: "all".to_owned(),
+        name: "全部".to_owned(),
+    }];
+    filters.extend(types.iter().map(|kind| TShelfFilter {
+        id: kind.id.to_string(),
+        name: kind.name.clone(),
+    }));
+    filters
+}
 
-    ShelfData {
-        sections,
-        total: items.len(),
-        has_filters,
-        warnings: Vec::new(),
+#[cfg(test)]
+mod shape_tests {
+    use super::*;
+
+    #[test]
+    fn t_shelf_shape_uses_stable_all_filter_and_camel_case_selection() {
+        let filters = to_t_shelf_filters(&[InternalArticleType {
+            id: 7,
+            name: "Engineering".to_owned(),
+            created_at: "c".to_owned(),
+            updated_at: "u".to_owned(),
+        }]);
+        let value = serde_json::to_value(TShelfData {
+            filters,
+            selected_filter_id: "7".to_owned(),
+            articles: Vec::new(),
+            total: 0,
+        })
+        .unwrap();
+        assert_eq!(value["filters"][0]["id"], "all");
+        assert_eq!(value["filters"][0]["name"], "全部");
+        assert_eq!(value["filters"][1]["id"], "7");
+        assert_eq!(value["selectedFilterId"], "7");
     }
 }
 
@@ -420,68 +436,6 @@ mod tests {
         assert_eq!(json[0]["createdAt"], "c");
         assert_eq!(json[0]["updatedAt"], "u");
         assert_eq!(json[0]["name"], "Field Notes");
-    }
-
-    #[test]
-    fn shelf_groups_by_type_hides_empty_sections_and_keeps_fallback() {
-        let types = vec![
-            InternalArticleType {
-                id: 1,
-                name: "Engineering".to_owned(),
-                created_at: "c".to_owned(),
-                updated_at: "u".to_owned(),
-            },
-            InternalArticleType {
-                id: 2,
-                name: "Field Notes".to_owned(),
-                created_at: "c".to_owned(),
-                updated_at: "u".to_owned(),
-            },
-        ];
-        let items = vec![
-            internal_item(11, 2),
-            internal_item(10, 2),
-            internal_item(9, 99), // 类型已删除 → 兜底 section
-        ];
-        let shelf = to_shelf(&types, &items, &items[..1], false);
-        assert_eq!(shelf.total, 3);
-        assert!(!shelf.has_filters);
-        assert_eq!(shelf.sections[0].id, "recommendation");
-        assert_eq!(shelf.sections[0].articles.len(), 1, "at most 3 cards");
-        assert_eq!(shelf.sections[1].id, "type-2");
-        assert_eq!(shelf.sections[1].title, "Field Notes");
-        assert_eq!(shelf.sections[2].id, "type-99");
-        assert_eq!(shelf.sections[2].title, "未分类");
-        assert!(
-            shelf.sections.iter().all(|section| section.id != "type-1"),
-            "empty section must be hidden"
-        );
-        for section in &shelf.sections {
-            for card in &section.articles {
-                let json = serde_json::to_value(card).unwrap();
-                assert!(json.get("contentHtml").is_none(), "cards carry no body");
-            }
-        }
-    }
-
-    #[test]
-    fn shelf_skips_recommendation_when_filtered() {
-        let types = vec![InternalArticleType {
-            id: 1,
-            name: "Engineering".to_owned(),
-            created_at: "c".to_owned(),
-            updated_at: "u".to_owned(),
-        }];
-        let items = vec![internal_item(11, 1)];
-        let shelf = to_shelf(&types, &items, &items, true);
-        assert!(shelf.has_filters);
-        assert!(
-            !shelf
-                .sections
-                .iter()
-                .any(|section| section.id == "recommendation"),
-            "filtered requests carry no recommendation section"
-        );
     }
 
     #[test]

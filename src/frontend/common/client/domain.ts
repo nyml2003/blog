@@ -35,6 +35,15 @@ export const articleListSchema = z.object({
   items: z.array(articleListItemSchema),
   total: z.number().int().nonnegative(),
 });
+/** `public.article_browse` 的分页形态：items + page/pageSize/total（沿用列表端点）。 */
+export const articleBrowsePageSchema = z.object({
+  items: z.array(articleListItemSchema),
+  page: z.number().int().positive(),
+  pageSize: z.number().int().positive(),
+  total: z.number().int().nonnegative(),
+  // 后端 `ArticleListPage` wire 另带 `hasMore`；契约只承诺上面四个字段。
+  hasMore: z.boolean().optional(),
+});
 export const adminArticleSchema = articleSchema.extend({
   htmlInspection: htmlInspectionSchema,
 });
@@ -59,6 +68,14 @@ export type Article = {
 
 export type ArticleListItem = Omit<Article, "contentHtml">;
 
+export type ArticleBrowsePage = {
+  items: ArticleListItem[];
+  page: number;
+  pageSize: number;
+  total: number;
+  hasMore?: boolean;
+};
+
 export type MobileShelfArticle = {
   id: number;
   title: string;
@@ -70,6 +87,8 @@ export type MobileShelfArticle = {
 export type MobileShelfSection = {
   id: string;
   title: string;
+  /** 截断前该分区的全量条数：类型分区据此渲染「查看全部」（`total > N`）。 */
+  total: number;
   articles: MobileShelfArticle[];
 };
 
@@ -78,6 +97,26 @@ export type MobileShelf = {
   total: number;
   hasFilters: boolean;
   warnings: string[];
+};
+
+export type TShelfFilter = {
+  id: string;
+  name: string;
+};
+
+export type TShelfArticle = {
+  id: number;
+  title: string;
+  summary: string;
+  updatedAt: string;
+  terms: Term[];
+};
+
+export type TShelf = {
+  filters: TShelfFilter[];
+  selectedFilterId: string;
+  articles: TShelfArticle[];
+  total: number;
 };
 
 export function parseArticle(value: unknown): Article {

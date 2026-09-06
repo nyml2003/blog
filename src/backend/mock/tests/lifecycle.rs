@@ -93,7 +93,7 @@ fn scenario_is_only_selected_through_the_cli() {
     );
     assert_eq!(
         get(server.port, &public_list(100)).data()["total"],
-        9,
+        45,
         "default seed served"
     );
     let status = server.signal("-TERM");
@@ -133,7 +133,7 @@ fn seed_is_stable_across_two_starts() {
         assert_eq!(&second, first, "seed drifted for {path}");
     }
     assert!(
-        first_bodies[0].contains("\"total\":9"),
+        first_bodies[0].contains("\"total\":45"),
         "bodies are non-trivial"
     );
     let _ = second_server.signal("-TERM");
@@ -198,19 +198,19 @@ fn restart_reinitializes_all_state() {
     assert_eq!(response.status, 200);
     assert_eq!(
         get_with(port, &admin_list(), Some("t1")).data()["total"],
-        13
+        49
     );
     let _ = first.signal("-TERM");
 
     let mut second = Server::start(&["--listen", "127.0.0.1:0", "--scenario", "default"]);
     assert_eq!(
         get_with(second.port, &admin_list(), Some("t1")).data()["total"],
-        12,
+        48,
         "the session must start from the seed again"
     );
     assert_eq!(
         get_with(second.port, &public_list(100), Some("t1")).data()["total"],
-        9
+        45
     );
     let _ = second.signal("-TERM");
 }

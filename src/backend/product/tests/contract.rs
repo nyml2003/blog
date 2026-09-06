@@ -17,6 +17,11 @@ const DATA_PORT: u16 = 18231;
 const PRODUCT_PORT: u16 = 18230;
 const DATA_ADDR: &str = "http://127.0.0.1:18231";
 
+/// SPEC-MOBILE-BROWSE-IA-001 用例的独立端口（与其他用例并行互不冲突）。
+const BROWSE_PRODUCT_PORT: u16 = 18260;
+const BROWSE_DATA_PORT: u16 = 18261;
+const BROWSE_DATA_ADDR: &str = "http://127.0.0.1:18261";
+
 struct Server {
     child: Child,
     lines: Arc<Mutex<Vec<String>>>,
@@ -221,16 +226,47 @@ fn full_public_admin_contract_and_static_mount() {
         "desktop/pages/admin-article-new/index.html",
         "desktop/pages/admin-article-edit/index.html",
         "desktop/pages/admin-editor-guide/index.html",
+        "desktop/pages/admin-article-preview-desktop/index.html",
         "desktop/pages/admin-article-types/index.html",
         "desktop/pages/admin-terms/index.html",
         "mobile/pages/home/index.html",
         "mobile/pages/articles/index.html",
+        "mobile/pages/article-list/index.html",
         "mobile/pages/article-detail/index.html",
+        "mobile/pages/settings/index.html",
+        "mobile/pages/admin-article-preview-content/index.html",
     ] {
         let path = workdir.join(relative);
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(path, format!("<html>{relative}</html>")).unwrap();
     }
+    let page_routes = serde_json::json!([
+        { "alias": "/", "outputPath": "desktop/pages/public-home/index.html" },
+        { "alias": "/articles/index.html", "outputPath": "desktop/pages/public-articles/index.html" },
+        { "alias": "/articles/detail.html", "outputPath": "desktop/pages/public-detail/index.html" },
+        { "alias": "/admin", "outputPath": "desktop/pages/admin-home/index.html" },
+        { "alias": "/admin/", "outputPath": "desktop/pages/admin-home/index.html" },
+        { "alias": "/admin/index.html", "outputPath": "desktop/pages/admin-home/index.html" },
+        { "alias": "/admin/articles/new.html", "outputPath": "desktop/pages/admin-article-new/index.html" },
+        { "alias": "/admin/articles/edit.html", "outputPath": "desktop/pages/admin-article-edit/index.html" },
+        { "alias": "/admin/editor-guide/index.html", "outputPath": "desktop/pages/admin-editor-guide/index.html" },
+        { "alias": "/admin/article-types/index.html", "outputPath": "desktop/pages/admin-article-types/index.html" },
+        { "alias": "/admin/terms/index.html", "outputPath": "desktop/pages/admin-terms/index.html" },
+        { "alias": "/admin/articles/preview/desktop.html", "outputPath": "desktop/pages/admin-article-preview-desktop/index.html" },
+        { "alias": "/m", "outputPath": "mobile/pages/home/index.html" },
+        { "alias": "/m/", "outputPath": "mobile/pages/home/index.html" },
+        { "alias": "/m/articles/index.html", "outputPath": "mobile/pages/articles/index.html" },
+        { "alias": "/m/articles/list.html", "outputPath": "mobile/pages/article-list/index.html" },
+        { "alias": "/m/articles/detail.html", "outputPath": "mobile/pages/article-detail/index.html" },
+        { "alias": "/m/settings/index.html", "outputPath": "mobile/pages/settings/index.html" },
+        { "alias": "/admin/articles/preview/mobile.html", "outputPath": "mobile/pages/admin-article-preview-content/index.html" },
+        { "alias": "/admin/articles/preview/mobile/content.html", "outputPath": "mobile/pages/admin-article-preview-content/index.html" }
+    ]);
+    std::fs::write(
+        workdir.join("page-routes.json"),
+        serde_json::to_vec(&page_routes).unwrap(),
+    )
+    .unwrap();
     std::fs::write(workdir.join("assets/app-test.js"), "console.log('app')").unwrap();
 
     let mut data = Server::start(
@@ -391,7 +427,7 @@ fn full_public_admin_contract_and_static_mount() {
         "/api/public/terms?sceneCode=public.term_list&kind=tag",
     );
     let terms = json_of(&response)["data"].as_array().unwrap().clone();
-    assert_eq!(terms.len(), 2, "seed has two tags");
+    assert_eq!(terms.len(), 3, "seed has three tags");
     assert!(terms.iter().all(|term| term["kind"] == "tag"));
 
     let response = get(
@@ -425,7 +461,7 @@ fn full_public_admin_contract_and_static_mount() {
         "推荐最多 3 张卡片"
     );
     assert!(sections[0]["articles"][0].get("contentHtml").is_none());
-    assert_eq!(shelf["total"], 9);
+    assert_eq!(shelf["total"], 45, "夹具全量 published");
     assert_eq!(shelf["hasFilters"], false);
     assert_eq!(shelf["warnings"].as_array().unwrap().len(), 0);
     let type_sections: Vec<&serde_json::Value> = sections[1..]
@@ -704,6 +740,12 @@ fn full_public_admin_contract_and_static_mount() {
         ("/", "desktop/pages/public-home/index.html"),
         ("/m", "mobile/pages/home/index.html"),
         ("/m/", "mobile/pages/home/index.html"),
+        // Mobile 平铺页入口（SPEC-MOBILE-BROWSE-IA-001）。
+        (
+            "/m/articles/list.html",
+            "mobile/pages/article-list/index.html",
+        ),
+        ("/m/settings/index.html", "mobile/pages/settings/index.html"),
         ("/admin", "desktop/pages/admin-home/index.html"),
         ("/admin/", "desktop/pages/admin-home/index.html"),
         (
@@ -713,6 +755,18 @@ fn full_public_admin_contract_and_static_mount() {
         (
             "/admin/editor-guide/index.html",
             "desktop/pages/admin-editor-guide/index.html",
+        ),
+        (
+            "/admin/articles/preview/desktop.html",
+            "desktop/pages/admin-article-preview-desktop/index.html",
+        ),
+        (
+            "/admin/articles/preview/mobile.html",
+            "mobile/pages/admin-article-preview-content/index.html",
+        ),
+        (
+            "/admin/articles/preview/mobile/content.html",
+            "mobile/pages/admin-article-preview-content/index.html",
         ),
         (
             "/admin/terms/index.html",
@@ -869,6 +923,251 @@ fn full_public_admin_contract_and_static_mount() {
     let _ = std::fs::remove_dir_all(&workdir);
 }
 
+/// SPEC-MOBILE-BROWSE-IA-001：货架分区截断 + 每分区 total，以及新浏览接口的
+/// 三维 AND / kind 校验 / 分页边界。
+///
+/// 与 `full_public_admin_contract_and_static_mount` 隔离：独立端口 + 独立临时库，
+/// 并通过管理端补建 3 篇同类型文章把 Engineering 推过 `N = 6`。
+#[test]
+fn shelf_sections_are_bounded_and_browse_filters_are_and() {
+    let workdir = std::env::temp_dir().join(format!("product-browse-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&workdir);
+    std::fs::create_dir_all(&workdir).unwrap();
+    let db_path = workdir.join("browse.db");
+
+    let mut data = Server::start(
+        "data",
+        &[
+            "--data-semantics",
+            "test",
+            "--data-database-path",
+            db_path.to_str().unwrap(),
+            "--listen",
+            &format!("127.0.0.1:{BROWSE_DATA_PORT}"),
+        ],
+        &[],
+    );
+    data.wait_for_line("listening addr=", Duration::from_secs(10));
+    let mut product = Server::start(
+        "product",
+        &["--listen", &format!("127.0.0.1:{BROWSE_PRODUCT_PORT}")],
+        &[("BLOG_DATA_ADDR", BROWSE_DATA_ADDR)],
+    );
+
+    // ---------- 素材：Engineering(1) 从 4 篇补到 7 篇（> N=6） ----------
+    // seed：type1=4(11,10,9,5) type2=3 type3=2；新文章 a[1] b[3] c[1,3]。
+    for (title, terms) in [
+        ("browse article a", "[1]"),
+        ("browse article b", "[3]"),
+        ("browse article c", "[1,3]"),
+    ] {
+        let body = format!(
+            r#"{{"sceneCode":"admin.article_create","title":"{title}","summary":"browse fixture","articleTypeId":1,"termIds":{terms},"contentHtml":"<p>{title}</p>"}}"#
+        );
+        let response = post_json(BROWSE_PRODUCT_PORT, "/api/admin/articles", &body);
+        assert_eq!(response.status, 200, "{}", response.body);
+        let id = json_of(&response)["data"]["id"].as_i64().unwrap();
+        let response = post_json(
+            BROWSE_PRODUCT_PORT,
+            "/api/admin/articles",
+            &format!(r#"{{"sceneCode":"admin.article_publish","id":{id}}}"#),
+        );
+        assert_eq!(response.status, 200, "{}", response.body);
+    }
+
+    // ---------- 货架：分区截断 + 每分区 total ----------
+    let shelf = json_of(&get(
+        BROWSE_PRODUCT_PORT,
+        "/api/public/mobile/article-shelf?sceneCode=public.mobile_article_shelf",
+    ))["data"]
+        .clone();
+    let sections = shelf["sections"].as_array().unwrap();
+    assert_eq!(sections[0]["id"], "recommendation");
+    assert_eq!(
+        sections[0]["articles"].as_array().unwrap().len(),
+        3,
+        "推荐区固定 3 张"
+    );
+    assert_eq!(sections[0]["total"], 6, "推荐 total 为截断前条数");
+    assert_eq!(shelf["total"], 48, "全量文章数，不随分区截断变化");
+
+    let section_of = |id: &str| {
+        sections
+            .iter()
+            .find(|section| section["id"] == id)
+            .unwrap_or_else(|| panic!("missing section {id}"))
+            .clone()
+    };
+    let engineering = section_of("type-1");
+    assert_eq!(
+        engineering["articles"].as_array().unwrap().len(),
+        6,
+        "类型分区只下发前 N=6 张"
+    );
+    assert_eq!(
+        engineering["total"], 31,
+        "分区 total = 该类型全量计数（> N）"
+    );
+    assert!(
+        engineering["total"].as_u64().unwrap() > 6,
+        "`total > N` 判定素材：Engineering 需要展示「查看全部」"
+    );
+    assert_eq!(section_of("type-2")["total"], 12);
+    assert_eq!(
+        section_of("type-2")["articles"].as_array().unwrap().len(),
+        6
+    );
+    assert_eq!(section_of("type-3")["total"], 5);
+    assert_eq!(
+        section_of("type-3")["articles"].as_array().unwrap().len(),
+        5
+    );
+
+    // 响应条数有界：分区数 × (N + 推荐 3) 量级，与文章总量无关。
+    let cards: usize = sections
+        .iter()
+        .map(|section| section["articles"].as_array().unwrap().len())
+        .sum();
+    assert!(
+        cards <= sections.len() * 6 + 3,
+        "下发条数必须有界：cards={cards} sections={}",
+        sections.len()
+    );
+    assert_eq!(cards, 20, "3 推荐 + 6 + 6 + 5");
+
+    // 带筛选：无推荐 section，分区截断语义不变。
+    let filtered = json_of(&get(
+        BROWSE_PRODUCT_PORT,
+        "/api/public/mobile/article-shelf?sceneCode=public.mobile_article_shelf&type_id=1",
+    ))["data"]
+        .clone();
+    assert_eq!(filtered["hasFilters"], true);
+    let filtered_sections = filtered["sections"].as_array().unwrap();
+    assert!(!filtered_sections.is_empty());
+    assert_eq!(filtered_sections[0]["id"], "type-1");
+    assert_eq!(
+        filtered_sections[0]["articles"].as_array().unwrap().len(),
+        6
+    );
+    assert_eq!(filtered_sections[0]["total"], 31);
+
+    // ---------- 浏览接口：三维 AND + kind 校验 + 分页 ----------
+    let browse = |query: &str| {
+        json_of(&get(
+            BROWSE_PRODUCT_PORT,
+            &format!("/api/public/articles?sceneCode=public.article_browse{query}"),
+        ))
+    };
+
+    // 空参数 = 全量第 1 页（默认 20 / 上限 100）。
+    let before = data_query_total(BROWSE_DATA_PORT);
+    let page = browse("");
+    assert_eq!(page["code"], "OK");
+    let empty = &page["data"];
+    assert_eq!(empty["page"], 1);
+    assert_eq!(empty["pageSize"], 20);
+    assert_eq!(empty["total"], 48, "全部已发布文章（45 夹具 + 3 篇新建）");
+    assert_eq!(
+        empty["items"].as_array().unwrap().len(),
+        20,
+        "默认一页 20 条"
+    );
+    assert_eq!(empty["hasMore"], true, "48 > 20 → 「加载更多」");
+    assert_eq!(
+        data_query_total(BROWSE_DATA_PORT) - before,
+        3,
+        "count + 当前页 + 批量 terms，与条目数无关"
+    );
+
+    // 单维 / 多维 AND。
+    let before = data_query_total(BROWSE_DATA_PORT);
+    assert_eq!(browse("&type_id=1")["data"]["total"], 31);
+    // type_id 走列过滤：count + 当前页 + 批量 terms（固定 3 条，与条目数无关）。
+    assert_eq!(data_query_total(BROWSE_DATA_PORT) - before, 3);
+    let before = data_query_total(BROWSE_DATA_PORT);
+    assert_eq!(browse("&type_id=1&topic_id=1")["data"]["total"], 9);
+    // term 维度多一次 kind 校验查询（固定 4 条）。
+    assert_eq!(
+        data_query_total(BROWSE_DATA_PORT) - before,
+        4,
+        "term kind 校验 + count + 当前页 + 批量 terms"
+    );
+    assert_eq!(
+        browse("&type_id=1&topic_id=1&tag_id=3")["data"]["total"],
+        1,
+        "三级 AND"
+    );
+    // 维度组合错开：Announcements + topic 1 → 空。
+    assert_eq!(browse("&type_id=3&topic_id=1")["data"]["total"], 0);
+
+    // kind 不匹配 / term 不存在 → 参数错误（对外沿用 INVALID_JSON + 400）。
+    for (query, message) in [
+        ("&topic_id=3", "term 3 是 tag"),
+        ("&tag_id=1", "term 1 是 topic"),
+        ("&topic_id=99999", "term 不存在"),
+    ] {
+        let response = get(
+            BROWSE_PRODUCT_PORT,
+            &format!("/api/public/articles?sceneCode=public.article_browse{query}"),
+        );
+        assert_eq!(response.status, 400, "{message}: {}", response.body);
+        assert_eq!(json_of(&response)["code"], "INVALID_JSON", "{message}");
+    }
+
+    // 分页边界：page < 1 归一化为 1；pageSize 0 → 默认 20；超上限钳制到 100；越界页为空。
+    let page = browse("&page=0&pageSize=0");
+    assert_eq!(page["data"]["page"], 1);
+    assert_eq!(page["data"]["pageSize"], 20);
+    let page = browse("&pageSize=5000");
+    assert_eq!(page["data"]["pageSize"], 100, "pageSize 上限 100");
+    let page = browse("&page=1&pageSize=2");
+    assert_eq!(page["data"]["items"].as_array().unwrap().len(), 2);
+    assert_eq!(page["data"]["hasMore"], true, "12 篇 / 每页 2 → 还有更多");
+    let page = browse("&page=24&pageSize=2");
+    assert_eq!(
+        page["data"]["items"].as_array().unwrap().len(),
+        2,
+        "48 = 24 页 × 2"
+    );
+    assert_eq!(page["data"]["hasMore"], false, "最后一页");
+    let page = browse("&page=25&pageSize=2");
+    assert_eq!(page["data"]["items"].as_array().unwrap().len(), 0);
+    assert_eq!(page["data"]["hasMore"], false);
+    let page = browse("&page=99");
+    assert_eq!(page["data"]["items"].as_array().unwrap().len(), 0);
+    assert_eq!(page["data"]["hasMore"], false);
+    assert_eq!(page["data"]["total"], 48);
+
+    // ---------- 共享的 `public.article_list` 契约零改动 ----------
+    // `term_ids` 仍是同维度 OR；浏览专用参数不会被列表端点解析。
+    let list = json_of(&get(
+        BROWSE_PRODUCT_PORT,
+        "/api/public/articles?sceneCode=public.article_list&term_ids=1,3",
+    ));
+    assert_eq!(
+        list["data"]["total"], 21,
+        "topic 1 OR tag 3（18 + 3 篇新建）"
+    );
+    let list = json_of(&get(
+        BROWSE_PRODUCT_PORT,
+        "/api/public/articles?sceneCode=public.article_list&topic_id=1",
+    ));
+    assert_eq!(
+        list["data"]["total"], 48,
+        "列表端点忽略 topic_id（同维度 OR 语义不变）"
+    );
+
+    assert!(
+        product.child.try_wait().unwrap().is_none() && data.child.try_wait().unwrap().is_none(),
+        "neither process may exit during the browse checks"
+    );
+    let data_ok = data.terminate();
+    let product_ok = product.terminate();
+    assert!(data_ok, "data exits cleanly on SIGTERM");
+    assert!(product_ok, "product exits cleanly on SIGTERM");
+    let _ = std::fs::remove_dir_all(&workdir);
+}
+
 fn assert_html_validation_contract() {
     let invalid_sources = [
         "<script>window.injected=true</script>",
@@ -880,59 +1179,56 @@ fn assert_html_validation_contract() {
         "<p><a href=\"javascript:alert(1)\" target=\"_blank\" rel=\"noopener noreferrer\">link</a></p>",
     ];
     for source in invalid_sources {
-        let body = serde_json::json!({
-            "sceneCode": "admin.article_create", "title": "original title", "summary": "original summary",
+        let invalid_create = serde_json::json!({
+            "sceneCode": "admin.article_create", "title": "invalid", "summary": "invalid",
             "articleTypeId": 1, "termIds": [1], "contentHtml": source,
-            "status": "published", "htmlInspection": { "valid": true },
+            "htmlInspection": { "valid": true },
         });
-        let response = post_json(PRODUCT_PORT, "/api/admin/articles", &body.to_string());
-        assert_eq!(response.status, 200, "{}", response.body);
-        let saved = json_of(&response)["data"].clone();
-        assert_eq!(saved["status"], "draft");
-        assert_eq!(saved["contentHtml"], source);
-        assert_eq!(saved["htmlInspection"]["valid"], false);
-        assert_eq!(saved["htmlInspection"]["profileVersion"], "article-html/v1");
-        let id = saved["id"].as_i64().unwrap();
-        let mut invalid_draft_update = body.clone();
-        invalid_draft_update["sceneCode"] = "admin.article_update".into();
-        invalid_draft_update["id"] = id.into();
-        let updated_draft = post_json(
+        let rejected = post_json(
             PRODUCT_PORT,
             "/api/admin/articles",
-            &invalid_draft_update.to_string(),
+            &invalid_create.to_string(),
         );
-        assert_eq!(updated_draft.status, 200);
-        assert_eq!(json_of(&updated_draft)["data"]["contentHtml"], source);
-        assert_eq!(
-            json_of(&updated_draft)["data"]["htmlInspection"]["valid"],
-            false
-        );
-        let publish = serde_json::json!({ "sceneCode": "admin.article_publish", "id": id, "contentHtml": "<p>forged</p>", "htmlInspection": { "valid": true } });
-        let rejected = post_json(PRODUCT_PORT, "/api/admin/articles", &publish.to_string());
         assert_eq!(rejected.status, 422, "{}", rejected.body);
         assert_eq!(json_of(&rejected)["code"], "INVALID_ARTICLE_HTML");
+        assert_eq!(json_of(&rejected)["data"]["htmlInspection"]["valid"], false);
         assert_eq!(
-            json_of(&rejected)["data"]["htmlInspection"],
-            saved["htmlInspection"]
+            json_of(&rejected)["data"]["htmlInspection"]["profileVersion"],
+            "article-html/v1"
         );
+
+        let valid = "<h2>Safe</h2><p><a href=\"https://example.com\" target=\"_blank\" rel=\"noopener noreferrer\">reference</a></p>";
+        let create = serde_json::json!({
+            "sceneCode": "admin.article_create", "title": "original title", "summary": "original summary",
+            "articleTypeId": 1, "termIds": [1], "contentHtml": valid,
+        });
+        let response = post_json(PRODUCT_PORT, "/api/admin/articles", &create.to_string());
+        assert_eq!(response.status, 200, "{}", response.body);
+        let saved = json_of(&response)["data"].clone();
+        let id = saved["id"].as_i64().unwrap();
+        assert_eq!(saved["status"], "draft");
+        assert_eq!(saved["contentHtml"], valid);
+
+        let invalid_update = serde_json::json!({
+            "sceneCode": "admin.article_update", "id": id, "title": "must not persist",
+            "summary": "changed", "articleTypeId": 1, "termIds": [1], "contentHtml": source,
+        });
+        let rejected = post_json(
+            PRODUCT_PORT,
+            "/api/admin/articles",
+            &invalid_update.to_string(),
+        );
+        assert_eq!(rejected.status, 422, "{}", rejected.body);
+        assert_eq!(json_of(&rejected)["code"], "INVALID_ARTICLE_HTML");
         let stored = get(
             PRODUCT_PORT,
             &format!("/api/admin/articles?sceneCode=admin.article_detail&id={id}"),
         );
-        for field in [
-            "title",
-            "summary",
-            "termIds",
-            "articleTypeId",
-            "contentHtml",
-            "status",
-        ] {
-            assert_eq!(
-                json_of(&stored)["data"][field],
-                saved[field],
-                "{field} must be preserved"
-            );
-        }
+        assert_eq!(
+            json_of(&stored)["data"],
+            saved,
+            "failed update preserves the entire saved version"
+        );
         assert_eq!(
             get(
                 PRODUCT_PORT,
@@ -942,26 +1238,24 @@ fn assert_html_validation_contract() {
             404
         );
 
-        let valid = "<h2>Safe</h2><p><a href=\"https://example.com\" target=\"_blank\" rel=\"noopener noreferrer\">reference</a></p>";
         let update = serde_json::json!({ "sceneCode": "admin.article_update", "id": id, "title": "corrected", "summary": "kept", "articleTypeId": 1, "termIds": [1], "contentHtml": valid });
         assert_eq!(
             post_json(PRODUCT_PORT, "/api/admin/articles", &update.to_string()).status,
             200
         );
+        let publish = serde_json::json!({
+            "sceneCode": "admin.article_publish", "id": id,
+        });
         assert_eq!(
             post_json(PRODUCT_PORT, "/api/admin/articles", &publish.to_string()).status,
             200
         );
-        let mut unsafe_update = update.clone();
-        unsafe_update["contentHtml"] = source.into();
-        unsafe_update["title"] = "must not persist".into();
         let rejected = post_json(
             PRODUCT_PORT,
             "/api/admin/articles",
-            &unsafe_update.to_string(),
+            &invalid_update.to_string(),
         );
-        assert_eq!(rejected.status, 422, "{}", rejected.body);
-        assert_eq!(json_of(&rejected)["code"], "INVALID_ARTICLE_HTML");
+        assert_eq!(rejected.status, 422);
         let public = get(
             PRODUCT_PORT,
             &format!("/api/public/articles?sceneCode=public.article_detail&id={id}"),

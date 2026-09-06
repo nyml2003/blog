@@ -1,5 +1,5 @@
 import { For, Show } from "solid-js";
-import { render } from "solid-js/web";
+import { definePage } from "../../../../common/page";
 import {
   browserClient as client,
   type ArticleId,
@@ -61,4 +61,4 @@ const App = () => {
     </div>
   );
 };
-render(() => <App />, document.getElementById("app")!);
+definePage(App);

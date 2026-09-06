@@ -6,56 +6,34 @@ import {
   onCleanup,
   onMount,
 } from "solid-js";
-import { render } from "solid-js/web";
+import { definePage } from "../../../common/page";
 import { Heading, Text } from "../../../mobile-ui/atoms";
 import {
   MobileNav,
-  StateMessage,
-  FilterPanel,
   pageStyles,
   ShelfIndex,
   ShelfSection,
+  StateMessage,
 } from "../components/ui";
 import { BottomNav } from "../../../mobile-ui/molecules";
 import { mobileNavigationItems } from "../logic/navigation";
-import { filterFromSearch, filterSearch } from "../../../common/logic/filter";
+import { cleanBrowseHref } from "../logic/browse-filter";
 import { browserClient as client } from "../../../common/client";
 import { useDataResource } from "../../../solid/data";
-import { type ArticleFilter } from "../../../common/contracts/domain";
-// Keep the shared Mobile foundation first, then component-library styles.
-import "../../styles/tokens.css";
-import "../../styles/base.css";
-import "../../styles/shell.css";
-import "../../styles/layout.css";
-import "../../styles/components.css";
-import "../../styles/shelf.css";
-import "../../styles/filter.css";
-import "../../styles/detail.css";
-import "../../styles/article-body.css";
-import "../../styles/pages.css";
-import "../../../mobile-ui/styles/themes.css";
-import "../../../mobile-ui/styles/atoms.css";
-import "../../../mobile-ui/styles/molecules.css";
+import "../../styles/app.css";
 
 const App = () => {
-  const [filter, setFilter] = createSignal<ArticleFilter>(
-    filterFromSearch(location.search),
-  );
-  const [open, setOpen] = createSignal(false);
-  const shelf = useDataResource(filter, (value) =>
-    client.mobileShelf.list({
-      ...value,
-      termIds: value.termIds.map(Number),
-      typeId: Number(value.typeId) || undefined,
-    }),
-  );
-  const terms = useDataResource(
+  // 货架页是纯快照：首帧忽略并清理遗留的旧日期参数（SPEC 场景 005）。
+  if (location.search !== "") {
+    history.replaceState(
+      {},
+      "",
+      cleanBrowseHref(location.pathname, location.search),
+    );
+  }
+  const shelf = useDataResource(
     () => undefined,
-    () => client.taxonomy.listTerms(),
-  );
-  const types = useDataResource(
-    () => undefined,
-    () => client.taxonomy.listTypes(),
+    () => client.mobileShelf.list(),
   );
   const [activeSectionId, setActiveSectionId] = createSignal("");
   let programmaticSectionId: string | undefined;
@@ -74,29 +52,6 @@ const App = () => {
       releaseProgrammaticScroll,
       delay,
     );
-  };
-  const activeCount = () => {
-    const value = filter();
-    return (
-      value.termIds.length +
-      [
-        value.typeId,
-        value.createdFrom,
-        value.createdTo,
-        value.updatedFrom,
-        value.updatedTo,
-      ].filter(Boolean).length
-    );
-  };
-  const apply = (next: ArticleFilter) => {
-    setFilter(next);
-    const q = filterSearch(next, false);
-    history.pushState(
-      {},
-      "",
-      `${location.pathname}${q.toString() ? `?${q}` : ""}`,
-    );
-    setOpen(false);
   };
   const selectSection = (sectionId: string) => {
     const section = document.getElementById(`shelf-${sectionId}`);
@@ -136,15 +91,12 @@ const App = () => {
     onCleanup(() => observer.disconnect());
   });
   onMount(() => {
-    const onPop = () => setFilter(filterFromSearch(location.search));
     const onScroll = () => {
       if (programmaticSectionId) scheduleProgrammaticRelease();
     };
-    addEventListener("popstate", onPop);
     addEventListener("scroll", onScroll, { passive: true });
+    onCleanup(() => removeEventListener("scroll", onScroll));
     onCleanup(() => {
-      removeEventListener("popstate", onPop);
-      removeEventListener("scroll", onScroll);
       if (programmaticScrollTimer !== undefined)
         clearTimeout(programmaticScrollTimer);
     });
@@ -157,20 +109,15 @@ const App = () => {
         <header class="page-heading">
           <Text content="文章库" options={{ tone: "accent", size: "meta" }} />
           <Heading content="全部文章" options={{ as: "h1", size: "page" }} />
-          <Text
-            content={`共 ${shelf.snapshot()?.total ?? "--"} 篇已发布记录`}
-            options={{ as: "p", tone: "muted", size: "meta" }}
-          />
-          <button
-            class="filter-trigger"
-            onClick={() => setOpen(true)}
-            aria-expanded={open()}
-          >
-            <span>筛选文章</span>
-            <span class="filter-trigger-count">
-              {activeCount() ? `${activeCount()} 项条件` : "全部"}
-            </span>
-          </button>
+          {/* 原子内容只在挂载时取值：总数到位后按 keyed 重建这一行。 */}
+          <Show when={shelf.snapshot()} keyed>
+            {(snapshot) => (
+              <Text
+                content={`共 ${snapshot.total} 篇已发布记录`}
+                options={{ as: "p", tone: "muted", size: "meta" }}
+              />
+            )}
+          </Show>
         </header>
         <Show
           when={!shelf.loading()}
@@ -188,7 +135,7 @@ const App = () => {
           >
             <Show
               when={(shelf.snapshot()?.sections ?? []).length > 0}
-              fallback={<StateMessage kind="empty" text="没有符合条件的文章" />}
+              fallback={<StateMessage kind="empty" text="暂无已发布文章" />}
             >
               <div class="shelf-layout">
                 <ShelfIndex
@@ -206,15 +153,6 @@ const App = () => {
           </Show>
         </Show>
       </main>
-      <Show when={open()}>
-        <FilterPanel
-          value={filter()}
-          terms={terms.snapshot() ?? []}
-          types={types.snapshot() ?? []}
-          onApply={apply}
-          onClose={() => setOpen(false)}
-        />
-      </Show>
       <BottomNav
         items={mobileNavigationItems}
         activeId="articles"
@@ -223,4 +161,4 @@ const App = () => {
     </div>
   );
 };
-render(() => <App />, document.getElementById("app")!);
+definePage(App);

@@ -55,6 +55,7 @@ export function createCodeMirrorEditor(
   parent: HTMLElement,
   initialValue: string,
   onChange: (value: string) => void,
+  options: { contentId?: string; diagnosticsId?: string } = {},
 ): CodeMirrorController {
   let syncing = false;
   const readOnlyCompartment = new Compartment();
@@ -74,9 +75,9 @@ export function createCodeMirrorEditor(
     keymap.of([...defaultKeymap, ...historyKeymap]),
     updateListener,
     EditorView.contentAttributes.of({
-      id: "html",
+      id: options.contentId ?? "html",
       "aria-label": "HTML 正文",
-      "aria-describedby": "html-diagnostics",
+      "aria-describedby": options.diagnosticsId ?? "html-diagnostics",
       spellcheck: "false",
     }),
     readOnlyCompartment.of([

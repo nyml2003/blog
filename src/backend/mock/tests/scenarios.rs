@@ -108,7 +108,7 @@ fn slow_scenario_delays_api_calls_but_not_readiness() {
     let started = std::time::Instant::now();
     let list = fetch_public_list(port);
     let elapsed = started.elapsed();
-    assert_eq!(list["total"], 9, "slow still serves the normal seed");
+    assert_eq!(list["total"], 45, "slow still serves the normal seed");
     assert!(
         elapsed >= Duration::from_millis(mock::scenario::SLOW_DELAY_MS).saturating_sub(CELL),
         "slow must delay ~{}ms, took {elapsed:?}",

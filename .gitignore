@@ -1,6 +1,7 @@
 node_modules/
 target/
 src/frontend/dist/
+src/frontend/.generated/
 .direnv/
 *.log
 .DS_Store

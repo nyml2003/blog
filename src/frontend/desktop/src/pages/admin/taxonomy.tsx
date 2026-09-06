@@ -1,5 +1,5 @@
 import { createSignal, For } from "solid-js";
-import { render } from "solid-js/web";
+import { definePage } from "../../../../common/page";
 import { browserClient as client } from "../../../../common/client";
 import type { DataTask } from "../../../../common/data/task";
 import { useDataResource } from "../../../../solid/data";
@@ -128,4 +128,4 @@ const App = () => {
     </div>
   );
 };
-render(() => <App />, document.getElementById("app")!);
+definePage(App);

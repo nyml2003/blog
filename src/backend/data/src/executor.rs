@@ -424,7 +424,7 @@ mod tests {
             );
             seen.push((page_size, page.items.len()));
         }
-        assert_eq!(seen, vec![(1, 1), (20, 9), (100, 9)]);
+        assert_eq!(seen, vec![(1, 1), (20, 20), (100, 45)]);
 
         let (lanes, query_total) = executor.diagnostics();
         let io = lanes.iter().find(|lane| lane.lane == Lane::Io).unwrap();

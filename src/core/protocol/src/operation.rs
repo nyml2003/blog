@@ -81,6 +81,45 @@ pub struct ArticleGetQuery {
     pub published_only: bool,
 }
 
+/// Mobile 平铺页的浏览查询（SPEC-MOBILE-BROWSE-IA-001，决策记录 #7）。
+///
+/// 与 [`ArticleListQuery`] 的关键差异：topic / tag 是**独立维度**，各单选、维度间
+/// AND，每维度使用独立的 EXISTS 子句。刻意**不**复用 `term_ids`（同一维度 OR 语义，
+/// 被 `public.article_list` / `admin.article_list` 与 Desktop 多选共用，不得改语义）。
+///
+/// `topic_id` / `tag_id` 必须引用对应 `kind` 的 term；不匹配（或 term 不存在）按
+/// 参数错误处理（`INVALID_PAYLOAD` → 对外 400）。
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case", default)]
+pub struct ArticleBrowseQuery {
+    pub page: Option<u32>,
+    pub page_size: Option<u32>,
+    /// L1：文章类型（`全部` 时为 `None`）。
+    pub article_type_id: Option<i64>,
+    /// L2：主题 term；必须是 `kind = 'topic'`。
+    pub topic_id: Option<i64>,
+    /// L3：标签 term；必须是 `kind = 'tag'`。
+    pub tag_id: Option<i64>,
+    /// `true` 时只返回 `status = 'published'`（公开可见性由 Data 保证）。
+    pub published_only: bool,
+}
+
+impl ArticleBrowseQuery {
+    /// 请求提供的 term 维度（`topic_id` / `tag_id`，跳过未提供的维度）。
+    ///
+    /// SQL 生成（每维度一个独立 EXISTS 子句）与 kind 校验共用同一顺序。
+    pub fn term_dimensions(&self) -> Vec<(i64, &'static str)> {
+        let mut wanted: Vec<(i64, &'static str)> = Vec::new();
+        if let Some(term_id) = self.topic_id {
+            wanted.push((term_id, TERM_KIND_TOPIC));
+        }
+        if let Some(term_id) = self.tag_id {
+            wanted.push((term_id, TERM_KIND_TAG));
+        }
+        wanted
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", default)]
 pub struct ArticleTypeListQuery {
@@ -125,6 +164,10 @@ pub const MAX_SUMMARY_CHARS: usize = 160;
 
 /// 推荐集合读取上限：当前生效集合（MVP 规则为最近更新的 6 篇）。
 pub const RECOMMENDATION_LIMIT: usize = 6;
+
+/// term 的两种 `kind`（[`ArticleBrowseQuery`] 的 L2 / L3 维度，写入时同样只接受这两者）。
+pub const TERM_KIND_TOPIC: &str = "topic";
+pub const TERM_KIND_TAG: &str = "tag";
 
 /// 文章写入（create / update 共用载荷）。
 ///
@@ -211,6 +254,9 @@ pub struct ArticleShelfQuery {
 pub enum DataOperation {
     /// 文章列表分页（含 count + 当前页 + 批量关联加载，固定查询数）。
     ArticleList(ArticleListQuery),
+    /// Mobile 平铺页浏览（SPEC-MOBILE-BROWSE-IA-001）：三维单选 AND + 分页，
+    /// 响应形态与 [`DataOperation::ArticleList`] 相同（[`ArticleListPage`]）。
+    ArticleBrowse(ArticleBrowseQuery),
     /// 单篇文章（含类型与 terms）。
     ArticleGet(ArticleGetQuery),
     /// 文章类型全量（按 `name` 排序）。
@@ -254,6 +300,7 @@ impl DataOperation {
     pub fn name(&self) -> &'static str {
         match self {
             DataOperation::ArticleList(_) => "article_list",
+            DataOperation::ArticleBrowse(_) => "article_browse",
             DataOperation::ArticleGet(_) => "article_get",
             DataOperation::ArticleTypeList(_) => "article_type_list",
             DataOperation::TermList(_) => "term_list",
@@ -310,6 +357,11 @@ impl DataOperation {
                     .unwrap_or(crate::paging::DEFAULT_PAGE_SIZE)
                     .clamp(1, crate::paging::MAX_PAGE_SIZE) as usize
             }
+            DataOperation::ArticleBrowse(q) => {
+                q.page_size
+                    .unwrap_or(crate::paging::DEFAULT_PAGE_SIZE)
+                    .clamp(1, crate::paging::MAX_PAGE_SIZE) as usize
+            }
             DataOperation::ArticleGet(_) => 1,
             DataOperation::ArticleTypeList(q) => q.limit.unwrap_or(u32::MAX) as usize,
             DataOperation::TermList(_) => usize::MAX,
@@ -326,6 +378,7 @@ impl DataOperation {
 /// `UNKNOWN_OPERATION` 与 `INVALID_PAYLOAD`。
 pub const OPERATION_NAMES: &[&str] = &[
     "article_list",
+    "article_browse",
     "article_get",
     "article_type_list",
     "term_list",

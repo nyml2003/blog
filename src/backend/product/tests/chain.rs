@@ -250,7 +250,7 @@ fn product_serves_public_articles_through_data() {
         let expected = (page_size as i64).min(page["total"].as_i64().unwrap()) as usize;
         assert_eq!(items, expected);
         assert_eq!(page["pageSize"], page_size);
-        assert_eq!(page["total"], 9);
+        assert_eq!(page["total"], 45, "夹具全量 published");
         // 外部契约是 camelCase。
         let first = &page["items"][0];
         assert!(first.get("articleTypeId").is_some());

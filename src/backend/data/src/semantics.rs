@@ -3,12 +3,12 @@
 //! - `mock`：内存夹具，**不创建、不打开任何 SQLite 文件**（SPEC-OPS-RUNTIME-001-MODE-002）；
 //! - `test`：每次运行全新临时 SQLite，自动迁移 + 稳定 seed；位于 `target/test-dbs/`、
 //!   以进程 PID 命名；**正常退出即删除，异常退出保留供诊断**（MODE-003）；
-//! - `prod`：本期只保留枚举位，不提供运行链路（PLAN 非目标）。
+//! - `prod`：显式指定的仓库外 SQLite 文件，自动迁移、不加载 seed、正常退出不删除。
 
 use std::io;
 use std::path::{Path, PathBuf};
 
-/// 数据语义；`prod` 只是枚举位，选中即在启动期快速失败。
+/// 数据语义决定存储位置、初始化方式和退出时的生命周期。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Semantics {
     #[default]
@@ -35,17 +35,18 @@ impl Semantics {
         }
     }
 
-    /// `prod` 是否允许启动（本期：否）。
+    /// 三种语义都允许进入启动流程；具体存储生命周期由 [`StorageLayout`] 决定。
     pub const fn runnable(self) -> bool {
-        !matches!(self, Self::Prod)
+        true
     }
 }
 
-/// test 语义下的临时库句柄；`mock` 语义为 [`StorageLayout::None`]。
+/// 运行时存储布局；`mock` 语义为 [`StorageLayout::None`]。
 #[derive(Debug, Clone)]
 pub enum StorageLayout {
     None,
     TempFile(TempDb),
+    PersistentFile(PersistentDb),
 }
 
 /// 临时库路径 + 三件套清理（`.db` / `-wal` / `-shm`，WAL 模式会产生 sidecar 文件）。
@@ -114,6 +115,33 @@ impl TempDb {
     }
 }
 
+/// `prod` 语义下的持久库句柄；只负责路径和父目录，不负责删除文件。
+#[derive(Debug, Clone)]
+pub struct PersistentDb {
+    path: PathBuf,
+}
+
+impl PersistentDb {
+    pub fn resolve(path: &Path) -> Self {
+        Self {
+            path: path.to_path_buf(),
+        }
+    }
+
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
+    pub fn prepare(&self) -> io::Result<()> {
+        if let Some(parent) = self.path.parent() {
+            if !parent.as_os_str().is_empty() {
+                std::fs::create_dir_all(parent)?;
+            }
+        }
+        Ok(())
+    }
+}
+
 /// `target/test-dbs/<PID>.db`，相对当前工作目录解析。
 pub fn default_test_db_path() -> PathBuf {
     PathBuf::from("target")
@@ -132,8 +160,9 @@ mod tests {
         assert_eq!(Semantics::parse("prod"), Some(Semantics::Prod));
         assert_eq!(Semantics::parse("Mock"), None);
         assert_eq!(Semantics::parse(""), None);
-        assert!(!Semantics::Prod.runnable());
-        assert!(Semantics::Mock.runnable() && Semantics::Test.runnable());
+        assert!(Semantics::Mock.runnable());
+        assert!(Semantics::Test.runnable());
+        assert!(Semantics::Prod.runnable());
     }
 
     #[test]

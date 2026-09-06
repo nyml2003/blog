@@ -23,6 +23,7 @@
 
 pub mod logging;
 
+pub mod bff;
 pub mod cli;
 pub mod domain;
 pub mod http;

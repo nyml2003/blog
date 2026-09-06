@@ -1,10 +1,10 @@
 ---
 kind: spec
 id: SPEC-MOBILE-BROWSE-IA-001
-status: draft
+status: accepted
 owner: frontend-mobile
 plan_id: PLAN-MOBILE-BROWSE-IA-001
-last_reviewed: 2026-09-06
+last_reviewed: 2026-09-07
 ---
 
 # C Mobile 文章浏览信息架构：货架快照 + F 型平铺页
@@ -30,7 +30,7 @@ last_reviewed: 2026-09-06
   - L2 横向 = 主题 topic（全部 + 各 topic，taxonomy 数据）；
   - L3 横向 = 标签 tag（全部 + 各 tag），仅当 L2 选择了具体主题时出现；L3 与 L2 无父子语义，为并列维度；
   - 选择变化重置为第 1 页并同步 URL（`?type=&topic=&tag=`，可分享 / 可后退）。
-- **分页**：复用 `/api/public/articles`（`sceneCode=public.article_list`，`page`/`pageSize`），`pageSize = 20`；显式"加载更多"按钮追加下一页，按钮展示进度（已载 / 总数），无更多时禁用或隐藏；页码不进 URL。
+- **分页**：消费新浏览接口 `/api/public/articles?sceneCode=public.article_browse`（决策记录 #7：不改共享 `term_ids` OR 语义）。参数 `type_id?` / `topic_id?` / `tag_id?`（单选，维度间 AND；`topic_id` / `tag_id` 需与 term `kind` 匹配）+ `page` / `pageSize`（默认 20 / 上限 100），响应沿用列表分页形态（items + page/pageSize/total）；显式"加载更多"按钮追加下一页，按钮展示进度（已载 / 总数），无更多时禁用或隐藏；页码不进 URL。`public.article_list` 契约不变。
 - **公开端日期移除**：公开页面不再出现创建 / 更新日期筛选；URL 中遗留的旧日期参数被忽略并清理。
 - **组件纪律**：新页面与货架改造优先消费既有九原子；出现能力缺口（tab、横向 chips 等）必须停下向用户报备裁决，不得擅自扩原子面或绕过 Props 契约。
 
@@ -107,10 +107,15 @@ Then 首页、详情、设置页行为不变；`pnpm --dir src/frontend typechec
 - 平铺页数据端点失败：显示既有错误态与重试，不白屏；
 - taxonomy 加载失败：L1 仍显示"全部"，级联条降级为不可用或重试，不阻塞"全部"列表；
 - 分区 total 与实际列表不一致以列表端点 total 为准（货架 total 仅用于入口判断）；
-- 多 term 的 SQL 组合语义（topic AND tag）在实现前核实；若现状为 OR 语义，以后端最小改动对齐 AND，不扩数据模型；
+- 多 term 的跨维度组合（topic AND tag）通过新接口分参表达，不改 `public.article_list` / `admin.article_list` 的 `term_ids`（同维度 OR）语义（2026-09-06 用户裁决，见计划决策记录 #7）；
 - 与在途计划的写集协调：`ui.tsx`、`vite.config.ts`、`client.ts` 存在他计划写集，必须串行并逐项复核。
 
 ## 测试/验收证据
 
-- 自动化测试：待补充（后端 shelf 截断与 per-section total 的 product/mock 测试；前端 URL 解析 / 级联重置 / 加载更多的单元或集成测试）；
-- 人工验收：待补充（`375x812` 与 `360px` 下货架快照、查看全部跳转、三级级联、加载到底、旧日期参数清理、首页 / 详情 / 设置回归）。
+- 自动化测试（2026-09-07，全绿）：
+  - 后端：`cargo test --manifest-path src/Cargo.toml --workspace` 110 passed / 0 failed（PM 独立复跑确认），含 wire 单测（截断 6 / total / camelCase）、product 契约 `shelf_sections_are_bounded_and_browse_filters_are_and`（>6 篇造数：推荐 3 / type 分区 6 张 + total 7 / 下发卡片总数有界断言 / 三维 AND / kind 错配 400 / 分页归一化与越界 hasMore / `public.article_list` OR 语义与 `topic_id` 忽略锚定）、mock http 契约同组断言、`static_files.rs` 路由唯一性/覆盖单测；fmt + clippy 零告警；
+  - 前端：`pnpm --dir src/frontend typecheck / lint / build / test:core` 四命令全绿，test:core 48/48（含 `browse-filter.test.ts` 10 条：URL 解析/级联重置/日期参数清理/`nextBrowsePage`；client 测试锚定 browse URL 形态与货架无参请求）；
+- 集成联调（ops runtime integration，独立端口 + 临时库，43 篇 Engineering + 6 篇 Field Notes 造数）：API 断言 13/13，浏览器断言 17/17（playwright 375x812，覆盖场景 001–006：无筛选入口、查看全部跳转定位、三级级联 + URL 同步 + 后退恢复、加载更多到底、旧日期参数清理、L3 出现/消失；截图 `/tmp/blog-browse-evidence/{shelf,flat-page}-375.png`，PM 目验）；
+- 场景 007（响应有界）：下发卡片总数 ≤ 分区数 × 6 + 推荐 3 有自动化断言 + 联调实测（6 分区 14 卡 / 51 篇全量）；
+- 场景 008：首页 / 详情 / 设置回归 = 三页仅 filter.css import 移除，四命令 + 浏览器走查通过；
+- 人工验收：**2026-09-07 用户验收通过**（夹具扩量至 45 篇 published 后 dev 模式全场景走查：货架快照 / 查看全部 / 三级级联含空态 / 加载到底 / 旧日期参数清理 / 首页详情设置回归；观察项 375px L1 长类型名截断用户接受，与货架现状一致）。

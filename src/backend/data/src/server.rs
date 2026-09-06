@@ -15,7 +15,7 @@ use std::time::{Duration, Instant};
 
 use tokio::net::TcpListener;
 
-use crate::cli::{Cli, EXIT_RUN_FAILURE};
+use crate::cli::{Cli, EXIT_RUN_FAILURE, EXIT_USAGE};
 use crate::executor;
 use crate::http::{self, AppState};
 use crate::semantics::{Semantics, TempDb};
@@ -30,14 +30,9 @@ pub const THREAD_JOIN_BUDGET: Duration = Duration::from_secs(3);
 pub fn run(mut cli: Cli) -> std::process::ExitCode {
     let started = Instant::now();
     cli.database_path_from_env();
-
-    // `prod` 只是枚举位：本期不提供运行链路（PLAN 非目标）。
-    if !cli.semantics.runnable() {
-        crate::data_error!(
-            "semantics '{}' is reserved for a later batch; this build runs mock and test only",
-            cli.semantics.as_str()
-        );
-        return std::process::ExitCode::from(crate::cli::EXIT_USAGE);
+    if cli.semantics == Semantics::Prod && cli.database_path.is_none() {
+        crate::data_error!("prod semantics requires --data-database-path or BLOG_DATABASE_PATH");
+        return std::process::ExitCode::from(EXIT_USAGE);
     }
 
     let runtime = match tokio::runtime::Builder::new_current_thread()
@@ -119,7 +114,21 @@ async fn boot(cli: &Cli) -> Result<Boot, String> {
             );
             Store::open_test(temp).await?
         }
-        Semantics::Prod => unreachable!("prod is rejected before boot"),
+        Semantics::Prod => {
+            let Some(path) = cli.database_path.as_deref() else {
+                return Err(
+                    "prod semantics requires --data-database-path or BLOG_DATABASE_PATH; no default path is allowed"
+                        .to_owned(),
+                );
+            };
+            let db = crate::semantics::PersistentDb::resolve(path);
+            crate::data_info!(
+                "prod db path={} pid={} injected=true",
+                db.path().display(),
+                std::process::id()
+            );
+            Store::open_prod(db).await?
+        }
     };
     if !store.uses_sqlite() {
         crate::data_info!("storage=memory");

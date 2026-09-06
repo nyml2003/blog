@@ -46,6 +46,13 @@
   color: var(--ink);
   font-family: var(--font-body);
 }
+.mobile-preview-page {
+  width: min(375px, 100%);
+  min-height: 100vh;
+  margin: 0 auto;
+  overflow-x: hidden;
+  box-shadow: 0 0 0 1px var(--border);
+}
 .mobile-main {
   max-width: var(--shell-content-max-width);
   margin: 0 auto;

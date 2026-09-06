@@ -33,6 +33,83 @@ function clientRespondingWith(data: unknown) {
   );
 }
 
+// ShelfCard wire fields from src/core/protocol/src/wire.rs (no article body, no type).
+const shelfCard = {
+  id: 12,
+  title: "Ops runtime checklist",
+  summary: "Runtime contract verification",
+  updatedAt: "2026-09-05T12:00:00Z",
+  terms: [{ id: 4, name: "runtime", kind: "tag" }],
+};
+
+test("mobile shelf is requested without filters and keeps per-section totals", async () => {
+  const shelf = {
+    sections: [
+      { id: "recommendation", title: "推荐", total: 3, articles: [shelfCard] },
+      { id: "type-2", title: "Field Notes", total: 9, articles: [shelfCard] },
+    ],
+    total: 25,
+    hasFilters: false,
+    warnings: [],
+  };
+  const requests: string[] = [];
+  const client = createClient({
+    request: async <T>({ path }: { path: string }) => {
+      requests.push(path);
+      return { ok: true, value: shelf } as { ok: true; value: T };
+    },
+  });
+  assert.deepEqual(await client.mobileShelf.list().start(), {
+    ok: true,
+    value: shelf,
+  });
+  assert.equal(
+    requests[0],
+    "/api/public/mobile/article-shelf?sceneCode=public.mobile_article_shelf",
+  );
+});
+
+test("T shelf requests keep surface and selected filter in the protocol boundary", async () => {
+  const data = {
+    filters: [
+      { id: "all", name: "全部" },
+      { id: "7", name: "工程" },
+    ],
+    selectedFilterId: "7",
+    articles: [
+      {
+        id: 4,
+        title: "边界治理",
+        summary: "查询层归一",
+        updatedAt: "2026-09-07T00:00:00Z",
+        terms: [],
+      },
+    ],
+    total: 1,
+  };
+  const requests: string[] = [];
+  const client = createClient({
+    request: async <T>({ path }: { path: string }) => {
+      requests.push(path);
+      return { ok: true, value: data } as { ok: true; value: T };
+    },
+  });
+
+  const result = await client.tShelf
+    .get({ surface: "archive", filterId: "7" })
+    .start();
+
+  assert.equal(result.ok, true);
+  assert.equal(
+    requests[0],
+    "/api/public/t-shelf?sceneCode=public.t_shelf&surface=archive&filter_id=7",
+  );
+  if (result.ok) {
+    assert.equal(result.value.selectedFilterId, "7");
+    assert.equal(result.value.articles[0]?.title, "边界治理");
+  }
+});
+
 test("public and admin lists decode body-free wire items and preserve totals", async () => {
   const draft = { ...listItem, id: 13, status: "draft" };
   const { publishedAt: _publishedAt, ...draftItem } = draft;
@@ -144,4 +221,67 @@ test("client builds domain intent requests and rejects invalid response data", a
     request: async () => ({ ok: true, value: { invalid: true } }) as never,
   }).articleCatalog.listPublishedArticles();
   assert.equal((await bad.start()).ok, false);
+});
+
+test("browse requests express type, topic and tag as separate AND params", async () => {
+  const requests: string[] = [];
+  const browsePage = {
+    items: [listItem],
+    page: 2,
+    pageSize: 20,
+    total: 25,
+    hasMore: true,
+  };
+  const client = createClient({
+    request: async <T>({ path }: { path: string }) => {
+      requests.push(path);
+      return { ok: true, value: browsePage } as { ok: true; value: T };
+    },
+  });
+  const combined = await client.articleCatalog
+    .browseArticles({
+      typeId: 2,
+      topicId: 4,
+      tagId: 7,
+      page: 2,
+    })
+    .start();
+  assert.equal(
+    requests[0],
+    "/api/public/articles?sceneCode=public.article_browse&type_id=2&topic_id=4&tag_id=7&page=2",
+  );
+  assert.deepEqual(combined, { ok: true, value: browsePage });
+
+  await client.articleCatalog.browseArticles().start();
+  assert.equal(
+    requests[1],
+    "/api/public/articles?sceneCode=public.article_browse",
+  );
+  await client.articleCatalog.browseArticles({ topicId: 4 }).start();
+  assert.equal(
+    requests[2],
+    "/api/public/articles?sceneCode=public.article_browse&topic_id=4",
+  );
+});
+
+test("browse decoding keeps the paged envelope and refuses an unpaged body", async () => {
+  const unpaged = clientRespondingWith({ items: [listItem], total: 1 });
+  const failed = await unpaged.articleCatalog.browseArticles().start();
+  assert.equal(failed.ok, false);
+  if (failed.ok) assert.fail("browse must require page/pageSize/total");
+  assert.equal(failed.error.kind, "protocol");
+
+  const paged = clientRespondingWith({
+    items: [listItem],
+    page: 1,
+    pageSize: 20,
+    total: 1,
+  });
+  const decoded = await paged.articleCatalog.browseArticles().start();
+  assert.deepEqual(decoded, {
+    ok: true,
+    value: { items: [listItem], page: 1, pageSize: 20, total: 1 },
+  });
+  assert.ok(decoded.ok);
+  if (decoded.ok) assert.equal("contentHtml" in decoded.value.items[0], false);
 });

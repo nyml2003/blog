@@ -1,5 +1,5 @@
 import { createSignal, Show } from "solid-js";
-import { render } from "solid-js/web";
+import { definePage } from "../../../../common/page";
 import { emptyFilter } from "../../../../common/contracts/domain";
 import { browserClient as client } from "../../../../common/client";
 import { useDataResource } from "../../../../solid/data";
@@ -114,4 +114,4 @@ const App = () => {
     </div>
   );
 };
-render(() => <App />, document.getElementById("app")!);
+definePage(App);

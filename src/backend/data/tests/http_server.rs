@@ -22,6 +22,17 @@ struct Server {
     lines: Arc<Mutex<Vec<String>>>,
 }
 
+#[test]
+fn prod_without_a_database_path_is_a_configuration_error() {
+    let output = Command::new(env!("CARGO_BIN_EXE_data"))
+        .args(["--data-semantics", "prod"])
+        .env_remove("BLOG_DATABASE_PATH")
+        .output()
+        .expect("data exits before listening");
+    assert_eq!(output.status.code(), Some(10));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("BLOG_DATABASE_PATH"));
+}
+
 impl Server {
     /// 启动 `data` binary；阻塞等待 `listening addr=` 行并解析实际端口。
     fn start(workdir: &Path, args: &[&str]) -> Self {
@@ -267,10 +278,12 @@ fn endpoints_envelope_backpressure_cancellation_and_shutdown() {
     // `data` 内是 adjacent tagged 的 typed outcome：`{ outcome, payload }`。
     assert_eq!(envelope["data"]["outcome"], "article_list");
     let payload = &envelope["data"]["payload"];
-    assert_eq!(payload["total"], 9);
-    assert_eq!(payload["items"].as_array().unwrap().len(), 9);
+    // 夹具全量 published（12 篇头部里的 9 篇 + 36 篇追加）。
+    assert_eq!(payload["total"], 45);
+    assert_eq!(payload["items"].as_array().unwrap().len(), 45);
+    assert_eq!(payload["items"][0]["id"], 48, "updated_at DESC, id DESC");
     assert_eq!(response.header("x-blog-data-query-count"), Some("3"));
-    assert_eq!(response.header("x-blog-data-items"), Some("9"));
+    assert_eq!(response.header("x-blog-data-items"), Some("45"));
 
     // mock 语义下的同一 operation 查询数口径一致（此处为 test 语义，仍为 3）。
     let response = post(
