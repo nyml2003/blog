@@ -32,7 +32,14 @@ export const INJECTION_ENV = {
   databasePath: 'BLOG_DATABASE_PATH',
 } as const;
 
-export interface BuildStep { label: string; command: string; args: readonly string[]; role: 'web' | 'ops' }
+export interface BuildStep {
+  label: string;
+  command: string;
+  args: readonly string[];
+  role: 'web' | 'ops';
+  /** Optional subdirectory (relative to the workspace root) the step runs in, e.g. the Cargo workspace at `src`. */
+  readonly cwd?: string;
+}
 
 export interface ModePlan {
   mode: RuntimeMode;
@@ -79,8 +86,8 @@ function candidateFor(role: ServiceRole, options: ModeOptions): number {
   }
 }
 
-const frontendBuild: BuildStep = { label: 'pnpm --filter blog-web run build', command: 'pnpm', args: ['--filter', 'blog-web', 'run', 'build'], role: 'web' };
-const frontendWatchBuild: BuildStep = { label: 'pnpm --filter blog-web run build --watch', command: 'pnpm', args: ['--filter', 'blog-web', 'run', 'build', '--watch'], role: 'web' };
+const frontendBuild: BuildStep = { label: 'pnpm -C src/frontend run build', command: 'pnpm', args: ['-C', 'src/frontend', 'run', 'build'], role: 'web' };
+const frontendWatchBuild: BuildStep = { label: 'pnpm -C src/frontend run build --watch', command: 'pnpm', args: ['-C', 'src/frontend', 'run', 'build', '--watch'], role: 'web' };
 
 /** Pure mode → {services, candidate ports, builds} mapping; the matrix in SPEC-OPS-RUNTIME-001. */
 export function planMode(mode: RuntimeMode, options: ModeOptions = {}): ModePlan {

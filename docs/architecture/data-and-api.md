@@ -29,6 +29,12 @@ last_reviewed: 2026-09-05
 
 公开查询隐含 `status = published`。草稿、取消发布的文章和不存在的公开文章不泄露管理状态。
 
+## 正文 Profile
+
+Rust Product 和 Mock 使用 `article-html-core` 的 `article-html/v1` 校验正文。无效草稿保留原文并返回诊断；已发布文章不能被无效更新覆盖，发布不能绕过检查。管理端 Article 成功响应追加 `htmlInspection`，拒绝时为 HTTP 422 / `INVALID_ARTICLE_HTML` / `data.htmlInspection`。
+
+Data 不解释 HTML；它提供仅草稿可更新和按检查过的完整原文条件发布两个原子操作，防止跨请求竞态。发布前 Product 读取持久化正文校验，Data 条件发布失败返回 `ARTICLE_CHANGED`（409），必须重新读取/校验。公开详情和返回正文的推荐结果同样拒绝或过滤不合法的存量正文。完整语法、限制和兼容性见 `SPEC-ARTICLE-HTML-VALIDATION-001`。
+
 ## 推荐
 
 推荐只引用已发布文章。MVP 当前推荐规则为最近更新的 6 篇文章，由管理端手动替换生效集合。

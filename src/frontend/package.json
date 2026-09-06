@@ -1,0 +1,28 @@
+{
+  "name": "blog-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "wasm:build": "node ../../scripts/build-article-html-wasm.mjs",
+    "dev": "pnpm wasm:build && vite",
+    "build": "pnpm wasm:build && vite build",
+    "test:core": "pnpm wasm:build && node ../../scripts/test-article-html-wasm.mjs && tsx --test common/client/client.test.ts common/client/mock-session.test.ts common/data/core.test.ts common/data/resource.test.ts common/validation/article-html.test.ts solid/data/use-data-resource.test.ts desktop/src/pages/admin/preview-cache.test.ts",
+    "typecheck": "pnpm wasm:build && tsc --noEmit",
+    "lint": "oxlint --deny-warnings desktop mobile common vite.config.ts",
+    "format": "biome format --write .",
+    "format:check": "biome format ."
+  },
+  "dependencies": {
+    "solid-js": "1.9.15",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.12",
+    "@types/node": "26.4.1",
+    "oxlint": "1.81.0",
+    "tsx": "^4.23.13",
+    "typescript": "7.0.2",
+    "vite": "8.2.2",
+    "vite-plugin-solid": "2.11.14"
+  }
+}

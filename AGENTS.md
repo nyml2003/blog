@@ -4,8 +4,8 @@
 
 ## 项目边界
 
-- 这是个人长期沉淀型技术知识库博客，后端使用 Rust + SQLite（仓库根 Cargo workspace：Product API / Data Server / Mock Product API），前端使用 Solid.js + TypeScript + Vite。
-- 前端目录边界：`web/common` 只放无 UI 契约和逻辑；Desktop、Mobile 不互相导入 UI；正文 HTML 由系统主题包裹，不引入自定义文章 CSS。
+- 这是个人长期沉淀型技术知识库博客，后端使用 Rust + SQLite（`src/` 下的 Cargo workspace：Product API / Data Server / Mock Product API（workspace 根在 `src/Cargo.toml`）），前端使用 Solid.js + TypeScript + Vite。
+- 前端目录边界：`src/frontend/common` 只放无 UI 契约和逻辑；Desktop、Mobile 不互相导入 UI；正文 HTML 由系统主题包裹，不引入自定义文章 CSS。
 - 公共端和管理端的业务行为、API 契约、文章状态和可见性由后端保证；不要在前端改写领域语义。
 - PC 与 Mobile 的页面、DOM、CSS、交互和内部状态可以隔离；共享数据语义和无界面契约即可。
 
@@ -28,7 +28,7 @@
   - `ops delivery build`
   - `ops runtime dev`（Vite + Mock Product API，页面数据只来自 Mock）
   - `ops runtime backend [--data mock|test]`（Rust Product + Rust Data，无页面）
-  - `ops runtime integration [--watch]`（先构建 `web/dist`，再由 Product 挂载，页面与 `/api` 同源）
+  - `ops runtime integration [--watch]`（先构建 `src/frontend/dist`，再由 Product 挂载，页面与 `/api` 同源）
 - 顶层退出码全局统一：`0` 成功、`10` 用法/配置错误、`20` 执行失败、`130` SIGINT、`143` SIGTERM。既有的 `1`/`2` 语义已废止。
 - `ops runtime serve` 与 `ops database migrate` 已删除，不保留别名：`serve` 的替代是 `ops runtime integration`；迁移由 Data Server 启动时自动执行（不再有独立迁移命令）。
 - 基础质量门禁包括：Rust 三件套（`cargo fmt --all --check`、`cargo clippy --workspace --all-targets -- -D warnings`、`cargo test --workspace`）、前端 `typecheck`、Oxlint、Biome `format:check`、核心测试、ops 契约测试和前端构建。Go 已于 2026-09-06 退场（门禁与代码均已移除）。
@@ -40,10 +40,10 @@
 - TypeScript/TSX 任务必须先阅读：
   - `docs/guides/typescript-style.md`
   - `docs/guides/typescript-review-checklist.md`
-  - `web/tsconfig.json`
-  - `web/package.json`
-  - `.oxlintrc.json`
-  - `biome.json`
+  - `src/frontend/tsconfig.json`
+  - `src/frontend/package.json`
+  - `src/frontend/.oxlintrc.json`
+  - `src/frontend/biome.json`
 - 目标是降低认知复杂度，让主路径、错误路径、边界条件和业务意图可以独立阅读。
 - 优先卫语句和早返回；复杂条件拆成命名布尔值、谓词函数或显式分支。
 - 三元表达式、`&&`、`||`、`??` 允许用于简单、纯值表达；不得隐藏请求、写入、状态变更或其他副作用；避免嵌套三元。

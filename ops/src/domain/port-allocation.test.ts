@@ -72,7 +72,7 @@ test('mode plans fix the dependency order, data semantics and candidate ports', 
   assert.equal(planMode('integration').dataMode, 'test');
   assert.deepEqual(planMode('dev').builds, []);
   assert.equal(planMode('integration').builds.length, 1);
-  assert.equal(planMode('integration', { watch: true }).watchBuild?.label, 'pnpm --filter blog-web run build --watch');
+  assert.equal(planMode('integration', { watch: true }).watchBuild?.label, 'pnpm -C src/frontend run build --watch');
   assert.equal(planMode('dev', { scenario: 'empty' }).scenario, 'empty');
   assert.equal(planMode('dev', {}).scenario, 'default');
   assert.deepEqual(planMode('dev', { webPort: 5273, mockPort: 9190 }).candidates, { mock: 9190, web: 5273 });

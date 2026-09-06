@@ -12,10 +12,10 @@ Plan 面向一个跨职能、可验收的产品结果，不面向单个文件或
 
 - `PLAN-MOBILE-CSS-ARCHITECTURE-001`：C Mobile CSS 正交化；
 - `PLAN-OPS-RUNTIME-DEV-001`：Ops Runtime 开发模式；
-- `PLAN-ARTICLE-HTML-VALIDATION-001`：文章 HTML Profile、服务端权威校验与 B Desktop 诊断；
 
 最近归档：
 
+- `PLAN-ARTICLE-HTML-VALIDATION-001`：手写 Rust HTML Profile、native/WASM 共享校验、后端权威门禁与 B Desktop 诊断；
 - `PLAN-CLIENT-SDK-001`：客户端 SDK 与 Solid Resource 适配；
 - `PLAN-MOBILE-DENSITY-001`：C Mobile 信息密度优化；
 - `PLAN-MOBILE-DENSITY-002`：C Mobile 信息密度优化第二轮；

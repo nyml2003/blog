@@ -1,6 +1,6 @@
 node_modules/
 target/
-web/dist/
+src/frontend/dist/
 .direnv/
 blog.db*
 *.log

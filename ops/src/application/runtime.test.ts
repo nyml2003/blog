@@ -6,7 +6,7 @@ import { planMode } from '../domain/runtime.ts';
 import { join } from 'node:path';
 import type { FsPort, LogLine, ManagedProcess, ProcessExit, ProcessGroupPort, ProcessPort, SpawnRequest } from '../domain/ports.ts';
 
-const workspace = { root: '/repo', web: '/repo/web', ops: '/repo/ops' };
+const workspace = { root: '/repo', web: '/repo/src/frontend', ops: '/repo/ops' };
 const node = process.execPath;
 
 interface FakeProcess extends ManagedProcess {
@@ -146,7 +146,7 @@ test('dev starts mock before vite and injects the mock address vite must use', a
   assert.deepEqual(specs[0]!.args, ['--listen', '127.0.0.1:9090', '--scenario', 'default']);
   if (!specs[1]) throw new Error('second spawn missing: ' + JSON.stringify(specs));
   assert.equal(specs[1]!.command, 'pnpm');
-  assert.match(specs[1]!.args.join(' '), /--filter blog-web run dev/);
+  assert.match(specs[1]!.args.join(' '), /-C src\/frontend run dev/);
   assert.equal(specs[1]!.env?.BLOG_API_ORIGIN, 'http://127.0.0.1:9090');
   const mock = harness.group.members[0] as FakeProcess;
   const web = harness.group.members[1] as FakeProcess;
@@ -181,10 +181,10 @@ test('integration builds the frontend first and mounts web/dist into product', a
   const harness = new Harness();
   const pending = runRuntimeMode(planMode('integration'), harness.ports(), options({ json: true }));
   await tick();
-  assert.deepEqual(harness.runs.map((run) => run.args.join(' ')), ['--filter blog-web run build']);
+  assert.deepEqual(harness.runs.map((run) => run.args.join(' ')), ['-C src/frontend run build']);
   assert.deepEqual(harness.spawns.map((process) => process.role), ['data', 'product']);
-  assert.equal(harness.spawns[1]!.env?.BLOG_WEB_DIR, '/repo/web/dist');
-  assert.deepEqual(harness.spawns[1]!.args, ['--listen', '127.0.0.1:8080', '--web-dir', '/repo/web/dist']);
+  assert.equal(harness.spawns[1]!.env?.BLOG_WEB_DIR, '/repo/src/frontend/dist');
+  assert.deepEqual(harness.spawns[1]!.args, ['--listen', '127.0.0.1:8080', '--web-dir', '/repo/src/frontend/dist']);
   const payload = harness.json[0] as { ok: boolean; command: string; services: unknown[]; entry: string | null };
   assert.equal(payload.ok, true);
   assert.equal(payload.command, 'runtime integration');
@@ -399,7 +399,7 @@ test('delivery build failures surface as BUILD_FAILED with the builder output', 
   harness.runCode = 2;
   const code = await runDeliveryBuild(harness.ports(), options());
   assert.equal(code, 20);
-  assert.match(harness.errors.join('\n'), /构建失败: pnpm --filter blog-web run build/);
+  assert.match(harness.errors.join('\n'), /构建失败: pnpm -C src\/frontend run build/);
 });
 
 test('end to end: a real mock process is spawned, killed and leaves no survivor behind', async () => {

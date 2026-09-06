@@ -1,0 +1,7 @@
+{
+  "$schema": "https://oxc.rs/schema/oxlintrc.json",
+  "ignorePatterns": ["**/validation/generated/**"],
+  "rules": {
+    "no-unused-vars": "error"
+  }
+}

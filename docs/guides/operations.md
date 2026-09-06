@@ -32,8 +32,8 @@ ops runtime integration
 | --- | --- | --- | --- |
 | `ops runtime dev [--scenario <NAME>]` | Vite dev + Mock Product API | Mock（`default`/`empty`/`slow`/`server-error`/`malformed-response`） | Vite 地址（默认 `http://127.0.0.1:5173`） |
 | `ops runtime backend [--data mock\|test]` | Rust Product API-only + Rust Data | `mock`（内存夹具，默认）或 `test`（临时 SQLite + 自动迁移 + seed） | 无，API 基址即 Product 地址 |
-| `ops runtime integration [--watch]` | 先构建 `web/dist`，再启动 Rust Product（挂载 `web/dist`）+ Rust Data(test) | `test`（固定，不接受 `--data`） | Product 地址，页面与 `/api` 同源 |
-| `ops delivery build` | 无（只构建 `web/dist` 与 Rust Product/Data/Mock binary，不编译 Go 目标） | — | — |
+| `ops runtime integration [--watch]` | 先构建 `src/frontend/dist`，再启动 Rust Product（挂载 `src/frontend/dist`）+ Rust Data(test) | `test`（固定，不接受 `--data`） | Product 地址，页面与 `/api` 同源 |
+| `ops delivery build` | 无（只构建 `src/frontend/dist` 与 Rust Product/Data/Mock binary，不编译 Go 目标） | — | — |
 
 约定：
 
@@ -47,7 +47,7 @@ ops runtime integration
 
 `ops runtime serve` 与 `ops database migrate` 已删除，不保留兼容别名：
 
-- 原 `serve`（构建前端后由单一服务提供页面、静态资源和 API）改用 `ops runtime integration`：同样是"先构建 `web/dist`、后端挂载、不启动 Vite"，但后端是 Rust Product + Rust Data(test) 两个进程，且不再提供 `--listen`。
+- 原 `serve`（构建前端后由单一服务提供页面、静态资源和 API）改用 `ops runtime integration`：同样是"先构建 `src/frontend/dist`、后端挂载、不启动 Vite"，但后端是 Rust Product + Rust Data(test) 两个进程，且不再提供 `--listen`。
 - 独立迁移命令不再存在：迁移由 Data Server 启动时自动执行（`sqlx::migrate!()`）。需要"只迁移"时，用 `ops runtime backend` 或 `ops runtime integration` 启动栈并等待 Data 就绪。
 
 开发环境和生产运行都应考虑 [FACT-RUNTIME-001](../FACTS.md) 的 2 核、2G、40G 约束。公网部署前必须补 B 端认证和写接口保护。

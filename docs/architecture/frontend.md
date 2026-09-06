@@ -19,13 +19,13 @@ last_reviewed: 2026-09-05
 ## 代码边界
 
 ```text
-web/
+src/frontend/
 ├── common/       # 无 UI 的契约和逻辑
 ├── desktop/      # C Desktop + B Desktop
 └── mobile/       # C Mobile
 ```
 
-`web/common` 不得依赖 JSX、CSS、Desktop 或 Mobile。Desktop 与 Mobile 不互相导入 UI。
+`src/frontend/common` 不得依赖 JSX、CSS、Desktop 或 Mobile。Desktop 与 Mobile 不互相导入 UI。
 
 ## 页面入口
 
@@ -39,6 +39,10 @@ web/
 
 HTML 正文由各端独立实现 `ArticleBody`，输入遵守同一正文片段契约。
 
+## 正文校验
+
+`src/frontend/common/validation` 装配共享 Rust core 的 WASM 并验证诊断 schema；页面通过 `client.draftEditor.inspectHtml` 使用，不维护 TS allowlist。B Desktop 预览只能消费当前源码的成功校验结果；session preview 重新验证存储内容。WASM 加载失败、过期结果或无效正文均不注入 `innerHTML`，但不剥夺保存草稿的能力。公开正文由 Product 的原生同源规则保证，见 `SPEC-ARTICLE-HTML-VALIDATION-001`。
+
 ## Client 注入与拦截器
 
-`web/common/data` 的 `createJsonTransport` 支持创建时注入请求拦截器；composition root（`web/common/client/browser.ts`）装配调试拦截器：URL 查询参数 `mock-session` 存在时为请求附加 `X-Blog-Mock-Session` 头（Mock 会话隔离），无参数时零副作用。Mock 专用类型与常量只存在于注入层，不泄漏到页面和领域模型。
+`src/frontend/common/data` 的 `createJsonTransport` 支持创建时注入请求拦截器；composition root（`src/frontend/common/client/browser.ts`）装配调试拦截器：URL 查询参数 `mock-session` 存在时为请求附加 `X-Blog-Mock-Session` 头（Mock 会话隔离），无参数时零副作用。Mock 专用类型与常量只存在于注入层，不泄漏到页面和领域模型。

@@ -48,8 +48,8 @@ const RECENT_LOG_LINES = 10;
 const SHUTDOWN_GRACE_MS = 5_000;
 const DEFAULT_READINESS_MS = 15_000;
 const TEST_DB_DIR = ['target', 'test-dbs'] as const;
-const frontendBuild: BuildStep = { label: 'pnpm --filter blog-web run build', command: 'pnpm', args: ['--filter', 'blog-web', 'run', 'build'], role: 'web' };
-const cargoBuild: BuildStep = { label: 'cargo build --release', command: 'cargo', args: ['build', '--release'], role: 'ops' };
+const frontendBuild: BuildStep = { label: 'pnpm -C src/frontend run build', command: 'pnpm', args: ['-C', 'src/frontend', 'run', 'build'], role: 'web' };
+const cargoBuild: BuildStep = { label: 'cargo build --release', command: 'cargo', args: ['build', '--release'], role: 'ops', cwd: 'src' };
 
 export function runtimeCommand(plan: ModePlan): string { return `runtime ${plan.mode}`; }
 
@@ -96,7 +96,7 @@ export async function runDeliveryBuild(ports: RuntimePorts, options: RunOptions)
 
 async function deliverySteps(ports: RuntimePorts): Promise<BuildStep[]> {
   const steps: BuildStep[] = [frontendBuild];
-  const hasWorkspace = ports.fs ? await ports.fs.exists(join(ports.root, 'Cargo.toml')) : false;
+  const hasWorkspace = ports.fs ? await ports.fs.exists(join(ports.root, 'src', 'Cargo.toml')) : false;
   if (hasWorkspace) steps.push(cargoBuild);
   else ports.log.info('未找到 Cargo workspace，跳过 Rust binary 构建');
   return steps;
@@ -104,7 +104,8 @@ async function deliverySteps(ports: RuntimePorts): Promise<BuildStep[]> {
 
 async function executeStep(step: BuildStep, ports: RuntimePorts): Promise<void> {
   ports.log.log(step.role, `$ ${step.label}`);
-  const result = await ports.process.run(step.command, [...step.args], ports.root);
+  const cwd = step.cwd === undefined ? ports.root : join(ports.root, step.cwd);
+  const result = await ports.process.run(step.command, [...step.args], cwd);
   emitCaptured(ports.log, step.role, result.stdout, result.stderr);
   if (result.code !== 0) {
     throw new OpsError('BUILD_FAILED', `构建失败: ${step.label} (exit ${result.code})`, [{ command: step.label, logs: recentOutput(result.stderr || result.stdout) }]);
@@ -221,13 +222,13 @@ async function spawnRequest(plan: ModePlan, ports: RuntimePorts, role: ServiceRo
   if (role === 'web') {
     const mock = allocated.get('mock');
     if (mock !== undefined) env[INJECTION_ENV.apiOrigin] = origin(mock);
-    return { role, command: 'pnpm', args: ['--filter', 'blog-web', 'run', 'dev', '--port', String(port)], cwd: ports.root, env };
+    return { role, command: 'pnpm', args: ['-C', 'src/frontend', 'run', 'dev', '--port', String(port)], cwd: ports.root, env };
   }
 
   const name = role as Exclude<ServiceRole, 'web'>;
   const binary = await ports.binaries.resolve(name);
   if (!binary) {
-    throw new OpsError('SERVICE_START_FAILED', `服务未构建: ${role}（未在 target/debug 或 target/release 找到 ${SERVICE_BINARIES[name]}）；先运行 ops delivery build 或 cargo build`, [{ service: role, binary: SERVICE_BINARIES[name] }]);
+    throw new OpsError('SERVICE_START_FAILED', `服务未构建: ${role}（未在 src/target/debug 或 src/target/release 找到 ${SERVICE_BINARIES[name]}）；先运行 ops delivery build 或 cargo build`, [{ service: role, binary: SERVICE_BINARIES[name] }]);
   }
   const args: string[] = ['--listen', listen(port)];
   if (role === 'mock') {
@@ -242,7 +243,7 @@ async function spawnRequest(plan: ModePlan, ports: RuntimePorts, role: ServiceRo
     const data = allocated.get('data');
     if (data !== undefined) env[INJECTION_ENV.dataAddr] = origin(data);
     if (plan.mode === 'integration') {
-      env[INJECTION_ENV.webDir] = join(ports.root, 'web', 'dist');
+      env[INJECTION_ENV.webDir] = join(ports.root, 'src', 'frontend', 'dist');
       args.push('--web-dir', env[INJECTION_ENV.webDir]);
     }
   }
@@ -291,7 +292,7 @@ function printPlan(ports: RuntimePorts, options: RunOptions, command: string, pl
   if (plan.watchBuild) ports.log.info(`构建监视: ${plan.watchBuild.label}`);
   if (plan.builds.length === 0 && !plan.watchBuild) ports.log.info('构建步骤: 无');
   if (plan.services.length === 0) {
-    ports.log.info('进程: 无（只构建产物: web/dist 与 target/release）');
+    ports.log.info('进程: 无（只构建产物: src/frontend/dist 与 src/target/release）');
     ports.log.info('入口: 无');
     return;
   }

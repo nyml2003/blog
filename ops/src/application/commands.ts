@@ -4,7 +4,7 @@ export async function runWebQuality(workspace: Workspace, process: ProcessPort, 
   const script = task === 'lint' ? 'lint' : check ? 'format:check' : 'format';
   const label = check ? `pnpm ${script}` : `pnpm ${task}`;
   reporter.section(`ops quality ${task}`);
-  const result = await process.run('pnpm', ['--filter', 'blog-web', 'run', script], workspace.root);
+  const result = await process.run('pnpm', ['-C', 'src/frontend', 'run', script], workspace.root);
   if (result.code !== 0) { reporter.fail(label); reporter.info(result.stderr || result.stdout); return false; }
   reporter.ok(label);
   return true;

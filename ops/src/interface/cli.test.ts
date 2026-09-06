@@ -127,7 +127,7 @@ test('dry run prints the plan without binding ports or spawning processes', asyn
 
   const build = await capture(['delivery', 'build', '--dry-run']);
   assert.equal(build.code, 0);
-  assert.match(build.output, /pnpm --filter blog-web run build/);
+  assert.match(build.output, /pnpm -C src\/frontend run build/);
   assert.match(build.output, /cargo build --release/);
   assert.doesNotMatch(build.output, /(^|\s)go build/);
 });

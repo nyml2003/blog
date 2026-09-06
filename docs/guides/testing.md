@@ -10,7 +10,7 @@ last_reviewed: 2026-09-05
 
 ## 分层策略
 
-- Rust 领域、存储、API（`crates/`）和 `web/common`：严格 red-green-refactor；
+- Rust 领域、存储、API（`src/core` 与 `src/backend`）和 `src/frontend/common`：严格 red-green-refactor；
 - Desktop/Mobile UI 早期：使用稳定、可重复的人工验收场景；
 - 推荐、预览、发布和公开可见性稳定后，再补浏览器自动化测试。
 
@@ -21,13 +21,13 @@ last_reviewed: 2026-09-05
 ## 基础门禁
 
 ```text
-cargo fmt --all --check
-cargo clippy --workspace --all-targets -- -D warnings
-cargo test --workspace
-pnpm --filter blog-web run typecheck
-pnpm --filter blog-web run lint
-pnpm --filter blog-web run format:check
-pnpm --filter blog-web run build
+cargo fmt --all --check --manifest-path src/Cargo.toml
+cargo clippy --workspace --all-targets -D warnings --manifest-path src/Cargo.toml
+cargo test --workspace --manifest-path src/Cargo.toml
+pnpm -C src/frontend run typecheck
+pnpm -C src/frontend run lint
+pnpm -C src/frontend run format:check
+pnpm -C src/frontend run build
 ```
 
 `ops quality check` 负责汇总上述门禁与 ops 契约测试。runtime 全栈端到端测试由 `OPS_RUNTIME_E2E` 环境变量门控（`ops/src/application/runtime.stack.test.ts`）：默认跳过保持快速反馈，`1` 跑进程级，`full` 追加构建级。

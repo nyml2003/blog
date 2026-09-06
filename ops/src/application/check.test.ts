@@ -4,7 +4,7 @@ import { runCheck } from './check.ts';
 import type { FsPort, ProcessPort, Reporter } from '../domain/ports.ts';
 import type { Workspace } from '../domain/workspace.ts';
 
-const workspace: Workspace = { root: '/repo', web: '/repo/web', ops: '/repo/ops' };
+const workspace: Workspace = { root: '/repo', web: '/repo/src/frontend', ops: '/repo/ops' };
 
 /** Minimal fs stub: every ops TS file exists, the frontend manifest depends on the scenario. */
 function stubFs(options: { cargo: boolean; web: boolean }): FsPort {

@@ -27,7 +27,7 @@ const execFileAsync = promisify(execFile);
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const cli = join(root, 'ops', 'src', 'interface', 'cli.ts');
 const testDbDir = join(root, 'target', 'test-dbs');
-const binary = (name: string): string => join(root, 'target', 'debug', name);
+const binary = (name: string): string => join(root, 'src', 'target', 'debug', name);
 
 const tier = process.env.OPS_RUNTIME_E2E ?? '';
 const PROCESS_TIER = tier === '1' || tier === 'full';
@@ -253,7 +253,7 @@ function dataRequestIds(run: OpsRun): string[] {
 
 test('product declares no sqlite dependency while data owns it (MODE-002, structural)', async () => {
   const dependenciesOf = async (crate: string): Promise<string> => {
-    const manifest = await readFile(join(root, 'crates', crate, 'Cargo.toml'), 'utf8');
+    const manifest = await readFile(join(root, 'src', crate === 'protocol' ? 'core' : 'backend', crate, 'Cargo.toml'), 'utf8');
     return manifest.split('[dev-dependencies]')[0]!.split('[dependencies]')[1] ?? '';
   };
   assert.doesNotMatch(await dependenciesOf('product'), /sqlx|sqlite/i, 'product must not depend on sqlx/sqlite');
@@ -676,7 +676,7 @@ test('MODE-004 + SPIKE-001: integration mounts web/dist and serves pages, assets
   assert.equal(payload.entry, `http://127.0.0.1:${productPort}`);
 
   // FAIL-002：先构建前端，再启动服务栈；Data 就绪先于 Product 对外就绪。
-  const buildIndex = run.err().indexOf('pnpm --filter blog-web run build');
+  const buildIndex = run.err().indexOf('pnpm -C src/frontend run build');
   const dataListening = run.err().indexOf('[data] listening addr=');
   assert.ok(buildIndex >= 0, `the frontend build must be forwarded:\n${run.err()}`);
   assert.ok(dataListening > buildIndex, `data may only start after the build finished (${buildIndex} → ${dataListening})`);
@@ -724,7 +724,7 @@ test('MODE-004 + SPIKE-001: integration mounts web/dist and serves pages, assets
 
 test('PLAN 验收 7: delivery build produces web/dist and the rust binaries and never a go artifact', gate(BUILD_TIER), async () => {
   // 清掉旧产物，让这次 delivery build 真正产出交付物（cargo 只在缺产物时重新链接）。
-  for (const name of ['product', 'data', 'mock']) await rm(join(root, 'target', 'release', name), { force: true });
+  for (const name of ['product', 'data', 'mock']) await rm(join(root, 'src', 'target', 'release', name), { force: true });
   const run = OpsRun.start(['delivery', 'build', '--json']);
   assert.equal(await run.exit(600_000), 0, run.err());
   const payload = JSON.parse(run.out().trim()) as ServicesPayload;
@@ -732,22 +732,22 @@ test('PLAN 验收 7: delivery build produces web/dist and the rust binaries and 
   assert.equal(payload.command, 'delivery build');
   assert.deepEqual(payload.services, [], 'delivery build starts no service');
   assert.equal(payload.entry, null);
-  const steps = run.errLines().filter((line) => line === '[web] $ pnpm --filter blog-web run build' || line === '[ops] $ cargo build --release');
+  const steps = run.errLines().filter((line) => line === '[web] $ pnpm -C src/frontend run build' || line === '[ops] $ cargo build --release');
   assert.deepEqual(
     steps,
-    ['[web] $ pnpm --filter blog-web run build', '[ops] $ cargo build --release'],
+    ['[web] $ pnpm -C src/frontend run build', '[ops] $ cargo build --release'],
     `exactly the frontend and the rust build must run, in that order:\n${run.err()}`,
   );
   assert.doesNotMatch(run.err(), /\bgo (build|vet|test)\b|\bgofmt\b/, 'no go command may appear in the build');
 
-  const dist = join(root, 'web', 'dist');
+  const dist = join(root, 'src', 'frontend', 'dist');
   for (const path of ['desktop/pages/public-home/index.html', 'desktop/pages/admin-home/index.html', 'mobile/pages/home/index.html']) {
     assert.equal(existsSync(join(dist, path)), true, `web/dist/${path} must exist`);
   }
   for (const name of ['product', 'data', 'mock']) {
-    const artifact = join(root, 'target', 'release', name);
+    const artifact = join(root, 'src', 'target', 'release', name);
     assert.equal(existsSync(artifact), true, `target/release/${name} must exist after the build`);
     assert.ok((await stat(artifact)).mode & 0o111, `target/release/${name} must be executable`);
   }
-  assert.equal(existsSync(join(root, 'target', 'release', 'blog-server')), false, 'the retired go server is not a build target');
+  assert.equal(existsSync(join(root, 'src', 'target', 'release', 'blog-server')), false, 'the retired go server is not a build target');
 });

@@ -11,10 +11,10 @@ export async function runCheck(workspace: Workspace, process: ProcessPort, fs: F
   };
   // Rust gate replaces the retired Go gate; the workspace is expected to exist, and a missing one
   // is a failure (20) rather than a silent pass.
-  if (await fs.exists(join(workspace.root, 'Cargo.toml'))) {
-    await run('cargo fmt', 'cargo', ['fmt', '--all', '--check'], workspace.root);
-    await run('cargo clippy', 'cargo', ['clippy', '--workspace', '--all-targets', '--', '-D', 'warnings'], workspace.root);
-    await run('cargo test', 'cargo', ['test', '--workspace'], workspace.root);
+  if (await fs.exists(join(workspace.root, 'src', 'Cargo.toml'))) {
+    await run('cargo fmt', 'cargo', ['fmt', '--all', '--check'], join(workspace.root, 'src'));
+    await run('cargo clippy', 'cargo', ['clippy', '--workspace', '--all-targets', '--', '-D', 'warnings'], join(workspace.root, 'src'));
+    await run('cargo test', 'cargo', ['test', '--workspace'], join(workspace.root, 'src'));
   } else {
     passed = false;
     reporter.fail('cargo workspace');
@@ -25,10 +25,10 @@ export async function runCheck(workspace: Workspace, process: ProcessPort, fs: F
   const opTests = opsFiles.filter((f) => f.endsWith('.test.ts'));
   if (opTests.length) await run('ops contract tests', 'node', ['--experimental-strip-types', '--test', ...opTests], workspace.root);
   if (await fs.exists(`${workspace.web}/package.json`)) {
-    await run('pnpm typecheck', 'pnpm', ['--filter', 'blog-web', 'run', 'typecheck'], workspace.root);
-    await run('pnpm lint', 'pnpm', ['--filter', 'blog-web', 'run', 'lint'], workspace.root);
-    await run('pnpm format:check', 'pnpm', ['--filter', 'blog-web', 'run', 'format:check'], workspace.root);
-    await run('pnpm build', 'pnpm', ['--filter', 'blog-web', 'run', 'build'], workspace.root);
+    await run('pnpm typecheck', 'pnpm', ['-C', 'src/frontend', 'run', 'typecheck'], workspace.root);
+    await run('pnpm lint', 'pnpm', ['-C', 'src/frontend', 'run', 'lint'], workspace.root);
+    await run('pnpm format:check', 'pnpm', ['-C', 'src/frontend', 'run', 'format:check'], workspace.root);
+    await run('pnpm build', 'pnpm', ['-C', 'src/frontend', 'run', 'build'], workspace.root);
   }
   const files = (await fs.files(workspace.web)).filter((f) => /\.(ts|tsx)$/.test(f));
   // Read source through the injected port while keeping the domain rule pure.

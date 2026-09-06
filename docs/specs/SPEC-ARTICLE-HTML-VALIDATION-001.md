@@ -5,7 +5,7 @@ status: confirmed
 version: 1
 plan_id: PLAN-ARTICLE-HTML-VALIDATION-001
 owner: product-content-design
-last_reviewed: 2026-09-05
+last_reviewed: 2026-09-06
 ---
 
 # 文章 HTML Profile 与校验契约
@@ -44,7 +44,7 @@ Profile `article-html/v1` 由共享 Rust HTML Fragment Parser 和 Profile valida
 - 输入必须是 fragment；拒绝 `doctype`、注释、处理指令、CDATA、raw-text 元素和完整文档外壳。
 - 标签和属性名称必须小写；开始/结束标签必须成对且严格嵌套；属性值必须带引号；禁止重复属性。
 - v1 不定义 void 元素，因此所有元素都必须显式闭合。
-- 命名实体只接受 `&amp;`、`&lt;`、`&gt;`、`&quot;`、`&apos;`。数字实体接受十进制 `&#...;` 和小写 `x` 的十六进制 `&#x...;`；结果必须是有效 Unicode scalar value，且不能是 NUL 或除换行、回车、Tab 以外的控制字符。未知、空、截断或畸形实体拒绝。
+- 命名实体只接受 `&amp;`、`&lt;`、`&gt;`、`&quot;`、`&apos;`。数字实体接受十进制 `&#...;` 和小写 `x` 的十六进制 `&#x...;`；结果必须是有效 Unicode scalar value，且不能是 NUL 或除换行、回车、Tab 以外的控制字符。实体 token（`&` 与 `;` 之间）最多 16 个 ASCII 字节，超长、未知、空、截断或畸形实体拒绝。不对解码结果再次解码。
 - source span 使用 UTF-8 字节半开区间 `[startByte, endByte)`；line/column 均从 1 开始，column 按 Unicode scalar value 计数。正文大小、嵌套深度、节点数、属性数、属性值长度和文本长度超过上限时返回资源限制诊断。
 - 空 fragment 作为空正文合法；空元素节点、只含空白的结构是否允许由元素内容规则判定，不进行隐式补全。
 
@@ -87,18 +87,24 @@ Parser 和 validator 对输入长度及 AST 节点数必须保持线性时间，
   code: stable diagnostic code,
   severity: "error" | "warning",
   message: author-readable message,
-  span: { startByte, endByte, startLine, startColumn, endLine, endColumn },
+  span: {
+    start: { byte, line, column },
+    end: { byte, line, column }
+  },
   profileVersion: "article-html/v1"
 }
 ```
 
 v1 诊断 code：`HTML_UNEXPECTED_EOF`、`HTML_INVALID_NAME`、`HTML_UNQUOTED_ATTRIBUTE`、`HTML_DUPLICATE_ATTRIBUTE`、`HTML_INVALID_ATTRIBUTE_VALUE`、`HTML_INVALID_TEXT`、`HTML_INVALID_ENTITY`、`HTML_MISMATCHED_TAG`、`HTML_SELF_CLOSING_FORBIDDEN`、`HTML_UNSUPPORTED_SYNTAX`、`HTML_UNSUPPORTED_ELEMENT`、`HTML_UNSUPPORTED_ATTRIBUTE`、`HTML_UNSUPPORTED_NESTING`、`HTML_CLASS_FORBIDDEN`、`HTML_STYLE_FORBIDDEN`、`HTML_EVENT_ATTRIBUTE_FORBIDDEN`、`HTML_IMAGE_FORBIDDEN`、`HTML_LINK_SCHEME_FORBIDDEN`、`HTML_LINK_TARGET_REQUIRED`、`HTML_LINK_REL_REQUIRED`、`HTML_INVALID_TABLE_SPAN`、`HTML_RESOURCE_LIMIT`。
 
-诊断属于领域结果，不泄漏 parser 内部节点、SQL、HTTP 或 Rust 错误类型。WASM 预检与未来 Rust 服务端必须返回同一 schema 和 code；WASM 仅改善编辑体验，不能替代服务端发布边界。
+诊断属于领域结果，不泄漏 parser 内部节点、SQL、HTTP 或 Rust 错误类型。WASM 与 Rust Product 使用同一个 core，返回同一 schema 和 code；WASM 仅改善编辑体验，不能替代服务端发布边界。v1 采用 fail-fast：先报告第一个语法错误；语法完整后报告第一个 Profile 错误，不返回部分可渲染 AST。资源错误的 span 指向超限位置；输入总长度超限在扫描前拒绝，span 为原点空区间。换行以 LF 计行，CR 作为一个 scalar 计列。
+
+管理端详情和成功的创建/更新/发布/取消发布响应保留现有 Article 字段，追加 `htmlInspection: { profileVersion, valid, diagnostics }`。违反发布门槛时返回 HTTP 422、`code: INVALID_ARTICLE_HTML`，`data.htmlInspection` 携带同一诊断结果；不能信任请求提供的诊断或 Profile version。
 
 ## 状态与安全要求
 
 - 创建和更新：无效正文可保存为草稿，但必须把诊断返回给 B Desktop，且保留标题、摘要、分类、标签和原始 HTML 输入。
+- 已发布文章更新：有效正文可更新；无效正文拒绝，保留当前已发布版本，不自动取消发布。需要保存无效正文时先明确取消发布。草稿更新和发布使用原子状态/原文比较，竞态返回冲突并要求重新读取，不能跳过重新校验。
 - 发布：正文必须通过 `article-html/v1`，否则拒绝状态转换。
 - 预览：通过 Profile 前不得把原始 `innerHTML` 注入可信 `ArticleBody`。B Desktop 应显示诊断或使用受控的失败状态；通过校验后才允许阅读预览。
 - C Desktop、C Mobile 和发布后的 B 预览只渲染服务端已通过 Profile 的正文。公开读取不依赖浏览器端再次消毒。

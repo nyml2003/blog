@@ -19,7 +19,7 @@ export class WorkspaceBinaries implements BinaryResolver {
 
   async resolve(role: keyof typeof SERVICE_BINARIES): Promise<string | undefined> {
     for (const profile of this.profiles) {
-      const path = join(this.root, 'target', profile, SERVICE_BINARIES[role]);
+      const path = join(this.root, 'src', 'target', profile, SERVICE_BINARIES[role]);
       if (await this.fs.exists(path)) return path;
     }
     return undefined;
