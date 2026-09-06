@@ -2,7 +2,8 @@
   description = "Local development environment for the blog MVP";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    # 锁定 release 分支：发布后仅收安全与关键修复，作为不滚动的主锚点。
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
   };
 
   outputs = { self, nixpkgs }:
@@ -54,6 +55,8 @@
             cargo
             rustfmt
             clippy
+            wasm-bindgen-cli
+            lld
             sqlite
             opsCommand
           ];
