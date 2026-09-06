@@ -1,3 +1,8 @@
+/* DEPRECATED ROLLBACK ANCHOR (2026-09-06).
+   Superseded by styles/tokens.css ... styles/pages.css; no page imports this
+   file any more. Kept unmodified except for the rename synchronisations that
+   kept the live pages correct during R1-R4, so an entry revert is still a
+   working fallback. Do not add rules here. */
 :root {
   --paper: #f4f1ea;
   --surface: #fffcf7;

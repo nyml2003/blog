@@ -20,8 +20,18 @@ import { filterFromSearch, filterSearch } from "../../../common/logic/filter";
 import { browserClient as client } from "../../../common/client";
 import { useDataResource } from "../../../solid/data";
 import { type ArticleFilter } from "../../../common/contracts/domain";
-import "../../styles.css";
-import "../../filter.css";
+// Fixed Mobile CSS entry order. Keep tokens first and pages last; the atom
+// layer stays unimported until the separate atom consumption migration.
+import "../../styles/tokens.css";
+import "../../styles/base.css";
+import "../../styles/shell.css";
+import "../../styles/layout.css";
+import "../../styles/components.css";
+import "../../styles/shelf.css";
+import "../../styles/filter.css";
+import "../../styles/detail.css";
+import "../../styles/article-body.css";
+import "../../styles/pages.css";
 
 const App = () => {
   const [filter, setFilter] = createSignal<ArticleFilter>(

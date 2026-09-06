@@ -1,0 +1,70 @@
+/* C Mobile pages module. Depends on every frozen module and is imported last.
+   Page rhythm for home, the article library and the reading page, plus local
+   rules that no component can own yet. It never overrides business component
+   internals and never invents one-off utility classes. */
+.page-heading {
+  margin-bottom: 28px;
+}
+/* Eyebrow is a shared text role across the three pages. STYLE-INVENTORY
+   targets it at the `Text` atom; the atom layer is frozen in this migration,
+   so the rule is parked here until that consumption migration (R6). */
+.eyebrow {
+  margin: 0 0 9px;
+  color: var(--blue);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+/* Page title appearance stays a page rule until the Heading atom consumption
+   migration replaces it with a size variant. See detail.css for the paired
+   `.detail-header h1` decision. */
+.page-heading h1 {
+  margin: 0 0 11px;
+  font-size: 32px;
+  line-height: 1.16;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+/* `.subtle` is the page summary text. `.meta` has no Mobile consumer (Desktop
+   owns its own `.meta` in desktop/src/styles.css); the rule is kept as a
+   recorded orphan, not deleted, pending the deletion decision. */
+.subtle,
+.meta {
+  color: var(--muted);
+  line-height: 1.55;
+  font-size: 14px;
+}
+.article-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  border-top: 2px solid var(--ink);
+}
+/* Home page action. STYLE-INVENTORY targets it at the `Link` action variant;
+   the shared `.primary-action, .apply-button` block was split so the anchor
+   and the Filter button no longer share one declaration list. Parked here
+   until the Link atom consumption migration (R6). */
+.primary-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 50px;
+  padding: 12px 16px;
+  border: 1px solid var(--blue);
+  border-radius: var(--radius-control);
+  background: var(--blue);
+  color: var(--foreground-on-accent);
+  font-weight: 700;
+  margin-top: 28px;
+}
+/* Orphan: no JSX, template or static-page consumer was found (see the
+   migration class map). Kept, not deleted, pending the deletion decision. */
+.back-button {
+  min-height: var(--touch-target);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  padding: 10px 13px;
+  margin-bottom: 34px;
+}

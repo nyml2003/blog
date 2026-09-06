@@ -1,3 +1,6 @@
+/* DEPRECATED ROLLBACK ANCHOR (2026-09-06).
+   The date grid moved into styles/filter.css; no page imports this file any
+   more. Kept as a rollback fallback. Do not add rules here. */
 .date-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

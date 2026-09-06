@@ -10,7 +10,18 @@ import { err } from "../../../common/data/result";
 import { createDataTask } from "../../../common/data/task";
 import { useDataResource } from "../../../solid/data";
 import { StateMessage, ArticleBody, pageStyles } from "../components/ui";
-import "../../styles.css";
+// Fixed Mobile CSS entry order. Keep tokens first and pages last; the atom
+// layer stays unimported until the separate atom consumption migration.
+import "../../styles/tokens.css";
+import "../../styles/base.css";
+import "../../styles/shell.css";
+import "../../styles/layout.css";
+import "../../styles/components.css";
+import "../../styles/shelf.css";
+import "../../styles/filter.css";
+import "../../styles/detail.css";
+import "../../styles/article-body.css";
+import "../../styles/pages.css";
 
 const displayDate = (value?: string) =>
   value
