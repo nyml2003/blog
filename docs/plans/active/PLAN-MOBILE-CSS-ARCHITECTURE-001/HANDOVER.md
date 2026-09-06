@@ -9,6 +9,8 @@ last_reviewed: 2026-09-05
 
 # C Mobile CSS Architecture 交接
 
+> **过时注记（2026-09-06）**：本文是 2026-09-05 的交接快照。此后发生：原子库已迁移至 `src/frontend/mobile-ui/` 并改为「类型即契约」（运行时 fail-fast 校验已移除，见 `ATOM-CONTRACT.md` 修订记录与 `PM-STATUS.md` 的 PM 决策）；CSS 已按 Runbook R1-R5 拆分完成（交付记录见 `WORKSTREAM-MIGRATION.md`），视觉回归由用户人工验收。本文的路径与 fail-fast 描述以那三份文档为准。
+
 ## 交接结论
 
 第一期 C Mobile 原子库和本计划的执行文档已完成并冻结；现有 Mobile 页面**没有**消费原子，

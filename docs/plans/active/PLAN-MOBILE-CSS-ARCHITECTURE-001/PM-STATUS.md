@@ -146,3 +146,5 @@ Web typecheck、Oxlint、production build、依赖边界和 9 个 core/resource 
 ## PM 决策（2026-09-06）：原子库改为「类型即契约」
 
 用户批准以 `defineAtom` 类型工厂取代全环境运行时配置校验：删除 `config.ts` 的 12 个校验 helper 与九原子 render 内的全部校验样板（九组件 613 行 -> 425 行），运行时只剩 defaults 合并；`config.test.ts` 的 6 条运行时 fail-fast 测试删除，由 `types.test.ts` 的 12 条 `@ts-expect-error` 类型负样例、9 条合法组合与 1 条 defaults 合并断言取代。Props 接口与 `index.ts` 导出面不变，业务零消费，不影响 CSS 迁移。放弃的运行时防线（JS 调用方、`any` 穿透、运行时拼装 Props、空内容、`Link` `_blank` 的 `rel` 组合）已记录在 ATOM-CONTRACT「类型即契约」节。当前原子目录门禁：`ops quality check`、typecheck、lint、format:check、build 与 `tsx --test mobile-ui/atoms/types.test.ts` 全绿；`HANDOVER.md` 与 `REGRESSION-BASELINE.md` 中对 fail-fast 的描述已过时，待其各自维护者按写集更新。
+
+2026-09-06（续）：用户裁决 `Link` `_blank`/`rel` 组合接受调用方自律，不引入判别 union；原子 API 重构（defineAtom 类型即契约）至此收尾，`HANDOVER.md` 已加过时注记指向现行契约。

@@ -289,3 +289,5 @@ type CheckboxProps = {
 ## 修订记录
 
 - 2026-09-06：由用户决策，以「类型即契约」取代「全环境运行时 fail-fast」。理由：单人、全 TypeScript strict 的工作流中类型防线真实存在，而运行时校验只能覆盖少数穿透通道；删除后消除 `config.ts` 的 12 个校验 helper、九原子内的校验样板（九组件由 613 行降至 425 行）与每次渲染的校验开销。Props 类型与导出面不变；新增 `mobile-ui/atoms/define.ts` 的 `defineAtom`（defaults 编译期锚定 + `Partial` 合并），`config.test.ts` 的 6 条运行时 fail-fast 测试由 `types.test.ts` 的 `@ts-expect-error` 类型负样例与 defaults 合并断言取代。明确放弃的防线见「类型即契约」节，其中 `Link` 的 `_blank`/`rel` 组合从"抛错"变为"调用方责任"。
+
+- 2026-09-06（续）：用户裁决——`Link` 的 `target="_blank"` + `rel` 组合**接受调用方自律**（`rel: string` 无法在类型层表达 token 组合，判别 union 方案因复杂化 defaults 锚定被否决）；该项从运行时防线清单转入调用方约定。
