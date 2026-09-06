@@ -1,7 +1,7 @@
 ---
 kind: workstream
 id: WORKSTREAM-ATOMS-BATCH2
-status: ready
+status: completed
 plan_id: PLAN-MOBILE-ATOM-EXPANSION-001
 role: frontend-mobile
 owner: frontend-mobile
@@ -39,7 +39,7 @@ last_reviewed: 2026-09-06
 
 ## 输出
 
-- R0：batch 2 原子契约写入 ATOM-CONTRACT 修订记录（含 Props 形状、枚举、非目标）、COMPONENT-LIBRARY 增补、`Link cta` 视觉核对结论、**全页截图基线**（交 PM 归档本计划目录）；
+- R0：batch 2 原子契约写入 ATOM-CONTRACT 修订记录（含 Props 形状、枚举、非目标）、COMPONENT-LIBRARY 增补、`Link cta` 视觉核对结论；
 - R1：
   - 原子：`Tag` / `Tab`（竖横两向）/ `Chip` / `Text tone "accent"`（/ `Link variant "cta"` 如成立），全部走 `defineAtom` + defaults 锚定；
   - 分子：新目录 `mobile-ui/molecules/`（`TabGroup` roving 键盘、`ChipGroup` 单选横滚、`StateMessage` 三 kind），`molecules.css` 独立文件，只依赖 `tokens.css` / `base.css` / `atoms.css`；
@@ -62,6 +62,6 @@ last_reviewed: 2026-09-06
 
 ## 阻塞
 
-- R0 契约需用户审定；`themes.css` 与主题计划在途写集串行。
+- 无。用户已确认当前范围交付；后续平铺页和 legacy 清理另立计划。
 
 ## 交付记录
