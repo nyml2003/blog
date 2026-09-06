@@ -138,3 +138,7 @@ Web typecheck、Oxlint、production build、依赖边界和 9 个 core/resource 
 ## 承接记录（2026-09-06）
 
 新 PM 承接。核实：九原子、`config.test.ts` 6/6 通过、`atoms.css` 177 行独立、业务零消费、`styles.css` 721 行 / `filter.css` 14 行未拆分——与 HANDOVER 状态一致。注意：仓库已于 2026-09-06 重构为 `src/{core,backend,frontend}` 布局，本文档及交接文档中的 `web/mobile/...` 路径与 `pnpm --dir web ...` 命令均对应现在的 `src/frontend/mobile/...` 与 `pnpm -C src/frontend ...`；Go 门禁记录已随 Go 退场过时。恢复顺序不变：先满足回归开工 gate，再 R0-R5 拆分 CSS，R6 消费迁移单独审批。
+
+## PM 决策（2026-09-06 晚）：跳过自动化基线，直接开始 CSS 迁移
+
+用户裁定：REGRESSION-BASELINE 的开工 gate 中「迁移前截图基线」由用户在迁移完成后人工验收替代；阶段 A 自动化采集取消（agent 已中止）。静态质量门禁（typecheck/lint/format/build/test + ops quality check）仍为迁移每步的硬性验收。视觉/交互回归改为：迁移完成后用户人工对照验收，P0/P1 判定标准仍以 REGRESSION-BASELINE.md 为准。原子库已抽取至 `src/frontend/mobile-ui/`（atoms 入口不变）。WORKSTREAM-MOBILE-CSS-MIGRATION 即日起置 in_progress，按 MIGRATION-RUNBOOK R0→R5 执行，R6 消费迁移仍需单独审批。
