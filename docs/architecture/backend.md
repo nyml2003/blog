@@ -33,7 +33,7 @@ HTTP handler 不直接拼接 SQL。文章公开可见性、状态迁移和推荐
 - `src/backend/data`：SQLite 存储、迁移、mock 内存夹具、线程池与通道；Data API 为按领域定义的 typed operations，不做表 CRUD；
 - `src/backend/mock`：Mock Product API（`ops runtime dev` 专用：有限命名场景 + `X-Blog-Mock-Session` 显式会话隔离，固定 seed，启动即重置）。
 
-数据语义：`mock`（内存夹具，不建不开 SQLite 文件）与 `test`（每次运行全新临时库 `target/test-dbs/<PID>.db`，自动迁移 + 稳定 seed，正常退出删除、异常退出保留）；`prod` 为后续扩展位。
+数据语义：`mock`（内存夹具，不建不开 SQLite 文件）与 `test`（每次运行全新临时库 `target/test-dbs/<PID>.db`，自动迁移 + 稳定 seed，正常退出删除、异常退出保留）；`prod` 为后续扩展位，约定如下——路径优先级为显式参数 > `BLOG_DATABASE_PATH` > **无默认值**（prod 缺路径即拒绝启动，生产数据位置不允许静默默认）；不加载 seed，仅自动迁移；开发持久库放仓库外（如 `~/.local/state/blog/`），服务器部署位 `/var/lib/blog/blog.db`（见 ARCH-INFRASTRUCTURE）。仓库保持零状态：任何语义都不在仓库内留下数据文件。
 
 ## 当前状态规则
 

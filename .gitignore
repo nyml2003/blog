@@ -2,6 +2,5 @@ node_modules/
 target/
 src/frontend/dist/
 .direnv/
-blog.db*
 *.log
 .DS_Store
