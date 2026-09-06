@@ -2,7 +2,7 @@
 kind: plan-pm-prompt
 id: PM-PROMPT-OPS-RUNTIME-DEV-001
 plan_id: PLAN-OPS-RUNTIME-DEV-001
-status: ready
+status: completed
 last_reviewed: 2026-09-05
 ---
 
