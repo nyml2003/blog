@@ -1,14 +1,6 @@
 import type { JSX } from "solid-js";
-import {
-  assertOptions,
-  assertProps,
-  classNames,
-  optionValue,
-  optionalString,
-  requireBoolean,
-  requireFunction,
-  type ValidationState,
-} from "./config";
+import { classNames, type ValidationState } from "./config";
+import { defineAtom, type AtomDefaults } from "./define";
 
 type CheckboxOptions = {
   describedById: string;
@@ -24,53 +16,33 @@ export type CheckboxProps = {
   options: Partial<CheckboxOptions>;
 };
 
-export function Checkbox(props: CheckboxProps) {
-  assertProps("Checkbox", props);
-  assertOptions("Checkbox", props.options);
-  const checked = requireBoolean("Checkbox", "checked", props.checked);
-  requireFunction("Checkbox", "onChange", props.onChange);
-  const describedById = optionalString(
-    "Checkbox",
-    "options.describedById",
-    props.options.describedById,
-  );
-  const id = optionalString("Checkbox", "options.id", props.options.id);
-  const name = optionalString("Checkbox", "options.name", props.options.name);
-  const value = optionalString(
-    "Checkbox",
-    "options.value",
-    props.options.value,
-  );
-  const state = optionValue(
-    "Checkbox",
-    "options.state",
-    props.options.state,
-    ["enabled", "disabled"],
-    "enabled",
-  );
-  const validation = optionValue(
-    "Checkbox",
-    "options.validation",
-    props.options.validation,
-    ["valid", "invalid"],
-    "valid",
-  );
-
-  return (
-    <input
-      aria-describedby={describedById}
-      aria-invalid={validation === "invalid" ? "true" : undefined}
-      checked={checked}
-      class={classNames(
-        "m-atom-checkbox",
-        validation === "invalid" && "is-invalid",
-      )}
-      disabled={state !== "enabled"}
-      id={id}
-      name={name}
-      onChange={props.onChange}
-      type="checkbox"
-      value={value}
-    />
-  );
-}
+export const Checkbox = defineAtom<CheckboxProps>({
+  name: "Checkbox",
+  defaults: {
+    describedById: undefined,
+    id: undefined,
+    name: undefined,
+    state: "enabled",
+    validation: "valid",
+    value: undefined,
+  } as const satisfies AtomDefaults<CheckboxProps>,
+  render({ checked, onChange, options }) {
+    return (
+      <input
+        aria-describedby={options.describedById}
+        aria-invalid={options.validation === "invalid" ? "true" : undefined}
+        checked={checked}
+        class={classNames(
+          "m-atom-checkbox",
+          options.validation === "invalid" && "is-invalid",
+        )}
+        disabled={options.state !== "enabled"}
+        id={options.id}
+        name={options.name}
+        onChange={onChange}
+        type="checkbox"
+        value={options.value}
+      />
+    );
+  },
+});

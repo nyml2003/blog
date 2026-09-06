@@ -3,7 +3,7 @@ kind: component-library-guide
 plan_id: PLAN-MOBILE-CSS-ARCHITECTURE-001
 status: implemented-not-integrated
 owner: project-manager
-last_reviewed: 2026-09-05
+last_reviewed: 2026-09-06
 write_set: docs/plans/active/PLAN-MOBILE-CSS-ARCHITECTURE-001/COMPONENT-LIBRARY.md
 depends_on: [ATOM-CONTRACT.md]
 ---
@@ -81,28 +81,30 @@ variant 还是应该归属到业务组件。
 - `Text`、`Heading` 和表单值不承担领域格式化。文章日期、标签、空态文案、错误文案和
   query 语义都应在业务组件或页面层完成后再传入。
 
-## 强制 Fail-Fast
+## 类型即契约
 
-组件库同时使用编译期和运行时两道约束。对于会破坏原生语义、受控协议或可访问名称的
-配置错误，**不得**静默填充、降级或只记录 console warning；组件在首次渲染时必须抛出
-带稳定前缀 `C Mobile atom:`、组件名和字段名的 `Error`。该行为在开发和生产环境一致，
-让错误在接入边界立即暴露。
+组件库的配置防线只有 TypeScript 一道（2026-09-06 起不再有运行时配置校验，也不再有
+`C Mobile atom:` 抛错）。会破坏原生语义、受控协议或可访问名称的配置错误在调用点被
+**编译拒绝**；可默认的 `options` 字段由 `defineAtom` 在渲染前合并进 `defaults`。
 
-| 组件 | 必须 fail-fast 的情形 |
+| 编译期拒绝的用法 | 依据 |
 | --- | --- |
-| `Text`、`Heading`、`Button`、`Link`、`Label`、`Select`、`IconButton` | `content`/`icon` 缺失、为 `null`/`false` 或仅空白字符串。 |
-| `IconButton` | `ariaLabel` 不是非空、去除首尾空白后的字符串。 |
-| `Label` | `controlId` 不是非空字符串。 |
-| `Input` | `value` 不是字符串，或 `onInput` 不是函数。 |
-| `Select` | `value` 不是字符串，或 `onChange` 不是函数。 |
-| `Checkbox` | `checked` 不是 boolean，或 `onChange` 不是函数。 |
-| `Link` | `href` 不是非空字符串；`target="_blank"` 时 `rel` 未显式包含 `noopener noreferrer`。 |
-| 所有原子 | `options` 不是对象、枚举 option 值不在公开集合中，或 `null` 进入公开 Props。 |
+| `Button` 传 `href`、`Select` 传业务数据源等超出契约的字段 | `XxxProps` 只声明契约内字段，对象字面量多写字段即报错。 |
+| `variant: "ghost"`、`tone: "disabled"`、`size: "display"` 等非法枚举值 | `XxxOptions` 的枚举字段是字面量联合。 |
+| 缺少 `content`、`href`、`value`、`checked`、`ariaLabel`、`controlId` 或受控回调 | 这些字段在 `XxxProps` 顶层必填。 |
+| `Input` 选择非 `date` 类型、`Select` 声明 `multiple` 等 | 组件固定原生形态，类型上根本不存在这些字段。 |
 
-缺少可默认的 `options` 字段不是 fail-fast 条件，组件应使用已文档化的默认值；但未知值不能
-被悄悄替换。`Button` 的 `onClick` 可以缺省，因为原生 submit/reset button 可以没有点击
-回调；这不属于受控值协议。被 `disabled` 或 `loading` 的 Button 也必须保持原生不可激活，
-而不是用回调中的静默 return 假装禁用。
+合法与非法样例固定在 `mobile-ui/atoms/types.test.ts`：每条非法用法都写成
+`@ts-expect-error`，有人放宽类型时 typecheck 会因"未使用的指令"变红；运行时部分只断言
+`defaults` 合并。
+
+因此这些情况**不再有防线**，由调用方自律：JavaScript 调用方、`any`/不安全断言、运行时
+拼装出来的 Props，以及空字符串或 `null` 的 `content`/`icon`。`Link` 的
+`target="_blank"` 需要 `rel` 显式包含 `noopener noreferrer`；组件既不校验也不自动补写。
+
+`Button` 的 `onClick` 可以缺省，因为原生 submit/reset button 可以没有点击回调；这不属于
+受控值协议。被 `disabled` 或 `loading` 的 Button 也必须保持原生不可激活，而不是用回调中
+的静默 return 假装禁用。
 
 ## 组件索引
 
@@ -169,7 +171,8 @@ variant 还是应该归属到业务组件。
 ### Link
 
 `Link` 始终输出 `<a href>`，用于真实导航；它不会改写浏览器 history 或读取路由。
-`href` 为必填项。`target: "_blank"` 时实现必须补上安全的 `rel` 值。
+`href` 为必填项。`target: "_blank"` 时必须由调用方传入含 `noopener noreferrer` 的
+`rel`：类型不表达该组合，实现也不校验或自动补写。
 
 ```tsx
 <Link content="浏览全部文章" href="/m/articles/index.html" options={{ variant: "action" }} />

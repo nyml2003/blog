@@ -1,66 +1,47 @@
-import type { JSX } from "solid-js";
-import {
-  assertOptions,
-  assertProps,
-  classNames,
-  optionValue,
-  optionalString,
-  requireContent,
-} from "./config";
+import { classNames, type AtomContent } from "./config";
+import { defineAtom, type AtomDefaults } from "./define";
+
+type TextAs = "span" | "p";
+type TextSize = "body" | "meta";
+type TextTone = "default" | "muted";
 
 type TextOptions = {
-  as: "span" | "p";
+  as: TextAs;
   id: string;
-  size: "body" | "meta";
-  tone: "default" | "muted";
+  size: TextSize;
+  tone: TextTone;
 };
 export type TextProps = {
-  content: JSX.Element;
+  content: AtomContent;
   options: Partial<TextOptions>;
 };
 
-export function Text(props: TextProps) {
-  assertProps("Text", props);
-  assertOptions("Text", props.options);
-  requireContent("Text", "content", props.content);
-  const as = optionValue(
-    "Text",
-    "options.as",
-    props.options.as,
-    ["span", "p"],
-    "span",
-  );
-  const tone = optionValue(
-    "Text",
-    "options.tone",
-    props.options.tone,
-    ["default", "muted"],
-    "default",
-  );
-  const size = optionValue(
-    "Text",
-    "options.size",
-    props.options.size,
-    ["body", "meta"],
-    "body",
-  );
-  const className = classNames(
-    "m-atom-text",
-    `m-atom-text--${tone}`,
-    `m-atom-text--${size}`,
-  );
-  const id = optionalString("Text", "options.id", props.options.id);
-
-  if (as === "p") {
-    return (
-      <p class={className} id={id}>
-        {props.content}
-      </p>
+export const Text = defineAtom<TextProps>({
+  name: "Text",
+  defaults: {
+    as: "span",
+    id: undefined,
+    size: "body",
+    tone: "default",
+  } as const satisfies AtomDefaults<TextProps>,
+  render({ content, options }) {
+    const className = classNames(
+      "m-atom-text",
+      `m-atom-text--${options.tone}`,
+      `m-atom-text--${options.size}`,
     );
-  }
-  return (
-    <span class={className} id={id}>
-      {props.content}
-    </span>
-  );
-}
+
+    if (options.as === "p") {
+      return (
+        <p class={className} id={options.id}>
+          {content}
+        </p>
+      );
+    }
+    return (
+      <span class={className} id={options.id}>
+        {content}
+      </span>
+    );
+  },
+});

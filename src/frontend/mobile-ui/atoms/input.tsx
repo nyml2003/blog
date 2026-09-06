@@ -1,14 +1,6 @@
 import type { JSX } from "solid-js";
-import {
-  assertOptions,
-  assertProps,
-  classNames,
-  optionValue,
-  optionalString,
-  requireFunction,
-  requireStringValue,
-  type ValidationState,
-} from "./config";
+import { classNames, type ValidationState } from "./config";
+import { defineAtom, type AtomDefaults } from "./define";
 
 type InputOptions = {
   describedById: string;
@@ -23,47 +15,31 @@ export type InputProps = {
   value: string;
 };
 
-export function Input(props: InputProps) {
-  assertProps("Input", props);
-  assertOptions("Input", props.options);
-  requireFunction("Input", "onInput", props.onInput);
-  const value = requireStringValue("Input", "value", props.value);
-  const describedById = optionalString(
-    "Input",
-    "options.describedById",
-    props.options.describedById,
-  );
-  const id = optionalString("Input", "options.id", props.options.id);
-  const name = optionalString("Input", "options.name", props.options.name);
-  const state = optionValue(
-    "Input",
-    "options.state",
-    props.options.state,
-    ["enabled", "disabled"],
-    "enabled",
-  );
-  const validation = optionValue(
-    "Input",
-    "options.validation",
-    props.options.validation,
-    ["valid", "invalid"],
-    "valid",
-  );
-
-  return (
-    <input
-      aria-describedby={describedById}
-      aria-invalid={validation === "invalid" ? "true" : undefined}
-      class={classNames(
-        "m-atom-input",
-        validation === "invalid" && "is-invalid",
-      )}
-      disabled={state !== "enabled"}
-      id={id}
-      name={name}
-      onInput={props.onInput}
-      type="date"
-      value={value}
-    />
-  );
-}
+export const Input = defineAtom<InputProps>({
+  name: "Input",
+  defaults: {
+    describedById: undefined,
+    id: undefined,
+    name: undefined,
+    state: "enabled",
+    validation: "valid",
+  } as const satisfies AtomDefaults<InputProps>,
+  render({ onInput, options, value }) {
+    return (
+      <input
+        aria-describedby={options.describedById}
+        aria-invalid={options.validation === "invalid" ? "true" : undefined}
+        class={classNames(
+          "m-atom-input",
+          options.validation === "invalid" && "is-invalid",
+        )}
+        disabled={options.state !== "enabled"}
+        id={options.id}
+        name={options.name}
+        onInput={onInput}
+        type="date"
+        value={value}
+      />
+    );
+  },
+});

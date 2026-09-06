@@ -1,31 +1,25 @@
-import type { JSX } from "solid-js";
-import {
-  assertOptions,
-  assertProps,
-  optionalString,
-  requireContent,
-  requireString,
-} from "./config";
+import type { AtomContent } from "./config";
+import { defineAtom, type AtomDefaults } from "./define";
 
 type LabelOptions = {
   id: string;
 };
 export type LabelProps = {
-  content: JSX.Element;
+  content: AtomContent;
   controlId: string;
   options: Partial<LabelOptions>;
 };
 
-export function Label(props: LabelProps) {
-  assertProps("Label", props);
-  assertOptions("Label", props.options);
-  requireContent("Label", "content", props.content);
-  const controlId = requireString("Label", "controlId", props.controlId);
-  const id = optionalString("Label", "options.id", props.options.id);
-
-  return (
-    <label class="m-atom-label" for={controlId} id={id}>
-      {props.content}
-    </label>
-  );
-}
+export const Label = defineAtom<LabelProps>({
+  name: "Label",
+  defaults: {
+    id: undefined,
+  } as const satisfies AtomDefaults<LabelProps>,
+  render({ content, controlId, options }) {
+    return (
+      <label class="m-atom-label" for={controlId} id={options.id}>
+        {content}
+      </label>
+    );
+  },
+});

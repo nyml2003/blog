@@ -1,83 +1,48 @@
 import type { JSX } from "solid-js";
-import {
-  assertOptions,
-  assertProps,
-  classNames,
-  optionValue,
-  optionalFunction,
-  optionalOptionValue,
-  optionalString,
-  requireContent,
-  requireString,
-} from "./config";
+import { classNames, type AtomContent } from "./config";
+import { defineAtom, type AtomDefaults } from "./define";
+
+type LinkAriaCurrent = "page" | "step" | "location" | "date" | "time" | "true";
+type LinkTarget = "_self" | "_blank";
+type LinkVariant = "inline" | "action";
 
 type LinkOptions = {
-  ariaCurrent: "page" | "step" | "location" | "date" | "time" | "true";
+  ariaCurrent: LinkAriaCurrent;
   id: string;
   onClick: JSX.EventHandlerUnion<HTMLAnchorElement, MouseEvent>;
   rel: string;
-  target: "_self" | "_blank";
-  variant: "inline" | "action";
+  target: LinkTarget;
+  variant: LinkVariant;
 };
 export type LinkProps = {
-  content: JSX.Element;
+  content: AtomContent;
   href: string;
   options: Partial<LinkOptions>;
 };
 
-function hasSafeNewWindowRel(rel: string | undefined): boolean {
-  if (rel === undefined) {
-    return false;
-  }
-  const tokens = rel.split(/\s+/);
-  return tokens.includes("noopener") && tokens.includes("noreferrer");
-}
-
-export function Link(props: LinkProps) {
-  assertProps("Link", props);
-  assertOptions("Link", props.options);
-  requireContent("Link", "content", props.content);
-  requireString("Link", "href", props.href);
-  optionalFunction("Link", "options.onClick", props.options.onClick);
-  const variant = optionValue(
-    "Link",
-    "options.variant",
-    props.options.variant,
-    ["inline", "action"],
-    "inline",
-  );
-  const target = optionValue(
-    "Link",
-    "options.target",
-    props.options.target,
-    ["_self", "_blank"],
-    "_self",
-  );
-  const ariaCurrent = optionalOptionValue(
-    "Link",
-    "options.ariaCurrent",
-    props.options.ariaCurrent,
-    ["page", "step", "location", "date", "time", "true"],
-  );
-  const id = optionalString("Link", "options.id", props.options.id);
-  const rel = optionalString("Link", "options.rel", props.options.rel);
-  if (target === "_blank" && !hasSafeNewWindowRel(rel)) {
-    throw new Error(
-      "C Mobile atom: Link.options.rel must include noopener and noreferrer for target _blank.",
+export const Link = defineAtom<LinkProps>({
+  name: "Link",
+  defaults: {
+    ariaCurrent: undefined,
+    id: undefined,
+    onClick: undefined,
+    rel: undefined,
+    target: "_self",
+    variant: "inline",
+  } as const satisfies AtomDefaults<LinkProps>,
+  render({ content, href, options }) {
+    return (
+      <a
+        aria-current={options.ariaCurrent}
+        class={classNames("m-atom-link", `m-atom-link--${options.variant}`)}
+        href={href}
+        id={options.id}
+        onClick={options.onClick}
+        rel={options.rel}
+        target={options.target}
+      >
+        {content}
+      </a>
     );
-  }
-
-  return (
-    <a
-      aria-current={ariaCurrent}
-      class={classNames("m-atom-link", `m-atom-link--${variant}`)}
-      href={props.href}
-      id={id}
-      onClick={props.options.onClick}
-      rel={rel}
-      target={target}
-    >
-      {props.content}
-    </a>
-  );
-}
+  },
+});

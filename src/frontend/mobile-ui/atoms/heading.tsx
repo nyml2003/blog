@@ -1,61 +1,50 @@
-import type { JSX } from "solid-js";
-import {
-  assertOptions,
-  assertProps,
-  classNames,
-  optionValue,
-  optionalString,
-  requireContent,
-} from "./config";
+import { classNames, type AtomContent } from "./config";
+import { defineAtom, type AtomDefaults } from "./define";
+
+type HeadingAs = "h1" | "h2" | "h3";
+type HeadingSize = "page" | "section" | "card";
 
 type HeadingOptions = {
-  as: "h1" | "h2" | "h3";
+  as: HeadingAs;
   id: string;
-  size: "page" | "section" | "card";
+  size: HeadingSize;
 };
 export type HeadingProps = {
-  content: JSX.Element;
+  content: AtomContent;
   options: Partial<HeadingOptions>;
 };
 
-export function Heading(props: HeadingProps) {
-  assertProps("Heading", props);
-  assertOptions("Heading", props.options);
-  requireContent("Heading", "content", props.content);
-  const as = optionValue(
-    "Heading",
-    "options.as",
-    props.options.as,
-    ["h1", "h2", "h3"],
-    "h2",
-  );
-  const size = optionValue(
-    "Heading",
-    "options.size",
-    props.options.size,
-    ["page", "section", "card"],
-    "section",
-  );
-  const className = classNames("m-atom-heading", `m-atom-heading--${size}`);
-  const id = optionalString("Heading", "options.id", props.options.id);
+export const Heading = defineAtom<HeadingProps>({
+  name: "Heading",
+  defaults: {
+    as: "h2",
+    id: undefined,
+    size: "section",
+  } as const satisfies AtomDefaults<HeadingProps>,
+  render({ content, options }) {
+    const className = classNames(
+      "m-atom-heading",
+      `m-atom-heading--${options.size}`,
+    );
 
-  if (as === "h1") {
+    if (options.as === "h1") {
+      return (
+        <h1 class={className} id={options.id}>
+          {content}
+        </h1>
+      );
+    }
+    if (options.as === "h3") {
+      return (
+        <h3 class={className} id={options.id}>
+          {content}
+        </h3>
+      );
+    }
     return (
-      <h1 class={className} id={id}>
-        {props.content}
-      </h1>
+      <h2 class={className} id={options.id}>
+        {content}
+      </h2>
     );
-  }
-  if (as === "h3") {
-    return (
-      <h3 class={className} id={id}>
-        {props.content}
-      </h3>
-    );
-  }
-  return (
-    <h2 class={className} id={id}>
-      {props.content}
-    </h2>
-  );
-}
+  },
+});

@@ -3,7 +3,7 @@ kind: mobile-atom-contract
 plan_id: PLAN-MOBILE-CSS-ARCHITECTURE-001
 status: approved
 owner: frontend-mobile
-last_reviewed: 2026-09-05
+last_reviewed: 2026-09-06
 write_set: docs/plans/active/PLAN-MOBILE-CSS-ARCHITECTURE-001/ATOM-CONTRACT.md
 ---
 
@@ -181,21 +181,26 @@ type CheckboxProps = {
 
 实现前应由 frontend-mobile 用当前 Solid 的 DOM 类型验证事件签名；若 `InputEvent` 与 Solid JSX 的事件泛型不完全相同，只能在原子内部适配，不能把 `Event` 或 `unknown` 向上扩散。`id`、`name` 与 `describedById` 在当前实现中可省略的情形，通过不提供对应 `Partial` 键表达；它们绝不能被 `null` 表达。`ariaLabel`、`controlId`、`onInput`、Select 的 `content/onChange` 与 Checkbox 的 `onChange` 不可省略。
 
-### 运行时配置 fail-fast
+### 类型即契约
 
-TypeScript 的必填字段只保护经过类型检查的调用点，不能保护 JavaScript 调用方、`any`/不安全断言、运行时组装的 Props 或空字符串。因此每个原子在创建其 DOM 前，必须在**所有环境**执行关键语义配置校验；不得以开发环境判断、console warning、fallback UI 或 error boundary 代替该校验。
+2026-09-06 起放弃全环境运行时配置校验：TypeScript 的 strict 字面量联合与必填字段是原子的**唯一**配置防线。每个原子在渲染前只做一件运行时的事——由 `mobile-ui/atoms/define.ts` 的 `defineAtom` 把 `Partial<XxxOptions>` 与 `defaults` 合并成完整渲染模型；render 内没有校验，也没有 `?? 默认值`。
 
-校验失败必须立即抛出 `Error`，消息包含组件名、字段名和期望条件。例如：`C Mobile atom: IconButton.ariaLabel must be a non-empty string.` 这类异常表示调用方传入了无效组件配置，不能静默默认、警告后继续或自动修复语义缺失。
+防线由三层构成：
 
-| 校验类别 | 必须 fail-fast 的条件 |
+1. **Props 类型**：`XxxOptions` 的枚举字段是字面量联合；`XxxProps` 的 `content`、`href`、`value`、`checked`、`ariaLabel`、`controlId` 与受控回调保持顶层必填；`options` 是字段全部可选的 `Partial`。超出契约的字段（如 `Button` 传 `href`）与非契约字面量（如 `variant: "ghost"`）在调用点直接编译失败。
+2. **defaults 编译期锚定**：`defaults` 用 `as const satisfies AtomDefaults<XxxProps>` 声明，必须逐字覆盖 options 的全部字段。新增 option 字段而不给默认值会编译失败；给非法字面量同样编译失败。可省略的 DOM 属性（`id`、`name`、`describedById`、`rel`、`ariaCurrent`、受控回调）在 defaults 中显式取 `undefined`，组件不为它们制造空字符串或空属性。
+3. **负样例类型测试**：`mobile-ui/atoms/types.test.ts` 为每个原子提供合法受控组合与 `@ts-expect-error` 非法用法。`@ts-expect-error` 是"此处必须报错"的承诺：一旦有人放宽 Props 类型，typecheck 会因"未使用的指令"变红。运行时部分只断言 defaults 合并行为。
+
+明确放弃的运行时防线（这些输入仍会穿过类型系统，且不再抛出 `C Mobile atom:` 异常）：
+
+| 穿透通道 | 后果 |
 | --- | --- |
-| 内容 | `Text`、`Heading`、`Button`、`Link`、`Label`、`Select` 的 `content`，以及 `IconButton` 的 `icon`，解析为 `undefined`、`null`、`false` 或仅空白字符串时抛出。数值 `0` 和合法 Solid JSX 节点不是空内容。 |
-| 可访问名称与关联 | `IconButton.ariaLabel` 不是非空白字符串，或 `Label.controlId` 不是非空白字符串时抛出。 |
-| 导航 | `Link.href` 不是非空白字符串时抛出。若 `target` 为 `_blank`，`rel` 必须显式包含 `noopener` 与 `noreferrer`，否则抛出；不得自动补写该关系。 |
-| 受控回调 | `Input.onInput`、`Select.onChange` 或 `Checkbox.onChange` 不是函数时抛出。不得以 no-op 代替，避免组件表面可交互但受控值不会回传。 |
-| 枚举选项 | 任一提供的 `as`、`tone`、`size`、`type`、`variant`、`width`、`state`、`target`、`ariaCurrent`、`validation` 不属于本文件声明的有限集合时抛出。未提供的可默认选项才可使用文档指定默认值。 |
+| JavaScript 调用方、`any`、不安全断言 | 缺失或错误类型的配置不再抛出；可能渲染出缺失语义的 DOM，或由原生行为自行失败。 |
+| 运行时组装的 Props（对象拼接、解构重组） | 类型检查无法覆盖非字面量调用点，同上。 |
+| 空字符串、`false`、`null` 等可渲染但为空的内容 | `AtomContent` 即 `JSX.Element`，空内容会渲染为空节点，不再被拒绝。 |
+| `target: "_blank"` 未显式提供含 `noopener noreferrer` 的 `rel` | 不再抛出，也不会自动补写；`rel: string` 无法在类型上表达 token 组合，由调用方保证。 |
 
-这个规则只处理组件**配置错误**。业务请求失败、资源 loading、服务端字段校验、筛选业务规则、提交失败、重试与取消仍由 Data SDK、Client SDK、Solid adapter 或业务组件以其既定状态/错误模型处理；原子不得把它们转换成配置异常，也不得在原子内抛出它们。
+本节只讨论组件**配置**。业务请求失败、资源 loading、服务端字段校验、筛选业务规则、提交失败、重试与取消仍由 Data SDK、Client SDK、Solid adapter 或业务组件以其既定状态/错误模型处理；原子不得把它们转换成配置异常，也不得在原子内抛出它们。
 
 ### Props 选择说明
 
@@ -268,15 +273,19 @@ TypeScript 的必填字段只保护经过类型检查的调用点，不能保护
 本文件本身不修改源代码，因此当前不以全项目 TypeScript 绿灯作为原子完成的证据。原子独立实现 PR 必须至少提供下列证据：
 
 1. `pnpm --dir web typecheck`、`pnpm --dir web lint`、`pnpm --dir web format:check` 和 `pnpm --dir web build` 的结果；既有跨范围失败必须逐项与原子改动区分，不能以已知失败掩盖新增错误。
-2. 每个原子的 TSX 类型使用样例：合法受控组合可编译；`Button` 无 `href`、`Link` 必有 `href`、`IconButton` 必有非空 `ariaLabel`、`Label` 必有 `controlId`、Input 必有 `onInput`、Select 必有原生 option 内容和 `onChange`、Checkbox 必有 `onChange`、Input 不能选择非 `date` 类型、Select 不能接收业务数据源等非法组合被类型或明确的构造期校验拒绝。
-3. 运行时 fail-fast 测试：通过 JavaScript/`any` 边界或受控 fixture 分别传入空 `ariaLabel`、空 `controlId`、空 `href`、非函数的受控回调、空内容和非法枚举值；每项都在创建 DOM 前抛出包含组件名、字段名和期望条件的 `Error`。另测试 `_blank` 链接缺少 `noopener noreferrer` 的 `rel` 同样抛出；不得只记录 warning、渲染 fallback 或自动补值。
+2. 每个原子的 TSX 类型使用样例：合法受控组合可编译；`Button` 无 `href`、`Link` 必有 `href`、`IconButton` 必有非空 `ariaLabel`、`Label` 必有 `controlId`、Input 必有 `onInput`、Select 必有原生 option 内容和 `onChange`、Checkbox 必有 `onChange`、Input 不能选择非 `date` 类型、Select 不能接收业务数据源等非法组合被类型拒绝。以上正负样例固定在 `mobile-ui/atoms/types.test.ts`。
+3. `defineAtom` 的 defaults 合并测试：部分传入 `options` 时 render 收到完整渲染模型，未传入的字段取 `defaults` 值。原运行时 fail-fast 测试已随运行时校验一并移除，不再作为验收证据。
 4. 结构测试或等价 DOM 断言：Button/IconButton 渲染 button，Link 渲染 anchor，Label 正确关联控件，Input/Checkbox 固定原生 type，Select 保留 option，invalid/loading/disabled 映射到规定的原生或 ARIA 属性。
 5. 键盘和状态测试：Tab 焦点可见；Space/Enter 保持原生 Button/Checkbox 行为；disabled/loading 不触发回调；Select 和 date input 的 change/input 向上交付最新受控值；invalid 有可访问描述关联。
 6. `375x812`、窄屏 `360px`、文字缩放和 reduced-motion 检查：无横向溢出，44px 控件不缩小，状态切换无布局抖动。正式接入业务组件前，还要将该检查纳入 `REGRESSION-BASELINE.md`。
 7. 依赖边界检查：原子目录的 import 图只可指向 Solid、原子内部文件及已批准的 token/class helper；不得出现 `common/data`、`solid/data`、Client SDK、业务组件、页面或 Desktop 路径。
 
-交接前在当前工作树运行的 `ops quality check`、`pnpm --dir web format:check`、typecheck、lint、build、`test:core` 和原子 fail-fast 单测均通过，详见 `PM-STATUS.md` 的“质量基线与阻塞项”。原子实现完成后的任何改动仍必须复跑并逐项对比该基线；这些静态结果不替代未来页面消费者的浏览器回归验收。
+交接前在当前工作树运行的 `ops quality check`、`pnpm --dir web format:check`、typecheck、lint、build、`test:core` 和原子类型契约单测（`mobile-ui/atoms/types.test.ts`）均通过，详见 `PM-STATUS.md` 的“质量基线与阻塞项”。原子实现完成后的任何改动仍必须复跑并逐项对比该基线；这些静态结果不替代未来页面消费者的浏览器回归验收。
 
 ## 接入门槛
 
 只有在本契约经 PM 审定、原子实现与独立验证完成、样式 inventory 冻结且 `COMPONENT-LIBRARY.md` 已用本文件 API 编写完成后，业务组件才可按独立迁移任务开始消费原子。接入顺序为原子 -> 分子（如有证据）-> 业务组件 -> 页面；不得通过一次重写 Filter 或 Shelf 来同时验证组件库与 CSS 架构。
+
+## 修订记录
+
+- 2026-09-06：由用户决策，以「类型即契约」取代「全环境运行时 fail-fast」。理由：单人、全 TypeScript strict 的工作流中类型防线真实存在，而运行时校验只能覆盖少数穿透通道；删除后消除 `config.ts` 的 12 个校验 helper、九原子内的校验样板（九组件由 613 行降至 425 行）与每次渲染的校验开销。Props 类型与导出面不变；新增 `mobile-ui/atoms/define.ts` 的 `defineAtom`（defaults 编译期锚定 + `Partial` 合并），`config.test.ts` 的 6 条运行时 fail-fast 测试由 `types.test.ts` 的 `@ts-expect-error` 类型负样例与 defaults 合并断言取代。明确放弃的防线见「类型即契约」节，其中 `Link` 的 `_blank`/`rel` 组合从"抛错"变为"调用方责任"。

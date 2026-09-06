@@ -3,7 +3,7 @@ kind: plan-pm-status
 plan_id: PLAN-MOBILE-CSS-ARCHITECTURE-001
 status: in_progress
 owner: project-manager
-last_reviewed: 2026-09-05
+last_reviewed: 2026-09-06
 ---
 
 # PM 执行状态
@@ -59,9 +59,9 @@ last_reviewed: 2026-09-05
 ### 审计后实施决定
 
 - 原子 CSS 的唯一文件为 `src/frontend/mobile-ui/styles/atoms.css`，不再把按钮或表单控件继续混入业务 `components.css`；它只依赖 `tokens.css`、`base.css`，并在后续 CSS 迁移中早于业务模块加载。
-- 原子源码的唯一入口为 `src/frontend/mobile-ui/atoms/index.ts`；未来调用方只能通过这个入口具名导入，不深度导入实现文件。实现已包含九个原子、统一配置校验 helper、组件级 fail-fast 单测和独占 `atoms.css`。
+- 原子源码的唯一入口为 `src/frontend/mobile-ui/atoms/index.ts`；未来调用方只能通过这个入口具名导入，不深度导入实现文件。实现已包含九个原子、`defineAtom` 类型工厂与独占 `atoms.css`（2026-09-06 起不再有运行时配置校验 helper）。
 - `FilterPanel`、Shelf、ArticleRow、导航、StateMessage、阅读页、文章正文和页面 JSX 在当前工作流中均为冻结消费者。原子库完整实现且独立验证后，才讨论单独的接入任务。
-- 类型检查和运行时 fail-fast 共同保护原子 Props。语义/受控协议配置不完整时，必须在所有环境、DOM 创建前抛出带组件名和字段名的 `Error`；不得用静默默认、warning、fallback 或 no-op 掩盖。
+- TypeScript strict 的字面量联合与必填字段是原子 Props 的唯一防线（2026-09-06 用户决策，取代原先的"类型 + 运行时 fail-fast"双防线）。`defaults` 用 `satisfies` 编译期锚定，`types.test.ts` 的 `@ts-expect-error` 负样例固定契约；JS 调用方、`any` 穿透、运行时拼装 Props、空内容与 `Link` `_blank` 的 `rel` 组合不再有运行时抛错，详见 ATOM-CONTRACT「类型即契约」节。
 
 ## 原子与客户端基建的边界
 
@@ -142,3 +142,7 @@ Web typecheck、Oxlint、production build、依赖边界和 9 个 core/resource 
 ## PM 决策（2026-09-06 晚）：跳过自动化基线，直接开始 CSS 迁移
 
 用户裁定：REGRESSION-BASELINE 的开工 gate 中「迁移前截图基线」由用户在迁移完成后人工验收替代；阶段 A 自动化采集取消（agent 已中止）。静态质量门禁（typecheck/lint/format/build/test + ops quality check）仍为迁移每步的硬性验收。视觉/交互回归改为：迁移完成后用户人工对照验收，P0/P1 判定标准仍以 REGRESSION-BASELINE.md 为准。原子库已抽取至 `src/frontend/mobile-ui/`（atoms 入口不变）。WORKSTREAM-MOBILE-CSS-MIGRATION 即日起置 in_progress，按 MIGRATION-RUNBOOK R0→R5 执行，R6 消费迁移仍需单独审批。
+
+## PM 决策（2026-09-06）：原子库改为「类型即契约」
+
+用户批准以 `defineAtom` 类型工厂取代全环境运行时配置校验：删除 `config.ts` 的 12 个校验 helper 与九原子 render 内的全部校验样板（九组件 613 行 -> 425 行），运行时只剩 defaults 合并；`config.test.ts` 的 6 条运行时 fail-fast 测试删除，由 `types.test.ts` 的 12 条 `@ts-expect-error` 类型负样例、9 条合法组合与 1 条 defaults 合并断言取代。Props 接口与 `index.ts` 导出面不变，业务零消费，不影响 CSS 迁移。放弃的运行时防线（JS 调用方、`any` 穿透、运行时拼装 Props、空内容、`Link` `_blank` 的 `rel` 组合）已记录在 ATOM-CONTRACT「类型即契约」节。当前原子目录门禁：`ops quality check`、typecheck、lint、format:check、build 与 `tsx --test mobile-ui/atoms/types.test.ts` 全绿；`HANDOVER.md` 与 `REGRESSION-BASELINE.md` 中对 fail-fast 的描述已过时，待其各自维护者按写集更新。

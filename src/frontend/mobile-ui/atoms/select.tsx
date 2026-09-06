@@ -1,15 +1,6 @@
 import type { JSX } from "solid-js";
-import {
-  assertOptions,
-  assertProps,
-  classNames,
-  optionValue,
-  optionalString,
-  requireContent,
-  requireFunction,
-  requireStringValue,
-  type ValidationState,
-} from "./config";
+import { classNames, type AtomContent, type ValidationState } from "./config";
+import { defineAtom, type AtomDefaults } from "./define";
 
 type SelectOptions = {
   describedById: string;
@@ -19,55 +10,38 @@ type SelectOptions = {
   validation: ValidationState;
 };
 export type SelectProps = {
-  content: JSX.Element;
+  content: AtomContent;
   onChange: JSX.ChangeEventHandler<HTMLSelectElement, Event>;
   options: Partial<SelectOptions>;
   value: string;
 };
 
-export function Select(props: SelectProps) {
-  assertProps("Select", props);
-  assertOptions("Select", props.options);
-  requireContent("Select", "content", props.content);
-  requireFunction("Select", "onChange", props.onChange);
-  const value = requireStringValue("Select", "value", props.value);
-  const describedById = optionalString(
-    "Select",
-    "options.describedById",
-    props.options.describedById,
-  );
-  const id = optionalString("Select", "options.id", props.options.id);
-  const name = optionalString("Select", "options.name", props.options.name);
-  const state = optionValue(
-    "Select",
-    "options.state",
-    props.options.state,
-    ["enabled", "disabled"],
-    "enabled",
-  );
-  const validation = optionValue(
-    "Select",
-    "options.validation",
-    props.options.validation,
-    ["valid", "invalid"],
-    "valid",
-  );
-
-  return (
-    <select
-      aria-describedby={describedById}
-      aria-invalid={validation === "invalid" ? "true" : undefined}
-      class={classNames(
-        "m-atom-select",
-        validation === "invalid" && "is-invalid",
-      )}
-      disabled={state !== "enabled"}
-      id={id}
-      name={name}
-      onChange={props.onChange}
-      value={value}
-    >
-      {props.content}
-    </select>
-  );
-}
+export const Select = defineAtom<SelectProps>({
+  name: "Select",
+  defaults: {
+    describedById: undefined,
+    id: undefined,
+    name: undefined,
+    state: "enabled",
+    validation: "valid",
+  } as const satisfies AtomDefaults<SelectProps>,
+  render({ content, onChange, options, value }) {
+    return (
+      <select
+        aria-describedby={options.describedById}
+        aria-invalid={options.validation === "invalid" ? "true" : undefined}
+        class={classNames(
+          "m-atom-select",
+          options.validation === "invalid" && "is-invalid",
+        )}
+        disabled={options.state !== "enabled"}
+        id={options.id}
+        name={options.name}
+        onChange={onChange}
+        value={value}
+      >
+        {content}
+      </select>
+    );
+  },
+});
