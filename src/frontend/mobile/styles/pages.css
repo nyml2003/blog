@@ -60,6 +60,39 @@
   grid-template-columns: minmax(0, 1fr);
   border-top: 2px solid var(--ink);
 }
+.mobile-t-shelf {
+  min-width: 0;
+  border-top: 2px solid var(--ink);
+}
+.mobile-t-shelf-filters {
+  min-height: 50px;
+  max-width: 100%;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border);
+}
+.mobile-t-shelf-filters .m-tab-group {
+  min-height: 49px;
+}
+
+.mobile-t-shelf-filters .m-atom-tab {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.mobile-t-shelf-content {
+  min-height: 260px;
+}
+.mobile-t-shelf-count {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.mobile-t-shelf-content .article-list {
+  border-top-width: 1px;
+}
 /* Shelf sections and the flat list share one card shape (component:
    ui.tsx `ArticleCard`). Card visuals live here as the single source. */
 .article-card {

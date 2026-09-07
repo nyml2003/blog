@@ -1,5 +1,5 @@
 import { type Accessor, createEffect, createSignal, onCleanup } from "solid-js";
-import type { DeepReadonly } from "../../../../common/data/readonly";
+import type { QueryReadonly as DeepReadonly } from "../../../../solid/queries";
 import type {
   HtmlDiagnostic,
   HtmlInspection,

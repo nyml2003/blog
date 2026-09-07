@@ -121,6 +121,7 @@ pub fn usage() -> String {
          ENDPOINTS:\n    \
          GET /healthz\n    \
          GET /api/public/articles      sceneCode=public.article_list\n    \
+         GET /api/public/t-shelf       sceneCode=public.t_shelf\n    \
          GET /mock/diagnostics         scenario + session + request counters",
         scenario::DEFAULT_NAME,
         scenario::SLOW_DELAY_MS

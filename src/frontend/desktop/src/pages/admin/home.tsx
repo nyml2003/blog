@@ -1,22 +1,19 @@
 import { createSignal, Show } from "solid-js";
-import { definePage } from "../../../../common/page";
-import { browserClient as client } from "../../../../common/client";
-import { useDataResource } from "../../../../solid/data";
-import { Header, Shelf, Status } from "../../app";
+import { definePage } from "../../../../solid/page";
+import {
+  generateRecommendations,
+  useAdminArticles,
+} from "../../../../solid/queries";
+import { AdminArticleTable, Header, Status } from "../../app";
 
 const App = () => {
-  const d = useDataResource(
-    () => undefined,
-    () => client.adminArticles.list(),
-  );
+  const d = useAdminArticles();
   const [busy, setBusy] = createSignal(false),
     [msg, setMsg] = createSignal("");
   const generate = async () => {
     setBusy(true);
     try {
-      const result = await client.adminArticles
-        .generateRecommendations()
-        .start();
+      const result = await generateRecommendations();
       if (!result.ok) throw new Error(result.error.kind);
       setMsg("推荐已更新");
     } catch (e) {
@@ -46,7 +43,7 @@ const App = () => {
         </div>
         <Status busy={busy()} ok={msg()} />
         <Show when={d.snapshot()} fallback={<div class="state">加载中...</div>}>
-          <Shelf items={d.snapshot()?.items || []} variant="admin" />
+          <AdminArticleTable items={d.snapshot()?.items || []} />
         </Show>
       </main>
     </div>

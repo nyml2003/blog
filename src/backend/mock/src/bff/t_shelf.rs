@@ -2,7 +2,7 @@
 
 use protocol::envelope::codes;
 use protocol::wire::{self, TShelfData};
-use protocol::{ArticleShelfQuery, ArticleTypeListQuery, OperationFailure};
+use protocol::{ArticleListQuery, ArticleTypeListQuery, OperationFailure};
 
 use crate::domain::DomainState;
 
@@ -43,10 +43,7 @@ pub fn request(
     })
 }
 
-pub fn load(
-    domain: &DomainState,
-    request: &TShelfRequest,
-) -> Result<TShelfData, OperationFailure> {
+pub fn load(domain: &DomainState, request: &TShelfRequest) -> Result<TShelfData, OperationFailure> {
     let types = domain.article_type_list(&ArticleTypeListQuery::default());
     validate_selected_type(&types, request.selected_type_id)?;
     let (articles, total) = match request.surface {
@@ -70,15 +67,17 @@ pub fn load(
             )
         }
         TShelfSurface::Archive => {
-            let shelf = domain.article_shelf(&ArticleShelfQuery {
+            let page = domain.article_list(&ArticleListQuery {
+                page: Some(1),
+                page_size: Some(T_SHELF_LIMIT as u32),
                 article_type_id: request.selected_type_id,
-                include_recommendation: false,
-                ..ArticleShelfQuery::default()
-            });
-            let total = usize::try_from(shelf.total)
+                published_only: true,
+                ..ArticleListQuery::default()
+            })?;
+            let total = usize::try_from(page.total)
                 .map_err(|_| internal("archive shelf returned a negative total"))?;
             (
-                wire::to_shelf_cards(&shelf.articles)
+                wire::to_shelf_cards(&page.items)
                     .into_iter()
                     .take(T_SHELF_LIMIT)
                     .collect(),

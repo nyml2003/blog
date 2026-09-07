@@ -1,7 +1,7 @@
 ---
 kind: workstream
 id: WORKSTREAM-GUARDRAIL
-status: in_progress
+status: completed
 plan_id: PLAN-ARCH-BOUNDARY-001
 role: infra
 owner: infra
@@ -16,7 +16,7 @@ write_set:
   - src/frontend/package.json
   - docs/guides/testing.md
   - docs/specs/SPEC-ARCH-BOUNDARY-001.md
-last_reviewed: 2026-09-06
+last_reviewed: 2026-09-07
 ---
 
 # 工作流：分层门禁（R1）
@@ -61,3 +61,6 @@ last_reviewed: 2026-09-06
 ## 交付记录
 
 - 2026-09-07：执行启动；写集补入 API golden、Rust/TS 对照测试和 `test:core` 集成入口。
+- 2026-09-07：`ops quality check` 已接入真实路径感知的前端 import 与 Rust 模块边界扫描，忽略构建产物目录；规则正负样例 6 项通过，当前仓库扫描零违规、零豁免。
+- 2026-09-07：`docs/api/routes.json` 固定 21 条 `method × endpoint × sceneCode`；Rust 生产路由、scene 校验与测试共用 `protocol::scene::ROUTES`，Product golden 测试逐条请求真实 binary，TS 通过可枚举的 client 路由表核对同一清单。
+- 2026-09-07：ops 契约测试 97 项（85 通过、12 跳过、0 失败）；最终 `ops quality check` 全部通过，包含 Rust fmt/clippy/test、前端 typecheck/lint/format/test:core/build、ops 契约测试与架构边界检查。

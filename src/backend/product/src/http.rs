@@ -20,6 +20,7 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::{any, get};
 use serde::Deserialize;
 
+use crate::bff;
 use crate::data_client::{DataCallError, DataClient};
 use crate::static_files::StaticFiles;
 use protocol::envelope::codes;
@@ -28,8 +29,8 @@ use protocol::wire::code;
 use protocol::wire::{self, Envelope};
 use protocol::{
     ArticleBrowseQuery, ArticleGetQuery, ArticleId, ArticleListPage, ArticleListQuery,
-    ArticleShelfQuery, ArticleTypeListQuery, ArticleTypeName, ArticleTypeRename, ArticleWrite,
-    DataOperation, TermListQuery, TermRename, TermWrite, has_more,
+    ArticleTypeListQuery, ArticleTypeName, ArticleTypeRename, ArticleWrite, DataOperation,
+    TermListQuery, TermRename, TermWrite, has_more,
 };
 
 /// 入口绝对 deadline；Data 收到的是剩余预算（deadline 沿链路传播）。
@@ -47,19 +48,32 @@ pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/healthz", get(healthz))
         // 公开
-        .route("/api/public/articles", any(public_articles))
-        .route("/api/public/article-types", any(public_article_types))
-        .route("/api/public/terms", any(public_terms))
-        .route("/api/public/recommendations", any(public_recommendations))
+        .route(scene::PUBLIC_ARTICLES_ENDPOINT, any(public_articles))
         .route(
-            "/api/public/mobile/article-shelf",
+            scene::PUBLIC_ARTICLE_TYPES_ENDPOINT,
+            any(public_article_types),
+        )
+        .route(scene::PUBLIC_TERMS_ENDPOINT, any(public_terms))
+        .route(
+            scene::PUBLIC_RECOMMENDATIONS_ENDPOINT,
+            any(public_recommendations),
+        )
+        .route(
+            scene::MOBILE_ARTICLE_SHELF_ENDPOINT,
             any(mobile_article_shelf),
         )
+        .route(scene::T_SHELF_ENDPOINT, any(t_shelf))
         // 管理
-        .route("/api/admin/articles", any(admin_articles))
-        .route("/api/admin/article-types", any(admin_article_types))
-        .route("/api/admin/terms", any(admin_terms))
-        .route("/api/admin/recommendations", any(admin_recommendations))
+        .route(scene::ADMIN_ARTICLES_ENDPOINT, any(admin_articles))
+        .route(
+            scene::ADMIN_ARTICLE_TYPES_ENDPOINT,
+            any(admin_article_types),
+        )
+        .route(scene::ADMIN_TERMS_ENDPOINT, any(admin_terms))
+        .route(
+            scene::ADMIN_RECOMMENDATIONS_ENDPOINT,
+            any(admin_recommendations),
+        )
         .route("/product/diagnostics", get(diagnostics))
         // MODE-004：`web/dist` 静态挂载（页面 + 静态资源 + `/api` 同源）。
         .fallback(fallback)
@@ -112,7 +126,15 @@ async fn public_articles(
     if method != Method::GET {
         return method_not_allowed();
     }
-    match params.get("sceneCode").map(String::as_str) {
+    let scene_code = params.get("sceneCode").map(String::as_str);
+    if !scene::supports(
+        method.as_str(),
+        scene::PUBLIC_ARTICLES_ENDPOINT,
+        scene_code.unwrap_or_default(),
+    ) {
+        return unknown_scene_code();
+    }
+    match scene_code {
         Some(scene::ARTICLE_LIST) => article_list_handler(&state, &params, true).await,
         Some(scene::ARTICLE_BROWSE) => article_browse_handler(&state, &params).await,
         Some(scene::ARTICLE_DETAIL) => {
@@ -131,9 +153,14 @@ async fn public_article_types(
     method: Method,
     Query(params): Query<HashMap<String, String>>,
 ) -> Response {
-    if method != Method::GET
-        || params.get("sceneCode").map(String::as_str) != Some(scene::ARTICLE_TYPE_LIST)
-    {
+    if !scene::supports(
+        method.as_str(),
+        scene::PUBLIC_ARTICLE_TYPES_ENDPOINT,
+        params
+            .get("sceneCode")
+            .map(String::as_str)
+            .unwrap_or_default(),
+    ) {
         return unknown_scene_code();
     }
     respond(
@@ -154,9 +181,14 @@ async fn public_terms(
     method: Method,
     Query(params): Query<HashMap<String, String>>,
 ) -> Response {
-    if method != Method::GET
-        || params.get("sceneCode").map(String::as_str) != Some(scene::TERM_LIST)
-    {
+    if !scene::supports(
+        method.as_str(),
+        scene::PUBLIC_TERMS_ENDPOINT,
+        params
+            .get("sceneCode")
+            .map(String::as_str)
+            .unwrap_or_default(),
+    ) {
         return unknown_scene_code();
     }
     let kind = params.get("kind").filter(|kind| !kind.is_empty()).cloned();
@@ -178,9 +210,14 @@ async fn public_recommendations(
     method: Method,
     Query(params): Query<HashMap<String, String>>,
 ) -> Response {
-    if method != Method::GET
-        || params.get("sceneCode").map(String::as_str) != Some(scene::RECOMMENDATION_CURRENT)
-    {
+    if !scene::supports(
+        method.as_str(),
+        scene::PUBLIC_RECOMMENDATIONS_ENDPOINT,
+        params
+            .get("sceneCode")
+            .map(String::as_str)
+            .unwrap_or_default(),
+    ) {
         return unknown_scene_code();
     }
     respond(
@@ -202,37 +239,31 @@ async fn mobile_article_shelf(
     method: Method,
     Query(params): Query<HashMap<String, String>>,
 ) -> Response {
-    if method != Method::GET
-        || params.get("sceneCode").map(String::as_str) != Some(scene::MOBILE_ARTICLE_SHELF)
-    {
+    if !scene::supports(
+        method.as_str(),
+        scene::MOBILE_ARTICLE_SHELF_ENDPOINT,
+        params
+            .get("sceneCode")
+            .map(String::as_str)
+            .unwrap_or_default(),
+    ) {
         return unknown_scene_code();
     }
-    let query = ArticleShelfQuery {
+    let plan = bff::mobile_shelf::plan(bff::mobile_shelf::MobileShelfRequest {
         article_type_id: parse_i64(params.get("type_id")),
         term_ids: parse_id_list(params.get("term_ids")),
         created_from: non_empty(params.get("created_from")),
         created_to: non_empty(params.get("created_to")),
         updated_from: non_empty(params.get("updated_from")),
         updated_to: non_empty(params.get("updated_to")),
-        include_recommendation: true,
-    };
-    let has_filters = query.article_type_id.is_some()
-        || !query.term_ids.is_empty()
-        || query.created_from.is_some()
-        || query.created_to.is_some()
-        || query.updated_from.is_some()
-        || query.updated_to.is_some();
-    // 无筛选时才带推荐（BFF 的推荐 section 规则），查询数固定 7 / 4。
-    let query = ArticleShelfQuery {
-        include_recommendation: !has_filters,
-        ..query
-    };
+    });
+    let has_filters = plan.has_filters;
     let started = Instant::now();
     let result = state
         .data
         .call(
             &request_id("shelf"),
-            &DataOperation::ArticleShelf(query),
+            &DataOperation::ArticleShelf(plan.query),
             ENTRY_BUDGET,
         )
         .await;
@@ -241,24 +272,93 @@ async fn mobile_article_shelf(
             let protocol::DataOutcome::ArticleShelf(shelf) = trace.outcome else {
                 return data_failure(&DataCallError::Unavailable(unexpected_payload().0), "shelf");
             };
+            let body = bff::mobile_shelf::assemble(&shelf, has_filters);
+            let item_count: usize = body
+                .sections
+                .iter()
+                .map(|section| section.articles.len())
+                .sum();
             crate::product_info!(
                 "GET /api/public/mobile/article-shelf scene={} items={} sections={} data_calls=1 data_queries={} data_elapsed_ms={} elapsed_ms={}",
-                shelf.articles.len(),
-                shelf.total,
-                shelf.article_types.len(),
+                scene::MOBILE_ARTICLE_SHELF,
+                item_count,
+                body.sections.len(),
                 trace.query_count.unwrap_or_default(),
                 trace.elapsed.as_millis(),
                 started.elapsed().as_millis()
             );
-            let body = wire::to_shelf(
-                &shelf.article_types,
-                &shelf.articles,
-                &shelf.recommendation,
-                has_filters,
-            );
             envelope(&Envelope::ok(body), StatusCode::OK)
         }
         Err(error) => data_failure(&error, "shelf"),
+    }
+}
+
+/// 公开端 T 型货架的 HTTP 适配：参数解析后把 surface / filter 编排交给 BFF。
+async fn t_shelf(
+    State(state): State<Arc<AppState>>,
+    method: Method,
+    Query(params): Query<HashMap<String, String>>,
+) -> Response {
+    if !scene::supports(
+        method.as_str(),
+        scene::T_SHELF_ENDPOINT,
+        params
+            .get("sceneCode")
+            .map(String::as_str)
+            .unwrap_or_default(),
+    ) {
+        return unknown_scene_code();
+    }
+    let plan = match bff::t_shelf::plan(
+        params.get("surface").map(String::as_str),
+        params.get("filter_id").map(String::as_str),
+    ) {
+        Ok(plan) => plan,
+        Err(failure) => {
+            return data_failure(&DataCallError::Failure(failure), "t_shelf");
+        }
+    };
+    let started = Instant::now();
+    let mut outcomes = Vec::with_capacity(plan.operations.len());
+    let mut query_count = 0_u32;
+    let mut data_elapsed = Duration::ZERO;
+    for (index, operation) in plan.operations.iter().enumerate() {
+        let remaining = ENTRY_BUDGET.saturating_sub(started.elapsed());
+        if remaining.is_zero() {
+            return data_failure(&DataCallError::DeadlineExceeded, "t_shelf");
+        }
+        let result = state
+            .data
+            .call(
+                &request_id(&format!("t-shelf-{index}")),
+                operation,
+                remaining,
+            )
+            .await;
+        match result {
+            Ok(trace) => {
+                query_count += trace.query_count.unwrap_or_default();
+                data_elapsed += trace.elapsed;
+                outcomes.push(trace.outcome);
+            }
+            Err(error) => return data_failure(&error, "t_shelf"),
+        }
+    }
+    match bff::t_shelf::assemble(&plan, outcomes) {
+        Ok(body) => {
+            crate::product_info!(
+                "GET /api/public/t-shelf scene={} items={} total={} data_calls={} data_queries={} data_elapsed_ms={} elapsed_ms={}",
+                scene::T_SHELF,
+                body.articles.len(),
+                body.total,
+                plan.operations.len(),
+                query_count,
+                data_elapsed.as_millis(),
+                started.elapsed().as_millis()
+            );
+            envelope(&Envelope::ok(body), StatusCode::OK)
+        }
+        Err(failure) => data_failure(&DataCallError::Failure(failure), "t_shelf"),
     }
 }
 
@@ -451,23 +551,35 @@ async fn admin_articles(
     body: axum::body::Bytes,
 ) -> Response {
     match method {
-        Method::GET => match params.get("sceneCode").map(String::as_str) {
-            Some(scene::ADMIN_ARTICLE_LIST) => article_list_handler(&state, &params, false).await,
-            Some(scene::ADMIN_ARTICLE_DETAIL) => {
-                let id = required_id(&params);
-                if id.is_none() {
-                    return invalid_id();
-                }
-                article_detail(
-                    &state,
-                    id.unwrap_or_default(),
-                    false,
-                    scene::ADMIN_ARTICLE_DETAIL,
-                )
-                .await
+        Method::GET => {
+            let scene_code = params.get("sceneCode").map(String::as_str);
+            if !scene::supports(
+                method.as_str(),
+                scene::ADMIN_ARTICLES_ENDPOINT,
+                scene_code.unwrap_or_default(),
+            ) {
+                return unknown_scene_code();
             }
-            _ => unknown_scene_code(),
-        },
+            match scene_code {
+                Some(scene::ADMIN_ARTICLE_LIST) => {
+                    article_list_handler(&state, &params, false).await
+                }
+                Some(scene::ADMIN_ARTICLE_DETAIL) => {
+                    let id = required_id(&params);
+                    if id.is_none() {
+                        return invalid_id();
+                    }
+                    article_detail(
+                        &state,
+                        id.unwrap_or_default(),
+                        false,
+                        scene::ADMIN_ARTICLE_DETAIL,
+                    )
+                    .await
+                }
+                _ => unknown_scene_code(),
+            }
+        }
         Method::POST => {
             let Ok(payload) = serde_json::from_slice::<AdminArticleBody>(&body) else {
                 return envelope(
@@ -521,6 +633,9 @@ fn invalid_html(inspection: article_html_core::Inspection) -> Response {
 async fn mutate_article(state: &Arc<AppState>, payload: &AdminArticleBody) -> Response {
     let started = Instant::now();
     let scene = payload.scene_code.as_deref().unwrap_or_default();
+    if !protocol::scene::supports("POST", protocol::scene::ADMIN_ARTICLES_ENDPOINT, scene) {
+        return unknown_scene_code();
+    }
     let mut inspection = None;
     let operation = match scene {
         scene::ADMIN_ARTICLE_CREATE => {
@@ -649,7 +764,14 @@ async fn admin_article_types(
 ) -> Response {
     match method {
         Method::GET => {
-            if params.get("sceneCode").map(String::as_str) != Some(scene::ADMIN_ARTICLE_TYPE_LIST) {
+            if !scene::supports(
+                method.as_str(),
+                scene::ADMIN_ARTICLE_TYPES_ENDPOINT,
+                params
+                    .get("sceneCode")
+                    .map(String::as_str)
+                    .unwrap_or_default(),
+            ) {
                 return unknown_scene_code();
             }
             respond(
@@ -674,6 +796,13 @@ async fn admin_article_types(
                     StatusCode::BAD_REQUEST,
                 );
             };
+            if !scene::supports(
+                method.as_str(),
+                scene::ADMIN_ARTICLE_TYPES_ENDPOINT,
+                payload.scene_code.as_deref().unwrap_or_default(),
+            ) {
+                return unknown_scene_code();
+            }
             let operation = match payload.scene_code.as_deref() {
                 Some(scene::ADMIN_ARTICLE_TYPE_CREATE) => {
                     DataOperation::ArticleTypeCreate(ArticleTypeName {
@@ -730,7 +859,14 @@ async fn admin_terms(
 ) -> Response {
     match method {
         Method::GET => {
-            if params.get("sceneCode").map(String::as_str) != Some(scene::ADMIN_TERM_LIST) {
+            if !scene::supports(
+                method.as_str(),
+                scene::ADMIN_TERMS_ENDPOINT,
+                params
+                    .get("sceneCode")
+                    .map(String::as_str)
+                    .unwrap_or_default(),
+            ) {
                 return unknown_scene_code();
             }
             respond(
@@ -755,6 +891,13 @@ async fn admin_terms(
                     StatusCode::BAD_REQUEST,
                 );
             };
+            if !scene::supports(
+                method.as_str(),
+                scene::ADMIN_TERMS_ENDPOINT,
+                payload.scene_code.as_deref().unwrap_or_default(),
+            ) {
+                return unknown_scene_code();
+            }
             let operation = match payload.scene_code.as_deref() {
                 Some(scene::ADMIN_TERM_CREATE) => DataOperation::TermCreate(TermWrite {
                     id: 0,
@@ -810,7 +953,11 @@ async fn admin_recommendations(
             StatusCode::BAD_REQUEST,
         );
     };
-    if payload.scene_code.as_deref() != Some(scene::ADMIN_RECOMMENDATION_GENERATE) {
+    if !scene::supports(
+        method.as_str(),
+        scene::ADMIN_RECOMMENDATIONS_ENDPOINT,
+        payload.scene_code.as_deref().unwrap_or_default(),
+    ) {
         return unknown_scene_code();
     }
     respond(

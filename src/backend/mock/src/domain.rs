@@ -267,14 +267,11 @@ impl DomainState {
             .iter()
             .map(|article| self.list_item(article))
             .collect();
-        let recommendation = if query.include_recommendation {
-            self.recommendation_current()
-                .iter()
-                .map(|detail| self.list_item(detail))
-                .collect()
-        } else {
-            Vec::new()
-        };
+        let recommendation = self
+            .recommendation_current()
+            .iter()
+            .map(|detail| self.list_item(detail))
+            .collect();
         ArticleShelfData {
             article_types: self.article_type_list(&ArticleTypeListQuery::default()),
             articles,
@@ -704,10 +701,7 @@ mod tests {
         );
         assert!(state.term_list(&TermListQuery::default()).is_empty());
         assert!(state.recommendation_current().is_empty());
-        let shelf = state.article_shelf(&ArticleShelfQuery {
-            include_recommendation: true,
-            ..ArticleShelfQuery::default()
-        });
+        let shelf = state.article_shelf(&ArticleShelfQuery::default());
         assert!(shelf.articles.is_empty());
         assert!(shelf.article_types.is_empty());
         assert!(shelf.recommendation.is_empty());

@@ -72,6 +72,8 @@ Then `/m/articles/index.html` 仍是 F 型货架快照，`/m/articles/list.html`
 
 ## 测试/验收证据
 
-- 自动化：API 契约、Product/Mock 对齐、查询竞态、页面切换/空态/失败/重试，以及 Mobile F 型回归；
-- 浏览器：Desktop 与 Mobile 代表视口截图、交互与无横向溢出检查；
-- 人工：最终视觉和产品验收由用户执行。
+- API（2026-09-07）：Product→Data 真实链路与 Mock HTTP 契约覆盖 `recommendation` / `archive` 初始 `all`、类型切换、推荐范围、非法参数及既有 Mobile F 型回归；Rust workspace tests 通过。
+- 查询与 client（2026-09-07）：测试覆盖初始请求、`filter_id` 序列化、响应解码、URL 筛选、快速切换时旧响应丢弃、分页累积与错误终止；前端核心测试 76/76 通过。
+- 浏览器（2026-09-07）：Desktop 首页、Desktop 全部文章和 Mobile 首页完成代表视口走查；筛选切换触发新请求并重渲染，拦截响应覆盖 error → retry → loading → empty；Mobile 两个 F 型入口结构保持，所测视图无页面级横向溢出或脚本错误。
+- 总门禁（2026-09-07）：前端 typecheck、lint、format、build，以及项目 `ops quality check` 全部通过。
+- 人工：代码与自动化验收完成；最终视觉和产品验收由用户执行。

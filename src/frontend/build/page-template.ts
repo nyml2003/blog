@@ -112,7 +112,9 @@ export function pageTemplatePlugin(
           page.outputPath,
         );
         if (!existsSync(generated)) {
-          throw new Error(`Generated page output is missing: ${page.outputPath}`);
+          throw new Error(
+            `Generated page output is missing: ${page.outputPath}`,
+          );
         }
         const destination = resolve(outputDirectory, page.outputPath);
         mkdirSync(dirname(destination), { recursive: true });

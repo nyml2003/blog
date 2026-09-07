@@ -1,20 +1,16 @@
 import { createSignal, For } from "solid-js";
-import { definePage } from "../../../../common/page";
-import { browserClient as client } from "../../../../common/client";
-import type { DataTask } from "../../../../common/data/task";
-import { useDataResource } from "../../../../solid/data";
+import { definePage } from "../../../../solid/page";
+import {
+  adminTaxonomyErrorMessage,
+  type AdminTaxonomyItem,
+  useAdminTaxonomy,
+} from "../../../../solid/queries";
 import { Header, Status } from "../../app";
 
-type Item = { id: number; name: string; kind?: string };
 const isTerms = location.pathname.includes("terms");
+const taxonomyKind = isTerms ? "terms" : "types";
 const App = () => {
-  const items = useDataResource(
-    () => isTerms,
-    (terms) =>
-      (terms
-        ? client.taxonomy.listTerms(true)
-        : client.taxonomy.listTypes(true)) as unknown as DataTask<Item[]>,
-  );
+  const items = useAdminTaxonomy(() => taxonomyKind);
   const [name, setName] = createSignal(""),
     [termKind, setTermKind] = createSignal("tag"),
     [busy, setBusy] = createSignal(false),
@@ -24,42 +20,32 @@ const App = () => {
     if (!name().trim()) return;
     setBusy(true);
     setError("");
-    try {
-      const task = isTerms
-        ? client.taxonomy.createTerm(
-            name().trim(),
-            termKind() as "topic" | "tag",
-          )
-        : client.taxonomy.createType(name().trim());
-      const result = await task.start();
-      if (!result.ok) throw new Error(result.error.kind);
-      setName("");
-      setMessage("已创建");
-      void items.refetch();
-    } catch (reason) {
-      setError((reason as Error).message);
-    } finally {
+    const result = await items.createItem(
+      name(),
+      termKind() === "topic" ? "topic" : "tag",
+    );
+    if (!result.ok) {
+      setError(adminTaxonomyErrorMessage(result.error));
       setBusy(false);
+      return;
     }
+    setName("");
+    setMessage("已创建");
+    setBusy(false);
   };
-  const rename = async (item: Item) => {
+  const rename = async (item: AdminTaxonomyItem) => {
     const next = prompt("新的名称", item.name)?.trim();
     if (!next || next === item.name) return;
     setBusy(true);
     setError("");
-    try {
-      const task = isTerms
-        ? client.taxonomy.renameTerm(item.id, next)
-        : client.taxonomy.renameType(item.id, next);
-      const result = await task.start();
-      if (!result.ok) throw new Error(result.error.kind);
-      setMessage("名称已更新");
-      void items.refetch();
-    } catch (reason) {
-      setError((reason as Error).message);
-    } finally {
+    const result = await items.renameItem(item, next);
+    if (!result.ok) {
+      setError(adminTaxonomyErrorMessage(result.error));
       setBusy(false);
+      return;
     }
+    setMessage("名称已更新");
+    setBusy(false);
   };
   const taxonomyItems = () => items.snapshot() ?? [];
   return (
@@ -110,7 +96,7 @@ const App = () => {
               <div class="item taxonomy-row">
                 <div>
                   <strong>{item.name}</strong>
-                  {item.kind && (
+                  {"kind" in item && (
                     <span class="muted">
                       {" "}
                       {item.kind === "topic" ? "主题" : "标签"}

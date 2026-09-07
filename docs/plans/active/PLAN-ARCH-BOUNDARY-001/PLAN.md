@@ -1,17 +1,17 @@
 ---
 kind: plan
 id: PLAN-ARCH-BOUNDARY-001
-status: in_progress
+status: acceptance
 owner: project-manager
 created: 2026-09-06
-last_reviewed: 2026-09-06
+last_reviewed: 2026-09-07
 ---
 
 # 架构边界治理（页面去数据化 / 后端四层归位）
 
 ## 目标
 
-按 [SPEC-ARCH-BOUNDARY-001](../../../specs/SPEC-ARCH-BOUNDARY-001.md) 治理边界腐化：前端建立查询层并把数据装配从页面剥净（页面只管 UI 编排）；后端把 `http.rs` 拆为协议适配、把 BFF 编排从 protocol crate 迁回 Product；分层规则进 `ops quality` 门禁长效防复发。**零行为变化**，内部实现不动。
+按 [SPEC-ARCH-BOUNDARY-001](../../../specs/SPEC-ARCH-BOUNDARY-001.md) 治理边界腐化：前端建立查询层并把数据装配从页面剥净（页面只管 UI 编排）；后端把 `http.rs` 拆为协议适配、把 BFF 编排从 protocol crate 迁回 Product；分层规则进 `ops quality` 门禁长效防复发。架构迁移部分保持既有契约与行为不变；同轮并入的 T 型货架是用户另行确认的功能范围，按页面计划验收。
 
 ## 决策记录（用户已定）
 
@@ -47,9 +47,9 @@ last_reviewed: 2026-09-06
 | 工作流 | Owner | 依赖 | Write set | 状态 |
 | --- | --- | --- | --- | --- |
 | 边界审查（R0） | backend | - | 见 [WORKSTREAM-AUDIT.md](./WORKSTREAM-AUDIT.md) | completed |
-| 分层门禁（R1） | infra | R0 | 见 [WORKSTREAM-GUARDRAIL.md](./WORKSTREAM-GUARDRAIL.md) | ready |
-| 前端治理（R2） | frontend | R1；BROWSE / ATOM-EXPANSION 归档 | 见 [WORKSTREAM-FRONTEND.md](./WORKSTREAM-FRONTEND.md) | ready |
-| 后端治理（R3） | backend | R1；CONTENT-TRUTH 后端写集交接 | 见 [WORKSTREAM-BACKEND.md](./WORKSTREAM-BACKEND.md) | ready |
+| 分层门禁（R1） | infra | R0 | 见 [WORKSTREAM-GUARDRAIL.md](./WORKSTREAM-GUARDRAIL.md) | completed |
+| 前端治理（R2） | frontend | R1；BROWSE / ATOM-EXPANSION 归档 | 见 [WORKSTREAM-FRONTEND.md](./WORKSTREAM-FRONTEND.md) | completed |
+| 后端治理（R3） | backend | R1；CONTENT-TRUTH 后端写集交接 | 见 [WORKSTREAM-BACKEND.md](./WORKSTREAM-BACKEND.md) | completed |
 
 项目经理启动提示见同目录的 [PM-PROMPT.md](./PM-PROMPT.md)。
 
@@ -68,7 +68,8 @@ last_reviewed: 2026-09-06
 - 门禁全量生效（豁免清零）+ 四命令与 Rust 测试全绿；
 - 迁移前后 API 响应 diff 抽查一致；两端页面行为走查；
 - Spec 证据回填。
+- 用户确认项见 [ACCEPTANCE.md](./ACCEPTANCE.md)。
 
 ## 未决项
 
-- R2/R3 的具体排期按本轮执行 agent 写集交接时点串行推进。
+- 实现与自动化验证已完成；计划保持 active，等待用户完成最终产品验收后归档。

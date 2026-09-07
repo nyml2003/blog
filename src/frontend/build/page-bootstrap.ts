@@ -1,9 +1,6 @@
 import { resolve } from "node:path";
 import { build, type HtmlTagDescriptor, type Plugin } from "vite";
-import {
-  pageRegistry,
-  type PageRegistration,
-} from "../pages.registry.ts";
+import { pageRegistry, type PageRegistration } from "../pages.registry.ts";
 import { generatedPagePath } from "./page-template.ts";
 
 type BootstrapBundler = (root: string) => Promise<string>;
@@ -59,7 +56,9 @@ export function pageBootstrap(
   let bundledSource: Promise<string> | undefined;
 
   function source(): Promise<string> {
-    bundledSource ??= dependencies.bundle(root);
+    if (!bundledSource) {
+      bundledSource = dependencies.bundle(root);
+    }
     return bundledSource;
   }
 

@@ -1,7 +1,7 @@
 ---
 kind: plan
 id: PLAN-FRONTEND-PAGE-TEMPLATE-001
-status: in_progress
+status: acceptance
 owner: project-manager
 created: 2026-09-07
 last_reviewed: 2026-09-07
@@ -42,9 +42,9 @@ Spec 全场景通过，核心：新增页面只改注册表一行；全部 HTML 
 
 | 工作流 | Owner | 依赖 | Write set | 状态 |
 | --- | --- | --- | --- | --- |
-| 注册表与生成机制 | frontend | - | 见 [WORKSTREAM-REGISTRY.md](./WORKSTREAM-REGISTRY.md) | in_progress |
-| 页面迁移 | frontend | 机制就绪；各端写集交接 | 见 [WORKSTREAM-MIGRATION.md](./WORKSTREAM-MIGRATION.md) | ready |
-| 公开端 T/F 货架归一 | frontend + backend | ARCH 后端 BFF/API 就绪；注册表迁移写集交接 | 见 [WORKSTREAM-T-SHELF.md](./WORKSTREAM-T-SHELF.md) | in_progress |
+| 注册表与生成机制 | frontend | - | 见 [WORKSTREAM-REGISTRY.md](./WORKSTREAM-REGISTRY.md) | completed |
+| 页面迁移 | frontend | 机制就绪；各端写集交接 | 见 [WORKSTREAM-MIGRATION.md](./WORKSTREAM-MIGRATION.md) | completed |
+| 公开端 T/F 货架归一 | frontend + backend | ARCH 后端 BFF/API 就绪；注册表迁移写集交接 | 见 [WORKSTREAM-T-SHELF.md](./WORKSTREAM-T-SHELF.md) | completed |
 
 项目经理启动提示见同目录的 [PM-PROMPT.md](./PM-PROMPT.md)。
 
@@ -63,8 +63,8 @@ Spec 全场景通过，核心：新增页面只改注册表一行；全部 HTML 
 - 自动化：注册表→产物断言、alias 对照、bootstrap 单次构建、样板零残留静态检查、四命令全绿；
 - 人工：抽样 head / title 走查、首绘防闪屏回归（mobile 全页）、各页功能冒烟；
 - Spec 证据回填。
+- 用户确认项见 [ACCEPTANCE.md](./ACCEPTANCE.md)。
 
 ## 未决项
 
-- R2/R3 批次划分随在途计划归档时点定，PM 排程报备即可；
-- 注册表文件形态（单文件 vs 按平台分文件）由机制工作流定并记录。
+- 实现与自动化验证已完成；计划保持 active，等待用户完成 title、首绘、页面功能与 T/F 货架的最终产品验收后归档。

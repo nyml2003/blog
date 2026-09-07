@@ -59,7 +59,27 @@ export const taskForArticleId = <T>(
   return id === undefined ? failedQuery("缺少或无效的文章 ID") : task(id);
 };
 
+export const queryErrorFromUnknown = (reason: unknown): QueryError => ({
+  kind: "network",
+  message: reason instanceof Error ? reason.message : "数据任务异常结束",
+});
+
 export const startQuery = <T>(task: QueryTask<T>): Promise<QueryResult<T>> =>
-  task.start();
+  task.start().catch((reason: unknown) => err(queryErrorFromUnknown(reason)));
+
+export const executeQuery = async <T>(
+  createTask: () => QueryTask<T>,
+): Promise<QueryResult<T>> => {
+  try {
+    return await startQuery(createTask());
+  } catch (reason) {
+    return err(queryErrorFromUnknown(reason));
+  }
+};
+
+export const queryErrorMessage = (
+  error: QueryError,
+  fallback: string,
+): string => ("message" in error ? error.message : fallback);
 
 export { useDataResource };

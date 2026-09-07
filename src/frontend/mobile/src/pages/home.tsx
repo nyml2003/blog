@@ -1,23 +1,18 @@
-import { For, Show } from "solid-js";
-import { definePage } from "../../../common/page";
+import { createSignal } from "solid-js";
+import { definePage } from "../../../solid/page";
 import { Heading, Link, Text } from "../../../mobile-ui/atoms";
-import { browserClient as client } from "../../../common/client";
-import { useDataResource } from "../../../solid/data";
-import {
-  ArticleRow,
-  MobileNav,
-  pageStyles,
-  StateMessage,
-} from "../components/ui";
+import { useTShelf } from "../../../solid/queries";
+import { MobileNav, MobileTShelf, pageStyles } from "../components/ui";
 import { BottomNav } from "../../../mobile-ui/molecules";
 import { mobileNavigationItems } from "../logic/navigation";
 import "../../styles/app.css";
 
 const App = () => {
-  const recommendations = useDataResource(
-    () => undefined,
-    () => client.recommendationFeed.getHomeRecommendations(),
-  );
+  const [selection, setSelection] = createSignal({
+    surface: "recommendation" as const,
+    filterId: "all",
+  });
+  const recommendations = useTShelf(selection);
   return (
     <div class="mobile-shell">
       {pageStyles()}
@@ -34,32 +29,18 @@ const App = () => {
             options={{ as: "p", tone: "muted", size: "meta" }}
           />
         </header>
-        <Show
-          when={recommendations.status() !== "loading"}
-          fallback={<StateMessage kind="loading" text="正在加载推荐内容…" />}
-        >
-          <Show
-            when={recommendations.status() !== "error"}
-            fallback={
-              <StateMessage
-                kind="error"
-                text="推荐内容加载失败"
-                onRetry={() => void recommendations.refetch()}
-              />
-            }
-          >
-            <Show
-              when={(recommendations.snapshot() ?? []).length > 0}
-              fallback={<StateMessage kind="empty" text="暂时还没有推荐文章" />}
-            >
-              <section class="article-list" aria-label="推荐文章">
-                <For each={recommendations.snapshot() ?? []}>
-                  {(article) => <ArticleRow article={article} />}
-                </For>
-              </section>
-            </Show>
-          </Show>
-        </Show>
+        <MobileTShelf
+          filters={recommendations.filters()}
+          selectedFilterId={selection().filterId}
+          articles={recommendations.snapshot()?.articles ?? []}
+          total={recommendations.snapshot()?.total}
+          loading={recommendations.loading()}
+          error={recommendations.error() !== undefined}
+          onSelect={(filterId) =>
+            setSelection({ surface: "recommendation", filterId })
+          }
+          onRetry={() => void recommendations.refetch()}
+        />
         <div class="primary-action">
           <Link
             content={

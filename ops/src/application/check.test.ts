@@ -64,3 +64,10 @@ test('a failing rust command fails the whole check', async () => {
   assert.equal(passed, false);
   assert.ok(h.messages.includes('fail:cargo fmt'));
 });
+
+test('quality check includes the frontend core test suite', async () => {
+  const h = harness();
+  const passed = await runCheck(workspace, h.process, stubFs({ cargo: true, web: true }), h.reporter);
+  assert.equal(passed, true);
+  assert.ok(h.labels().includes('pnpm -C src/frontend run test:core'));
+});

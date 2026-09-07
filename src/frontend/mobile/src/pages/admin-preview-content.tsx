@@ -1,11 +1,7 @@
 import { For, Show } from "solid-js";
-import { definePage } from "../../../common/page";
+import { definePage } from "../../../solid/page";
 import { Heading, Link, Tag, Text } from "../../../mobile-ui/atoms";
-import {
-  type ArticleId,
-  browserClient as client,
-} from "../../../common/client";
-import { useDataResource } from "../../../solid/data";
+import { useAdminArticle } from "../../../solid/queries";
 import { ArticleBody, StateMessage } from "../components/ui";
 import "../../styles/app.css";
 
@@ -19,20 +15,7 @@ const displayDate = (value?: string) =>
     : "-";
 const App = () => {
   const id = new URLSearchParams(location.search).get("id");
-  const article = useDataResource(
-    () => id,
-    (value) =>
-      value
-        ? client.adminArticles.get(Number(value) as ArticleId)
-        : {
-            start: () =>
-              Promise.resolve({
-                ok: false,
-                error: { kind: "protocol", message: "缺少文章 ID" } as const,
-              }),
-            cancel: () => undefined,
-          },
-  );
+  const article = useAdminArticle(() => id);
   const savedArticle = () => {
     const value = article.snapshot();
     if (article.loading() || !value || value.htmlInspection.valid !== true)

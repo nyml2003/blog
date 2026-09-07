@@ -1186,15 +1186,10 @@ impl DataStore for SqliteStore {
             rows.iter().map(article_item).collect::<Result<_, _>>()?;
         self.attach_relations(&mut conn.conn, &mut articles, ctx)?;
 
-        let recommendation = if query.include_recommendation {
-            let ids = self.recommendation_ids(ctx)?;
-            let mut conn = self.connect()?;
-            let mut items = self.load_articles_ordered(&mut conn.conn, &ids, true, ctx)?;
-            self.attach_relations(&mut conn.conn, &mut items, ctx)?;
-            items
-        } else {
-            Vec::new()
-        };
+        let ids = self.recommendation_ids(ctx)?;
+        let mut conn = self.connect()?;
+        let mut recommendation = self.load_articles_ordered(&mut conn.conn, &ids, true, ctx)?;
+        self.attach_relations(&mut conn.conn, &mut recommendation, ctx)?;
 
         Ok(ArticleShelfData {
             article_types,
@@ -1378,7 +1373,7 @@ fn validate_browse_terms(
     super::validation::browse_term_kind_failure(query, |term_id| {
         kinds.get(&term_id).map(String::as_str)
     })
-        .map_or(Ok(()), Err)
+    .map_or(Ok(()), Err)
 }
 
 /// 列读取：集中在此做类型与错误映射，保持查询代码可读。

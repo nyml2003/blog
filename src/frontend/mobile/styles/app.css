@@ -6,8 +6,8 @@
 @import "./shelf.css";
 @import "./detail.css";
 @import "./article-body.css";
-@import "./pages.css";
 @import "./browse.css";
+@import "./pages.css";
 @import "../../mobile-ui/styles/themes.css";
 @import "../../mobile-ui/styles/atoms.css";
 @import "../../mobile-ui/styles/molecules.css";

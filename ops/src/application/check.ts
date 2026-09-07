@@ -28,14 +28,19 @@ export async function runCheck(workspace: Workspace, process: ProcessPort, fs: F
     await run('pnpm typecheck', 'pnpm', ['-C', 'src/frontend', 'run', 'typecheck'], workspace.root);
     await run('pnpm lint', 'pnpm', ['-C', 'src/frontend', 'run', 'lint'], workspace.root);
     await run('pnpm format:check', 'pnpm', ['-C', 'src/frontend', 'run', 'format:check'], workspace.root);
+    await run('pnpm test:core', 'pnpm', ['-C', 'src/frontend', 'run', 'test:core'], workspace.root);
     await run('pnpm build', 'pnpm', ['-C', 'src/frontend', 'run', 'build'], workspace.root);
   }
-  const files = (await fs.files(workspace.web)).filter((f) => /\.(ts|tsx)$/.test(f));
+  const isProjectSource = (file: string) => !/[\\/](?:node_modules|dist|target|\.generated)[\\/]/.test(file);
+  const frontendFiles = (await fs.files(workspace.web)).filter((file) => isProjectSource(file) && /\.(?:ts|tsx)$/.test(file));
+  const rustRoot = join(workspace.root, 'src');
+  const rustFiles = (await fs.files(rustRoot)).filter((file) => isProjectSource(file) && file.endsWith('.rs'));
+  const files = [...frontendFiles, ...rustFiles];
   // Read source through the injected port while keeping the domain rule pure.
   const sources = new Map<string, string>();
   for (const file of files) sources.set(file, await fs.read(file));
   const actual = checkWebBoundaries(files, (f) => sources.get(f) ?? '');
   for (const violation of actual) { passed = false; reporter.fail(`${violation.file}: ${violation.message}`); }
-  if (!actual.length) reporter.ok('web dependency boundaries');
+  if (!actual.length) reporter.ok('architecture boundaries');
   return passed;
 }

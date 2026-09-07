@@ -61,6 +61,15 @@ fn empty_scenario_returns_valid_empty_collections_on_every_read() {
     assert_eq!(shelf["sections"].as_array().unwrap().len(), 0);
     assert_eq!(shelf["total"], 0);
 
+    let t_shelf = get(
+        port,
+        "/api/public/t-shelf?sceneCode=public.t_shelf&surface=archive",
+    )
+    .data();
+    assert_eq!(t_shelf["filters"][0]["id"], "all");
+    assert_eq!(t_shelf["articles"].as_array().unwrap().len(), 0);
+    assert_eq!(t_shelf["total"], 0);
+
     // 详情：空世界里一切都不存在（不报错，返回 404 envelope）。
     let response = get(
         port,
@@ -161,6 +170,7 @@ fn server_error_scenario_serves_a_stable_envelope_and_refuses_writes() {
         "/api/public/terms?sceneCode=public.term_list",
         "/api/public/recommendations?sceneCode=public.recommendation_current",
         "/api/public/mobile/article-shelf?sceneCode=public.mobile_article_shelf",
+        "/api/public/t-shelf?sceneCode=public.t_shelf&surface=archive",
         "/api/admin/articles?sceneCode=admin.article_list",
     ] {
         let response = get(port, path);

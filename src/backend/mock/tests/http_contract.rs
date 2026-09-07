@@ -6,8 +6,106 @@ mod common;
 
 use common::*;
 
+#[test]
+fn t_shelf_returns_filters_and_refetches_inside_each_surface() {
+    let mut server = Server::start(&["--listen", "127.0.0.1:0", "--scenario", "default"]);
+    let port = server.port;
+
+    let archive = get(
+        port,
+        "/api/public/t-shelf?sceneCode=public.t_shelf&surface=archive",
+    );
+    assert_eq!(archive.status, 200, "{}", archive.body);
+    let archive = archive.data();
+    assert_eq!(archive["filters"][0]["id"], "all");
+    assert_eq!(archive["filters"][0]["name"], "全部");
+    assert_eq!(archive["selectedFilterId"], "all");
+    assert_eq!(archive["total"], 45);
+    assert_eq!(archive["articles"].as_array().unwrap().len(), 20);
+    assert!(archive["articles"][0].get("contentHtml").is_none());
+
+    let engineering = get(
+        port,
+        "/api/public/t-shelf?sceneCode=public.t_shelf&surface=archive&filter_id=1",
+    )
+    .data();
+    assert_eq!(engineering["selectedFilterId"], "1");
+    assert_eq!(engineering["total"], 28);
+    assert_eq!(engineering["articles"].as_array().unwrap().len(), 20);
+
+    let recommendations = get(
+        port,
+        "/api/public/recommendations?sceneCode=public.recommendation_current",
+    )
+    .data();
+    let recommendation_ids: Vec<i64> = recommendations
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|item| item["id"].as_i64().unwrap())
+        .collect();
+    let recommendation_initial = get(
+        port,
+        "/api/public/t-shelf?sceneCode=public.t_shelf&surface=recommendation",
+    )
+    .data();
+    let initial_ids: Vec<i64> = recommendation_initial["articles"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|item| item["id"].as_i64().unwrap())
+        .collect();
+    assert_eq!(recommendation_initial["selectedFilterId"], "all");
+    assert_eq!(recommendation_initial["total"], recommendation_ids.len());
+    assert_eq!(initial_ids, recommendation_ids);
+    assert!(
+        recommendation_initial["articles"][0]
+            .get("contentHtml")
+            .is_none()
+    );
+
+    let filtered_expected: Vec<i64> = recommendations
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|item| item["articleTypeId"] == 1)
+        .map(|item| item["id"].as_i64().unwrap())
+        .collect();
+    let recommendation = get(
+        port,
+        "/api/public/t-shelf?sceneCode=public.t_shelf&surface=recommendation&filter_id=1",
+    )
+    .data();
+    let actual_ids: Vec<i64> = recommendation["articles"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|item| item["id"].as_i64().unwrap())
+        .collect();
+    assert_eq!(actual_ids, filtered_expected);
+    assert_eq!(recommendation["total"], actual_ids.len());
+    assert!(
+        actual_ids
+            .iter()
+            .all(|article_id| recommendation_ids.contains(article_id)),
+        "recommendation surface must not pull from the archive"
+    );
+
+    for path in [
+        "/api/public/t-shelf?sceneCode=public.t_shelf",
+        "/api/public/t-shelf?sceneCode=public.t_shelf&surface=archive&filter_id=nope",
+        "/api/public/t-shelf?sceneCode=public.t_shelf&surface=archive&filter_id=999",
+    ] {
+        let response = get(port, path);
+        assert_eq!(response.status, 400, "{path}: {}", response.body);
+        assert_envelope(&response, "INVALID_JSON");
+    }
+
+    assert!(server.signal("-TERM").success());
+}
+
 /// SPEC-MOBILE-BROWSE-IA-001：货架分区截断 + 每分区 total，以及浏览接口的三维
-/// AND / kind 校验 / 分页边界。Mock 必须与 Product 同形（同一 `wire::to_shelf`）。
+/// AND / kind 校验 / 分页边界。Mock 与 Product 各自编排，这组断言锁定共同 wire。
 #[test]
 fn shelf_sections_are_bounded_and_browse_filters_are_and() {
     let mut server = Server::start(&["--listen", "127.0.0.1:0", "--scenario", "default"]);

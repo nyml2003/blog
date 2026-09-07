@@ -29,6 +29,139 @@ pub const ADMIN_TERM_CREATE: &str = "admin.term_create";
 pub const ADMIN_TERM_UPDATE: &str = "admin.term_update";
 pub const ADMIN_RECOMMENDATION_GENERATE: &str = "admin.recommendation_generate";
 
+pub const PUBLIC_ARTICLES_ENDPOINT: &str = "/api/public/articles";
+pub const PUBLIC_ARTICLE_TYPES_ENDPOINT: &str = "/api/public/article-types";
+pub const PUBLIC_TERMS_ENDPOINT: &str = "/api/public/terms";
+pub const PUBLIC_RECOMMENDATIONS_ENDPOINT: &str = "/api/public/recommendations";
+pub const MOBILE_ARTICLE_SHELF_ENDPOINT: &str = "/api/public/mobile/article-shelf";
+pub const T_SHELF_ENDPOINT: &str = "/api/public/t-shelf";
+pub const ADMIN_ARTICLES_ENDPOINT: &str = "/api/admin/articles";
+pub const ADMIN_ARTICLE_TYPES_ENDPOINT: &str = "/api/admin/article-types";
+pub const ADMIN_TERMS_ENDPOINT: &str = "/api/admin/terms";
+pub const ADMIN_RECOMMENDATIONS_ENDPOINT: &str = "/api/admin/recommendations";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ApiRoute {
+    pub method: &'static str,
+    pub endpoint: &'static str,
+    pub scene_code: &'static str,
+}
+
+/// Product 路由、scene 校验和跨语言 golden 测试共同使用的编译期契约。
+pub const ROUTES: &[ApiRoute] = &[
+    ApiRoute {
+        method: "GET",
+        endpoint: PUBLIC_ARTICLES_ENDPOINT,
+        scene_code: ARTICLE_LIST,
+    },
+    ApiRoute {
+        method: "GET",
+        endpoint: PUBLIC_ARTICLES_ENDPOINT,
+        scene_code: ARTICLE_BROWSE,
+    },
+    ApiRoute {
+        method: "GET",
+        endpoint: PUBLIC_ARTICLES_ENDPOINT,
+        scene_code: ARTICLE_DETAIL,
+    },
+    ApiRoute {
+        method: "GET",
+        endpoint: PUBLIC_ARTICLE_TYPES_ENDPOINT,
+        scene_code: ARTICLE_TYPE_LIST,
+    },
+    ApiRoute {
+        method: "GET",
+        endpoint: PUBLIC_TERMS_ENDPOINT,
+        scene_code: TERM_LIST,
+    },
+    ApiRoute {
+        method: "GET",
+        endpoint: PUBLIC_RECOMMENDATIONS_ENDPOINT,
+        scene_code: RECOMMENDATION_CURRENT,
+    },
+    ApiRoute {
+        method: "GET",
+        endpoint: MOBILE_ARTICLE_SHELF_ENDPOINT,
+        scene_code: MOBILE_ARTICLE_SHELF,
+    },
+    ApiRoute {
+        method: "GET",
+        endpoint: T_SHELF_ENDPOINT,
+        scene_code: T_SHELF,
+    },
+    ApiRoute {
+        method: "GET",
+        endpoint: ADMIN_ARTICLES_ENDPOINT,
+        scene_code: ADMIN_ARTICLE_LIST,
+    },
+    ApiRoute {
+        method: "GET",
+        endpoint: ADMIN_ARTICLES_ENDPOINT,
+        scene_code: ADMIN_ARTICLE_DETAIL,
+    },
+    ApiRoute {
+        method: "POST",
+        endpoint: ADMIN_ARTICLES_ENDPOINT,
+        scene_code: ADMIN_ARTICLE_CREATE,
+    },
+    ApiRoute {
+        method: "POST",
+        endpoint: ADMIN_ARTICLES_ENDPOINT,
+        scene_code: ADMIN_ARTICLE_UPDATE,
+    },
+    ApiRoute {
+        method: "POST",
+        endpoint: ADMIN_ARTICLES_ENDPOINT,
+        scene_code: ADMIN_ARTICLE_PUBLISH,
+    },
+    ApiRoute {
+        method: "POST",
+        endpoint: ADMIN_ARTICLES_ENDPOINT,
+        scene_code: ADMIN_ARTICLE_UNPUBLISH,
+    },
+    ApiRoute {
+        method: "GET",
+        endpoint: ADMIN_ARTICLE_TYPES_ENDPOINT,
+        scene_code: ADMIN_ARTICLE_TYPE_LIST,
+    },
+    ApiRoute {
+        method: "POST",
+        endpoint: ADMIN_ARTICLE_TYPES_ENDPOINT,
+        scene_code: ADMIN_ARTICLE_TYPE_CREATE,
+    },
+    ApiRoute {
+        method: "POST",
+        endpoint: ADMIN_ARTICLE_TYPES_ENDPOINT,
+        scene_code: ADMIN_ARTICLE_TYPE_UPDATE,
+    },
+    ApiRoute {
+        method: "GET",
+        endpoint: ADMIN_TERMS_ENDPOINT,
+        scene_code: ADMIN_TERM_LIST,
+    },
+    ApiRoute {
+        method: "POST",
+        endpoint: ADMIN_TERMS_ENDPOINT,
+        scene_code: ADMIN_TERM_CREATE,
+    },
+    ApiRoute {
+        method: "POST",
+        endpoint: ADMIN_TERMS_ENDPOINT,
+        scene_code: ADMIN_TERM_UPDATE,
+    },
+    ApiRoute {
+        method: "POST",
+        endpoint: ADMIN_RECOMMENDATIONS_ENDPOINT,
+        scene_code: ADMIN_RECOMMENDATION_GENERATE,
+    },
+];
+
+pub fn supports(method: &str, endpoint: &str, scene_code: &str) -> bool {
+    ROUTES.iter().any(|route| {
+        route.method == method && route.endpoint == endpoint && route.scene_code == scene_code
+    })
+}
+
 /// 公开端点使用的 `public.*` 场景集合（Mock 场景覆盖的输入来源）。
 pub const PUBLIC: &[&str] = &[
     ARTICLE_LIST,
@@ -77,6 +210,35 @@ mod tests {
                 "sceneCode must be `端点.场景`: {scene}"
             );
         }
+    }
+
+    #[test]
+    fn api_routes_are_unique_and_cover_every_scene() {
+        let mut triples = ROUTES
+            .iter()
+            .map(|route| (route.method, route.endpoint, route.scene_code))
+            .collect::<Vec<_>>();
+        let route_count = triples.len();
+        triples.sort_unstable();
+        triples.dedup();
+        assert_eq!(
+            route_count,
+            triples.len(),
+            "API route triples must be unique"
+        );
+
+        let mut route_scenes = ROUTES
+            .iter()
+            .map(|route| route.scene_code)
+            .collect::<Vec<_>>();
+        route_scenes.sort_unstable();
+        let mut all_scenes = PUBLIC
+            .iter()
+            .chain(ADMIN.iter())
+            .copied()
+            .collect::<Vec<_>>();
+        all_scenes.sort_unstable();
+        assert_eq!(route_scenes, all_scenes);
     }
 
     #[test]

@@ -1,4 +1,4 @@
-import { definePage } from "../../../common/page";
+import { definePage } from "../../../solid/page";
 import { Heading, Select } from "../../../mobile-ui/atoms";
 import { BottomNav, Field } from "../../../mobile-ui/molecules";
 import {

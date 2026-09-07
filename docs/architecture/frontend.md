@@ -3,7 +3,7 @@ kind: architecture
 id: ARCH-FRONTEND
 status: current
 owner: frontend
-last_reviewed: 2026-09-05
+last_reviewed: 2026-09-07
 ---
 
 # Frontend 架构
@@ -23,10 +23,16 @@ src/frontend/
 ├── common/       # 无 UI 的契约和逻辑
 ├── desktop/      # C Desktop + B Desktop
 ├── mobile/       # C Mobile 页面与适配
-└── mobile-ui/    # Mobile 独立原子、组合组件与页面容器
+├── mobile-ui/    # Mobile 独立原子、组合组件与页面容器
+└── solid/        # Solid 资源适配与页面查询层
 ```
 
 `src/frontend/common` 不得依赖 JSX、CSS、Desktop 或 Mobile。Desktop 与 Mobile 不互相导入 UI。
+
+`src/frontend/solid/queries` 是页面的数据入口：它组合 `browserClient` 与
+`useDataResource`，负责请求参数、DTO 到页面模型的映射、错误归一和异步竞态控制。页面
+只消费查询结果和命令，不直接拼 API 请求，也不直接映射 wire DTO。该层不含 Desktop 或
+Mobile UI，因此两端只共享数据语义，不共享界面实现。
 
 `mobile-ui/atoms` 提供独立控件，`molecules` 提供 Field、PageHeader、BottomNav、TabGroup、ChipGroup 和 StateMessage，`containers` 提供 PageContainer；样式由对应层负责。Field 管理标签与 Select 的关联，Select 消费 `{ value, label }` 列表并回调选中值；Tab/Chip 分组保持受控，StateMessage 不读取资源状态。mobile-ui 不访问 Client、存储或业务路由状态，页面提供已归一化的数据和命令。
 
@@ -41,6 +47,16 @@ src/frontend/
 页面至少处理 `loading`、`success`、`empty`、`error`。编辑器至少处理 `idle`、`dirty`、`saving`、`saved`、`save_error`。
 
 HTML 正文由各端独立实现 `ArticleBody`，输入遵守同一正文片段契约。
+
+## 公开文章货架
+
+除 Mobile 文章入口 `/m/articles/index.html` 及其二级平铺页
+`/m/articles/list.html` 使用 F 型货架外，公开文章展示货架统一使用 T 型结构：顶部为文章
+类型筛选，下面为文章列表。管理端文章列表是管理表格，不属于展示货架。
+
+T 型货架首次请求同时取得筛选项和首个筛选项对应的文章；切换筛选后重新请求文章数据并
+重渲染。切换期间保留筛选条，内容区明确显示 loading、error、empty 和 retry 状态；查询
+层通过取消与 generation guard 丢弃旧请求结果，避免快速切换时旧响应覆盖当前筛选。
 
 ## Mobile 设置
 

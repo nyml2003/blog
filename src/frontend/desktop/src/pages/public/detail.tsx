@@ -1,30 +1,11 @@
 import { For, Show } from "solid-js";
-import { definePage } from "../../../../common/page";
-import {
-  browserClient as client,
-  type ArticleId,
-} from "../../../../common/client";
-import { useDataResource } from "../../../../solid/data";
+import { definePage } from "../../../../solid/page";
+import { usePublishedArticle } from "../../../../solid/queries";
 import { ArticleBody, date, Header, qs } from "../../app";
 
 const App = () => {
   const id = qs().get("id");
-  const article = useDataResource(
-    () => id,
-    (articleId) =>
-      articleId
-        ? client.articleCatalog.getPublishedArticle(
-            Number(articleId) as ArticleId,
-          )
-        : {
-            start: () =>
-              Promise.resolve({
-                ok: false,
-                error: { kind: "protocol", message: "缺少文章 ID" } as const,
-              }),
-            cancel: () => undefined,
-          },
-  );
+  const article = usePublishedArticle(() => id);
   return (
     <div class="shell">
       <Header />

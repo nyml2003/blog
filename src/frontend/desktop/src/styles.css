@@ -313,6 +313,49 @@ button.danger {
 .list-recommended .archive-row:first-of-type .tag-line {
   color: #cbd0d6;
 }
+.t-shelf {
+  border-top: 2px solid var(--ink);
+}
+.t-shelf-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  min-height: 54px;
+  border-bottom: 1px solid var(--border);
+}
+.t-shelf-filters button {
+  min-height: 52px;
+  border: 0;
+  border-right: 1px solid var(--border);
+  border-radius: 0;
+  padding-inline: 18px;
+  background: transparent;
+  color: var(--muted);
+}
+.t-shelf-filters button[aria-pressed="true"] {
+  background: var(--ink);
+  color: #fff;
+}
+.t-shelf-content {
+  min-height: 260px;
+}
+.t-shelf-count {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 13px;
+}
+.t-shelf-content > .error {
+  min-height: 130px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin: 0;
+}
 .filters {
   display: grid;
   grid-template-columns: repeat(4, minmax(130px, 1fr)) auto auto;

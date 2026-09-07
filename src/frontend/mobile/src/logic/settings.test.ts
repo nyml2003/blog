@@ -28,15 +28,15 @@ function readStoredSettings(provider: StorageProvider) {
 }
 
 function persistFont(provider: StorageProvider, font: MobileFont) {
-  return createMobileSettingsClient(createSynchronousStorage(provider)).saveFont(
-    font,
-  );
+  return createMobileSettingsClient(
+    createSynchronousStorage(provider),
+  ).saveFont(font);
 }
 
 function persistTheme(provider: StorageProvider, theme: MobileTheme) {
-  return createMobileSettingsClient(createSynchronousStorage(provider)).saveTheme(
-    theme,
-  );
+  return createMobileSettingsClient(
+    createSynchronousStorage(provider),
+  ).saveTheme(theme);
 }
 
 function createStorage(initial: Record<string, string>) {
@@ -176,12 +176,16 @@ test("a blocked head bootstrap leaves the page on its default selection", () => 
 
 test("the synchronous head bootstrap agrees with module validation and fallback", async () => {
   const frontendRoot = fileURLToPath(new URL("../../../", import.meta.url));
-  const settingsPage = pageRegistry.find((page) => page.id === "mobile-settings");
+  const settingsPage = pageRegistry.find(
+    (page) => page.id === "mobile-settings",
+  );
   assert.ok(settingsPage);
   const filename = generatedPagePath(frontendRoot, settingsPage);
   const plugin = pageBootstrap(frontendRoot);
   const transform = plugin.transformIndexHtml;
-  assert.ok(transform && typeof transform === "object" && "handler" in transform);
+  assert.ok(
+    transform && typeof transform === "object" && "handler" in transform,
+  );
   const transformed = await transform.handler(renderPageHtml(settingsPage), {
     path: "/m/settings/index.html",
     filename,
@@ -235,7 +239,9 @@ test("the synchronous head bootstrap is present on every mobile page", async () 
   const frontendRoot = fileURLToPath(new URL("../../../", import.meta.url));
   const plugin = pageBootstrap(frontendRoot);
   const transform = plugin.transformIndexHtml;
-  assert.ok(transform && typeof transform === "object" && "handler" in transform);
+  assert.ok(
+    transform && typeof transform === "object" && "handler" in transform,
+  );
 
   for (const page of pageRegistry.filter((entry) => entry.bootstrap)) {
     const filename = generatedPagePath(frontendRoot, page);

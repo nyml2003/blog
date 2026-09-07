@@ -1,7 +1,7 @@
 ---
 kind: workstream
 id: WORKSTREAM-T-SHELF
-status: in_progress
+status: completed
 plan_id: PLAN-FRONTEND-PAGE-TEMPLATE-001
 role: frontend-backend
 owner: frontend
@@ -11,11 +11,11 @@ depends_on:
 write_set:
   - src/frontend/solid/queries/
   - src/frontend/desktop/src/
-  - src/frontend/desktop/styles/
+  - src/frontend/desktop/src/styles.css
   - src/frontend/mobile/src/
   - src/frontend/mobile/styles/
   - src/backend/product/
-  - src/backend/mock-product/
+  - src/backend/mock/
   - src/core/protocol/
   - docs/specs/SPEC-FRONTEND-T-SHELF-001.md
   - docs/plans/active/PLAN-FRONTEND-PAGE-TEMPLATE-001/
@@ -64,3 +64,7 @@ Mobile 文章 list 页及其二级页继续使用既有 F 型浏览；其余公�
 ## 交付记录
 
 - 2026-09-07：用户确认 T/F 适用范围和 T 型数据加载方式，工作流启动。
+- 2026-09-07：Product 与 Mock 新增 `GET /api/public/t-shelf`（`public.t_shelf`），支持 `recommendation` / `archive` 两类 surface；初始请求默认 `all` 并同时返回完整 filters 与文章，切换按 `filter_id` 重取文章。
+- 2026-09-07：Desktop 首页、Desktop 文章页与 Mobile 首页完成独立 T 型实现；Mobile `/m/articles/index.html` 和 `/m/articles/list.html` 保持既有 F 型结构。查询层覆盖 loading / error / empty / retry，并以取消和 generation guard 防止旧响应覆盖新选择。
+- 2026-09-07：Product→Data、Product/Mock API 契约、前端 client 与查询竞态测试通过；前端 typecheck、lint、format、76 项核心测试与 build 通过；Desktop/Mobile 代表视口浏览器走查覆盖筛选重请求、重渲染、错误重试、空态、F 型回归及无横向溢出。
+- 2026-09-07：代码与自动化验收完成；最终视觉和产品验收由用户执行。

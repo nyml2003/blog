@@ -3,14 +3,14 @@ kind: architecture
 id: ARCH-BACKEND
 status: current
 owner: backend
-last_reviewed: 2026-09-06
+last_reviewed: 2026-09-07
 ---
 
 # Backend 架构
 
 ## 运行方式
 
-后端使用 Rust。Cargo workspace（根在 `src/Cargo.toml`）包含 `src/core/protocol`（层间类型与共享投影）、`src/backend/product`（Product API）、`src/backend/data`（Data Server）、`src/backend/mock`（Mock Product API）、`src/core/article-html-core`（手写严格正文解析和 Profile）与 `src/core/article-html-wasm`（浏览器适配）。
+后端使用 Rust。Cargo workspace（根在 `src/Cargo.toml`）包含 `src/core/protocol`（层间类型与纯形状投影）、`src/backend/product`（Product API）、`src/backend/data`（Data Server）、`src/backend/mock`（Mock Product API）、`src/core/article-html-core`（手写严格正文解析和 Profile）与 `src/core/article-html-wasm`（浏览器适配）。
 
 Product 与 Data 是独立进程：Product 面向前端提供公开/管理 API 与 BFF，不访问 SQLite；Data 负责数据表、迁移、分页与批量关联。
 
@@ -21,17 +21,18 @@ Product 与 Data 是独立进程：Product 面向前端提供公开/管理 API �
 请求处理顺序：
 
 ```text
-method -> route -> sceneCode -> Product handler -> Data typed operation -> domain rules -> SQLite
+method -> route -> sceneCode -> Product HTTP adapter -> Product BFF -> Data typed operation -> domain rules -> SQLite
 ```
 
 HTTP handler 不直接拼接 SQL。文章公开可见性、状态迁移和推荐候选范围由后端保证。
 
 ## 领域模块
 
-- `src/core/protocol`：typed operations 请求/响应、wire 投影与 sceneCode 常量、诊断 schema；
-- `src/backend/product`：路由、sceneCode 解析、envelope、静态挂载、Data client；
-- `src/backend/data`：SQLite 存储、迁移、mock 内存夹具、线程池与通道；Data API 为按领域定义的 typed operations，不做表 CRUD；
-- `src/backend/mock`：Mock Product API（`ops runtime dev` 专用：有限命名场景 + `X-Blog-Mock-Session` 显式会话隔离，固定 seed，启动即重置）。
+- `src/core/protocol`：typed operations 请求/响应、DTO、纯字段映射、sceneCode 常量与诊断 schema；protocol 不决定分组、排序、截断、推荐范围或兜底；
+- `src/backend/product/src/http.rs`：路由、参数适配、BFF/Data 调用、envelope 与结构化日志；
+- `src/backend/product/src/bff/`：跨 Data 操作编排和公开读模型决策。Mobile F 型货架与公开 T 型货架的分组、筛选、截断、推荐范围和兜底均在此层；
+- `src/backend/data`：SQLite 存储、迁移、mock 内存夹具、业务校验、线程池与通道；Data API 为按领域定义的 typed operations，不做表 CRUD；依赖当前 term 集合的筛选维度校验由 Data 执行；
+- `src/backend/mock`：Mock Product API（`ops runtime dev` 专用：有限命名场景 + `X-Blog-Mock-Session` 显式会话隔离，固定 seed，启动即重置）。Mock 自己实现与 Product 等价的 BFF 和依赖会话数据的校验，不借 protocol 承载业务规则。
 
 数据语义：`mock`（内存夹具，不建不开 SQLite 文件）与 `test`（每次运行全新临时库 `target/test-dbs/<PID>.db`，自动迁移 + 稳定 seed，正常退出删除、异常退出保留）；`prod` 为后续扩展位，约定如下——路径优先级为显式参数 > `BLOG_DATABASE_PATH` > **无默认值**（prod 缺路径即拒绝启动，生产数据位置不允许静默默认）；不加载 seed，仅自动迁移；开发持久库放仓库外（如 `~/.local/state/blog/`），服务器部署位 `/var/lib/blog/blog.db`（见 ARCH-INFRASTRUCTURE）。仓库保持零状态：任何语义都不在仓库内留下数据文件。
 
@@ -45,7 +46,7 @@ draft -> published -> draft
 
 ## 边界约束
 
-Product 对每个公开请求调用 Data 的次数与结果条目数无关；Data 列表读取使用固定查询数量（批量 `IN`/`JOIN`），排序保持 `updated_at DESC, id DESC`。
+Product 对每个公开请求调用 Data 的次数与结果条目数无关；单一读取场景使用一次 typed operation，聚合场景使用由 BFF 预先声明的固定操作序列。Data 列表读取使用固定查询数量（批量 `IN`/`JOIN`），排序保持 `updated_at DESC, id DESC`。
 
 ## 当前限制
 

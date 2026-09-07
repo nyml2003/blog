@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { createClient } from "./client";
+import { CLIENT_API_ROUTES, createClient } from "./client";
 import { createJsonTransport } from "../data/transport";
 import { parseArticle } from "./domain";
 
@@ -32,6 +33,40 @@ function clientRespondingWith(data: unknown) {
     ),
   );
 }
+
+type GoldenRoute = {
+  method: "GET" | "POST";
+  endpoint: string;
+  sceneCode: string;
+};
+
+const routeKey = (route: GoldenRoute) =>
+  `${route.method} ${route.endpoint} ${route.sceneCode}`;
+
+test("the enumerable client route registry matches the API golden list", () => {
+  const golden = JSON.parse(
+    readFileSync(
+      new URL("../../../../docs/api/routes.json", import.meta.url),
+      "utf8",
+    ),
+  ) as GoldenRoute[];
+  assert.deepEqual(
+    [...new Set(Object.values(CLIENT_API_ROUTES).map(routeKey))].sort(),
+    [...new Set(golden.map(routeKey))].sort(),
+  );
+});
+
+test("client request code keeps API literals inside the route registry", () => {
+  const source = readFileSync(new URL("./client.ts", import.meta.url), "utf8");
+  const implementation = source
+    .replace(
+      /export const CLIENT_API_ROUTES = \{[\s\S]*?\} as const satisfies Record<string, ClientApiRoute>;/,
+      "",
+    )
+    .replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "");
+  assert.doesNotMatch(implementation, /["'`]\/api\//);
+  assert.doesNotMatch(implementation, /["'`](?:public|admin)\.[a-z_]+["'`]/);
+});
 
 // ShelfCard wire fields from src/core/protocol/src/wire.rs (no article body, no type).
 const shelfCard = {

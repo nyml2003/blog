@@ -28,10 +28,11 @@ use protocol::scene;
 use protocol::wire::code;
 use protocol::{
     ArticleBrowseQuery, ArticleGetQuery, ArticleId, ArticleListPage, ArticleListQuery,
-    ArticleShelfQuery, ArticleTypeListQuery, ArticleTypeName, ArticleTypeRename, ArticleWrite,
-    OperationFailure, TermListQuery, TermRename, TermWrite, has_more,
+    ArticleTypeListQuery, ArticleTypeName, ArticleTypeRename, ArticleWrite, OperationFailure,
+    TermListQuery, TermRename, TermWrite, has_more,
 };
 
+use crate::bff;
 use crate::scenario::{Fault, TRUNCATE_BYTES};
 use crate::store::{SESSION_HEADER, SessionScope, Store, scope_from_header};
 use protocol::wire::{self, Envelope};
@@ -54,6 +55,7 @@ pub fn router(state: Arc<AppState>) -> Router {
             "/api/public/mobile/article-shelf",
             any(mobile_article_shelf),
         )
+        .route("/api/public/t-shelf", any(t_shelf))
         // 管理
         .route("/api/admin/articles", any(admin_articles))
         .route("/api/admin/article-types", any(admin_article_types))
@@ -315,45 +317,75 @@ async fn mobile_article_shelf(
     {
         return unknown_scene_code(&state, label);
     }
-    let query = ArticleShelfQuery {
+    let request = bff::mobile_shelf::MobileShelfRequest {
         article_type_id: parse_i64(params.get("type_id")),
         term_ids: parse_id_list(params.get("term_ids")),
         created_from: non_empty(params.get("created_from")),
         created_to: non_empty(params.get("created_to")),
         updated_from: non_empty(params.get("updated_from")),
         updated_to: non_empty(params.get("updated_to")),
-        include_recommendation: true,
-    };
-    let has_filters = query.article_type_id.is_some()
-        || !query.term_ids.is_empty()
-        || query.created_from.is_some()
-        || query.created_to.is_some()
-        || query.updated_from.is_some()
-        || query.updated_to.is_some();
-    // 无筛选时才带推荐（BFF 的推荐 section 规则）。
-    let query = ArticleShelfQuery {
-        include_recommendation: !has_filters,
-        ..query
     };
     let shelf = state
         .store
-        .read(&scope, |domain| domain.article_shelf(&query));
+        .read(&scope, |domain| bff::mobile_shelf::load(domain, request));
     crate::mock_info!(
         "{label} scene={} session={} items={} total={} sections={} elapsed_ms={}",
         scene::MOBILE_ARTICLE_SHELF,
         describe(&scope),
-        shelf.articles.len(),
+        shelf
+            .sections
+            .iter()
+            .map(|section| section.articles.len())
+            .sum::<usize>(),
         shelf.total,
-        shelf.article_types.len(),
+        shelf.sections.len(),
         started.elapsed().as_millis()
     );
-    let body = wire::to_shelf(
-        &shelf.article_types,
-        &shelf.articles,
-        &shelf.recommendation,
-        has_filters,
-    );
-    ok(&state, label, StatusCode::OK, &body)
+    ok(&state, label, StatusCode::OK, &shelf)
+}
+
+/// 公开端 T 型货架：首次请求同时返回完整类型筛选项和默认货架；切换后按
+/// `filter_id` 重新读取当前 surface 下的文章。
+async fn t_shelf(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    method: Method,
+    Query(params): Query<HashMap<String, String>>,
+) -> Response {
+    let started = Instant::now();
+    let scope = session_scope(&headers);
+    let label = "GET /api/public/t-shelf";
+    if let Some(response) = gate(&state, label, scene::T_SHELF, &scope).await {
+        return response;
+    }
+    if method != Method::GET || params.get("sceneCode").map(String::as_str) != Some(scene::T_SHELF)
+    {
+        return unknown_scene_code(&state, label);
+    }
+    let request = match bff::t_shelf::request(
+        params.get("surface").map(String::as_str),
+        params.get("filter_id").map(String::as_str),
+    ) {
+        Ok(request) => request,
+        Err(failure) => return domain_failure(&state, label, &failure, started),
+    };
+    let outcome = state
+        .store
+        .read(&scope, |domain| bff::t_shelf::load(domain, &request));
+    match outcome {
+        Ok(shelf) => {
+            crate::mock_info!(
+                "{label} scene={} session={} items={} total={} elapsed_ms={}",
+                scene::T_SHELF,
+                describe(&scope),
+                shelf.articles.len(),
+                shelf.total,
+                started.elapsed().as_millis()
+            );
+            ok(&state, label, StatusCode::OK, &shelf)
+        }
+        Err(failure) => domain_failure(&state, label, &failure, started),
+    }
 }
 
 // ---------- 文章（公开 + 管理共用实现） ----------

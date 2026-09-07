@@ -315,6 +315,17 @@ fn product_serves_public_articles_through_data() {
         "product logs must carry the [product] prefix: {product_lines:?}"
     );
 
+    let mobile_shelf = get(
+        product_port,
+        "/api/public/mobile/article-shelf?sceneCode=public.mobile_article_shelf",
+    );
+    assert_eq!(mobile_shelf.status, 200, "{}", mobile_shelf.body);
+    let mobile_shelf: serde_json::Value = serde_json::from_str(&mobile_shelf.body).unwrap();
+    assert_eq!(mobile_shelf["data"]["sections"][0]["id"], "recommendation");
+    product.wait_for_line("scene=public.mobile_article_shelf", Duration::from_secs(3));
+
+    assert_product_t_shelf_contract(product_port);
+
     // 背压链路：灌满 Data 的 io lane，Product 对外返回 503 envelope（FAIL-008）。
     let handles: Vec<_> = (0..90)
         .map(|index| {
@@ -353,6 +364,112 @@ fn product_serves_public_articles_through_data() {
     data.wait_for_line("shutdown complete", Duration::from_secs(3));
 
     let _ = std::fs::remove_dir_all(&workdir);
+}
+
+/// Product 的 T 型货架必须与 Mock 的同名契约一致，并通过真实 Data 操作装配。
+fn assert_product_t_shelf_contract(port: u16) {
+    let archive = get(
+        port,
+        "/api/public/t-shelf?sceneCode=public.t_shelf&surface=archive",
+    );
+    assert_eq!(archive.status, 200, "{}", archive.body);
+    let archive: serde_json::Value = serde_json::from_str(&archive.body).unwrap();
+    let archive = &archive["data"];
+    assert_eq!(archive["filters"][0]["id"], "all");
+    assert_eq!(archive["filters"][0]["name"], "全部");
+    assert_eq!(archive["selectedFilterId"], "all");
+    assert_eq!(archive["total"], 45);
+    assert_eq!(archive["articles"].as_array().unwrap().len(), 20);
+    assert!(archive["articles"][0].get("contentHtml").is_none());
+
+    let engineering = get(
+        port,
+        "/api/public/t-shelf?sceneCode=public.t_shelf&surface=archive&filter_id=1",
+    );
+    assert_eq!(engineering.status, 200, "{}", engineering.body);
+    let engineering: serde_json::Value = serde_json::from_str(&engineering.body).unwrap();
+    let engineering = &engineering["data"];
+    assert_eq!(engineering["selectedFilterId"], "1");
+    assert_eq!(engineering["total"], 28);
+    assert_eq!(engineering["articles"].as_array().unwrap().len(), 20);
+
+    let recommendations = get(
+        port,
+        "/api/public/recommendations?sceneCode=public.recommendation_current",
+    );
+    assert_eq!(recommendations.status, 200, "{}", recommendations.body);
+    let recommendations: serde_json::Value = serde_json::from_str(&recommendations.body).unwrap();
+    let recommendations = recommendations["data"].as_array().unwrap();
+    let recommendation_ids: Vec<i64> = recommendations
+        .iter()
+        .map(|item| item["id"].as_i64().unwrap())
+        .collect();
+    let recommendation_initial = get(
+        port,
+        "/api/public/t-shelf?sceneCode=public.t_shelf&surface=recommendation",
+    );
+    assert_eq!(
+        recommendation_initial.status, 200,
+        "{}",
+        recommendation_initial.body
+    );
+    let recommendation_initial: serde_json::Value =
+        serde_json::from_str(&recommendation_initial.body).unwrap();
+    let recommendation_initial = &recommendation_initial["data"];
+    let initial_ids: Vec<i64> = recommendation_initial["articles"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|item| item["id"].as_i64().unwrap())
+        .collect();
+    assert_eq!(recommendation_initial["selectedFilterId"], "all");
+    assert_eq!(recommendation_initial["total"], recommendation_ids.len());
+    assert_eq!(initial_ids, recommendation_ids);
+    assert!(
+        recommendation_initial["articles"][0]
+            .get("contentHtml")
+            .is_none()
+    );
+
+    let expected_engineering: Vec<i64> = recommendations
+        .iter()
+        .filter(|item| item["articleTypeId"] == 1)
+        .map(|item| item["id"].as_i64().unwrap())
+        .collect();
+
+    let recommendation = get(
+        port,
+        "/api/public/t-shelf?sceneCode=public.t_shelf&surface=recommendation&filter_id=1",
+    );
+    assert_eq!(recommendation.status, 200, "{}", recommendation.body);
+    let recommendation: serde_json::Value = serde_json::from_str(&recommendation.body).unwrap();
+    let recommendation = &recommendation["data"];
+    let actual_ids: Vec<i64> = recommendation["articles"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|item| item["id"].as_i64().unwrap())
+        .collect();
+    assert_eq!(actual_ids, expected_engineering);
+    assert_eq!(recommendation["total"], actual_ids.len());
+    assert!(
+        actual_ids
+            .iter()
+            .all(|article_id| recommendation_ids.contains(article_id)),
+        "recommendation surface must remain inside the current recommendation set"
+    );
+
+    for path in [
+        "/api/public/t-shelf?sceneCode=public.t_shelf",
+        "/api/public/t-shelf?sceneCode=public.t_shelf&surface=archive&filter_id=nope",
+        "/api/public/t-shelf?sceneCode=public.t_shelf&surface=archive&filter_id=999",
+    ] {
+        let response = get(port, path);
+        assert_eq!(response.status, 400, "{path}: {}", response.body);
+        let envelope: serde_json::Value = serde_json::from_str(&response.body).unwrap();
+        assert_eq!(envelope["code"], "INVALID_JSON");
+        assert_eq!(envelope["data"], serde_json::Value::Null);
+    }
 }
 
 /// Data 诊断端点暴露的累计查询数。

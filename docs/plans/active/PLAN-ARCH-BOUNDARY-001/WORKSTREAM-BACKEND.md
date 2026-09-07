@@ -1,7 +1,7 @@
 ---
 kind: workstream
 id: WORKSTREAM-BACKEND
-status: in_progress
+status: completed
 plan_id: PLAN-ARCH-BOUNDARY-001
 role: backend
 owner: backend
@@ -22,7 +22,7 @@ write_set:
   - docs/architecture/backend.md
   - docs/architecture/data-and-api.md
   - docs/specs/SPEC-ARCH-BOUNDARY-001.md
-last_reviewed: 2026-09-06
+last_reviewed: 2026-09-07
 ---
 
 # 工作流：后端治理（R3）
@@ -42,7 +42,7 @@ last_reviewed: 2026-09-06
 - `product/bff/`（或等价模块）：货架 BFF（分组 / 截断 / 推荐开关 / 分区排序 / 兜底）自 `http.rs` 与 `wire.rs` 迁入；
 - `http.rs`：仅剩路由、参数→Query、调用 BFF/Data、envelope、日志；`parse_*` 家族保留但语义转换移出；
 - `wire.rs` / protocol：`to_shelf` 等函数降为纯形状映射（或迁 BFF 后由 protocol 提供 DTO 定义）；protocol 无业务决策；
-- Data 层边界核验（禁 HTML / HTTP / GitHub 感知）与既有表述对齐；
+- Data store/domain 边界核验（禁 HTML / HTTP / GitHub 感知；Data Server HTTP adapter 保留协议职责）与既有表述对齐；
 - 架构文档（backend.md / data-and-api.md）分层图更新；
 - 豁免清零 + Spec 证据回填。
 
@@ -66,3 +66,6 @@ last_reviewed: 2026-09-06
 ## 交付记录
 
 - 2026-09-07：CONTENT-TRUTH 已归档并完成写集交接；执行以归档 RESULT 所述的部分交付代码为当前基线。Product `static_files.rs` 暂归 PAGE-TEMPLATE 独占，本工作流不修改。
+- 2026-09-07：Product 与 Mock 的 Mobile F 型货架和新增 T 型货架编排归位到各自 `bff/`；HTTP 只保留路由、参数适配、调用、envelope 与日志，protocol 删除 `to_shelf` 等业务编排。
+- 2026-09-07：文章术语类型校验归入 Data/Mock 事务域，Product 不接触 SQL；架构文档同步完成，后端分层门禁无豁免。
+- 2026-09-07：`cargo fmt --all --check`、workspace clippy（`-D warnings`）和 workspace tests 全部通过；Product→Data 真实链路、Product/Mock T 型契约、既有 Mobile F 型契约及错误语义均有回归覆盖。

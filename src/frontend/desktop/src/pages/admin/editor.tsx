@@ -1,14 +1,17 @@
 import { createEffect, createSignal, For, Show } from "solid-js";
 import {
-  type ArticleId,
-  type AdminArticle,
-  type ArticleTypeId,
-  browserClient as client,
-} from "../../../../common/client";
-import type { DataError } from "../../../../common/data/errors";
-import type { DeepReadonly } from "../../../../common/data/readonly";
+  adminQueryErrorMessage,
+  type AdminEditorArticle,
+  type QueryError as DataError,
+  type QueryReadonly as DeepReadonly,
+  saveAdminEditorArticle,
+  unpublishArticle,
+  useAdminArticleTypes,
+  useAdminEditorArticle,
+  useAdminTerms,
+  useHtmlInspection,
+} from "../../../../solid/queries";
 import type { HtmlInspection } from "../../../../common/validation/article-html";
-import { useDataResource } from "../../../../solid/data";
 import { type Article, Header, qs, Status } from "../../app";
 import { ArticleSourceEditor } from "./article-source-editor";
 import {
@@ -16,49 +19,14 @@ import {
   editorSnapshotsEqual,
   type EditorSnapshot,
 } from "./editor-state";
-import { useHtmlInspection } from "./html-inspection";
-
-const emptyArticle: AdminArticle = {
-  id: 0 as ArticleId,
-  title: "",
-  summary: "",
-  articleTypeId: 0 as ArticleTypeId,
-  contentHtml: "",
-  termIds: [],
-  terms: [],
-  status: "draft",
-  createdAt: "",
-  updatedAt: "",
-  htmlInspection: {
-    profileVersion: "article-html/v1",
-    valid: true,
-    diagnostics: [],
-  },
-};
-
 export function Editor() {
   const initialId = qs().get("id");
   const [currentId, setCurrentId] = createSignal(
     initialId ? Number(initialId) : 0,
   );
-  const loaded = useDataResource<AdminArticle, string | undefined>(
-    () => initialId ?? undefined,
-    (value) =>
-      value
-        ? client.adminArticles.get(Number(value) as ArticleId)
-        : {
-            start: () => Promise.resolve({ ok: true, value: emptyArticle }),
-            cancel: () => undefined,
-          },
-  );
-  const types = useDataResource(
-    () => undefined,
-    () => client.taxonomy.listTypes(true),
-  );
-  const terms = useDataResource(
-    () => undefined,
-    () => client.taxonomy.listTerms(true),
-  );
+  const loaded = useAdminEditorArticle(() => initialId);
+  const types = useAdminArticleTypes();
+  const terms = useAdminTerms();
   const [title, setTitle] = createSignal("");
   const [summary, setSummary] = createSignal("");
   const [typeId, setTypeId] = createSignal("");
@@ -99,9 +67,32 @@ export function Editor() {
   const previewDisabled = () =>
     busy() || !currentId() || dirty() || savedInspection()?.valid !== true;
   const showFailure = (failure: DataError, source: string) => {
-    setError("message" in failure ? failure.message : "请求未完成，请重试");
+    setError(adminQueryErrorMessage(failure));
     if (failure.kind === "html-validation")
       setServerInspection({ source, inspection: failure.htmlInspection });
+  };
+  const rememberSavedArticle = (
+    article: AdminEditorArticle,
+    source: string,
+  ) => {
+    setCurrentId(article.id);
+    setPreviewOpen(false);
+    setServerInspection({ source, inspection: article.htmlInspection });
+    setSavedSnapshot(
+      editorSnapshot({
+        title: article.title,
+        summary: article.summary ?? "",
+        typeId: article.articleTypeId,
+        termIds: article.termIds,
+        contentHtml: article.contentHtml,
+      }),
+    );
+    if (!initialId)
+      history.replaceState(
+        null,
+        "",
+        `/admin/articles/edit.html?id=${article.id}`,
+      );
   };
   let initialized = false;
   createEffect(() => {
@@ -133,86 +124,52 @@ export function Editor() {
     setBusy(true);
     setError("");
     setMessage("");
-    try {
-      if (!title().trim() || !Number(typeId()))
-        throw new Error("请填写标题并选择文章类型");
-      const source = html();
-      const result = await client.draftEditor
-        .saveDraft({
-          id: currentId() ? (currentId() as ArticleId) : undefined,
-          title: title().trim(),
-          summary: summary().trim(),
-          articleTypeId: Number(typeId()),
-          termIds: termIds(),
-          contentHtml: source,
-        })
-        .start();
-      if (!result.ok) {
-        showFailure(result.error, source);
-        return;
-      }
-      let article = result.value;
-      setCurrentId(article.id);
-      setPreviewOpen(false);
-      setServerInspection({ source, inspection: article.htmlInspection });
-      setSavedSnapshot(
-        editorSnapshot({
-          title: article.title,
-          summary: article.summary ?? "",
-          typeId: article.articleTypeId,
-          termIds: article.termIds,
-          contentHtml: article.contentHtml,
-        }),
-      );
-      if (!initialId)
-        history.replaceState(
-          null,
-          "",
-          `/admin/articles/edit.html?id=${article.id}`,
-        );
-      if (publish && article.status === "draft") {
-        const published = await client.draftEditor.publish(article.id).start();
-        if (!published.ok) {
-          showFailure(published.error, source);
-          return;
-        }
-        article = published.value;
-      }
-      setStatus(article.status);
-      setMessage(publish ? "文章已保存并发布" : "文章已保存");
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "保存失败，请重试");
-    } finally {
+    const source = html();
+    const outcome = await saveAdminEditorArticle(
+      {
+        id: currentId(),
+        title: title(),
+        summary: summary(),
+        articleTypeId: Number(typeId()),
+        termIds: termIds(),
+        contentHtml: source,
+      },
+      publish,
+    );
+    if (outcome.kind === "save-failed") {
+      showFailure(outcome.error, source);
       setBusy(false);
+      return;
     }
+    rememberSavedArticle(outcome.savedArticle, source);
+    if (outcome.kind === "publish-failed") {
+      showFailure(outcome.error, source);
+      setBusy(false);
+      return;
+    }
+    setStatus(outcome.article.status);
+    setMessage(publish ? "文章已保存并发布" : "文章已保存");
+    setBusy(false);
   };
   const unpublish = async () => {
     if (busy() || !currentId()) return;
     setBusy(true);
     setError("");
     setMessage("");
-    try {
-      const result = await client.draftEditor
-        .unpublish(currentId() as ArticleId)
-        .start();
-      if (!result.ok) {
-        showFailure(result.error, html());
-        return;
-      }
-      setStatus(result.value.status);
-      setPreviewOpen(false);
-      setServerInspection({
-        source: result.value.contentHtml,
-        inspection: result.value.htmlInspection,
-      });
-      setMessage("文章已取消发布并恢复为草稿");
-    } catch (reason) {
-      setError(
-        reason instanceof Error ? reason.message : "取消发布失败，请重试",
-      );
-    } finally {
+    const result = await unpublishArticle(currentId());
+    if (!result.ok) {
+      showFailure(result.error, html());
       setBusy(false);
+      return;
     }
+    setStatus(result.value.status);
+    setPreviewOpen(false);
+    setServerInspection({
+      source: result.value.contentHtml,
+      inspection: result.value.htmlInspection,
+    });
+    setMessage("文章已取消发布并恢复为草稿");
+    setBusy(false);
   };
   return (
     <div class="shell">

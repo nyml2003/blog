@@ -10,8 +10,8 @@ Plan 面向一个跨职能、可验收的产品结果，不面向单个文件或
 
 当前 active business plan：
 
-- `PLAN-ARCH-BOUNDARY-001`：架构边界治理（页面去数据化 / 后端四层归位 / 分层门禁）；
-- `PLAN-FRONTEND-PAGE-TEMPLATE-001`：前端页面模板与接入统一（注册表驱动）；
+- `PLAN-ARCH-BOUNDARY-001`：架构边界治理（代码与自动化完成，含 [API 响应对照](./active/PLAN-ARCH-BOUNDARY-001/API-RESPONSE-DIFF.md)，待用户产品验收）；
+- `PLAN-FRONTEND-PAGE-TEMPLATE-001`：前端页面模板与接入统一（代码与自动化完成，含 [浏览器证据](./active/PLAN-FRONTEND-PAGE-TEMPLATE-001/evidence/README.md)，待用户产品验收）；
 
 ## 发布就绪锚点（v1）
 

@@ -1,10 +1,6 @@
 import { For, Show } from "solid-js";
-import { definePage } from "../../../../common/page";
-import {
-  type ArticleId,
-  browserClient as client,
-} from "../../../../common/client";
-import { useDataResource } from "../../../../solid/data";
+import { definePage } from "../../../../solid/page";
+import { useAdminArticle } from "../../../../solid/queries";
 import { ArticleBody, date, Header, qs } from "../../app";
 
 export function AdminArticlePreview(props: { mobile?: boolean }) {
@@ -28,20 +24,7 @@ export function AdminArticlePreview(props: { mobile?: boolean }) {
     );
   }
   const id = qs().get("id");
-  const article = useDataResource(
-    () => id,
-    (value) =>
-      value
-        ? client.adminArticles.get(Number(value) as ArticleId)
-        : {
-            start: () =>
-              Promise.resolve({
-                ok: false,
-                error: { kind: "protocol", message: "缺少文章 ID" } as const,
-              }),
-            cancel: () => undefined,
-          },
-  );
+  const article = useAdminArticle(() => id);
   const savedArticle = () => {
     const value = article.snapshot();
     if (article.loading() || !value || value.htmlInspection.valid !== true)

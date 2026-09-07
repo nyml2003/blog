@@ -1,17 +1,18 @@
-import { createSignal, For } from "solid-js";
-import { browserClient as client } from "../../common/client";
+import { For, Show } from "solid-js";
 import type {
   Article,
-  ArticleFilter,
   ArticleListItem,
   ArticleType,
-  Term,
 } from "../../common/contracts/domain";
-import { useDataResource } from "../../solid/data";
+import {
+  type TShelfArticle,
+  type TShelfFilter,
+  type QueryReadonly,
+} from "../../solid/queries";
 import "./styles.css";
 import "./integration.css";
 
-export type { Article, ArticleFilter, ArticleType, Term };
+export type { Article };
 export const qs = () => new URLSearchParams(location.search);
 export const date = (value?: string) =>
   value ? new Date(value).toLocaleString() : "-";
@@ -129,205 +130,138 @@ export function ArticleBody(props: { html: string }) {
   return <div class="article-body" innerHTML={props.html} />;
 }
 
-export function Shelf(props: {
+type PublicShelfArticle = QueryReadonly<TShelfArticle> & {
+  readonly articleTypeId?: number;
+  readonly articleType?: ArticleType;
+};
+
+export function AdminArticleTable(props: {
   items: readonly ArticleListItem[];
-  variant?: "archive" | "recommended" | "admin";
 }) {
-  const isAdmin = () => props.variant === "admin";
   return (
-    <div class={`list list-${props.variant ?? "archive"}`}>
-      {isAdmin() && (
-        <div class="admin-list-head" aria-hidden="true">
-          <span>文章</span>
-          <span>类型</span>
-          <span>状态</span>
-          <span>更新时间</span>
-          <span>操作</span>
-        </div>
-      )}
+    <div class="list list-admin">
+      <div class="admin-list-head" aria-hidden="true">
+        <span>文章</span>
+        <span>类型</span>
+        <span>状态</span>
+        <span>更新时间</span>
+        <span>操作</span>
+      </div>
       <For each={props.items}>
-        {(article, index) =>
-          isAdmin() ? (
-            <article class="admin-row">
-              <h3>
-                <a href={`/admin/articles/edit.html?id=${article.id}`}>
-                  {article.title || "未命名文章"}
-                </a>
-              </h3>
-              <span>
-                {article.articleType?.name ?? `类型 #${article.articleTypeId}`}
-              </span>
-              <span class={`status-${article.status}`}>
-                {article.status === "published" ? "已发布" : "草稿"}
-              </span>
-              <time>{shortDate(article.updatedAt)}</time>
-              <div class="row-actions">
-                <a href={`/admin/articles/edit.html?id=${article.id}`}>编辑</a>
-              </div>
-            </article>
-          ) : (
-            <a
-              class="archive-row"
-              href={`/articles/detail.html?id=${article.id}`}
-            >
-              <div class="archive-index">
-                <strong>{String(index() + 1).padStart(2, "0")}</strong>
-                <time>{shortDate(article.updatedAt)}</time>
-              </div>
-              <div class="archive-copy">
-                {props.variant === "recommended" && index() === 0 && (
-                  <span class="feature-label">近期精选</span>
-                )}
-                <h3>{article.title || "未命名文章"}</h3>
-                <div class="tag-line">
-                  <For each={(article.terms ?? []).slice(0, 3)}>
-                    {(term) => <span class="tag">{term.name}</span>}
-                  </For>
-                </div>
-              </div>
-              <div class="archive-type">
-                <span>
-                  {article.articleType?.name ??
-                    `类型 #${article.articleTypeId}`}
-                </span>
-                <span aria-hidden="true">→</span>
-              </div>
-            </a>
-          )
-        }
+        {(article) => (
+          <article class="admin-row">
+            <h3>
+              <a href={`/admin/articles/edit.html?id=${article.id}`}>
+                {article.title || "未命名文章"}
+              </a>
+            </h3>
+            <span>
+              {article.articleType?.name ?? `类型 #${article.articleTypeId}`}
+            </span>
+            <span class={`status-${article.status}`}>
+              {article.status === "published" ? "已发布" : "草稿"}
+            </span>
+            <time>{shortDate(article.updatedAt)}</time>
+            <div class="row-actions">
+              <a href={`/admin/articles/edit.html?id=${article.id}`}>编辑</a>
+            </div>
+          </article>
+        )}
       </For>
     </div>
   );
 }
 
-export function Filters(props: {
-  value: ArticleFilter;
-  onChange: (value: ArticleFilter) => void;
+function PublicShelf(props: {
+  items: readonly PublicShelfArticle[];
+  variant: "archive" | "recommended";
 }) {
-  const types = useDataResource(
-    () => undefined,
-    () => client.taxonomy.listTypes(),
-  );
-  const terms = useDataResource(
-    () => undefined,
-    () => client.taxonomy.listTerms(),
-  );
-  const [typeId, setTypeId] = createSignal(props.value.typeId);
-  const [termIds, setTermIds] = createSignal([...props.value.termIds]);
-  const [createdFrom, setCreatedFrom] = createSignal(props.value.createdFrom);
-  const [createdTo, setCreatedTo] = createSignal(props.value.createdTo);
-  const [updatedFrom, setUpdatedFrom] = createSignal(props.value.updatedFrom);
-  const [updatedTo, setUpdatedTo] = createSignal(props.value.updatedTo);
-  const current = (): ArticleFilter => ({
-    typeId: typeId(),
-    termIds: termIds(),
-    createdFrom: createdFrom(),
-    createdTo: createdTo(),
-    updatedFrom: updatedFrom(),
-    updatedTo: updatedTo(),
-  });
-  const clear = () => {
-    setTypeId("");
-    setTermIds([]);
-    setCreatedFrom("");
-    setCreatedTo("");
-    setUpdatedFrom("");
-    setUpdatedTo("");
-    props.onChange({
-      typeId: "",
-      termIds: [],
-      createdFrom: "",
-      createdTo: "",
-      updatedFrom: "",
-      updatedTo: "",
-    });
-  };
   return (
-    <form
-      class="filters"
-      onSubmit={(event) => {
-        event.preventDefault();
-        props.onChange(current());
-      }}
-    >
-      <div class="field">
-        <label for="filter-type">文章类型</label>
-        <select
-          id="filter-type"
-          value={typeId()}
-          onChange={(event) => setTypeId(event.currentTarget.value)}
+    <div class={`list list-${props.variant}`}>
+      <For each={props.items}>
+        {(article, index) => (
+          <a
+            class="archive-row"
+            href={`/articles/detail.html?id=${article.id}`}
+          >
+            <div class="archive-index">
+              <strong>{String(index() + 1).padStart(2, "0")}</strong>
+              <time>{shortDate(article.updatedAt)}</time>
+            </div>
+            <div class="archive-copy">
+              {props.variant === "recommended" && index() === 0 && (
+                <span class="feature-label">近期精选</span>
+              )}
+              <h3>{article.title || "未命名文章"}</h3>
+              <div class="tag-line">
+                <For each={article.terms.slice(0, 3)}>
+                  {(term) => <span class="tag">{term.name}</span>}
+                </For>
+              </div>
+            </div>
+            <div class="archive-type">
+              <span>{article.articleType?.name ?? "阅读全文"}</span>
+              <span aria-hidden="true">→</span>
+            </div>
+          </a>
+        )}
+      </For>
+    </div>
+  );
+}
+
+export function TShelf(props: {
+  filters: readonly QueryReadonly<TShelfFilter>[];
+  selectedFilterId: string;
+  articles: readonly QueryReadonly<TShelfArticle>[];
+  total: number | undefined;
+  loading: boolean;
+  error: boolean;
+  variant: "archive" | "recommended";
+  onSelect: (filterId: string) => void;
+  onRetry: () => void;
+}) {
+  return (
+    <div class="t-shelf">
+      <nav class="t-shelf-filters" aria-label="文章类型筛选">
+        <For each={props.filters}>
+          {(filter) => (
+            <button
+              type="button"
+              aria-pressed={props.selectedFilterId === filter.id}
+              onClick={() => props.onSelect(filter.id)}
+            >
+              {filter.name}
+            </button>
+          )}
+        </For>
+      </nav>
+      <div class="t-shelf-content" aria-live="polite" aria-busy={props.loading}>
+        <Show
+          when={!props.loading}
+          fallback={<div class="state">加载中...</div>}
         >
-          <option value="">全部类型</option>
-          <For each={types.snapshot() ?? []}>
-            {(type) => <option value={type.id}>{type.name}</option>}
-          </For>
-        </select>
+          <Show
+            when={!props.error}
+            fallback={
+              <div class="error" role="alert">
+                <span>文章加载失败，请重试。</span>
+                <button type="button" onClick={props.onRetry}>
+                  重试
+                </button>
+              </div>
+            }
+          >
+            <Show
+              when={props.articles.length > 0}
+              fallback={<div class="state">当前分类还没有文章</div>}
+            >
+              <div class="t-shelf-count">共 {props.total ?? 0} 篇</div>
+              <PublicShelf items={props.articles} variant={props.variant} />
+            </Show>
+          </Show>
+        </Show>
       </div>
-      <fieldset class="term-filter">
-        <legend>主题/标签</legend>
-        <div class="check-list">
-          <For each={terms.snapshot() ?? []}>
-            {(term) => (
-              <label>
-                <input
-                  type="checkbox"
-                  checked={termIds().includes(String(term.id))}
-                  onChange={(event) =>
-                    setTermIds(
-                      event.currentTarget.checked
-                        ? [...termIds(), String(term.id)]
-                        : termIds().filter((id) => id !== String(term.id)),
-                    )
-                  }
-                />
-                {term.name}
-              </label>
-            )}
-          </For>
-        </div>
-      </fieldset>
-      <div class="field">
-        <label for="created-from">创建起始</label>
-        <input
-          id="created-from"
-          type="date"
-          value={createdFrom()}
-          onInput={(event) => setCreatedFrom(event.currentTarget.value)}
-        />
-      </div>
-      <div class="field">
-        <label for="created-to">创建结束</label>
-        <input
-          id="created-to"
-          type="date"
-          value={createdTo()}
-          onInput={(event) => setCreatedTo(event.currentTarget.value)}
-        />
-      </div>
-      <div class="field">
-        <label for="updated-from">更新起始</label>
-        <input
-          id="updated-from"
-          type="date"
-          value={updatedFrom()}
-          onInput={(event) => setUpdatedFrom(event.currentTarget.value)}
-        />
-      </div>
-      <div class="field">
-        <label for="updated-to">更新结束</label>
-        <input
-          id="updated-to"
-          type="date"
-          value={updatedTo()}
-          onInput={(event) => setUpdatedTo(event.currentTarget.value)}
-        />
-      </div>
-      <button class="primary" type="submit">
-        应用筛选
-      </button>
-      <button type="button" onClick={clear}>
-        清除
-      </button>
-    </form>
+    </div>
   );
 }

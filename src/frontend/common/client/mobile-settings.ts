@@ -77,4 +77,6 @@ export function createMobileSettingsClient(storage: SynchronousStorage) {
   };
 }
 
-export type MobileSettingsClient = ReturnType<typeof createMobileSettingsClient>;
+export type MobileSettingsClient = ReturnType<
+  typeof createMobileSettingsClient
+>;

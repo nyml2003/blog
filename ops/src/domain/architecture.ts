@@ -1,11 +1,244 @@
-export interface Violation { file: string; message: string }
-export function checkWebBoundaries(files: readonly string[], source: (file: string) => string): Violation[] {
+import { dirname, normalize, resolve } from "node:path";
+
+export interface Violation {
+  file: string;
+  message: string;
+}
+
+const IMPORT_PATTERN =
+  /(?:import|export)\s+(?:type\s+)?(?:[^"']*?\s+from\s+)?["']([^"']+)["']|import\s*\(\s*["']([^"']+)["']\s*\)/g;
+
+function normalized(file: string): string {
+  return normalize(file).replaceAll("\\", "/");
+}
+
+function importedModules(file: string, source: string): string[] {
+  const modules: string[] = [];
+  for (const match of source.matchAll(IMPORT_PATTERN)) {
+    const specifier = match[1] ?? match[2];
+    if (!specifier) continue;
+    if (specifier.startsWith(".")) {
+      modules.push(normalized(resolve(dirname(file), specifier)));
+      continue;
+    }
+    modules.push(specifier);
+  }
+  return modules;
+}
+
+function containsPath(module: string, path: string): boolean {
+  return module.includes(`/src/frontend/${path}`);
+}
+
+function isPage(file: string): boolean {
+  return /\/src\/frontend\/(?:desktop|mobile)\/src\/pages\//.test(file);
+}
+
+function isUiComponent(file: string): boolean {
+  return (
+    /\/src\/frontend\/(?:desktop|mobile)\/src\/components\//.test(file) ||
+    file.includes("/src/frontend/mobile-ui/") ||
+    (!isPage(file) &&
+      /\/src\/frontend\/(?:desktop|mobile)\/src\/.*\.tsx$/.test(file))
+  );
+}
+
+function checkFrontendFile(file: string, source: string): Violation[] {
   const violations: Violation[] = [];
-  for (const file of files) {
-    const text = source(file);
-    if (file.includes('/web/desktop/') && /from ['"].*web\/mobile|from ['"].*mobile\/src/.test(text)) violations.push({ file, message: 'desktop must not import mobile UI' });
-    if (file.includes('/web/mobile/') && /from ['"].*web\/desktop|from ['"].*desktop\/src/.test(text)) violations.push({ file, message: 'mobile must not import desktop UI' });
-    if (file.includes('/web/common/') && /\.(tsx|jsx)|from ['"].*(desktop|mobile)\//.test(text)) violations.push({ file, message: 'common must not depend on UI' });
+  const modules = importedModules(file, source);
+  const importsDesktopUi = modules.some((module) =>
+    containsPath(module, "desktop/"),
+  );
+  const importsMobileUi = modules.some(
+    (module) =>
+      containsPath(module, "mobile/") || containsPath(module, "mobile-ui/"),
+  );
+
+  if (file.includes("/src/frontend/desktop/") && importsMobileUi) {
+    violations.push({ file, message: "desktop must not import mobile UI" });
+  }
+  if (file.includes("/src/frontend/mobile/") && importsDesktopUi) {
+    violations.push({ file, message: "mobile must not import desktop UI" });
+  }
+
+  const isCommonClient = file.includes("/src/frontend/common/client/");
+  if (file.includes("/src/frontend/common/") && !isCommonClient) {
+    const importsUi =
+      importsDesktopUi ||
+      importsMobileUi ||
+      modules.some(
+        (module) => module === "solid-js" || module === "solid-js/web",
+      );
+    if (file.endsWith(".tsx") || importsUi) {
+      violations.push({ file, message: "common must not depend on UI" });
+    }
+  }
+
+  if (isPage(file)) {
+    const importsDataMechanism = modules.some(
+      (module) =>
+        containsPath(module, "common/client") ||
+        containsPath(module, "common/data") ||
+        containsPath(module, "solid/data"),
+    );
+    if (importsDataMechanism) {
+      violations.push({
+        file,
+        message:
+          "pages must use the query layer instead of client/data modules",
+      });
+    }
+  }
+
+  if (isUiComponent(file)) {
+    const importsDataAccess = modules.some(
+      (module) =>
+        containsPath(module, "common/client") ||
+        containsPath(module, "common/data"),
+    );
+    if (importsDataAccess) {
+      violations.push({
+        file,
+        message: "UI components must not import client/data modules",
+      });
+    }
+  }
+
+  if (file.includes("/src/frontend/solid/queries/")) {
+    const importsUi = modules.some(
+      (module) =>
+        containsPath(module, "desktop/") ||
+        containsPath(module, "mobile/") ||
+        containsPath(module, "mobile-ui/"),
+    );
+    if (importsUi) {
+      violations.push({
+        file,
+        message: "query modules must not import pages or UI modules",
+      });
+    }
+  }
+
+  if (isCommonClient) {
+    const importsSolid = modules.some(
+      (module) => module === "solid-js" || module === "solid-js/web",
+    );
+    if (importsSolid || importsDesktopUi || importsMobileUi) {
+      violations.push({
+        file,
+        message: "common client must remain framework independent",
+      });
+    }
+  }
+
+  return violations;
+}
+
+function checkRustFile(file: string, source: string): Violation[] {
+  const violations: Violation[] = [];
+  const productHttpOwnsBffDecision =
+    /\binclude_recommendation\b/.test(source) ||
+    /\b(?:group|partition|sort|truncate)_(?:articles|sections|recommendations)\b/i.test(
+      source,
+    ) ||
+    /\.(?:group_by|partition|sort_by|sort_by_key|truncate)\s*\(/.test(source) ||
+    /\.take\s*\(\s*\d+\s*\)/.test(source) ||
+    /["'](?:未分类|uncategorized)["']/i.test(source);
+  if (
+    file.endsWith("/src/backend/product/src/http.rs") &&
+    productHttpOwnsBffDecision
+  ) {
+    violations.push({
+      file,
+      message: "product HTTP adapter must not own BFF decisions",
+    });
+  }
+
+  const protocolOwnsShelfComposition =
+    /\bto_shelf\b/.test(source) ||
+    /\b(?:assemble|compose|group|partition|sort|truncate)[a-z0-9_]*shelf\b/i.test(
+      source,
+    ) ||
+    /\b(?:group|partition|sort|truncate)_(?:articles|sections|recommendations)\b/i.test(
+      source,
+    ) ||
+    /\.(?:group_by|partition|sort_by|sort_by_key|truncate)\s*\(/.test(source) ||
+    /\.take\s*\(\s*\d+\s*\)/.test(source) ||
+    /["'](?:未分类|uncategorized)["']/i.test(source);
+  if (file.includes("/src/core/protocol/") && protocolOwnsShelfComposition) {
+    violations.push({
+      file,
+      message: "protocol must not own shelf composition",
+    });
+  }
+  const isProductDataClient = file.endsWith(
+    "/backend/product/src/data_client.rs",
+  );
+  if (
+    file.includes("/src/backend/product/") &&
+    !isProductDataClient &&
+    /\b(?:sqlx|rusqlite|SqliteConnection|SqlitePool)\b/.test(source)
+  ) {
+    violations.push({
+      file,
+      message: "product must not access SQLite directly",
+    });
+  }
+  if (
+    file.includes("/src/backend/data/") &&
+    /\b(?:article_html_core|ammonia|html5ever|kuchiki|lol_html|scraper)\b/i.test(
+      source,
+    )
+  ) {
+    violations.push({
+      file,
+      message: "data domain and storage must not parse HTML",
+    });
+  }
+  if (
+    file.includes("/src/backend/data/") &&
+    /\b(?:github|octocrab)\b/i.test(source)
+  ) {
+    violations.push({
+      file,
+      message: "data domain and storage must not access GitHub",
+    });
+  }
+
+  const isDataHttpAdapter =
+    file.endsWith("/src/backend/data/src/http.rs") ||
+    file.endsWith("/src/backend/data/src/server.rs") ||
+    file.endsWith("/src/backend/data/src/main.rs") ||
+    file.endsWith("/src/backend/data/src/cli.rs");
+  const dataOwnsHttpDependency =
+    /(?:^|\n)\s*(?:use|extern\s+crate)\s+(?:axum|http|http_body_util|hyper|reqwest|tower_http|ureq)\b/m.test(
+      source,
+    ) ||
+    /\b(?:axum|http|http_body_util|hyper|reqwest|tower_http|ureq)::/.test(source);
+  if (
+    file.includes("/src/backend/data/src/") &&
+    !isDataHttpAdapter &&
+    dataOwnsHttpDependency
+  ) {
+    violations.push({
+      file,
+      message: "data domain and storage must not depend on HTTP",
+    });
   }
   return violations;
 }
+
+export function checkArchitectureBoundaries(
+  files: readonly string[],
+  source: (file: string) => string,
+): Violation[] {
+  return files.flatMap((rawFile) => {
+    const file = normalized(rawFile);
+    const text = source(rawFile);
+    if (/\.(?:ts|tsx)$/.test(file)) return checkFrontendFile(file, text);
+    if (file.endsWith(".rs")) return checkRustFile(file, text);
+    return [];
+  });
+}
+
+export const checkWebBoundaries = checkArchitectureBoundaries;

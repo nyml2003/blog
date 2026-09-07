@@ -1,7 +1,7 @@
 ---
 kind: workstream
 id: WORKSTREAM-MIGRATION
-status: ready
+status: completed
 plan_id: PLAN-FRONTEND-PAGE-TEMPLATE-001
 role: frontend
 owner: frontend
@@ -58,3 +58,8 @@ last_reviewed: 2026-09-07
 - desktop admin 批与 CONTENT-TRUTH EDITOR 工作流的 admin-home 改造时序协调（其将重做 admin-home，title / 模板以本计划机制为准，页面内容归其计划）。
 
 ## 交付记录
+
+- 2026-09-07：16 个页面全部移除手写 `index.html`；15 个唯一入口 TSX（文章类型与术语共用 taxonomy 入口）均改用 `definePage`，仓库入口中 `getElementById("app")` 与 `solid-js/web` mount 样板零残留。
+- 2026-09-07：6 个 Mobile 页面统一只导入 `mobile/styles/app.css`；集中入口锁定 tokens 起始、页面样式收尾及 mobile-ui 样式顺序。
+- 2026-09-07：构建产物保留原有 16 个 HTML 路径并生成 20 条 alias 清单；公开端和管理端 title 已分别按“技术知识库”与“管理台”规范中文化。
+- 2026-09-07：自动化回归通过；页面视觉、首绘与功能的最终产品验收仍由用户执行。

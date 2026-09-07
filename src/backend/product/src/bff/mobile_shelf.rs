@@ -36,7 +36,6 @@ pub fn plan(request: MobileShelfRequest) -> MobileShelfPlan {
             created_to: request.created_to,
             updated_from: request.updated_from,
             updated_to: request.updated_to,
-            include_recommendation: !has_filters,
         },
         has_filters,
     }
@@ -87,8 +86,7 @@ pub fn assemble(data: &ArticleShelfData, has_filters: bool) -> ShelfData {
         if seen.contains(&type_id) || articles.is_empty() {
             continue;
         }
-        let title = type_name(&data.article_types, type_id)
-            .unwrap_or_else(|| "未分类".to_owned());
+        let title = type_name(&data.article_types, type_id).unwrap_or_else(|| "未分类".to_owned());
         sections.push(type_section(type_id, title, articles));
     }
 
@@ -162,14 +160,13 @@ mod tests {
     fn plan_owns_filter_and_recommendation_decisions() {
         let unfiltered = plan(MobileShelfRequest::default());
         assert!(!unfiltered.has_filters);
-        assert!(unfiltered.query.include_recommendation);
 
         let filtered = plan(MobileShelfRequest {
             term_ids: vec![4],
             ..MobileShelfRequest::default()
         });
         assert!(filtered.has_filters);
-        assert!(!filtered.query.include_recommendation);
+        assert_eq!(filtered.query.term_ids, vec![4]);
     }
 
     #[test]
@@ -178,7 +175,10 @@ mod tests {
             .map(|id| item(id, if id == 9 { 99 } else { 2 }))
             .collect();
         let data = ArticleShelfData {
-            article_types: vec![article_type(1, "Engineering"), article_type(2, "Field Notes")],
+            article_types: vec![
+                article_type(1, "Engineering"),
+                article_type(2, "Field Notes"),
+            ],
             recommendation: articles[..6].to_vec(),
             total: articles.len() as i64,
             articles,

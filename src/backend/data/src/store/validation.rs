@@ -46,6 +46,9 @@ mod tests {
         })
         .unwrap();
         assert_eq!(wrong_kind.code, codes::INVALID_PAYLOAD);
-        assert_eq!(wrong_kind.message, "term 7 has kind 'tag', expected 'topic'");
+        assert_eq!(
+            wrong_kind.message,
+            "term 7 has kind 'tag', expected 'topic'"
+        );
     }
 }

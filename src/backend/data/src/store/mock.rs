@@ -663,35 +663,30 @@ impl DataStore for MockStore {
             item.term_ids = item.terms.iter().map(|term| term.id).collect();
         }
 
-        let recommendation = if query.include_recommendation {
-            let rec_ids = state.recommendation.clone();
-            // 逻辑读取：推荐 id(1) + 推荐行(1)。
-            ctx.meter.record(2);
-            let mut items: Vec<ArticleListItem> = state
-                .articles
+        let rec_ids = state.recommendation.clone();
+        // 逻辑读取：推荐 id(1) + 推荐行(1)。
+        ctx.meter.record(2);
+        let mut recommendation: Vec<ArticleListItem> = state
+            .articles
+            .iter()
+            .filter(|article| rec_ids.contains(&article.id) && article.status == "published")
+            .map(|article| self.item(article))
+            .collect();
+        // 逻辑读取：推荐批量 terms(1)。
+        let rec_terms = self.batch_terms(&state, &rec_ids);
+        ctx.meter.record(1);
+        for item in &mut recommendation {
+            let article_terms = rec_terms.get(&item.id).cloned().unwrap_or_default();
+            item.terms = article_terms;
+            item.term_ids = item.terms.iter().map(|term| term.id).collect();
+        }
+        // 保持推荐 position 顺序。
+        recommendation.sort_by_key(|item| {
+            rec_ids
                 .iter()
-                .filter(|article| rec_ids.contains(&article.id) && article.status == "published")
-                .map(|article| self.item(article))
-                .collect();
-            // 逻辑读取：推荐批量 terms(1)。
-            let rec_terms = self.batch_terms(&state, &rec_ids);
-            ctx.meter.record(1);
-            for item in &mut items {
-                let article_terms = rec_terms.get(&item.id).cloned().unwrap_or_default();
-                item.terms = article_terms;
-                item.term_ids = item.terms.iter().map(|term| term.id).collect();
-            }
-            // 保持推荐 position 顺序。
-            items.sort_by_key(|item| {
-                rec_ids
-                    .iter()
-                    .position(|id| *id == item.id)
-                    .unwrap_or(usize::MAX)
-            });
-            items
-        } else {
-            Vec::new()
-        };
+                .position(|id| *id == item.id)
+                .unwrap_or(usize::MAX)
+        });
 
         Ok(ArticleShelfData {
             article_types: types

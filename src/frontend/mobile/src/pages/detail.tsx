@@ -1,15 +1,7 @@
 import { For, Show } from "solid-js";
-import { definePage } from "../../../common/page";
+import { definePage } from "../../../solid/page";
 import { Heading, Link, Tag, Text } from "../../../mobile-ui/atoms";
-import {
-  browserClient as client,
-  type Article,
-  type ArticleId,
-} from "../../../common/client";
-import type { DataError } from "../../../common/data/errors";
-import { err } from "../../../common/data/result";
-import { createDataTask } from "../../../common/data/task";
-import { useDataResource } from "../../../solid/data";
+import { usePublishedArticle } from "../../../solid/queries";
 import { StateMessage, ArticleBody, pageStyles } from "../components/ui";
 import "../../styles/app.css";
 
@@ -42,20 +34,8 @@ const returnToArticleList = (event: MouseEvent) => {
 };
 
 const App = () => {
-  const id = new URLSearchParams(location.search).get("id") ?? "";
-  const article = useDataResource<Article, string, DataError>(
-    () => id,
-    (articleId) => {
-      const parsedId = Number(articleId);
-      const hasValidId =
-        articleId !== "" && Number.isInteger(parsedId) && parsedId > 0;
-      if (!hasValidId)
-        return createDataTask<Article, DataError>(async () =>
-          err({ kind: "protocol", message: "缺少文章 ID" }),
-        );
-      return client.articleCatalog.getPublishedArticle(parsedId as ArticleId);
-    },
-  );
+  const id = new URLSearchParams(location.search).get("id");
+  const article = usePublishedArticle(() => id);
   return (
     <div class="mobile-shell">
       {pageStyles()}

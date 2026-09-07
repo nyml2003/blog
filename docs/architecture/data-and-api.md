@@ -3,7 +3,7 @@ kind: architecture
 id: ARCH-DATA-API
 status: current
 owner: backend
-last_reviewed: 2026-09-05
+last_reviewed: 2026-09-07
 ---
 
 # Data and API 架构
@@ -45,3 +45,12 @@ Data 不解释 HTML；它提供仅草稿可更新和按检查过的完整原文�
 - BFF 在服务端完成推荐、筛选、文章类型排序、分区分组和空分区隐藏，客户端不重复归一化业务数据；
 - 推荐 section 最多返回 3 篇卡片；类型 section 使用稳定的 `type-<id>` 标识；
 - BFF section 使用 `articles` 字段，卡片只返回列表展示字段，不返回正文 HTML；现有文章、推荐和类型公共接口继续保留。
+
+## 公开 T 型货架 BFF
+
+- Mobile `/m/articles/index.html` 与 `/m/articles/list.html` 继续使用既有 F 型信息架构；其他公开展示货架通过 `GET /api/public/t-shelf?sceneCode=public.t_shelf` 读取 T 型模型；
+- `surface` 为必填参数：`recommendation` 仅在当前推荐集合内筛选，`archive` 在全部公开文章内筛选；
+- `filter_id` 可省略，默认选择稳定首项 `all`；其他值为正整数文章类型 id。响应的 `filters` 始终返回完整有序列表，首项固定为 `{ "id": "all", "name": "全部" }`，后续项沿用 Data 返回的文章类型顺序；
+- 初次请求一次返回 `filters`、`selectedFilterId`、当前筛选的 `articles` 与截断前 `total`。切换筛选时用新的 `filter_id` 重新请求；请求竞态由客户端按最新选择处理；
+- `articles` 最多返回 20 张列表卡片，只含 `id`、`title`、`summary`、`updatedAt`、`terms`，不含正文；
+- 缺少或不支持的 `surface`、非法 `filter_id`、不存在的文章类型均返回 HTTP 400 / `INVALID_JSON`。Product 与 Mock Product 各自在自己的 BFF 层实现相同语义。

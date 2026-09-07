@@ -74,5 +74,9 @@ Then 各页功能、视觉、首绘行为零回归（title 等元数据变化除
 
 ## 测试/验收证据
 
-- 自动化测试：待补充（注册表 → 生成 HTML 的快照或字段断言、alias 与迁移前对照、bootstrap 单次构建断言、`getElementById` 样板零残留的静态检查）；
-- 人工验收：待补充（抽样页面构建产物 head 与 title 走查、首绘防闪屏回归、各页功能冒烟）。
+- 自动化机制测试（2026-09-07）：注册表固定 16 页 / 20 alias；逐页断言 charset、viewport、theme-color、中文 title、入口脚本；生成器断言手写 HTML 零残留；逐入口断言 `definePage` 且无 `getElementById("app")`；Mobile 逐页断言单一 CSS 入口与集中顺序。
+- bootstrap 测试（2026-09-07）：全部 6 个 Mobile 页面并发转换只触发一次子构建；设置存储合法值、回退值、存储异常与同步应用场景通过。
+- 前端门禁（2026-09-07）：`pnpm --dir src/frontend typecheck`、`lint`、`format:check`、`build`、`test:core` 通过；核心测试共 76 项，其中页面机制与设置 bootstrap 13 项。
+- 产物走查（2026-09-07）：`dist` 含 16 个既有页面路径、无 `.generated` 残留，`page-routes.json` 含 20 条唯一 alias 并包含 `/m/settings/index.html`。
+- Product 证据（2026-09-07）：`cargo test --manifest-path src/Cargo.toml -p product static_files` 的 3 项路由清单测试通过；`full_public_admin_contract_and_static_mount` 通过并覆盖 Mobile 设置页。
+- 人工验收：待用户执行抽样 head / title、首绘防闪屏和各页功能冒烟；未以自动化证据替代产品验收。

@@ -1,7 +1,7 @@
 ---
 kind: workstream
 id: WORKSTREAM-FRONTEND
-status: ready
+status: completed
 plan_id: PLAN-ARCH-BOUNDARY-001
 role: frontend
 owner: frontend
@@ -12,14 +12,19 @@ depends_on:
 write_set:
   - src/frontend/common/data/
   - src/frontend/solid/data/
+  - src/frontend/solid/queries/
   - src/frontend/common/client/
   - src/frontend/mobile/src/pages/
+  - src/frontend/mobile/src/components/ui.tsx
   - src/frontend/mobile/src/logic/
+  - src/frontend/mobile/styles/
   - src/frontend/desktop/src/pages/
   - src/frontend/desktop/src/app.tsx
+  - src/frontend/desktop/src/styles.css
+  - src/frontend/package.json
   - docs/architecture/frontend.md
   - docs/specs/SPEC-ARCH-BOUNDARY-001.md
-last_reviewed: 2026-09-06
+last_reviewed: 2026-09-07
 ---
 
 # 工作流：前端治理（R2）
@@ -59,3 +64,23 @@ last_reviewed: 2026-09-06
 - 后台页保存流若逢 CONTENT-TRUTH EDITOR 工作流在途，对应页面顺延。
 
 ## 交付记录
+
+2026-09-07 完成 R2 实现：
+
+- 在 `src/frontend/solid/queries/` 建立页面查询层，统一承接参数归一、无效文章 ID
+  失败任务、DTO 映射、错误语义、HTML 检查调度及 T 型货架异步资源；
+- Desktop / Mobile 全部页面已迁移到查询层。静态扫描
+  `rg -n "common/client|solid/data|common/data" src/frontend/desktop/src/pages src/frontend/mobile/src/pages --glob '*.ts' --glob '*.tsx'`
+  无匹配；
+- 按用户本轮已定规则，Mobile `/m/articles/index.html` 及二级页
+  `/m/articles/list.html` 保持 F 型，其余公开文章展示货架使用 T 型；管理文章列表保持管理表格；
+- T 型货架首次取得 filters 与首项文章，切换筛选重新请求并重渲染；筛选条在加载与
+  错误期间保持稳定，支持 loading / error / empty / retry，并通过请求取消和 generation
+  guard 防止旧响应覆盖；
+- 查询层单测覆盖参数归一、无效 ID、URL 筛选以及快速切换时旧响应丢弃；client 测试
+  覆盖 T 型货架请求和响应解码；
+- `pnpm --dir src/frontend typecheck`、`lint`、`format:check`、`test:core`（76/76）及
+  `build` 均通过；
+- Playwright 实际走查 Desktop 首页、Desktop 全部文章、Mobile 首页筛选切换，核对请求
+  返回和重渲染结果；另以拦截响应验证 error → retry → loading → empty。Mobile 两个 F 型
+  页面结构保持，所测视图均无页面级横向溢出或脚本错误。

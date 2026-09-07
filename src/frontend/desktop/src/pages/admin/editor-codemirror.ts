@@ -14,7 +14,7 @@ import {
   keymap,
   lineNumbers,
 } from "@codemirror/view";
-import type { DeepReadonly } from "../../../../common/data/readonly";
+import type { QueryReadonly as DeepReadonly } from "../../../../solid/queries";
 import {
   byteOffsetToSelection,
   type HtmlDiagnostic,

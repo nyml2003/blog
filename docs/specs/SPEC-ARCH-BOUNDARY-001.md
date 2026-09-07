@@ -4,14 +4,14 @@ id: SPEC-ARCH-BOUNDARY-001
 status: draft
 owner: backend
 plan_id: PLAN-ARCH-BOUNDARY-001
-last_reviewed: 2026-09-06
+last_reviewed: 2026-09-07
 ---
 
 # 架构分层边界规则（前端查询层归一 / 后端四层各归其位）
 
 ## 目标
 
-将两条分层原则成文并自动化执行：前端"页面只管 UI 编排，数据获取归数据层（查询层）"；后端"HTTP 只管协议适配，编排归 BFF 层，protocol 是纯契约，Data 是类型化事务域"。边界违规由质量门禁拦截。治理为**零行为变化**的结构迁移。
+将两条分层原则成文并自动化执行：前端"页面只管 UI 编排，数据获取归数据层（查询层）"；后端"HTTP 只管协议适配，编排归 BFF 层，protocol 是纯契约，Data 是类型化事务域"。边界违规由质量门禁拦截。架构迁移本身保持既有契约与行为不变；同轮另行授权的 T 型货架功能不属于该零变化对照集。
 
 ## 非目标
 
@@ -47,7 +47,7 @@ common/data + solid/data 机制层：transport / task / resource / adapter
 product/http      协议适配：路由、参数解析为类型化 Query、envelope、结构化日志
 product/bff       编排：分组 / 截断 / 推荐规则 / 聚合决策（含 content_* 等领域模块）
 core/protocol     纯契约：scene / operation / DTO 形状与序列化映射
-backend/data      类型化事务操作：SQL 私有；禁 HTML 解析、禁 HTTP、禁 GitHub
+backend/data      Data Server HTTP 适配 + 类型化事务操作：store/domain 内 SQL 私有；禁 HTML 解析、禁 HTTP/GitHub 感知
 ```
 
 **禁令（门禁断言）**：
@@ -56,7 +56,7 @@ backend/data      类型化事务操作：SQL 私有；禁 HTML 解析、禁 HTT
 | --- | --- |
 | `product/http` | 内联 BFF 决策（分组、截断、推荐开关、聚合规则）；散放 `parse_*` 之外的语义转换 |
 | `core/protocol` | 业务决策：分组 / 排序规则 / 兜底策略（"未分类"兜底等属 BFF）；只允许形状映射 |
-| `backend/data` | 解析 HTML、感知 HTTP / GitHub（吸收 `SPEC-CONTENT-GITHUB-TRUTH-001` 层间接口节既有表述） |
+| `backend/data` 的 store/domain | 解析 HTML、感知 HTTP / GitHub（Data Server 自身的 HTTP adapter 例外） |
 | `product`（除 data_client） | 直接访问 SQLite |
 
 现状违规实例（治理对象）：`product/src/http.rs` 混合路由 + 参数解析 + scene 分发 + 货架 BFF 决策（`has_filters` / `include_recommendation`）+ 日志文案；`core/protocol/src/wire.rs` 的 `to_shelf` 承载分组、分区排序与"未分类"兜底（编排行为住在契约 crate）。
@@ -136,5 +136,9 @@ Then 对应测试失败（Rust 或 TS 侧红灯）
 
 ## 测试/验收证据
 
-- 自动化测试：待补充（门禁规则自身的正负样例测试；迁移后全量既有测试绿）；
-- 人工验收：待补充（审查报告与豁免清单的用户审定记录；迁移前后 API 响应 diff 抽查）。
+- R0 审查：`AUDIT-REPORT.md` 按当前代码重核前后端违规、目标层与写集；查询层定稿为 `src/frontend/solid/queries/`。
+- 前端：两端全部页面零 `common/client` / `common/data` / `solid/data` import；查询层测试覆盖参数归一、无效 ID、URL 筛选、乱序响应丢弃、分页和管理命令编排。前端 typecheck、lint、format、76 项核心测试与 build 通过。
+- 后端：Mobile/T 型货架编排位于 Product/Mock `bff/`，HTTP 保留协议适配，protocol 只保留契约与纯映射；workspace fmt、clippy 和 tests 通过，Product/Mock 契约及真实 Product→Data 链路通过。
+- 门禁：架构规则 6 项正负样例通过，仓库扫描零违规、零豁免；21 条 API golden 同时由 Rust 生产路由/scene 契约和 TS client 实际调用测试对照。
+- 总门禁：2026-09-07 `ops quality check` 全部通过；Desktop/Mobile 代表页面浏览器走查无脚本错误或页面级横向溢出。
+- 人工验收：代码与自动化证据已齐，最终产品验收由用户执行。

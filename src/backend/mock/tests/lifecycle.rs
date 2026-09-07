@@ -117,6 +117,7 @@ fn seed_is_stable_across_two_starts() {
         "/api/public/terms?sceneCode=public.term_list",
         "/api/public/recommendations?sceneCode=public.recommendation_current",
         "/api/public/mobile/article-shelf?sceneCode=public.mobile_article_shelf",
+        "/api/public/t-shelf?sceneCode=public.t_shelf&surface=archive",
         "/api/admin/articles?sceneCode=admin.article_list",
     ];
     let mut first_bodies: Vec<String> = Vec::new();

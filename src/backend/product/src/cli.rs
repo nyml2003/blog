@@ -152,6 +152,7 @@ pub fn usage() -> String {
          ENDPOINTS:\n    \
          GET /healthz\n    \
          GET /api/public/articles      sceneCode=public.article_list\n    \
+         GET /api/public/t-shelf       sceneCode=public.t_shelf\n    \
          GET /product/diagnostics      injected config + Data call counters"
     )
 }

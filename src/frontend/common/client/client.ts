@@ -157,12 +157,140 @@ export interface Client {
   };
 }
 
+export type ClientApiRoute = {
+  method: "GET" | "POST";
+  endpoint: string;
+  sceneCode: string;
+};
+
+/**
+ * 完整、可枚举的浏览器 API 契约。Client 的每次请求都从这里取得 endpoint、method 与
+ * sceneCode；golden 测试可直接遍历全集，不依赖手工调用每个 Client 方法。
+ */
+export const CLIENT_API_ROUTES = {
+  publicArticleList: {
+    method: "GET",
+    endpoint: "/api/public/articles",
+    sceneCode: "public.article_list",
+  },
+  publicArticleBrowse: {
+    method: "GET",
+    endpoint: "/api/public/articles",
+    sceneCode: "public.article_browse",
+  },
+  publicArticleDetail: {
+    method: "GET",
+    endpoint: "/api/public/articles",
+    sceneCode: "public.article_detail",
+  },
+  publicArticleTypeList: {
+    method: "GET",
+    endpoint: "/api/public/article-types",
+    sceneCode: "public.article_type_list",
+  },
+  publicTermList: {
+    method: "GET",
+    endpoint: "/api/public/terms",
+    sceneCode: "public.term_list",
+  },
+  publicRecommendationCurrent: {
+    method: "GET",
+    endpoint: "/api/public/recommendations",
+    sceneCode: "public.recommendation_current",
+  },
+  publicMobileArticleShelf: {
+    method: "GET",
+    endpoint: "/api/public/mobile/article-shelf",
+    sceneCode: "public.mobile_article_shelf",
+  },
+  publicTShelf: {
+    method: "GET",
+    endpoint: "/api/public/t-shelf",
+    sceneCode: "public.t_shelf",
+  },
+  adminArticleList: {
+    method: "GET",
+    endpoint: "/api/admin/articles",
+    sceneCode: "admin.article_list",
+  },
+  adminArticleDetail: {
+    method: "GET",
+    endpoint: "/api/admin/articles",
+    sceneCode: "admin.article_detail",
+  },
+  adminArticleCreate: {
+    method: "POST",
+    endpoint: "/api/admin/articles",
+    sceneCode: "admin.article_create",
+  },
+  adminArticleUpdate: {
+    method: "POST",
+    endpoint: "/api/admin/articles",
+    sceneCode: "admin.article_update",
+  },
+  adminArticlePublish: {
+    method: "POST",
+    endpoint: "/api/admin/articles",
+    sceneCode: "admin.article_publish",
+  },
+  adminArticleUnpublish: {
+    method: "POST",
+    endpoint: "/api/admin/articles",
+    sceneCode: "admin.article_unpublish",
+  },
+  adminArticleTypeList: {
+    method: "GET",
+    endpoint: "/api/admin/article-types",
+    sceneCode: "admin.article_type_list",
+  },
+  adminArticleTypeCreate: {
+    method: "POST",
+    endpoint: "/api/admin/article-types",
+    sceneCode: "admin.article_type_create",
+  },
+  adminArticleTypeUpdate: {
+    method: "POST",
+    endpoint: "/api/admin/article-types",
+    sceneCode: "admin.article_type_update",
+  },
+  adminTermList: {
+    method: "GET",
+    endpoint: "/api/admin/terms",
+    sceneCode: "admin.term_list",
+  },
+  adminTermCreate: {
+    method: "POST",
+    endpoint: "/api/admin/terms",
+    sceneCode: "admin.term_create",
+  },
+  adminTermUpdate: {
+    method: "POST",
+    endpoint: "/api/admin/terms",
+    sceneCode: "admin.term_update",
+  },
+  adminRecommendationGenerate: {
+    method: "POST",
+    endpoint: "/api/admin/recommendations",
+    sceneCode: "admin.recommendation_generate",
+  },
+} as const satisfies Record<string, ClientApiRoute>;
+
 const query = (params: Record<string, string | undefined>) => {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params))
     if (value !== undefined && value !== "") search.set(key, value);
   return search.toString();
 };
+
+const getPath = (
+  route: ClientApiRoute,
+  params: Record<string, string | undefined>,
+) => `${route.endpoint}?${query({ sceneCode: route.sceneCode, ...params })}`;
+
+const postBody = (route: ClientApiRoute, fields: Record<string, unknown>) => ({
+  sceneCode: route.sceneCode,
+  ...fields,
+});
 
 export function createClient(transport: Transport): Client {
   const request = <T>(
@@ -184,149 +312,181 @@ export function createClient(transport: Transport): Client {
     articleCatalog: {
       listPublishedArticles: (input = {}) =>
         request<{ items: ArticleListItem[]; total: number }>(
-          `/api/public/articles?${query({ sceneCode: "public.article_list", term_ids: input.termIds?.join(","), type_id: input.typeId?.toString(), created_from: input.createdFrom, created_to: input.createdTo, updated_from: input.updatedFrom, updated_to: input.updatedTo })}`,
-          articleListSchema as unknown as z.ZodType<{
-            items: ArticleListItem[];
-            total: number;
-          }>,
-        ),
-      browseArticles: (input = {}) =>
-        request<ArticleBrowsePage>(
-          `/api/public/articles?${query({
-            sceneCode: "public.article_browse",
-            type_id: input.typeId?.toString(),
-            topic_id: input.topicId?.toString(),
-            tag_id: input.tagId?.toString(),
-            page: input.page?.toString(),
-          })}`,
-          articleBrowsePageSchema as unknown as z.ZodType<ArticleBrowsePage>,
-        ),
-      getPublishedArticle: (id) =>
-        request<Article>(
-          `/api/public/articles?sceneCode=public.article_detail&id=${encodeURIComponent(String(id))}`,
-          articleSchema as unknown as z.ZodType<Article>,
-        ),
-    },
-    recommendationFeed: {
-      getHomeRecommendations: () =>
-        request<Article[]>(
-          "/api/public/recommendations?sceneCode=public.recommendation_current",
-          z.array(articleSchema) as unknown as z.ZodType<Article[]>,
-        ),
-    },
-    mobileShelf: {
-      list: (input = {}) =>
-        request<MobileShelf>(
-          `/api/public/mobile/article-shelf?${query({
-            sceneCode: "public.mobile_article_shelf",
+          getPath(CLIENT_API_ROUTES.publicArticleList, {
             term_ids: input.termIds?.join(","),
             type_id: input.typeId?.toString(),
             created_from: input.createdFrom,
             created_to: input.createdTo,
             updated_from: input.updatedFrom,
             updated_to: input.updatedTo,
-          })}`,
+          }),
+          articleListSchema as unknown as z.ZodType<{
+            items: ArticleListItem[];
+            total: number;
+          }>,
+          CLIENT_API_ROUTES.publicArticleList.method,
+        ),
+      browseArticles: (input = {}) =>
+        request<ArticleBrowsePage>(
+          getPath(CLIENT_API_ROUTES.publicArticleBrowse, {
+            type_id: input.typeId?.toString(),
+            topic_id: input.topicId?.toString(),
+            tag_id: input.tagId?.toString(),
+            page: input.page?.toString(),
+          }),
+          articleBrowsePageSchema as unknown as z.ZodType<ArticleBrowsePage>,
+          CLIENT_API_ROUTES.publicArticleBrowse.method,
+        ),
+      getPublishedArticle: (id) =>
+        request<Article>(
+          getPath(CLIENT_API_ROUTES.publicArticleDetail, {
+            id: String(id),
+          }),
+          articleSchema as unknown as z.ZodType<Article>,
+          CLIENT_API_ROUTES.publicArticleDetail.method,
+        ),
+    },
+    recommendationFeed: {
+      getHomeRecommendations: () =>
+        request<Article[]>(
+          getPath(CLIENT_API_ROUTES.publicRecommendationCurrent, {}),
+          z.array(articleSchema) as unknown as z.ZodType<Article[]>,
+          CLIENT_API_ROUTES.publicRecommendationCurrent.method,
+        ),
+    },
+    mobileShelf: {
+      list: (input = {}) =>
+        request<MobileShelf>(
+          getPath(CLIENT_API_ROUTES.publicMobileArticleShelf, {
+            term_ids: input.termIds?.join(","),
+            type_id: input.typeId?.toString(),
+            created_from: input.createdFrom,
+            created_to: input.createdTo,
+            updated_from: input.updatedFrom,
+            updated_to: input.updatedTo,
+          }),
           shelfSchema as unknown as z.ZodType<MobileShelf>,
-      ),
+          CLIENT_API_ROUTES.publicMobileArticleShelf.method,
+        ),
     },
     tShelf: {
       get: (input) =>
         request<TShelf>(
-          `/api/public/t-shelf?${query({
-            sceneCode: "public.t_shelf",
+          getPath(CLIENT_API_ROUTES.publicTShelf, {
             surface: input.surface,
             filter_id: input.filterId,
-          })}`,
+          }),
           tShelfSchema as unknown as z.ZodType<TShelf>,
+          CLIENT_API_ROUTES.publicTShelf.method,
         ),
     },
     taxonomy: {
-      listTypes: (admin = false) =>
-        request<ArticleType[]>(
-          `${admin ? "/api/admin" : "/api/public"}/article-types?sceneCode=${admin ? "admin" : "public"}.article_type_list`,
+      listTypes: (admin = false) => {
+        const route = admin
+          ? CLIENT_API_ROUTES.adminArticleTypeList
+          : CLIENT_API_ROUTES.publicArticleTypeList;
+        return request<ArticleType[]>(
+          getPath(route, {}),
           z.array(typeSchema) as unknown as z.ZodType<ArticleType[]>,
-        ),
-      listTerms: (admin = false) =>
-        request<Term[]>(
-          `${admin ? "/api/admin" : "/api/public"}/terms?sceneCode=${admin ? "admin" : "public"}.term_list`,
+          route.method,
+        );
+      },
+      listTerms: (admin = false) => {
+        const route = admin
+          ? CLIENT_API_ROUTES.adminTermList
+          : CLIENT_API_ROUTES.publicTermList;
+        return request<Term[]>(
+          getPath(route, {}),
           z.array(termSchema) as unknown as z.ZodType<Term[]>,
-        ),
+          route.method,
+        );
+      },
       createType: (name) =>
         request<ArticleType>(
-          "/api/admin/article-types",
+          CLIENT_API_ROUTES.adminArticleTypeCreate.endpoint,
           typeSchema as unknown as z.ZodType<ArticleType>,
-          "POST",
-          { sceneCode: "admin.article_type_create", name },
+          CLIENT_API_ROUTES.adminArticleTypeCreate.method,
+          postBody(CLIENT_API_ROUTES.adminArticleTypeCreate, { name }),
         ),
       createTerm: (name, kind) =>
         request<Term>(
-          "/api/admin/terms",
+          CLIENT_API_ROUTES.adminTermCreate.endpoint,
           termSchema as unknown as z.ZodType<Term>,
-          "POST",
-          { sceneCode: "admin.term_create", name, kind },
+          CLIENT_API_ROUTES.adminTermCreate.method,
+          postBody(CLIENT_API_ROUTES.adminTermCreate, { name, kind }),
         ),
       renameType: (id, name) =>
         request<ArticleType>(
-          "/api/admin/article-types",
+          CLIENT_API_ROUTES.adminArticleTypeUpdate.endpoint,
           typeSchema as unknown as z.ZodType<ArticleType>,
-          "POST",
-          { sceneCode: "admin.article_type_update", id, name },
+          CLIENT_API_ROUTES.adminArticleTypeUpdate.method,
+          postBody(CLIENT_API_ROUTES.adminArticleTypeUpdate, { id, name }),
         ),
       renameTerm: (id, name) =>
         request<Term>(
-          "/api/admin/terms",
+          CLIENT_API_ROUTES.adminTermUpdate.endpoint,
           termSchema as unknown as z.ZodType<Term>,
-          "POST",
-          { sceneCode: "admin.term_update", id, name },
+          CLIENT_API_ROUTES.adminTermUpdate.method,
+          postBody(CLIENT_API_ROUTES.adminTermUpdate, { id, name }),
         ),
     },
     adminArticles: {
       list: (input = {}) =>
         request<{ items: ArticleListItem[]; total: number }>(
-          `/api/admin/articles?${query({ sceneCode: "admin.article_list", term_ids: input.termIds?.join(","), type_id: input.typeId?.toString(), created_from: input.createdFrom, created_to: input.createdTo, updated_from: input.updatedFrom, updated_to: input.updatedTo })}`,
+          getPath(CLIENT_API_ROUTES.adminArticleList, {
+            term_ids: input.termIds?.join(","),
+            type_id: input.typeId?.toString(),
+            created_from: input.createdFrom,
+            created_to: input.createdTo,
+            updated_from: input.updatedFrom,
+            updated_to: input.updatedTo,
+          }),
           articleListSchema as unknown as z.ZodType<{
             items: ArticleListItem[];
             total: number;
           }>,
+          CLIENT_API_ROUTES.adminArticleList.method,
         ),
       get: (id) =>
         request<AdminArticle>(
-          `/api/admin/articles?sceneCode=admin.article_detail&id=${encodeURIComponent(String(id))}`,
+          getPath(CLIENT_API_ROUTES.adminArticleDetail, { id: String(id) }),
           adminArticleSchema as unknown as z.ZodType<AdminArticle>,
+          CLIENT_API_ROUTES.adminArticleDetail.method,
         ),
       publish: (id) =>
         request<AdminArticle>(
-          "/api/admin/articles",
+          CLIENT_API_ROUTES.adminArticlePublish.endpoint,
           adminArticleSchema as unknown as z.ZodType<AdminArticle>,
-          "POST",
-          { sceneCode: "admin.article_publish", id },
+          CLIENT_API_ROUTES.adminArticlePublish.method,
+          postBody(CLIENT_API_ROUTES.adminArticlePublish, { id }),
         ),
       unpublish: (id) =>
         request<AdminArticle>(
-          "/api/admin/articles",
+          CLIENT_API_ROUTES.adminArticleUnpublish.endpoint,
           adminArticleSchema as unknown as z.ZodType<AdminArticle>,
-          "POST",
-          { sceneCode: "admin.article_unpublish", id },
+          CLIENT_API_ROUTES.adminArticleUnpublish.method,
+          postBody(CLIENT_API_ROUTES.adminArticleUnpublish, { id }),
         ),
       generateRecommendations: () =>
         request<undefined>(
-          "/api/admin/recommendations",
+          CLIENT_API_ROUTES.adminRecommendationGenerate.endpoint,
           z.undefined(),
-          "POST",
-          { sceneCode: "admin.recommendation_generate" },
+          CLIENT_API_ROUTES.adminRecommendationGenerate.method,
+          postBody(CLIENT_API_ROUTES.adminRecommendationGenerate, {}),
         ),
     },
     draftEditor: {
       inspectHtml,
-      saveDraft: (input) =>
-        request<AdminArticle>(
-          "/api/admin/articles",
+      saveDraft: (input) => {
+        const route = input.id
+          ? CLIENT_API_ROUTES.adminArticleUpdate
+          : CLIENT_API_ROUTES.adminArticleCreate;
+        return request<AdminArticle>(
+          route.endpoint,
           adminArticleSchema as unknown as z.ZodType<AdminArticle>,
-          "POST",
+          route.method,
           {
-            sceneCode: input.id
-              ? "admin.article_update"
-              : "admin.article_create",
+            sceneCode: route.sceneCode,
             ...(input.id ? { id: input.id } : {}),
             title: input.title,
             summary: input.summary ?? "",
@@ -334,20 +494,21 @@ export function createClient(transport: Transport): Client {
             termIds: input.termIds,
             contentHtml: input.contentHtml,
           },
-        ),
+        );
+      },
       publish: (id) =>
         request<AdminArticle>(
-          "/api/admin/articles",
+          CLIENT_API_ROUTES.adminArticlePublish.endpoint,
           adminArticleSchema as unknown as z.ZodType<AdminArticle>,
-          "POST",
-          { sceneCode: "admin.article_publish", id },
+          CLIENT_API_ROUTES.adminArticlePublish.method,
+          postBody(CLIENT_API_ROUTES.adminArticlePublish, { id }),
         ),
       unpublish: (id) =>
         request<AdminArticle>(
-          "/api/admin/articles",
+          CLIENT_API_ROUTES.adminArticleUnpublish.endpoint,
           adminArticleSchema as unknown as z.ZodType<AdminArticle>,
-          "POST",
-          { sceneCode: "admin.article_unpublish", id },
+          CLIENT_API_ROUTES.adminArticleUnpublish.method,
+          postBody(CLIENT_API_ROUTES.adminArticleUnpublish, { id }),
         ),
     },
   };

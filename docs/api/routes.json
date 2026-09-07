@@ -1,0 +1,23 @@
+[
+  { "method": "GET", "endpoint": "/api/public/articles", "sceneCode": "public.article_list" },
+  { "method": "GET", "endpoint": "/api/public/articles", "sceneCode": "public.article_browse" },
+  { "method": "GET", "endpoint": "/api/public/articles", "sceneCode": "public.article_detail" },
+  { "method": "GET", "endpoint": "/api/public/article-types", "sceneCode": "public.article_type_list" },
+  { "method": "GET", "endpoint": "/api/public/terms", "sceneCode": "public.term_list" },
+  { "method": "GET", "endpoint": "/api/public/recommendations", "sceneCode": "public.recommendation_current" },
+  { "method": "GET", "endpoint": "/api/public/mobile/article-shelf", "sceneCode": "public.mobile_article_shelf" },
+  { "method": "GET", "endpoint": "/api/public/t-shelf", "sceneCode": "public.t_shelf" },
+  { "method": "GET", "endpoint": "/api/admin/articles", "sceneCode": "admin.article_list" },
+  { "method": "GET", "endpoint": "/api/admin/articles", "sceneCode": "admin.article_detail" },
+  { "method": "POST", "endpoint": "/api/admin/articles", "sceneCode": "admin.article_create" },
+  { "method": "POST", "endpoint": "/api/admin/articles", "sceneCode": "admin.article_update" },
+  { "method": "POST", "endpoint": "/api/admin/articles", "sceneCode": "admin.article_publish" },
+  { "method": "POST", "endpoint": "/api/admin/articles", "sceneCode": "admin.article_unpublish" },
+  { "method": "GET", "endpoint": "/api/admin/article-types", "sceneCode": "admin.article_type_list" },
+  { "method": "POST", "endpoint": "/api/admin/article-types", "sceneCode": "admin.article_type_create" },
+  { "method": "POST", "endpoint": "/api/admin/article-types", "sceneCode": "admin.article_type_update" },
+  { "method": "GET", "endpoint": "/api/admin/terms", "sceneCode": "admin.term_list" },
+  { "method": "POST", "endpoint": "/api/admin/terms", "sceneCode": "admin.term_create" },
+  { "method": "POST", "endpoint": "/api/admin/terms", "sceneCode": "admin.term_update" },
+  { "method": "POST", "endpoint": "/api/admin/recommendations", "sceneCode": "admin.recommendation_generate" }
+]

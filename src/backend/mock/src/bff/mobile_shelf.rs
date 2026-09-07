@@ -32,7 +32,6 @@ pub fn load(domain: &DomainState, request: MobileShelfRequest) -> ShelfData {
         created_to: request.created_to,
         updated_from: request.updated_from,
         updated_to: request.updated_to,
-        include_recommendation: !has_filters,
     });
     assemble(&data, has_filters)
 }
@@ -82,8 +81,7 @@ fn assemble(data: &ArticleShelfData, has_filters: bool) -> ShelfData {
         if seen.contains(&type_id) || articles.is_empty() {
             continue;
         }
-        let title = type_name(&data.article_types, type_id)
-            .unwrap_or_else(|| "未分类".to_owned());
+        let title = type_name(&data.article_types, type_id).unwrap_or_else(|| "未分类".to_owned());
         sections.push(type_section(type_id, title, articles));
     }
 

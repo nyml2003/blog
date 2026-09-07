@@ -2,9 +2,7 @@
 
 use protocol::envelope::codes;
 use protocol::wire::{self, TShelfData};
-use protocol::{
-    ArticleShelfQuery, ArticleType, DataOperation, DataOutcome, OperationFailure,
-};
+use protocol::{ArticleListQuery, ArticleType, DataOperation, DataOutcome, OperationFailure};
 
 pub const T_SHELF_LIMIT: usize = 20;
 pub const SURFACE_RECOMMENDATION: &str = "recommendation";
@@ -16,6 +14,7 @@ pub enum TShelfSurface {
     Archive,
 }
 
+#[derive(Debug)]
 pub struct TShelfPlan {
     pub surface: TShelfSurface,
     pub selected_filter_id: String,
@@ -23,7 +22,10 @@ pub struct TShelfPlan {
     pub operations: Vec<DataOperation>,
 }
 
-pub fn plan(surface: Option<&str>, filter_id: Option<&str>) -> Result<TShelfPlan, OperationFailure> {
+pub fn plan(
+    surface: Option<&str>,
+    filter_id: Option<&str>,
+) -> Result<TShelfPlan, OperationFailure> {
     let surface = match surface {
         Some(SURFACE_RECOMMENDATION) => TShelfSurface::Recommendation,
         Some(SURFACE_ARCHIVE) => TShelfSurface::Archive,
@@ -39,11 +41,16 @@ pub fn plan(surface: Option<&str>, filter_id: Option<&str>) -> Result<TShelfPlan
             DataOperation::ArticleTypeList(protocol::ArticleTypeListQuery::default()),
             DataOperation::RecommendationCurrent,
         ],
-        TShelfSurface::Archive => vec![DataOperation::ArticleShelf(ArticleShelfQuery {
-            article_type_id: selected_type_id,
-            include_recommendation: false,
-            ..ArticleShelfQuery::default()
-        })],
+        TShelfSurface::Archive => vec![
+            DataOperation::ArticleTypeList(protocol::ArticleTypeListQuery::default()),
+            DataOperation::ArticleList(ArticleListQuery {
+                page: Some(1),
+                page_size: Some(T_SHELF_LIMIT as u32),
+                article_type_id: selected_type_id,
+                published_only: true,
+                ..ArticleListQuery::default()
+            }),
+        ],
     };
     Ok(TShelfPlan {
         surface,
@@ -58,14 +65,20 @@ pub fn assemble(
     outcomes: Vec<DataOutcome>,
 ) -> Result<TShelfData, OperationFailure> {
     match (plan.surface, outcomes.as_slice()) {
-        (TShelfSurface::Archive, [DataOutcome::ArticleShelf(data)]) => {
-            validate_selected_type(&data.article_types, plan.selected_type_id)?;
-            let total = usize::try_from(data.total)
+        (
+            TShelfSurface::Archive,
+            [
+                DataOutcome::ArticleTypes(types),
+                DataOutcome::ArticleList(page),
+            ],
+        ) => {
+            validate_selected_type(types, plan.selected_type_id)?;
+            let total = usize::try_from(page.total)
                 .map_err(|_| internal("archive shelf returned a negative total"))?;
             Ok(TShelfData {
-                filters: wire::to_t_shelf_filters(&data.article_types),
+                filters: wire::to_t_shelf_filters(types),
                 selected_filter_id: plan.selected_filter_id.clone(),
-                articles: wire::to_shelf_cards(&data.articles)
+                articles: wire::to_shelf_cards(&page.items)
                     .into_iter()
                     .take(T_SHELF_LIMIT)
                     .collect(),
@@ -74,7 +87,10 @@ pub fn assemble(
         }
         (
             TShelfSurface::Recommendation,
-            [DataOutcome::ArticleTypes(types), DataOutcome::Recommendation(items)],
+            [
+                DataOutcome::ArticleTypes(types),
+                DataOutcome::Recommendation(items),
+            ],
         ) => {
             validate_selected_type(types, plan.selected_type_id)?;
             let matching: Vec<_> = items
@@ -141,7 +157,7 @@ fn internal(message: impl Into<String>) -> OperationFailure {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use protocol::{ArticleDetail, ArticleListItem, ArticleShelfData};
+    use protocol::{ArticleDetail, ArticleListItem, ArticleListPage};
 
     fn article_type(id: i64, name: &str) -> ArticleType {
         ArticleType {
@@ -190,16 +206,20 @@ mod tests {
     fn initial_archive_plan_selects_all_and_returns_filters_with_first_shelf() {
         let plan = plan(Some("archive"), None).unwrap();
         assert_eq!(plan.selected_filter_id, "all");
-        assert_eq!(plan.operations.len(), 1);
+        assert_eq!(plan.operations.len(), 2);
         let articles: Vec<_> = (1..=25).map(|id| list_item(id, 1)).collect();
         let data = assemble(
             &plan,
-            vec![DataOutcome::ArticleShelf(ArticleShelfData {
-                article_types: vec![article_type(1, "Engineering")],
-                total: articles.len() as i64,
-                articles,
-                recommendation: Vec::new(),
-            })],
+            vec![
+                DataOutcome::ArticleTypes(vec![article_type(1, "Engineering")]),
+                DataOutcome::ArticleList(ArticleListPage {
+                    total: articles.len() as i64,
+                    items: articles,
+                    page: 1,
+                    page_size: T_SHELF_LIMIT as u32,
+                    has_more: true,
+                }),
+            ],
         )
         .unwrap();
         assert_eq!(data.filters[0].id, "all");
@@ -235,10 +255,7 @@ mod tests {
 
     #[test]
     fn invalid_surface_filter_and_unknown_type_are_rejected() {
-        assert_eq!(
-            plan(None, None).unwrap_err().code,
-            codes::INVALID_PAYLOAD
-        );
+        assert_eq!(plan(None, None).unwrap_err().code, codes::INVALID_PAYLOAD);
         assert_eq!(
             plan(Some("archive"), Some("x")).unwrap_err().code,
             codes::INVALID_PAYLOAD
@@ -246,12 +263,16 @@ mod tests {
         let plan = plan(Some("archive"), Some("9")).unwrap();
         let error = assemble(
             &plan,
-            vec![DataOutcome::ArticleShelf(ArticleShelfData {
-                article_types: vec![article_type(1, "Engineering")],
-                articles: Vec::new(),
-                total: 0,
-                recommendation: Vec::new(),
-            })],
+            vec![
+                DataOutcome::ArticleTypes(vec![article_type(1, "Engineering")]),
+                DataOutcome::ArticleList(ArticleListPage {
+                    items: Vec::new(),
+                    page: 1,
+                    page_size: T_SHELF_LIMIT as u32,
+                    total: 0,
+                    has_more: false,
+                }),
+            ],
         )
         .unwrap_err();
         assert_eq!(error.code, codes::INVALID_PAYLOAD);

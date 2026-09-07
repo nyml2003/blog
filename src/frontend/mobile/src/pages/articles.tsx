@@ -6,7 +6,7 @@ import {
   onCleanup,
   onMount,
 } from "solid-js";
-import { definePage } from "../../../common/page";
+import { definePage } from "../../../solid/page";
 import { Heading, Text } from "../../../mobile-ui/atoms";
 import {
   MobileNav,
@@ -18,8 +18,7 @@ import {
 import { BottomNav } from "../../../mobile-ui/molecules";
 import { mobileNavigationItems } from "../logic/navigation";
 import { cleanBrowseHref } from "../logic/browse-filter";
-import { browserClient as client } from "../../../common/client";
-import { useDataResource } from "../../../solid/data";
+import { useMobileArticleShelf } from "../../../solid/queries";
 import "../../styles/app.css";
 
 const App = () => {
@@ -31,10 +30,7 @@ const App = () => {
       cleanBrowseHref(location.pathname, location.search),
     );
   }
-  const shelf = useDataResource(
-    () => undefined,
-    () => client.mobileShelf.list(),
-  );
+  const shelf = useMobileArticleShelf();
   const [activeSectionId, setActiveSectionId] = createSignal("");
   let programmaticSectionId: string | undefined;
   let programmaticScrollTimer: number | undefined;

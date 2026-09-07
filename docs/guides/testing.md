@@ -29,7 +29,20 @@ cargo test --workspace --manifest-path src/Cargo.toml
 pnpm -C src/frontend run typecheck
 pnpm -C src/frontend run lint
 pnpm -C src/frontend run format:check
+pnpm -C src/frontend run test:core
 pnpm -C src/frontend run build
 ```
 
 `ops quality check` 负责汇总上述门禁与 ops 契约测试。runtime 全栈端到端测试由 `OPS_RUNTIME_E2E` 环境变量门控（`ops/src/application/runtime.stack.test.ts`）：默认跳过保持快速反馈，`1` 跑进程级，`full` 追加构建级。
+
+## 架构边界门禁
+
+`ops quality check` 还扫描前端 TypeScript/TSX 与 Rust 源码，执行 `SPEC-ARCH-BOUNDARY-001` 的长期边界规则：
+
+- Desktop 与 Mobile 不互相导入 UI；`common` 不依赖平台 UI 或 Solid UI；
+- 页面只从 `solid/queries` 取得业务数据，不直接导入 `common/client`、`common/data` 或 `solid/data`；
+- UI 组件不直接导入 client/data，查询层不导入页面或 UI；
+- `common/client` 保持框架无关；
+- protocol 不承载货架编排，Product 不直接访问 SQLite，Data 不解析 HTML 或访问 GitHub。
+
+规则的正负样例位于 `ops/src/domain/architecture.test.ts`。违规会让 `ops quality check` 返回 `20`，报告包含文件路径与对应边界说明。

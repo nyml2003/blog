@@ -1,8 +1,8 @@
 import { createSignal, For, Show } from "solid-js";
-import { definePage } from "../../../../common/page";
+import { definePage } from "../../../../solid/page";
 import { Header } from "../../app";
 import { ArticleSourceEditor } from "./article-source-editor";
-import { useHtmlInspection } from "./html-inspection";
+import { useHtmlInspection } from "../../../../solid/queries";
 
 type GuidePageId = "start" | "format" | "validation" | "publishing";
 type GuidePage = {

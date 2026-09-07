@@ -8,7 +8,14 @@ import type {
 import type { ArticleType, Term } from "../../common/contracts/domain";
 import { createDataTask, type DataTask } from "../../common/data/task";
 import {
+  executeQuery,
   queryClient,
+  queryErrorFromUnknown,
+  queryErrorMessage,
+  type QueryError,
+  type QueryReadonly,
+  type QueryResult,
+  type QueryTask,
   startQuery,
   taskForArticleId,
   useDataResource,
@@ -23,6 +30,29 @@ export type AdminDraftValues = {
   readonly articleTypeId: number;
   readonly termIds: readonly number[];
   readonly contentHtml: string;
+};
+
+export type AdminEditorSaveOutcome =
+  | {
+      readonly kind: "completed";
+      readonly savedArticle: QueryReadonly<AdminArticle>;
+      readonly article: QueryReadonly<AdminArticle>;
+    }
+  | {
+      readonly kind: "save-failed";
+      readonly error: QueryError;
+    }
+  | {
+      readonly kind: "publish-failed";
+      readonly savedArticle: QueryReadonly<AdminArticle>;
+      readonly error: QueryError;
+    };
+
+export type AdminEditorArticle = QueryReadonly<AdminArticle>;
+
+export type AdminEditorWriter = {
+  readonly saveDraft: (input: DraftInput) => QueryTask<AdminArticle>;
+  readonly publish: (id: ArticleId) => QueryTask<AdminArticle>;
 };
 
 const emptyAdminArticle = (): AdminArticle => ({
@@ -79,44 +109,87 @@ export const useAdminTerms = () =>
     () => queryClient.taxonomy.listTerms(true),
   );
 
-export const useAdminTaxonomy = (kind: Accessor<AdminTaxonomyKind>) =>
-  useDataResource<AdminTaxonomyItem[], AdminTaxonomyKind>(kind, (value) => {
-    if (value === "terms") {
-      return queryClient.taxonomy.listTerms(true);
-    }
-    return queryClient.taxonomy.listTypes(true);
-  });
+export const refreshAfterSuccessfulQuery = async <T>(
+  operation: Promise<QueryResult<T>>,
+  refresh: () => Promise<unknown>,
+): Promise<QueryResult<T>> => {
+  const result = await operation;
+  if (result.ok) void refresh();
+  return result;
+};
+
+export const useAdminTaxonomy = (kind: Accessor<AdminTaxonomyKind>) => {
+  const resource = useDataResource<AdminTaxonomyItem[], AdminTaxonomyKind>(
+    kind,
+    (value) => {
+      if (value === "terms") {
+        return queryClient.taxonomy.listTerms(true);
+      }
+      return queryClient.taxonomy.listTypes(true);
+    },
+  );
+  return {
+    ...resource,
+    createItem: (name: string, termKind: Term["kind"]) =>
+      refreshAfterSuccessfulQuery(
+        createAdminTaxonomyItem(kind(), name, termKind),
+        resource.refetch,
+      ),
+    renameItem: (item: AdminTaxonomyItem, name: string) =>
+      refreshAfterSuccessfulQuery(
+        renameAdminTaxonomyItem(kind(), item, name),
+        resource.refetch,
+      ),
+  };
+};
 
 export const createAdminTaxonomyItem = (
   kind: AdminTaxonomyKind,
   name: string,
   termKind: Term["kind"],
-) => {
+): Promise<QueryResult<AdminTaxonomyItem>> => {
   const normalizedName = name.trim();
   if (kind === "terms") {
-    return startQuery(
+    return executeQuery(() =>
       queryClient.taxonomy.createTerm(normalizedName, termKind),
     );
   }
-  return startQuery(queryClient.taxonomy.createType(normalizedName));
+  return executeQuery(() => queryClient.taxonomy.createType(normalizedName));
 };
 
 export const renameAdminTaxonomyItem = (
   kind: AdminTaxonomyKind,
   item: AdminTaxonomyItem,
   name: string,
-) => {
+): Promise<QueryResult<AdminTaxonomyItem>> => {
   const normalizedName = name.trim();
   if (kind === "terms") {
-    return startQuery(queryClient.taxonomy.renameTerm(item.id, normalizedName));
+    return executeQuery(() =>
+      queryClient.taxonomy.renameTerm(item.id, normalizedName),
+    );
   }
-  return startQuery(queryClient.taxonomy.renameType(item.id, normalizedName));
+  return executeQuery(() =>
+    queryClient.taxonomy.renameType(item.id, normalizedName),
+  );
 };
 
 export const generateRecommendations = () =>
-  startQuery(queryClient.adminArticles.generateRecommendations());
+  executeQuery(() => queryClient.adminArticles.generateRecommendations());
 
-export const saveDraft = (values: AdminDraftValues) => {
+const invalidDraftError = (): QueryError => ({
+  kind: "protocol",
+  message: "请填写标题并选择文章类型",
+});
+
+export const executeAdminEditorSave = async (
+  writer: AdminEditorWriter,
+  values: AdminDraftValues,
+  shouldPublish: boolean,
+): Promise<AdminEditorSaveOutcome> => {
+  if (values.title.trim() === "" || values.articleTypeId <= 0) {
+    return { kind: "save-failed", error: invalidDraftError() };
+  }
+
   const input: DraftInput = {
     title: values.title.trim(),
     summary: values.summary.trim(),
@@ -125,11 +198,59 @@ export const saveDraft = (values: AdminDraftValues) => {
     contentHtml: values.contentHtml,
   };
   if (values.id > 0) input.id = values.id as ArticleId;
-  return startQuery(queryClient.draftEditor.saveDraft(input));
+
+  let saved: QueryResult<AdminArticle>;
+  try {
+    saved = await startQuery(writer.saveDraft(input));
+  } catch (reason) {
+    return {
+      kind: "save-failed",
+      error: queryErrorFromUnknown(reason),
+    };
+  }
+  if (!saved.ok) return { kind: "save-failed", error: saved.error };
+  if (!shouldPublish || saved.value.status !== "draft") {
+    return {
+      kind: "completed",
+      savedArticle: saved.value,
+      article: saved.value,
+    };
+  }
+
+  let published: QueryResult<AdminArticle>;
+  try {
+    published = await startQuery(writer.publish(saved.value.id));
+  } catch (reason) {
+    return {
+      kind: "publish-failed",
+      savedArticle: saved.value,
+      error: queryErrorFromUnknown(reason),
+    };
+  }
+  if (!published.ok) {
+    return {
+      kind: "publish-failed",
+      savedArticle: saved.value,
+      error: published.error,
+    };
+  }
+  return {
+    kind: "completed",
+    savedArticle: saved.value,
+    article: published.value,
+  };
 };
 
-export const publishArticle = (id: number) =>
-  startQuery(queryClient.draftEditor.publish(id as ArticleId));
+export const saveAdminEditorArticle = (
+  values: AdminDraftValues,
+  shouldPublish: boolean,
+) => executeAdminEditorSave(queryClient.draftEditor, values, shouldPublish);
 
 export const unpublishArticle = (id: number) =>
-  startQuery(queryClient.draftEditor.unpublish(id as ArticleId));
+  executeQuery(() => queryClient.draftEditor.unpublish(id as ArticleId));
+
+export const adminQueryErrorMessage = (error: QueryError): string =>
+  queryErrorMessage(error, "请求未完成，请重试");
+
+export const adminTaxonomyErrorMessage = (error: QueryError): string =>
+  error.kind;

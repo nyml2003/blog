@@ -244,18 +244,16 @@ fn sqlite_backend_supports_writes_transitions_and_shelf() {
         generated.iter().map(|item| item.id).collect::<Vec<_>>()
     );
 
-    // shelf：固定查询数（types + count + 全量行 + 批量 terms = 4，含推荐再加 3），与条目数无关。
-    for (request_id, query, expected) in [
-        ("shelf-all", ArticleShelfQuery::default(), 4u32),
+    // shelf：固定查询数（types + count + 全量行 + 批量 terms + 推荐三步 = 7），与条目数无关。
+    for (request_id, query) in [
+        ("shelf-all", ArticleShelfQuery::default()),
         (
             "shelf-filtered",
             ArticleShelfQuery {
                 article_type_id: Some(1),
                 term_ids: vec![4],
-                include_recommendation: true,
                 ..ArticleShelfQuery::default()
             },
-            7u32,
         ),
     ] {
         let result = call(
@@ -265,7 +263,7 @@ fn sqlite_backend_supports_writes_transitions_and_shelf() {
             DataOperation::ArticleShelf(query),
         );
         assert_eq!(
-            result.diag.query_count, expected,
+            result.diag.query_count, 7,
             "{request_id} 查询数与条目数无关"
         );
         let DataOutcome::ArticleShelf(shelf) = result.outcome.expect("ok") else {
@@ -276,21 +274,6 @@ fn sqlite_backend_supports_writes_transitions_and_shelf() {
         assert!(shelf.articles.iter().all(|item| item.status == "published"));
         assert!(shelf.recommendation.len() <= 6);
     }
-    let result = call(
-        &executor,
-        &rt,
-        "shelf-norec",
-        DataOperation::ArticleShelf(ArticleShelfQuery {
-            include_recommendation: false,
-            ..ArticleShelfQuery::default()
-        }),
-    );
-    let DataOutcome::ArticleShelf(shelf) = result.outcome.expect("ok") else {
-        panic!("expected shelf");
-    };
-    assert_eq!(shelf.recommendation, Vec::new(), "无筛选请求才带推荐");
-    // 查询数在 include_recommendation=false 时少 3（推荐三步不执行）。
-    assert_eq!(result.diag.query_count, 4);
 
     // 分类与 term 的写入 + 唯一约束。
     let result = call(
@@ -470,10 +453,7 @@ fn mock_backend_matches_sqlite_semantics_for_writes() {
         &executor,
         &rt,
         "shelf",
-        DataOperation::ArticleShelf(ArticleShelfQuery {
-            include_recommendation: true,
-            ..ArticleShelfQuery::default()
-        }),
+        DataOperation::ArticleShelf(ArticleShelfQuery::default()),
     );
     assert_eq!(result.diag.query_count, 7, "与 SQLite 路径同一计数口径");
     let DataOutcome::ArticleShelf(shelf) = result.outcome.expect("ok") else {

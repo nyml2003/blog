@@ -242,8 +242,6 @@ pub struct ArticleShelfQuery {
     pub created_to: Option<String>,
     pub updated_from: Option<String>,
     pub updated_to: Option<String>,
-    /// `false` 时 `recommendation` 为空数组（带筛选时 BFF 不含推荐 section）。
-    pub include_recommendation: bool,
 }
 
 /// Data API 的封闭操作集合。
@@ -512,7 +510,7 @@ pub struct ArticleShelfData {
     /// 完整筛选结果（`updated_at DESC, id DESC`），不含正文 HTML。
     pub articles: Vec<ArticleListItem>,
     pub total: i64,
-    /// 当前生效推荐（≤ [`RECOMMENDATION_LIMIT`]，只含已发布文章）。
+    /// 当前生效推荐（≤ [`RECOMMENDATION_LIMIT`]，只含已发布文章）。是否展示由 BFF 决定。
     pub recommendation: Vec<ArticleListItem>,
 }
 
