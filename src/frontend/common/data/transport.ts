@@ -6,7 +6,7 @@ import { err, ok, type Result } from "./result";
 
 export interface TransportRequest {
   readonly path: string;
-  readonly method: "GET" | "POST";
+  readonly method: "GET" | "POST" | "DELETE";
   readonly body?: unknown;
   readonly signal: AbortSignal;
   readonly timeoutMs?: number;

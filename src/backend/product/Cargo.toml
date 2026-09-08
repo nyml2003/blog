@@ -21,3 +21,21 @@ serde_json = { workspace = true }
 hyper = { workspace = true }
 hyper-util = { workspace = true }
 http-body-util = { workspace = true }
+base64 = "0.22"
+sha2 = "0.10"
+argon2 = { version = "0.5.3", features = ["std"] }
+fs2 = "0.4.3"
+getrandom = "0.3.3"
+hmac = "0.12.1"
+libc = "0.2.175"
+rpassword = "7.4.0"
+rustix = { version = "1.0.8", features = ["fs", "process"] }
+sha1 = "0.10.6"
+subtle = "2.6.1"
+zeroize = "1.8.1"
+# Blocking HTTPS client used exclusively behind Product's spawn_blocking boundary.
+ureq = { version = "2.12", default-features = false, features = ["json", "tls"] }
+wait-timeout = "0.2"
+
+[dev-dependencies]
+tempfile = "3.21.0"

@@ -136,6 +136,74 @@ test("enforces protocol, Product, and Data boundaries", () => {
   );
 });
 
+test("rejects category shelf decisions in the Product HTTP adapter", () => {
+  const directSnapshotFiltering = `
+    let leaves: BTreeSet<_> = snapshot
+      .taxonomy
+      .categories
+      .iter()
+      .filter(|category| !parent_ids.contains(&category.id))
+      .collect();
+    let articles: Vec<_> = snapshot
+      .articles
+      .iter()
+      .filter(|article| article.meta.published_at.is_some())
+      .collect();
+  `;
+  assert.deepEqual(
+    check("/repo/src/backend/product/src/http.rs", directSnapshotFiltering),
+    ["product HTTP adapter must not own BFF decisions"],
+  );
+  assert.deepEqual(
+    check(
+      "/repo/src/backend/product/src/http.rs",
+      "fn is_descendant(parents: &Parents, leaf: i64, root: i64) -> bool { true }",
+    ),
+    ["product HTTP adapter must not own BFF decisions"],
+  );
+  assert.deepEqual(
+    check(
+      "/repo/src/backend/product/src/http.rs",
+      "let shelf = bff::category_shelf::assemble(&snapshot, selected)?;",
+    ),
+    [],
+  );
+});
+
+test("rejects HTML parser dependencies in the Data manifest", () => {
+  assert.deepEqual(
+    check(
+      "/repo/src/backend/data/Cargo.toml",
+      '[dependencies]\narticle-html-core = { path = "../../core/article-html-core" }',
+    ),
+    ["data must not depend on HTML parsers"],
+  );
+  assert.deepEqual(
+    check(
+      "/repo/src/backend/product/Cargo.toml",
+      '[dependencies]\narticle-html-core = { path = "../../core/article-html-core" }',
+    ),
+    [],
+  );
+});
+
+test("rejects external HTTP and GitHub clients in the Data manifest", () => {
+  assert.deepEqual(
+    check(
+      "/repo/src/backend/data/Cargo.toml",
+      '[dependencies]\nreqwest = "0.12"\noctocrab = "0.44"',
+    ),
+    ["data must not depend on external HTTP or GitHub clients"],
+  );
+  assert.deepEqual(
+    check(
+      "/repo/src/backend/data/Cargo.toml",
+      '[dependencies]\naxum = "0.8"\nhttp = "1"',
+    ),
+    [],
+  );
+});
+
 test("allows Product data client, Data HTTP adapter, and typed Data storage", () => {
   assert.deepEqual(
     check("/repo/src/backend/product/src/data_client.rs", "struct DataClient;"),

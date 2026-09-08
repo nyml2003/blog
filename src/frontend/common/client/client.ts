@@ -6,6 +6,14 @@ import type {
   ArticleBrowsePage,
   ArticleId,
   ArticleType,
+  CategoryShelf,
+  ContentArticleDetail,
+  ContentArticleList,
+  ContentArticleSaveResult,
+  ContentPreview,
+  ContentSyncStatus,
+  ContentTaxonomy,
+  ContentWorkspace,
   MobileShelf,
   TShelf,
   Term,
@@ -15,6 +23,14 @@ import {
   articleListSchema,
   articleBrowsePageSchema,
   adminArticleSchema,
+  categoryShelfSchema,
+  contentArticleDetailSchema,
+  contentArticleListSchema,
+  contentArticleSaveResultSchema,
+  contentPreviewSchema,
+  contentSyncStatusSchema,
+  contentTaxonomySchema,
+  contentWorkspaceSchema,
 } from "./domain";
 import { inspectHtml } from "../validation/wasm";
 import type { HtmlInspection } from "../validation/article-html";
@@ -108,6 +124,44 @@ export type TShelfInput = {
   surface: "recommendation" | "archive";
   filterId: string;
 };
+export type CategoryShelfInput = Partial<{
+  categoryId: number;
+}>;
+export type ContentWorkspaceVersionInput = {
+  readonly expectedVersion: number;
+};
+export type ContentTaxonomySaveInput = {
+  readonly expectedVersion: number;
+  readonly taxonomy: ContentTaxonomy;
+};
+export type ContentTaxonomyAnalyzeInput = {
+  readonly expectedVersion: number;
+  readonly articleIds: readonly number[];
+};
+export type ContentArticleFields = {
+  readonly title: string;
+  readonly summary: string;
+  readonly categoryIds: readonly number[];
+  readonly tagIds: readonly number[];
+  readonly contentHtml: string;
+};
+export type ContentArticleCreateInput = {
+  readonly kind: "create";
+  readonly expectedVersion: number;
+  readonly article: ContentArticleFields;
+};
+export type ContentArticleUpdateInput = {
+  readonly kind: "update";
+  readonly expectedVersion: number;
+  readonly article: ContentArticleFields & { readonly id: number };
+};
+export type ContentArticleSaveInput =
+  | ContentArticleCreateInput
+  | ContentArticleUpdateInput;
+export type ContentArticleRemoveInput = {
+  readonly expectedVersion: number;
+  readonly articleId: number;
+};
 export type DraftInput = {
   id?: ArticleId;
   title: string;
@@ -117,7 +171,20 @@ export type DraftInput = {
   contentHtml: string;
 };
 
+export type AdminSessionVerification =
+  | { readonly kind: "totp"; readonly code: string }
+  | { readonly kind: "recovery"; readonly code: string };
+
+export type AdminSessionLoginInput = {
+  readonly password: string;
+  readonly verification: AdminSessionVerification;
+};
+
 export interface Client {
+  adminSession: {
+    login(input: AdminSessionLoginInput): DataTask<undefined>;
+    logout(): DataTask<undefined>;
+  };
   articleCatalog: {
     listPublishedArticles(
       input?: ArticleFilterInput,
@@ -131,6 +198,25 @@ export interface Client {
   };
   tShelf: {
     get(input: TShelfInput): DataTask<TShelf>;
+  };
+  contentTaxonomy: {
+    getPublic(): DataTask<ContentTaxonomy>;
+    getCategoryShelf(input?: CategoryShelfInput): DataTask<CategoryShelf>;
+    getWorkspace(): DataTask<ContentWorkspace>;
+    save(input: ContentTaxonomySaveInput): DataTask<ContentWorkspace>;
+    analyze(input: ContentTaxonomyAnalyzeInput): DataTask<ContentWorkspace>;
+    review(input: ContentWorkspaceVersionInput): DataTask<ContentWorkspace>;
+    preview(): DataTask<ContentPreview>;
+    submit(input: ContentWorkspaceVersionInput): DataTask<ContentWorkspace>;
+    abandon(input: ContentWorkspaceVersionInput): DataTask<ContentWorkspace>;
+    synchronize(): DataTask<ContentSyncStatus>;
+    getSyncStatus(): DataTask<ContentSyncStatus>;
+    listArticles(): DataTask<ContentArticleList>;
+    getArticle(id: number): DataTask<ContentArticleDetail>;
+    saveArticle(
+      input: ContentArticleSaveInput,
+    ): DataTask<ContentArticleSaveResult>;
+    removeArticle(input: ContentArticleRemoveInput): DataTask<ContentWorkspace>;
   };
   taxonomy: {
     listTypes(admin?: boolean): DataTask<ArticleType[]>;
@@ -158,7 +244,7 @@ export interface Client {
 }
 
 export type ClientApiRoute = {
-  method: "GET" | "POST";
+  method: "GET" | "POST" | "DELETE";
   endpoint: string;
   sceneCode: string;
 };
@@ -168,6 +254,16 @@ export type ClientApiRoute = {
  * sceneCode；golden 测试可直接遍历全集，不依赖手工调用每个 Client 方法。
  */
 export const CLIENT_API_ROUTES = {
+  adminSessionCreate: {
+    method: "POST",
+    endpoint: "/api/admin/session",
+    sceneCode: "admin.session.create",
+  },
+  adminSessionDelete: {
+    method: "DELETE",
+    endpoint: "/api/admin/session",
+    sceneCode: "admin.session.delete",
+  },
   publicArticleList: {
     method: "GET",
     endpoint: "/api/public/articles",
@@ -207,6 +303,16 @@ export const CLIENT_API_ROUTES = {
     method: "GET",
     endpoint: "/api/public/t-shelf",
     sceneCode: "public.t_shelf",
+  },
+  publicTaxonomyTree: {
+    method: "GET",
+    endpoint: "/api/public/taxonomy",
+    sceneCode: "public.taxonomy_tree",
+  },
+  publicMobileCategoryShelf: {
+    method: "GET",
+    endpoint: "/api/public/mobile/category-shelf",
+    sceneCode: "public.mobile_category_shelf",
   },
   adminArticleList: {
     method: "GET",
@@ -273,6 +379,71 @@ export const CLIENT_API_ROUTES = {
     endpoint: "/api/admin/recommendations",
     sceneCode: "admin.recommendation_generate",
   },
+  adminContentWorkspace: {
+    method: "GET",
+    endpoint: "/api/admin/content/workspace",
+    sceneCode: "admin.content_workspace",
+  },
+  adminContentArticleList: {
+    method: "GET",
+    endpoint: "/api/admin/content/articles",
+    sceneCode: "admin.content_article_list",
+  },
+  adminContentArticleDetail: {
+    method: "GET",
+    endpoint: "/api/admin/content/articles",
+    sceneCode: "admin.content_article_detail",
+  },
+  adminContentArticleSave: {
+    method: "POST",
+    endpoint: "/api/admin/content/articles",
+    sceneCode: "admin.content_article_save",
+  },
+  adminContentArticleRemove: {
+    method: "POST",
+    endpoint: "/api/admin/content/articles/remove",
+    sceneCode: "admin.content_article_remove",
+  },
+  adminContentTaxonomySave: {
+    method: "POST",
+    endpoint: "/api/admin/content/taxonomy",
+    sceneCode: "admin.content_taxonomy_save",
+  },
+  adminContentTaxonomyAnalyze: {
+    method: "POST",
+    endpoint: "/api/admin/content/taxonomy/analyze",
+    sceneCode: "admin.content_taxonomy_analyze",
+  },
+  adminContentTaxonomyReview: {
+    method: "POST",
+    endpoint: "/api/admin/content/taxonomy/review",
+    sceneCode: "admin.content_taxonomy_review",
+  },
+  adminContentPreview: {
+    method: "GET",
+    endpoint: "/api/admin/content/preview",
+    sceneCode: "admin.content_preview",
+  },
+  adminContentSubmit: {
+    method: "POST",
+    endpoint: "/api/admin/content/submit",
+    sceneCode: "admin.content_submit",
+  },
+  adminContentAbandon: {
+    method: "POST",
+    endpoint: "/api/admin/content/abandon",
+    sceneCode: "admin.content_abandon",
+  },
+  adminContentSync: {
+    method: "POST",
+    endpoint: "/api/admin/content/sync",
+    sceneCode: "admin.content_sync",
+  },
+  adminContentSyncStatus: {
+    method: "GET",
+    endpoint: "/api/admin/content/sync",
+    sceneCode: "admin.content_sync_status",
+  },
 } as const satisfies Record<string, ClientApiRoute>;
 
 const query = (params: Record<string, string | undefined>) => {
@@ -292,11 +463,19 @@ const postBody = (route: ClientApiRoute, fields: Record<string, unknown>) => ({
   ...fields,
 });
 
+const contentTaxonomyBody = (taxonomy: ContentTaxonomy) => ({
+  ...taxonomy,
+  categories: taxonomy.categories.map((category) => ({
+    ...category,
+    parentId: category.parentId ?? null,
+  })),
+});
+
 export function createClient(transport: Transport): Client {
   const request = <T>(
     path: string,
     schema: z.ZodType<T>,
-    method: "GET" | "POST" = "GET",
+    method: "GET" | "POST" | "DELETE" = "GET",
     body?: unknown,
   ) =>
     createDataTask(async (signal) => {
@@ -309,6 +488,21 @@ export function createClient(transport: Transport): Client {
       return response.ok ? decode(schema, response.value) : response;
     });
   return {
+    adminSession: {
+      login: (input) =>
+        request<undefined>(
+          CLIENT_API_ROUTES.adminSessionCreate.endpoint,
+          z.unknown().transform(() => undefined),
+          CLIENT_API_ROUTES.adminSessionCreate.method,
+          postBody(CLIENT_API_ROUTES.adminSessionCreate, input),
+        ),
+      logout: () =>
+        request<undefined>(
+          getPath(CLIENT_API_ROUTES.adminSessionDelete, {}),
+          z.unknown().transform(() => undefined),
+          CLIENT_API_ROUTES.adminSessionDelete.method,
+        ),
+    },
     articleCatalog: {
       listPublishedArticles: (input = {}) =>
         request<{ items: ArticleListItem[]; total: number }>(
@@ -378,6 +572,116 @@ export function createClient(transport: Transport): Client {
           }),
           tShelfSchema as unknown as z.ZodType<TShelf>,
           CLIENT_API_ROUTES.publicTShelf.method,
+        ),
+    },
+    contentTaxonomy: {
+      getPublic: () =>
+        request<ContentTaxonomy>(
+          getPath(CLIENT_API_ROUTES.publicTaxonomyTree, {}),
+          contentTaxonomySchema as z.ZodType<ContentTaxonomy>,
+          CLIENT_API_ROUTES.publicTaxonomyTree.method,
+        ),
+      getCategoryShelf: (input = {}) =>
+        request<CategoryShelf>(
+          getPath(CLIENT_API_ROUTES.publicMobileCategoryShelf, {
+            category_id: input.categoryId?.toString(),
+          }),
+          categoryShelfSchema as z.ZodType<CategoryShelf>,
+          CLIENT_API_ROUTES.publicMobileCategoryShelf.method,
+        ),
+      getWorkspace: () =>
+        request<ContentWorkspace>(
+          getPath(CLIENT_API_ROUTES.adminContentWorkspace, {}),
+          contentWorkspaceSchema as z.ZodType<ContentWorkspace>,
+          CLIENT_API_ROUTES.adminContentWorkspace.method,
+        ),
+      save: (input) =>
+        request<ContentWorkspace>(
+          CLIENT_API_ROUTES.adminContentTaxonomySave.endpoint,
+          contentWorkspaceSchema as z.ZodType<ContentWorkspace>,
+          CLIENT_API_ROUTES.adminContentTaxonomySave.method,
+          postBody(CLIENT_API_ROUTES.adminContentTaxonomySave, {
+            ...input,
+            taxonomy: contentTaxonomyBody(input.taxonomy),
+          }),
+        ),
+      analyze: (input) =>
+        request<ContentWorkspace>(
+          CLIENT_API_ROUTES.adminContentTaxonomyAnalyze.endpoint,
+          contentWorkspaceSchema as z.ZodType<ContentWorkspace>,
+          CLIENT_API_ROUTES.adminContentTaxonomyAnalyze.method,
+          postBody(CLIENT_API_ROUTES.adminContentTaxonomyAnalyze, input),
+        ),
+      review: (input) =>
+        request<ContentWorkspace>(
+          CLIENT_API_ROUTES.adminContentTaxonomyReview.endpoint,
+          contentWorkspaceSchema as z.ZodType<ContentWorkspace>,
+          CLIENT_API_ROUTES.adminContentTaxonomyReview.method,
+          postBody(CLIENT_API_ROUTES.adminContentTaxonomyReview, input),
+        ),
+      preview: () =>
+        request<ContentPreview>(
+          getPath(CLIENT_API_ROUTES.adminContentPreview, {}),
+          contentPreviewSchema as z.ZodType<ContentPreview>,
+          CLIENT_API_ROUTES.adminContentPreview.method,
+        ),
+      submit: (input) =>
+        request<ContentWorkspace>(
+          CLIENT_API_ROUTES.adminContentSubmit.endpoint,
+          contentWorkspaceSchema as z.ZodType<ContentWorkspace>,
+          CLIENT_API_ROUTES.adminContentSubmit.method,
+          postBody(CLIENT_API_ROUTES.adminContentSubmit, input),
+        ),
+      abandon: (input) =>
+        request<ContentWorkspace>(
+          CLIENT_API_ROUTES.adminContentAbandon.endpoint,
+          contentWorkspaceSchema as z.ZodType<ContentWorkspace>,
+          CLIENT_API_ROUTES.adminContentAbandon.method,
+          postBody(CLIENT_API_ROUTES.adminContentAbandon, input),
+        ),
+      synchronize: () =>
+        request<ContentSyncStatus>(
+          CLIENT_API_ROUTES.adminContentSync.endpoint,
+          contentSyncStatusSchema as z.ZodType<ContentSyncStatus>,
+          CLIENT_API_ROUTES.adminContentSync.method,
+          postBody(CLIENT_API_ROUTES.adminContentSync, {}),
+        ),
+      getSyncStatus: () =>
+        request<ContentSyncStatus>(
+          getPath(CLIENT_API_ROUTES.adminContentSyncStatus, {}),
+          contentSyncStatusSchema as z.ZodType<ContentSyncStatus>,
+          CLIENT_API_ROUTES.adminContentSyncStatus.method,
+        ),
+      listArticles: () =>
+        request<ContentArticleList>(
+          getPath(CLIENT_API_ROUTES.adminContentArticleList, {}),
+          contentArticleListSchema as z.ZodType<ContentArticleList>,
+          CLIENT_API_ROUTES.adminContentArticleList.method,
+        ),
+      getArticle: (id) =>
+        request<ContentArticleDetail>(
+          getPath(CLIENT_API_ROUTES.adminContentArticleDetail, {
+            id: String(id),
+          }),
+          contentArticleDetailSchema as z.ZodType<ContentArticleDetail>,
+          CLIENT_API_ROUTES.adminContentArticleDetail.method,
+        ),
+      saveArticle: (input) =>
+        request<ContentArticleSaveResult>(
+          CLIENT_API_ROUTES.adminContentArticleSave.endpoint,
+          contentArticleSaveResultSchema as z.ZodType<ContentArticleSaveResult>,
+          CLIENT_API_ROUTES.adminContentArticleSave.method,
+          postBody(CLIENT_API_ROUTES.adminContentArticleSave, {
+            expectedVersion: input.expectedVersion,
+            article: input.article,
+          }),
+        ),
+      removeArticle: (input) =>
+        request<ContentWorkspace>(
+          CLIENT_API_ROUTES.adminContentArticleRemove.endpoint,
+          contentWorkspaceSchema as z.ZodType<ContentWorkspace>,
+          CLIENT_API_ROUTES.adminContentArticleRemove.method,
+          postBody(CLIENT_API_ROUTES.adminContentArticleRemove, input),
         ),
     },
     taxonomy: {

@@ -4,14 +4,14 @@ id: PLAN-FRONTEND-PAGE-TEMPLATE-001
 status: acceptance
 owner: project-manager
 created: 2026-09-07
-last_reviewed: 2026-09-07
+last_reviewed: 2026-09-08
 ---
 
 # 前端页面模板与接入统一（注册表驱动）
 
 ## 目标
 
-按 [SPEC-FRONTEND-PAGE-TEMPLATE-001](../../../specs/SPEC-FRONTEND-PAGE-TEMPLATE-001.md) 建立页面注册表单一事实源：构建期生成 `index.html`、派生 vite 注册、统一 head 元数据规范与首绘 bootstrap 注入、`definePage` 统一页面接入、CSS 入口契约收敛。消除页面工程的三处声明、样板复制与 head 乱象。同时按用户追加决定完成公开端货架形态归一：Mobile 文章 list 页及其二级页保持 F 型，其余公开货架统一为 T 型。
+按 [SPEC-FRONTEND-PAGE-TEMPLATE-001](../../../specs/SPEC-FRONTEND-PAGE-TEMPLATE-001.md) 建立页面注册表单一事实源：构建期生成 `index.html`、派生 vite 注册、统一 head 元数据规范与首绘 bootstrap 注入、`definePage` 统一页面接入、CSS 入口契约收敛。消除页面工程的三处声明、样板复制与 head 乱象。同时按用户追加决定完成公开端货架形态归一：Mobile 两个文章入口保持 F 型并采用现行分类树语义，其余公开货架统一为 T 型。
 
 ## 决策记录（用户已定）
 
@@ -20,7 +20,8 @@ last_reviewed: 2026-09-07
 3. 细节默认：`definePage(App)` mount helper；mobile CSS 收敛单一入口（顺序契约不变）；`mobile-settings-bootstrap` 泛化为通用 `page-bootstrap`（注册表声明注入 + 子构建缓存）；theme-color 静态纸张色（动态留 v1.1）。
 4. 注册表补齐 Product 的 Mobile 设置页路由，使 `/m/settings/index.html` 在 integration 模式可访问；
 5. 页面 title 使用计划约定的中文页面名，由执行 agent 定稿；用户负责最终产品验收。
-6. 货架形态：Mobile `/m/articles/index.html` 与二级 `/m/articles/list.html` 使用 F 型；其余公开端货架使用 T 型；管理端文章表格是操作界面，不按展示货架改造。
+6. 货架形态：Mobile `/m/articles/index.html` 与 `/m/articles/list.html` 使用分类树 F 型；
+   其余公开端货架使用 T 型；管理端文章表格是操作界面，不按展示货架改造。
 7. T 型货架首个请求同时返回筛选项与第一个筛选项对应的文章数据；切换筛选项后重新请求文章数据并重新渲染。切换期间旧请求必须取消或忽略，且页面覆盖加载、空态、失败和重试状态。
 
 ## 成功标准

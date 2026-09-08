@@ -1,12 +1,34 @@
 import type { Accessor } from "solid-js";
 import type {
-  AdminArticle,
-  ArticleId,
-  ArticleTypeId,
-  DraftInput,
+  AdminSessionLoginInput,
+  ContentArticleDetail,
+  ContentArticleRemoveInput,
+  ContentArticleSaveInput,
+  ContentArticleSaveResult,
+  ContentSyncStatus,
+  ContentTaxonomy,
+  ContentWorkspace,
+  ContentWorkspaceArticle,
+} from "../../common/client";
+import type { HtmlInspection } from "../../common/validation/article-html";
+import { createDataTask } from "../../common/data/task";
+export {
+  ADMIN_SESSION_EXPIRED_EVENT,
+  adminNextFromSearch,
+} from "../../common/client";
+export type {
+  AdminSessionVerification,
+  ContentArticle,
+  ContentArticleDetail,
+  ContentArticleList,
+  ContentArticleSaveResult,
+  ContentPreview,
+  ContentSyncStatus,
+  ContentTaxonomy,
+  ContentWorkspace,
+  ContentWorkspaceStatus,
 } from "../../common/client";
 import type { ArticleType, Term } from "../../common/contracts/domain";
-import { createDataTask, type DataTask } from "../../common/data/task";
 import {
   executeQuery,
   queryClient,
@@ -23,79 +45,45 @@ import {
 
 export type AdminTaxonomyKind = "types" | "terms";
 export type AdminTaxonomyItem = ArticleType | Term;
-export type AdminDraftValues = {
+export type ContentEditorValues = {
   readonly id: number;
   readonly title: string;
   readonly summary: string;
-  readonly articleTypeId: number;
-  readonly termIds: readonly number[];
+  readonly categoryIds: readonly number[];
+  readonly tagIds: readonly number[];
   readonly contentHtml: string;
 };
 
-export type AdminEditorSaveOutcome =
-  | {
-      readonly kind: "completed";
-      readonly savedArticle: QueryReadonly<AdminArticle>;
-      readonly article: QueryReadonly<AdminArticle>;
-    }
-  | {
-      readonly kind: "save-failed";
-      readonly error: QueryError;
-    }
-  | {
-      readonly kind: "publish-failed";
-      readonly savedArticle: QueryReadonly<AdminArticle>;
-      readonly error: QueryError;
-    };
-
-export type AdminEditorArticle = QueryReadonly<AdminArticle>;
-
-export type AdminEditorWriter = {
-  readonly saveDraft: (input: DraftInput) => QueryTask<AdminArticle>;
-  readonly publish: (id: ArticleId) => QueryTask<AdminArticle>;
+export type ContentArticleWriter = {
+  readonly saveArticle: (
+    input: ContentArticleSaveInput,
+  ) => QueryTask<ContentArticleSaveResult>;
 };
 
-const emptyAdminArticle = (): AdminArticle => ({
-  id: 0 as ArticleId,
-  title: "",
-  summary: "",
-  articleTypeId: 0 as ArticleTypeId,
-  contentHtml: "",
-  termIds: [],
-  terms: [],
-  status: "draft",
-  createdAt: "",
-  updatedAt: "",
-  htmlInspection: {
-    profileVersion: "article-html/v1",
-    valid: true,
-    diagnostics: [],
-  },
-});
+export type ContentArticleRemover = {
+  readonly removeArticle: (
+    input: ContentArticleRemoveInput,
+  ) => QueryTask<ContentWorkspace>;
+};
 
-const resolvedTask = <T>(value: T): DataTask<T> =>
-  createDataTask(async () => ({ ok: true, value }));
+export const unicodeScalarLength = (value: string): number =>
+  Array.from(value).length;
 
-export const useAdminArticles = () =>
-  useDataResource(
-    () => undefined,
-    () => queryClient.adminArticles.list(),
-  );
+export const limitUnicodeScalars = (value: string, limit: number): string =>
+  Array.from(value).slice(0, limit).join("");
+
+export const contentAnalysisArticleIds = (
+  selectedIds: readonly number[],
+  articles: readonly ContentWorkspaceArticle[],
+): readonly number[] => {
+  if (selectedIds.length > 0) return selectedIds;
+  return articles.map((article) => article.id);
+};
 
 export const useAdminArticle = (rawId: Accessor<string | null | undefined>) =>
   useDataResource(rawId, (value) =>
     taskForArticleId(value, (id) => queryClient.adminArticles.get(id)),
   );
-
-export const useAdminEditorArticle = (
-  rawId: Accessor<string | null | undefined>,
-) =>
-  useDataResource(rawId, (value) => {
-    if (value === null || value === undefined || value === "") {
-      return resolvedTask(emptyAdminArticle());
-    }
-    return taskForArticleId(value, (id) => queryClient.adminArticles.get(id));
-  });
 
 export const useAdminArticleTypes = () =>
   useDataResource(
@@ -173,84 +161,181 @@ export const renameAdminTaxonomyItem = (
   );
 };
 
-export const generateRecommendations = () =>
-  executeQuery(() => queryClient.adminArticles.generateRecommendations());
+export const loginAdminSession = (input: AdminSessionLoginInput) =>
+  executeQuery(() => queryClient.adminSession.login(input));
 
-const invalidDraftError = (): QueryError => ({
+export const logoutAdminSession = () =>
+  executeQuery(() => queryClient.adminSession.logout());
+
+export const useContentWorkspace = () =>
+  useDataResource(
+    () => undefined,
+    () => queryClient.contentTaxonomy.getWorkspace(),
+  );
+
+export const useContentSyncStatus = () =>
+  useDataResource<ContentSyncStatus, undefined>(
+    () => undefined,
+    () => queryClient.contentTaxonomy.getSyncStatus(),
+  );
+
+export const useContentArticles = () =>
+  useDataResource(
+    () => undefined,
+    () => queryClient.contentTaxonomy.listArticles(),
+  );
+
+export const useContentArticle = (rawId: Accessor<string | null | undefined>) =>
+  useDataResource<ContentArticleDetail | undefined, string | null | undefined>(
+    rawId,
+    (value) => {
+      if (value === null || value === undefined || value === "") {
+        return createDataTask(async () => ({ ok: true, value: undefined }));
+      }
+      return taskForArticleId(value, (id) =>
+        queryClient.contentTaxonomy.getArticle(Number(id)),
+      );
+    },
+  );
+
+export const saveContentTaxonomy = (
+  expectedVersion: number,
+  taxonomy: ContentTaxonomy,
+) =>
+  executeQuery(() =>
+    queryClient.contentTaxonomy.save({ expectedVersion, taxonomy }),
+  );
+
+export const analyzeContentTaxonomy = (
+  expectedVersion: number,
+  articleIds: readonly number[],
+) =>
+  executeQuery(() =>
+    queryClient.contentTaxonomy.analyze({ expectedVersion, articleIds }),
+  );
+
+export const reviewContentTaxonomy = (expectedVersion: number) =>
+  executeQuery(() => queryClient.contentTaxonomy.review({ expectedVersion }));
+
+export const previewContentTaxonomy = () =>
+  executeQuery(() => queryClient.contentTaxonomy.preview());
+
+export const submitContentTaxonomy = (expectedVersion: number) =>
+  executeQuery(() => queryClient.contentTaxonomy.submit({ expectedVersion }));
+
+export const abandonContentTaxonomy = (expectedVersion: number) =>
+  executeQuery(() => queryClient.contentTaxonomy.abandon({ expectedVersion }));
+
+export const synchronizeContent = () =>
+  executeQuery(() => queryClient.contentTaxonomy.synchronize());
+
+export const getContentSyncStatus = () =>
+  executeQuery(() => queryClient.contentTaxonomy.getSyncStatus());
+
+const invalidArticleError = (): QueryError => ({
   kind: "protocol",
-  message: "请填写标题并选择文章类型",
+  message: "请填写文章标题",
 });
 
-export const executeAdminEditorSave = async (
-  writer: AdminEditorWriter,
-  values: AdminDraftValues,
-  shouldPublish: boolean,
-): Promise<AdminEditorSaveOutcome> => {
-  if (values.title.trim() === "" || values.articleTypeId <= 0) {
-    return { kind: "save-failed", error: invalidDraftError() };
+const invalidSummaryError = (): QueryError => ({
+  kind: "protocol",
+  message: "摘要不能超过 160 个 Unicode 字符",
+});
+
+const pendingInspectionError = (): QueryError => ({
+  kind: "protocol",
+  message: "正文 HTML 仍在校验，请稍候再保存",
+});
+
+const invalidHtmlError = (
+  inspection: QueryReadonly<HtmlInspection>,
+): QueryError => ({
+  kind: "html-validation",
+  message: "正文 HTML 校验未通过，请修正后再保存",
+  htmlInspection: inspection,
+});
+
+export const executeContentArticleSave = async (
+  writer: ContentArticleWriter,
+  expectedVersion: number,
+  values: ContentEditorValues,
+  inspection: QueryReadonly<HtmlInspection> | undefined,
+): Promise<QueryResult<ContentArticleSaveResult>> => {
+  if (values.title.trim() === "") {
+    return { ok: false, error: invalidArticleError() };
+  }
+  if (unicodeScalarLength(values.summary.trim()) > 160) {
+    return { ok: false, error: invalidSummaryError() };
+  }
+  if (inspection === undefined) {
+    return { ok: false, error: pendingInspectionError() };
+  }
+  if (!inspection.valid) {
+    return { ok: false, error: invalidHtmlError(inspection) };
   }
 
-  const input: DraftInput = {
+  const article = {
     title: values.title.trim(),
     summary: values.summary.trim(),
-    articleTypeId: values.articleTypeId,
-    termIds: values.termIds,
+    categoryIds: values.categoryIds,
+    tagIds: values.tagIds,
     contentHtml: values.contentHtml,
   };
-  if (values.id > 0) input.id = values.id as ArticleId;
-
-  let saved: QueryResult<AdminArticle>;
+  const input: ContentArticleSaveInput =
+    values.id > 0
+      ? {
+          kind: "update",
+          expectedVersion,
+          article: { ...article, id: values.id },
+        }
+      : { kind: "create", expectedVersion, article };
   try {
-    saved = await startQuery(writer.saveDraft(input));
+    return await startQuery(writer.saveArticle(input));
   } catch (reason) {
-    return {
-      kind: "save-failed",
-      error: queryErrorFromUnknown(reason),
-    };
+    return { ok: false, error: queryErrorFromUnknown(reason) };
   }
-  if (!saved.ok) return { kind: "save-failed", error: saved.error };
-  if (!shouldPublish || saved.value.status !== "draft") {
-    return {
-      kind: "completed",
-      savedArticle: saved.value,
-      article: saved.value,
-    };
-  }
-
-  let published: QueryResult<AdminArticle>;
-  try {
-    published = await startQuery(writer.publish(saved.value.id));
-  } catch (reason) {
-    return {
-      kind: "publish-failed",
-      savedArticle: saved.value,
-      error: queryErrorFromUnknown(reason),
-    };
-  }
-  if (!published.ok) {
-    return {
-      kind: "publish-failed",
-      savedArticle: saved.value,
-      error: published.error,
-    };
-  }
-  return {
-    kind: "completed",
-    savedArticle: saved.value,
-    article: published.value,
-  };
 };
 
-export const saveAdminEditorArticle = (
-  values: AdminDraftValues,
-  shouldPublish: boolean,
-) => executeAdminEditorSave(queryClient.draftEditor, values, shouldPublish);
+export const saveContentArticle = (
+  expectedVersion: number,
+  values: ContentEditorValues,
+  inspection: QueryReadonly<HtmlInspection> | undefined,
+) =>
+  executeContentArticleSave(
+    queryClient.contentTaxonomy,
+    expectedVersion,
+    values,
+    inspection,
+  );
 
-export const unpublishArticle = (id: number) =>
-  executeQuery(() => queryClient.draftEditor.unpublish(id as ArticleId));
+export const executeContentArticleRemoval = async (
+  remover: ContentArticleRemover,
+  expectedVersion: number,
+  articleId: number,
+  confirmRemoval: () => boolean,
+): Promise<QueryResult<ContentWorkspace> | undefined> => {
+  if (!confirmRemoval()) return undefined;
+  return startQuery(remover.removeArticle({ expectedVersion, articleId }));
+};
 
-export const adminQueryErrorMessage = (error: QueryError): string =>
-  queryErrorMessage(error, "请求未完成，请重试");
+export const stageContentArticleRemoval = (
+  expectedVersion: number,
+  articleId: number,
+  confirmRemoval: () => boolean,
+) =>
+  executeContentArticleRemoval(
+    queryClient.contentTaxonomy,
+    expectedVersion,
+    articleId,
+    confirmRemoval,
+  );
+
+export const adminQueryErrorMessage = (error: QueryError): string => {
+  if (error.kind === "remote" && error.code === "WORKSPACE_VERSION_CONFLICT") {
+    return "工作区版本已变化。当前输入已保留，请刷新后重新应用修改。";
+  }
+  return queryErrorMessage(error, "请求未完成，请重试");
+};
 
 export const adminTaxonomyErrorMessage = (error: QueryError): string =>
   error.kind;

@@ -7,7 +7,7 @@
 //! - 列表读取保持**固定查询数**：count + 当前页 + 批量 terms（`IN (...)`），
 //!   禁止逐条 detail（N+1 边界）。
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
@@ -199,8 +199,15 @@ impl SqliteStore {
             .bind(position as i64)
             .execute(&mut *tx)
             .await
-            .map_err(|error| OpenError(format!("seed recommendation_items: {error}")))?;
+                .map_err(|error| OpenError(format!("seed recommendation_items: {error}")))?;
         }
+        let content_snapshot = serde_json::to_string(&fixture::content_snapshot())
+            .map_err(|error| OpenError(format!("encode seed content snapshot: {error}")))?;
+        sqlx::query("INSERT INTO content_snapshot (singleton, source_commit, snapshot_json) VALUES (1, 'fixture-main', ?)")
+            .bind(content_snapshot)
+            .execute(&mut *tx)
+            .await
+            .map_err(|error| OpenError(format!("seed content snapshot: {error}")))?;
         tx.commit()
             .await
             .map_err(|error| OpenError(format!("commit seed: {error}")))?;
@@ -665,11 +672,358 @@ fn map_write_error(sql: &str, error: &dyn std::fmt::Display) -> OperationFailure
     internal(sql, &text.as_str())
 }
 
+fn content_workflow_conflict() -> OperationFailure {
+    OperationFailure::new(
+        codes::CONTENT_WORKFLOW_CHANGED,
+        "content workflow revision changed before persistence",
+    )
+}
+
+fn content_snapshot_conflict() -> OperationFailure {
+    OperationFailure::new(
+        codes::CONTENT_SNAPSHOT_CHANGED,
+        "content snapshot source commit changed before replacement",
+    )
+}
+
 fn not_found(kind: &str, id: i64) -> OperationFailure {
     OperationFailure::new(codes::NOT_FOUND, format!("{kind} {id} not found"))
 }
 
 impl DataStore for SqliteStore {
+    fn content_workflow_write(
+        &self,
+        request: &protocol::ContentWorkflowWrite,
+        ctx: &OpCtx<'_>,
+    ) -> Result<protocol::StoredContentWorkflow, OperationFailure> {
+        if let Some(failure) = super::validation::content_workflow_failure(&request.state) {
+            return Err(failure);
+        }
+        let payload = serde_json::to_string(&request.state)
+            .map_err(|error| internal("serialize content workflow", &error))?;
+        let revision = request
+            .expected_revision
+            .unwrap_or(0)
+            .checked_add(1)
+            .ok_or_else(content_workflow_conflict)?;
+        let revision_i64 = i64::try_from(revision).map_err(|_| content_workflow_conflict())?;
+        let mut conn = self.connect()?;
+        let result = match request.expected_revision {
+            None => self.execute(
+                &mut conn.conn,
+                "INSERT INTO content_workflow (singleton, revision, state_json) VALUES (1, ?, ?) ON CONFLICT(singleton) DO NOTHING",
+                &[Bind::Int(revision_i64), Bind::Text(payload)],
+                ctx,
+            )?,
+            Some(expected) => {
+                let expected_i64 =
+                    i64::try_from(expected).map_err(|_| content_workflow_conflict())?;
+                self.execute(
+                    &mut conn.conn,
+                    "UPDATE content_workflow SET revision = ?, state_json = ? WHERE singleton = 1 AND revision = ?",
+                    &[
+                        Bind::Int(revision_i64),
+                        Bind::Text(payload),
+                        Bind::Int(expected_i64),
+                    ],
+                    ctx,
+                )?
+            }
+        };
+        ctx.meter.record(1);
+        if result.rows_affected() != 1 {
+            return Err(content_workflow_conflict());
+        }
+        Ok(protocol::StoredContentWorkflow {
+            revision,
+            state: request.state.clone(),
+        })
+    }
+
+    fn content_workflow_get(
+        &self,
+        ctx: &OpCtx<'_>,
+    ) -> Result<Option<protocol::StoredContentWorkflow>, OperationFailure> {
+        let mut conn = self.connect()?;
+        let row = self.fetch_optional(
+            &mut conn.conn,
+            "SELECT revision, state_json FROM content_workflow WHERE singleton = 1",
+            &[],
+            ctx,
+        )?;
+        ctx.meter.record(1);
+        row.map(|row| {
+            let revision: i64 = column(&row, "revision")?;
+            let revision = u64::try_from(revision)
+                .map_err(|error| internal("decode content workflow revision", &error))?;
+            let payload: String = column(&row, "state_json")?;
+            let state = serde_json::from_str(&payload)
+                .map_err(|error| internal("decode stored content workflow", &error))?;
+            Ok(protocol::StoredContentWorkflow { revision, state })
+        })
+        .transpose()
+    }
+
+    fn content_snapshot_replace(
+        &self,
+        request: &protocol::ContentSnapshotReplace,
+        ctx: &OpCtx<'_>,
+    ) -> Result<(), OperationFailure> {
+        if let Some(failure) = super::validation::content_snapshot_failure(&request.snapshot) {
+            return Err(failure);
+        }
+        if request.commit.trim().is_empty() {
+            return Err(OperationFailure::new(
+                codes::INVALID_PAYLOAD,
+                "source commit must not be empty",
+            ));
+        }
+        let projection = super::validation::legacy_projection(&request.snapshot)?;
+        let payload = serde_json::to_string(&request.snapshot)
+            .map_err(|error| internal("serialize content snapshot", &error))?;
+        let mut tx = self.begin()?;
+        let inserted_initial = match request.expected_previous_commit.as_deref() {
+            None => {
+                let result = self.execute(
+                    &mut tx.tx,
+                    "INSERT INTO content_snapshot (singleton, source_commit, snapshot_json) VALUES (1, ?, ?) ON CONFLICT(singleton) DO NOTHING",
+                    &[
+                        Bind::Text(request.commit.clone()),
+                        Bind::Text(payload.clone()),
+                    ],
+                    ctx,
+                )?;
+                if result.rows_affected() != 1 {
+                    return Err(content_snapshot_conflict());
+                }
+                true
+            }
+            Some(expected) => {
+                let result = self.execute(
+                    &mut tx.tx,
+                    "UPDATE content_snapshot SET source_commit = source_commit WHERE singleton = 1 AND source_commit = ?",
+                    &[Bind::Text(expected.to_owned())],
+                    ctx,
+                )?;
+                if result.rows_affected() != 1 {
+                    return Err(content_snapshot_conflict());
+                }
+                false
+            }
+        };
+        ctx.meter.record(1);
+        if !inserted_initial
+            && let Some(row) = self.fetch_optional_tx(
+                &mut tx.tx,
+                "SELECT source_commit, snapshot_json FROM content_snapshot WHERE singleton = 1",
+                &[],
+                ctx,
+            )?
+        {
+            let previous_json: String = column(&row, "snapshot_json")?;
+            let previous: protocol::ContentSnapshot = serde_json::from_str(&previous_json)
+                .map_err(|error| internal("decode previous content snapshot", &error))?;
+            let previous_commit: String = column(&row, "source_commit")?;
+            if previous_commit == request.commit {
+                if previous == request.snapshot {
+                    return Ok(());
+                }
+                return Err(OperationFailure::new(
+                    codes::CONTENT_WORKFLOW_CHANGED,
+                    "the same source commit cannot identify a different snapshot",
+                ));
+            }
+            if let Some(failure) =
+                super::validation::content_history_failure(&previous, &request.snapshot)
+            {
+                return Err(failure);
+            }
+        }
+        for article in &projection.articles {
+            if let Some(row) = self.fetch_optional_tx(&mut tx.tx, "SELECT created_at, first_published_at FROM content_article_identity WHERE article_id = ?", &[Bind::Int(article.id)], ctx)? {
+                let created_at: String = column(&row, "created_at")?;
+                let published_at: String = column(&row, "first_published_at")?;
+                if created_at != article.created_at || published_at != article.published_at {
+                    return Err(OperationFailure::new(codes::CONTENT_WORKFLOW_CHANGED, format!("article {} identity or first publication time changed", article.id)));
+                }
+            } else {
+                self.execute(&mut tx.tx, "INSERT INTO content_article_identity (article_id, created_at, first_published_at) VALUES (?, ?, ?)", &[Bind::Int(article.id), Bind::Text(article.created_at.clone()), Bind::Text(article.published_at.clone())], ctx)?;
+            }
+        }
+        let published_ids = projection
+            .articles
+            .iter()
+            .map(|article| article.id)
+            .collect::<BTreeSet<_>>();
+        let previous_types = self
+            .fetch_all_tx(
+                &mut tx.tx,
+                "SELECT id, name, created_at, updated_at FROM article_types",
+                &[],
+                ctx,
+            )?
+            .into_iter()
+            .map(|row| {
+                Ok((
+                    column::<i64, _>(&row, "id")?,
+                    (
+                        column::<String, _>(&row, "name")?,
+                        column::<String, _>(&row, "created_at")?,
+                        column::<String, _>(&row, "updated_at")?,
+                    ),
+                ))
+            })
+            .collect::<Result<BTreeMap<_, _>, OperationFailure>>()?;
+        let previous_terms = self
+            .fetch_all_tx(
+                &mut tx.tx,
+                "SELECT id, name, kind, created_at, updated_at FROM terms",
+                &[],
+                ctx,
+            )?
+            .into_iter()
+            .map(|row| {
+                Ok((
+                    column::<i64, _>(&row, "id")?,
+                    (
+                        column::<String, _>(&row, "name")?,
+                        column::<String, _>(&row, "kind")?,
+                        column::<String, _>(&row, "created_at")?,
+                        column::<String, _>(&row, "updated_at")?,
+                    ),
+                ))
+            })
+            .collect::<Result<BTreeMap<_, _>, OperationFailure>>()?;
+        let recommendation_rows = self.fetch_all_tx(
+            &mut tx.tx,
+            "SELECT recommendation_set_id, article_id, position FROM recommendation_items ORDER BY recommendation_set_id, position",
+            &[],
+            ctx,
+        )?;
+        let recommendations = recommendation_rows
+            .iter()
+            .map(|row| {
+                Ok((
+                    column::<i64, _>(row, "recommendation_set_id")?,
+                    column::<i64, _>(row, "article_id")?,
+                    column::<i64, _>(row, "position")?,
+                ))
+            })
+            .collect::<Result<Vec<_>, OperationFailure>>()?
+            .into_iter()
+            .filter(|(_, article_id, _)| published_ids.contains(article_id))
+            .collect::<Vec<_>>();
+        self.execute(&mut tx.tx, "DELETE FROM recommendation_items", &[], ctx)?;
+        self.execute(&mut tx.tx, "DELETE FROM article_terms", &[], ctx)?;
+        self.execute(&mut tx.tx, "DELETE FROM articles", &[], ctx)?;
+        self.execute(&mut tx.tx, "DELETE FROM terms", &[], ctx)?;
+        self.execute(&mut tx.tx, "DELETE FROM article_types", &[], ctx)?;
+        let stamp = protocol::clock::now_utc_rfc3339();
+        for value in &projection.types {
+            let (created_at, updated_at) = previous_types
+                .get(&value.id)
+                .map(|(name, created_at, updated_at)| {
+                    (
+                        created_at.clone(),
+                        if name == &value.name {
+                            updated_at.clone()
+                        } else {
+                            stamp.clone()
+                        },
+                    )
+                })
+                .unwrap_or_else(|| (stamp.clone(), stamp.clone()));
+            self.execute(
+                &mut tx.tx,
+                "INSERT INTO article_types (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)",
+                &[
+                    Bind::Int(value.id),
+                    Bind::Text(value.name.clone()),
+                    Bind::Text(created_at),
+                    Bind::Text(updated_at),
+                ],
+                ctx,
+            )?;
+        }
+        for value in &projection.terms {
+            let (created_at, updated_at) = previous_terms
+                .get(&value.id)
+                .map(|(name, kind, created_at, updated_at)| {
+                    (
+                        created_at.clone(),
+                        if name == &value.name && kind == value.kind {
+                            updated_at.clone()
+                        } else {
+                            stamp.clone()
+                        },
+                    )
+                })
+                .unwrap_or_else(|| (stamp.clone(), stamp.clone()));
+            self.execute(
+                &mut tx.tx,
+                "INSERT INTO terms (id, name, kind, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+                &[
+                    Bind::Int(value.id),
+                    Bind::Text(value.name.clone()),
+                    Bind::Text(value.kind.to_owned()),
+                    Bind::Text(created_at),
+                    Bind::Text(updated_at),
+                ],
+                ctx,
+            )?;
+        }
+        for value in &projection.articles {
+            self.execute(&mut tx.tx, "INSERT INTO articles (id, title, summary, article_type_id, content_html, status, created_at, updated_at, published_at) VALUES (?, ?, ?, ?, ?, 'published', ?, ?, ?)", &[Bind::Int(value.id), Bind::Text(value.title.clone()), Bind::Text(value.summary.clone()), Bind::Int(value.article_type_id), Bind::Text(value.content_html.clone()), Bind::Text(value.created_at.clone()), Bind::Text(value.updated_at.clone()), Bind::Text(value.published_at.clone())], ctx)?;
+            self.write_term_links(&mut tx.tx, value.id, &value.term_ids, ctx)?;
+        }
+        for (set_id, article_id, position) in recommendations {
+            self.execute(
+                &mut tx.tx,
+                "INSERT INTO recommendation_items (recommendation_set_id, article_id, position) VALUES (?, ?, ?)",
+                &[Bind::Int(set_id), Bind::Int(article_id), Bind::Int(position)],
+                ctx,
+            )?;
+        }
+        ctx.meter.record(1);
+        self.execute(
+            &mut tx.tx,
+            "UPDATE content_snapshot SET source_commit = ?, snapshot_json = ? WHERE singleton = 1",
+            &[Bind::Text(request.commit.clone()), Bind::Text(payload)],
+            ctx,
+        )?;
+        ctx.meter.record(1);
+        self.block(async {
+            tx.tx
+                .commit()
+                .await
+                .map_err(|error| internal("commit content snapshot", &error))
+        })?;
+        ctx.meter.record(1);
+        Ok(())
+    }
+
+    fn content_snapshot_get(
+        &self,
+        ctx: &OpCtx<'_>,
+    ) -> Result<Option<protocol::StoredContentSnapshot>, OperationFailure> {
+        let mut conn = self.connect()?;
+        let row = self.fetch_optional(
+            &mut conn.conn,
+            "SELECT source_commit, snapshot_json FROM content_snapshot WHERE singleton = 1",
+            &[],
+            ctx,
+        )?;
+        ctx.meter.record(1);
+        row.map(|row| {
+            let commit: String = column(&row, "source_commit")?;
+            let payload: String = column(&row, "snapshot_json")?;
+            let snapshot = serde_json::from_str(&payload)
+                .map_err(|error| internal("decode stored content snapshot", &error))?;
+            Ok(protocol::StoredContentSnapshot { commit, snapshot })
+        })
+        .transpose()
+    }
+
     /// 固定 3 条查询：count → 当前页 → 批量 terms。查询数与条目数无关。
     fn article_list(
         &self,

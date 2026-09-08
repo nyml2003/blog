@@ -8,6 +8,8 @@ import type {
   ArticleBrowsePage,
   ArticleBrowseInput,
   ArticleListItem,
+  CategoryShelf,
+  CategoryShelfInput,
   Term,
   TShelf,
   TShelfFilter,
@@ -15,6 +17,7 @@ import type {
 } from "../../common/client";
 
 export type { TShelf, TShelfArticle, TShelfFilter } from "../../common/client";
+export type { CategoryShelf } from "../../common/client";
 import type { ArticleFilter } from "../../common/contracts/domain";
 import {
   createDataResource,
@@ -210,6 +213,26 @@ export const createTShelfResource = (
   };
 };
 
+export type CategoryShelfLoader = (
+  selection: CategoryShelfInput,
+) => QueryTask<CategoryShelf>;
+
+export const createCategoryShelfResource = (load: CategoryShelfLoader) => {
+  let selection: CategoryShelfInput = {};
+  const resource = createDataResource(() => load(selection));
+  return {
+    getSnapshot: resource.getSnapshot,
+    subscribe: resource.subscribe,
+    start: resource.start,
+    select: (nextSelection: CategoryShelfInput) => {
+      selection = nextSelection;
+      return resource.refetch();
+    },
+    refetch: resource.refetch,
+    cancel: resource.cancel,
+  };
+};
+
 export const tShelfFilterFromSearch = (search: string): string => {
   const rawId = new URLSearchParams(search).get("type_id");
   if (rawId === null || !/^\d+$/.test(rawId)) return "all";
@@ -297,6 +320,42 @@ export const useMobileArticleShelf = () =>
     () => undefined,
     () => queryClient.mobileShelf.list(),
   );
+
+export const useMobileCategoryShelf = (
+  categoryId: Accessor<number | undefined>,
+) => {
+  const resource = createCategoryShelfResource((selection) =>
+    queryClient.contentTaxonomy.getCategoryShelf(selection),
+  );
+  const [state, setState] = createSignal(resource.getSnapshot());
+  const unsubscribe = resource.subscribe(() =>
+    setState(resource.getSnapshot()),
+  );
+  let started = false;
+  createRenderEffect(() => {
+    const categoryIdValue = categoryId();
+    const selection: CategoryShelfInput = { categoryId: categoryIdValue };
+    if (!started) {
+      started = true;
+      void resource.select(selection);
+      return;
+    }
+    void resource.select(selection);
+  });
+  onCleanup(() => {
+    unsubscribe();
+    resource.cancel();
+  });
+  return {
+    state,
+    snapshot: () => state().snapshot,
+    latest: () => state().latest,
+    loading: () => state().status === "loading",
+    error: () => state().error,
+    refetch: resource.refetch,
+    cancel: resource.cancel,
+  };
+};
 
 export const usePublicArticleTypes = () =>
   useDataResource(

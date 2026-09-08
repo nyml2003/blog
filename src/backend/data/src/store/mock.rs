@@ -16,7 +16,7 @@ use protocol::{
     TermRename, TermWrite, Unit, has_more, normalize_page, normalize_page_size,
 };
 
-use super::{ArticleFilter, DataStore, OpCtx, term_refs, type_ref};
+use super::{ArticleFilter, DataStore, OpCtx};
 use crate::fixture;
 
 /// 一篇内存文章（字段与 SQLite 表一一对应）。
@@ -56,11 +56,14 @@ struct MockState {
     next_article_id: i64,
     next_type_id: i64,
     next_term_id: i64,
+    content_snapshot: Option<protocol::StoredContentSnapshot>,
+    content_workflow: Option<protocol::StoredContentWorkflow>,
+    article_identities: HashMap<i64, (String, String)>,
 }
 
 impl MockState {
     fn from_fixture() -> Self {
-        let articles = fixture::ARTICLES
+        let articles: Vec<MockArticle> = fixture::ARTICLES
             .iter()
             .map(|article| MockArticle {
                 id: article.id,
@@ -73,6 +76,17 @@ impl MockState {
                 updated_at: article.updated_at.to_owned(),
                 published_at: article.published_at.map(str::to_owned),
                 term_ids: article.term_ids.to_vec(),
+            })
+            .collect();
+        let article_identities = articles
+            .iter()
+            .filter_map(|article| {
+                article.published_at.as_ref().map(|published_at| {
+                    (
+                        article.id,
+                        (article.created_at.clone(), published_at.clone()),
+                    )
+                })
             })
             .collect();
         Self {
@@ -101,6 +115,12 @@ impl MockState {
                 .unwrap_or(0)
                 + 1,
             next_term_id: fixture::TERMS.iter().map(|t| t.id).max().unwrap_or(0) + 1,
+            content_snapshot: Some(protocol::StoredContentSnapshot {
+                commit: "fixture-main".into(),
+                snapshot: fixture::content_snapshot(),
+            }),
+            content_workflow: None,
+            article_identities,
         }
     }
 }
@@ -122,24 +142,40 @@ impl MockStore {
         }
     }
 
-    fn item(&self, article: &MockArticle) -> ArticleListItem {
+    fn item(state: &MockState, article: &MockArticle) -> ArticleListItem {
         ArticleListItem {
             id: article.id,
             title: article.title.clone(),
             summary: article.summary.clone(),
             article_type_id: article.article_type_id,
-            article_type: type_ref(article.article_type_id),
+            article_type: state
+                .article_types
+                .iter()
+                .find(|candidate| candidate.id == article.article_type_id)
+                .map(|candidate| protocol::ArticleTypeRef {
+                    id: candidate.id,
+                    name: candidate.name.clone(),
+                }),
             status: article.status.clone(),
             created_at: article.created_at.clone(),
             updated_at: article.updated_at.clone(),
             published_at: article.published_at.clone(),
             term_ids: article.term_ids.clone(),
-            terms: term_refs(&article.term_ids),
+            terms: state
+                .terms
+                .iter()
+                .filter(|term| article.term_ids.contains(&term.id))
+                .map(|term| TermRef {
+                    id: term.id,
+                    name: term.name.clone(),
+                    kind: term.kind.clone(),
+                })
+                .collect(),
         }
     }
 
-    fn detail(&self, article: &MockArticle) -> ArticleDetail {
-        let item = self.item(article);
+    fn detail(state: &MockState, article: &MockArticle) -> ArticleDetail {
+        let item = Self::item(state, article);
         ArticleDetail {
             content_html: article.content_html.clone(),
             id: item.id,
@@ -176,7 +212,19 @@ impl MockStore {
         let mut grouped: HashMap<i64, Vec<TermRef>> = HashMap::with_capacity(article_ids.len());
         for article in &state.articles {
             if article_ids.contains(&article.id) {
-                grouped.insert(article.id, term_refs(&article.term_ids));
+                grouped.insert(
+                    article.id,
+                    state
+                        .terms
+                        .iter()
+                        .filter(|term| article.term_ids.contains(&term.id))
+                        .map(|term| TermRef {
+                            id: term.id,
+                            name: term.name.clone(),
+                            kind: term.kind.clone(),
+                        })
+                        .collect(),
+                );
             }
         }
         grouped
@@ -187,7 +235,7 @@ impl MockStore {
         let mut by_id: HashMap<i64, ArticleDetail> = HashMap::with_capacity(ids.len());
         for article in &state.articles {
             if ids.contains(&article.id) && article.status == "published" {
-                by_id.insert(article.id, self.detail(article));
+                by_id.insert(article.id, Self::detail(state, article));
             }
         }
         ids.iter().filter_map(|id| by_id.remove(id)).collect()
@@ -203,37 +251,40 @@ impl MockStore {
         let stamp = protocol::clock::now_utc_rfc3339();
         let mut state = self.state.lock().expect("mock state mutex");
         ctx.meter.record(1); // select 状态
-        let article = state
-            .articles
-            .iter_mut()
-            .find(|candidate| candidate.id == id)
-            .ok_or_else(|| not_found("article", id))?;
-        let allowed = if publish {
-            article.status == "draft"
-        } else {
-            article.status == "published"
+        let article = {
+            let article = state
+                .articles
+                .iter_mut()
+                .find(|candidate| candidate.id == id)
+                .ok_or_else(|| not_found("article", id))?;
+            let allowed = if publish {
+                article.status == "draft"
+            } else {
+                article.status == "published"
+            };
+            if !allowed {
+                return Err(OperationFailure::new(
+                    codes::INVALID_STATE_TRANSITION,
+                    format!(
+                        "cannot transition article {id} from '{}' to '{}'",
+                        article.status,
+                        if publish { "published" } else { "draft" }
+                    ),
+                ));
+            }
+            if expected_content.is_some_and(|expected| article.content_html != expected) {
+                return Err(OperationFailure::new(
+                    codes::ARTICLE_CHANGED,
+                    "article changed after inspection; retry publish",
+                ));
+            }
+            article.updated_at = stamp.clone();
+            article.published_at = if publish { Some(stamp) } else { None };
+            article.status = if publish { "published" } else { "draft" }.to_owned();
+            article.clone()
         };
-        if !allowed {
-            return Err(OperationFailure::new(
-                codes::INVALID_STATE_TRANSITION,
-                format!(
-                    "cannot transition article {id} from '{}' to '{}'",
-                    article.status,
-                    if publish { "published" } else { "draft" }
-                ),
-            ));
-        }
-        if expected_content.is_some_and(|expected| article.content_html != expected) {
-            return Err(OperationFailure::new(
-                codes::ARTICLE_CHANGED,
-                "article changed after inspection; retry publish",
-            ));
-        }
-        article.updated_at = stamp.clone();
-        article.published_at = if publish { Some(stamp) } else { None };
-        article.status = if publish { "published" } else { "draft" }.to_owned();
         ctx.meter.record(3); // update + 回读(2)
-        Ok(self.detail(article))
+        Ok(Self::detail(&state, &article))
     }
 
     fn upsert_article(
@@ -294,7 +345,7 @@ impl MockStore {
             .articles
             .iter()
             .find(|candidate| candidate.id == id)
-            .map(|article| self.detail(article))
+            .map(|article| Self::detail(&state, article))
             .ok_or_else(|| not_found("article", id))?;
         ctx.meter.record(1); // commit
         Ok(detail)
@@ -302,6 +353,197 @@ impl MockStore {
 }
 
 impl DataStore for MockStore {
+    fn content_workflow_write(
+        &self,
+        request: &protocol::ContentWorkflowWrite,
+        ctx: &OpCtx<'_>,
+    ) -> Result<protocol::StoredContentWorkflow, OperationFailure> {
+        if let Some(failure) = super::validation::content_workflow_failure(&request.state) {
+            return Err(failure);
+        }
+        let mut state = self.state.lock().expect("mock state poisoned");
+        let current_revision = state.content_workflow.as_ref().map(|value| value.revision);
+        if current_revision != request.expected_revision {
+            return Err(OperationFailure::new(
+                codes::CONTENT_WORKFLOW_CHANGED,
+                format!(
+                    "content workflow revision conflict: expected {:?}, actual {:?}",
+                    request.expected_revision, current_revision
+                ),
+            ));
+        }
+        let stored = protocol::StoredContentWorkflow {
+            revision: current_revision
+                .unwrap_or(0)
+                .checked_add(1)
+                .ok_or_else(|| {
+                    OperationFailure::new(
+                        codes::CONTENT_WORKFLOW_CHANGED,
+                        "content workflow revision space is exhausted",
+                    )
+                })?,
+            state: request.state.clone(),
+        };
+        state.content_workflow = Some(stored.clone());
+        ctx.meter.record(1);
+        Ok(stored)
+    }
+
+    fn content_workflow_get(
+        &self,
+        ctx: &OpCtx<'_>,
+    ) -> Result<Option<protocol::StoredContentWorkflow>, OperationFailure> {
+        ctx.meter.record(1);
+        Ok(self
+            .state
+            .lock()
+            .expect("mock state poisoned")
+            .content_workflow
+            .clone())
+    }
+
+    fn content_snapshot_replace(
+        &self,
+        request: &protocol::ContentSnapshotReplace,
+        ctx: &OpCtx<'_>,
+    ) -> Result<(), OperationFailure> {
+        if let Some(failure) = super::validation::content_snapshot_failure(&request.snapshot) {
+            return Err(failure);
+        }
+        if request.commit.trim().is_empty() {
+            return Err(OperationFailure::new(
+                codes::INVALID_PAYLOAD,
+                "source commit must not be empty",
+            ));
+        }
+        let projection = super::validation::legacy_projection(&request.snapshot)?;
+        let mut state = self.state.lock().expect("mock state poisoned");
+        let current_commit = state
+            .content_snapshot
+            .as_ref()
+            .map(|snapshot| snapshot.commit.as_str());
+        if current_commit != request.expected_previous_commit.as_deref() {
+            return Err(OperationFailure::new(
+                codes::CONTENT_SNAPSHOT_CHANGED,
+                "content snapshot source commit changed before replacement",
+            ));
+        }
+        if let Some(previous) = &state.content_snapshot {
+            if previous.commit == request.commit {
+                if previous.snapshot == request.snapshot {
+                    return Ok(());
+                }
+                return Err(OperationFailure::new(
+                    codes::CONTENT_WORKFLOW_CHANGED,
+                    "the same source commit cannot identify a different snapshot",
+                ));
+            }
+            if let Some(failure) =
+                super::validation::content_history_failure(&previous.snapshot, &request.snapshot)
+            {
+                return Err(failure);
+            }
+        }
+        for article in &projection.articles {
+            if let Some((created_at, published_at)) = state.article_identities.get(&article.id) {
+                if created_at != &article.created_at || published_at != &article.published_at {
+                    return Err(OperationFailure::new(
+                        codes::CONTENT_WORKFLOW_CHANGED,
+                        format!(
+                            "article {} identity or first publication time changed",
+                            article.id
+                        ),
+                    ));
+                }
+            }
+        }
+        for article in &projection.articles {
+            state
+                .article_identities
+                .entry(article.id)
+                .or_insert_with(|| (article.created_at.clone(), article.published_at.clone()));
+        }
+        state.content_snapshot = Some(protocol::StoredContentSnapshot {
+            commit: request.commit.clone(),
+            snapshot: request.snapshot.clone(),
+        });
+        state.article_types = projection
+            .types
+            .into_iter()
+            .map(|v| MockType {
+                id: v.id,
+                name: v.name,
+            })
+            .collect();
+        state.terms = projection
+            .terms
+            .into_iter()
+            .map(|v| MockTerm {
+                id: v.id,
+                name: v.name,
+                kind: v.kind.to_owned(),
+            })
+            .collect();
+        state.articles = projection
+            .articles
+            .into_iter()
+            .map(|v| MockArticle {
+                id: v.id,
+                title: v.title,
+                summary: v.summary,
+                article_type_id: v.article_type_id,
+                content_html: v.content_html,
+                status: "published".to_owned(),
+                created_at: v.created_at,
+                updated_at: v.updated_at,
+                published_at: Some(v.published_at),
+                term_ids: v.term_ids,
+            })
+            .collect();
+        let published = state
+            .articles
+            .iter()
+            .map(|v| v.id)
+            .collect::<std::collections::BTreeSet<_>>();
+        state.recommendation.retain(|id| published.contains(id));
+        state.next_article_id = state
+            .articles
+            .iter()
+            .map(|v| v.id)
+            .max()
+            .unwrap_or(0)
+            .saturating_add(1);
+        state.next_type_id = state
+            .article_types
+            .iter()
+            .map(|v| v.id)
+            .max()
+            .unwrap_or(0)
+            .saturating_add(1);
+        state.next_term_id = state
+            .terms
+            .iter()
+            .map(|v| v.id)
+            .max()
+            .unwrap_or(0)
+            .saturating_add(1);
+        ctx.meter.record(1);
+        Ok(())
+    }
+
+    fn content_snapshot_get(
+        &self,
+        ctx: &OpCtx<'_>,
+    ) -> Result<Option<protocol::StoredContentSnapshot>, OperationFailure> {
+        ctx.meter.record(1);
+        Ok(self
+            .state
+            .lock()
+            .expect("mock state poisoned")
+            .content_snapshot
+            .clone())
+    }
+
     fn article_list(
         &self,
         query: &ArticleListQuery,
@@ -325,7 +567,7 @@ impl DataStore for MockStore {
             .into_iter()
             .skip(offset)
             .take(page_size as usize)
-            .map(|article| self.item(&article))
+            .map(|article| Self::item(&state, &article))
             .collect();
         ctx.meter.record(1);
         if ctx.canceled() {
@@ -370,7 +612,7 @@ impl DataStore for MockStore {
             return Err(canceled("article_get canceled before term read"));
         }
         ctx.meter.record(1);
-        Ok(self.detail(article))
+        Ok(Self::detail(&state, article))
     }
 
     fn article_type_list(
@@ -652,8 +894,10 @@ impl DataStore for MockStore {
             .collect();
         let total = matching.len() as i64;
         ctx.meter.record(2);
-        let mut articles: Vec<ArticleListItem> =
-            matching.iter().map(|article| self.item(article)).collect();
+        let mut articles: Vec<ArticleListItem> = matching
+            .iter()
+            .map(|article| Self::item(&state, article))
+            .collect();
         let ids: Vec<i64> = articles.iter().map(|item| item.id).collect();
         let terms = self.batch_terms(&state, &ids);
         ctx.meter.record(1);
@@ -670,7 +914,7 @@ impl DataStore for MockStore {
             .articles
             .iter()
             .filter(|article| rec_ids.contains(&article.id) && article.status == "published")
-            .map(|article| self.item(article))
+            .map(|article| Self::item(&state, article))
             .collect();
         // 逻辑读取：推荐批量 terms(1)。
         let rec_terms = self.batch_terms(&state, &rec_ids);
@@ -748,7 +992,7 @@ impl DataStore for MockStore {
             .into_iter()
             .skip(offset)
             .take(page_size as usize)
-            .map(|article| self.item(article))
+            .map(|article| Self::item(&state, article))
             .collect();
         ctx.meter.record(1);
         if ctx.canceled() {

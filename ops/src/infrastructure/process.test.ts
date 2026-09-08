@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { ManagedChildProcess, ProcessGroup, NodeProcessSupervisor, ConsoleRuntimeLog } from './process.ts';
+import { ManagedChildProcess, ProcessGroup, NodeProcess, NodeProcessSupervisor, ConsoleRuntimeLog } from './process.ts';
 import type { LogLine } from '../domain/ports.ts';
 
 const node = process.execPath;
@@ -59,6 +59,70 @@ test('spawn failures surface as a structured exit instead of hanging', async () 
   assert.equal(exit.code, null);
   assert.match(exit.error ?? '', /ENOENT|spawn/);
   assert.ok(child.exited);
+});
+
+test('real children receive BLOG configuration only through an explicit per-child allowlist', async () => {
+  const previousRepo = process.env.BLOG_CONTENT_REPO;
+  const previousToken = process.env.BLOG_CONTENT_TOKEN;
+  const previousAuth = process.env.BLOG_ADMIN_AUTH_SECRET;
+  const previousModelProvider = process.env.BLOG_TAXONOMY_MODEL_PROVIDER;
+  const previousModelCommand = process.env.BLOG_TAXONOMY_MODEL_COMMAND;
+  process.env.BLOG_CONTENT_REPO = 'ambient/repository';
+  process.env.BLOG_CONTENT_TOKEN = 'ambient-token';
+  process.env.BLOG_ADMIN_AUTH_SECRET = 'ambient-auth';
+  process.env.BLOG_TAXONOMY_MODEL_PROVIDER = 'ambient-provider';
+  process.env.BLOG_TAXONOMY_MODEL_COMMAND = 'ambient-command';
+  const script = 'console.log(JSON.stringify({repo:process.env.BLOG_CONTENT_REPO,token:process.env.BLOG_CONTENT_TOKEN,auth:process.env.BLOG_ADMIN_AUTH_SECRET,modelProvider:process.env.BLOG_TAXONOMY_MODEL_PROVIDER,modelCommand:process.env.BLOG_TAXONOMY_MODEL_COMMAND}))';
+  try {
+    const single = new NodeProcess();
+    const scrubbed = await single.run(node, ['-e', script], process.cwd());
+    assert.deepEqual(JSON.parse(scrubbed.stdout), {});
+    const helper = await single.run(node, ['-e', script], process.cwd(), {
+      BLOG_CONTENT_REPO: 'explicit/repository',
+      BLOG_CONTENT_TOKEN: 'explicit-token',
+    });
+    assert.deepEqual(JSON.parse(helper.stdout), {
+      repo: 'explicit/repository',
+      token: 'explicit-token',
+    });
+
+    const supervisor = new NodeProcessSupervisor();
+    const data = supervisor.spawn({ role: 'data', command: node, args: ['-e', script], cwd: process.cwd() });
+    assert.equal((await data.exit()).code, 0);
+    assert.deepEqual(JSON.parse(data.recentLogs()[0]!), {});
+    const mock = supervisor.spawn({ role: 'mock', command: node, args: ['-e', script], cwd: process.cwd() });
+    assert.equal((await mock.exit()).code, 0);
+    assert.deepEqual(JSON.parse(mock.recentLogs()[0]!), {});
+    const web = supervisor.spawn({ role: 'web', command: node, args: ['-e', script], cwd: process.cwd() });
+    assert.equal((await web.exit()).code, 0);
+    assert.deepEqual(JSON.parse(web.recentLogs()[0]!), {});
+
+    const product = supervisor.spawn({
+      role: 'product',
+      command: node,
+      args: ['-e', script],
+      cwd: process.cwd(),
+      env: {
+        BLOG_CONTENT_REPO: 'explicit/repository',
+        BLOG_CONTENT_TOKEN: 'explicit-token',
+        BLOG_TAXONOMY_MODEL_PROVIDER: 'claude-cli',
+        BLOG_TAXONOMY_MODEL_COMMAND: '/explicit/model-command',
+      },
+    });
+    assert.equal((await product.exit()).code, 0);
+    assert.deepEqual(JSON.parse(product.recentLogs()[0]!), {
+      repo: 'explicit/repository',
+      token: 'explicit-token',
+      modelProvider: 'claude-cli',
+      modelCommand: '/explicit/model-command',
+    });
+  } finally {
+    if (previousRepo === undefined) delete process.env.BLOG_CONTENT_REPO; else process.env.BLOG_CONTENT_REPO = previousRepo;
+    if (previousToken === undefined) delete process.env.BLOG_CONTENT_TOKEN; else process.env.BLOG_CONTENT_TOKEN = previousToken;
+    if (previousAuth === undefined) delete process.env.BLOG_ADMIN_AUTH_SECRET; else process.env.BLOG_ADMIN_AUTH_SECRET = previousAuth;
+    if (previousModelProvider === undefined) delete process.env.BLOG_TAXONOMY_MODEL_PROVIDER; else process.env.BLOG_TAXONOMY_MODEL_PROVIDER = previousModelProvider;
+    if (previousModelCommand === undefined) delete process.env.BLOG_TAXONOMY_MODEL_COMMAND; else process.env.BLOG_TAXONOMY_MODEL_COMMAND = previousModelCommand;
+  }
 });
 
 test('signals reach the child and the exit reports the signal', async () => {

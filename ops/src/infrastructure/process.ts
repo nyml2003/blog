@@ -20,14 +20,22 @@ const RECENT_LOG_LIMIT = 50;
 
 /** Single-shot execution used by builds and checks; output is buffered to process exit. */
 export class NodeProcess implements ProcessPort {
-  run(command: string, args: string[], cwd: string): Promise<ProcessResult> {
+  run(command: string, args: string[], cwd: string, env?: Readonly<Record<string, string>>): Promise<ProcessResult> {
     return new Promise((resolve, reject) => {
-      const child = spawn(command, args, { cwd, stdio: ['ignore', 'pipe', 'pipe'] });
+      const child = spawn(command, args, { cwd, env: childEnvironment(env), stdio: ['ignore', 'pipe', 'pipe'] });
       let stdout = ''; let stderr = '';
       child.stdout.on('data', (chunk) => { stdout += chunk; });
       child.stderr.on('data', (chunk) => { stderr += chunk; });
       child.on('error', reject);
       child.on('close', (code) => resolve({ code: code ?? 1, stdout, stderr }));
+    });
+  }
+
+  runInteractive(command: string, args: string[], cwd: string, env?: Readonly<Record<string, string>>): Promise<number> {
+    return new Promise((resolve, reject) => {
+      const child = spawn(command, args, { cwd, env: childEnvironment(env), stdio: 'inherit' });
+      child.on('error', reject);
+      child.on('close', (code) => resolve(code ?? 20));
     });
   }
 }
@@ -170,13 +178,20 @@ export class NodeProcessSupervisor implements ProcessSupervisor {
   spawn(request: SpawnRequest): ManagedProcess {
     const child = spawn(request.command, [...request.args], {
       cwd: request.cwd,
-      env: { ...process.env, ...request.env },
+      env: childEnvironment(request.env),
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     return new ManagedChildProcess(request.role, child);
   }
 
   createGroup(): ProcessGroup { return new ProcessGroup(); }
+}
+
+function childEnvironment(explicit?: Readonly<Record<string, string>>): NodeJS.ProcessEnv {
+  const inherited = Object.fromEntries(
+    Object.entries(process.env).filter(([name]) => !name.startsWith('BLOG_')),
+  );
+  return { ...inherited, ...explicit };
 }
 
 /**

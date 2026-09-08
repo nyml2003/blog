@@ -1,10 +1,9 @@
-import { For, Show } from "solid-js";
-import type {
-  Article,
-  ArticleListItem,
-  ArticleType,
-} from "../../common/contracts/domain";
+import { createSignal, For, Show } from "solid-js";
+import type { Article, ArticleType } from "../../common/contracts/domain";
 import {
+  logoutAdminSession,
+  queryErrorMessage,
+  type ContentArticle,
   type TShelfArticle,
   type TShelfFilter,
   type QueryReadonly,
@@ -28,6 +27,8 @@ export const shortDate = (value?: string) =>
 
 export function Header(props: { admin?: boolean }) {
   const current = location.pathname;
+  const [logoutBusy, setLogoutBusy] = createSignal(false);
+  const [logoutError, setLogoutError] = createSignal<string | undefined>();
   const active = (href: string) =>
     href === "/"
       ? current === "/"
@@ -51,6 +52,7 @@ export function Header(props: { admin?: boolean }) {
         <nav class="nav" aria-label="主导航">
           {props.admin ? (
             <>
+              <a href="/">返回站点</a>
               <a
                 aria-current={active("/admin/index.html") ? "page" : undefined}
                 href="/admin/index.html"
@@ -59,19 +61,11 @@ export function Header(props: { admin?: boolean }) {
               </a>
               <a
                 aria-current={
-                  active("/admin/article-types/index.html") ? "page" : undefined
+                  active("/admin/content/workspace.html") ? "page" : undefined
                 }
-                href="/admin/article-types/index.html"
+                href="/admin/content/workspace.html"
               >
-                类型
-              </a>
-              <a
-                aria-current={
-                  active("/admin/terms/index.html") ? "page" : undefined
-                }
-                href="/admin/terms/index.html"
-              >
-                主题/标签
+                分类工作台
               </a>
               <a
                 aria-current={
@@ -81,6 +75,33 @@ export function Header(props: { admin?: boolean }) {
               >
                 指南
               </a>
+              <button
+                class="nav-logout"
+                type="button"
+                disabled={logoutBusy()}
+                onClick={async () => {
+                  setLogoutError(undefined);
+                  setLogoutBusy(true);
+                  const result = await logoutAdminSession();
+                  if (result.ok) {
+                    location.replace("/admin/login.html");
+                    return;
+                  }
+                  setLogoutError(
+                    queryErrorMessage(result.error, "退出失败，请重试"),
+                  );
+                  setLogoutBusy(false);
+                }}
+              >
+                {logoutBusy() ? "退出中..." : "退出"}
+              </button>
+              <Show when={logoutError()}>
+                {(message) => (
+                  <span class="nav-error" role="alert">
+                    {message()}
+                  </span>
+                )}
+              </Show>
             </>
           ) : (
             <>
@@ -95,7 +116,6 @@ export function Header(props: { admin?: boolean }) {
               >
                 全部文章
               </a>
-              <a href="/admin/index.html">管理</a>
             </>
           )}
         </nav>
@@ -135,15 +155,17 @@ type PublicShelfArticle = QueryReadonly<TShelfArticle> & {
   readonly articleType?: ArticleType;
 };
 
-export function AdminArticleTable(props: {
-  items: readonly ArticleListItem[];
+export function WorkspaceArticleTable(props: {
+  items: readonly ContentArticle[];
+  busyArticleId: number | undefined;
+  onRemove: (article: ContentArticle) => void;
 }) {
   return (
     <div class="list list-admin">
       <div class="admin-list-head" aria-hidden="true">
         <span>文章</span>
-        <span>类型</span>
-        <span>状态</span>
+        <span>分类</span>
+        <span>标签</span>
         <span>更新时间</span>
         <span>操作</span>
       </div>
@@ -155,15 +177,20 @@ export function AdminArticleTable(props: {
                 {article.title || "未命名文章"}
               </a>
             </h3>
-            <span>
-              {article.articleType?.name ?? `类型 #${article.articleTypeId}`}
-            </span>
-            <span class={`status-${article.status}`}>
-              {article.status === "published" ? "已发布" : "草稿"}
-            </span>
+            <span>{article.categoryIds.length} 个分类</span>
+            <span>{article.tagIds.length} 个标签</span>
             <time>{shortDate(article.updatedAt)}</time>
             <div class="row-actions">
               <a href={`/admin/articles/edit.html?id=${article.id}`}>编辑</a>
+              <button
+                type="button"
+                class="link-button danger"
+                disabled={props.busyArticleId !== undefined}
+                aria-label={`暂存下架《${article.title || "未命名文章"}》`}
+                onClick={() => props.onRemove(article)}
+              >
+                {props.busyArticleId === article.id ? "暂存中..." : "暂存下架"}
+              </button>
             </div>
           </article>
         )}

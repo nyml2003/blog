@@ -19,6 +19,10 @@ use crate::operation::{
 /// 与内部失败码（[`crate::envelope::codes`]）不同：这是前端可见的稳定集合，
 /// 语义以 ARCH-DATA-API 为准。
 pub mod code {
+    pub const ADMIN_AUTH_REQUIRED: &str = "ADMIN_AUTH_REQUIRED";
+    pub const ADMIN_AUTH_INVALID: &str = "ADMIN_AUTH_INVALID";
+    pub const ADMIN_AUTH_RATE_LIMITED: &str = "ADMIN_AUTH_RATE_LIMITED";
+    pub const ADMIN_AUTH_UNAVAILABLE: &str = "ADMIN_AUTH_UNAVAILABLE";
     pub const UNKNOWN_SCENE_CODE: &str = "UNKNOWN_SCENE_CODE";
     pub const METHOD_NOT_ALLOWED: &str = "METHOD_NOT_ALLOWED";
     pub const INVALID_ID: &str = "INVALID_ID";
@@ -31,6 +35,16 @@ pub mod code {
     pub const INTERNAL_ERROR: &str = "INTERNAL_ERROR";
     pub const BACKPRESSURE: &str = "BACKPRESSURE";
     pub const DEADLINE_EXCEEDED: &str = "DEADLINE_EXCEEDED";
+    pub const WORKSPACE_VERSION_CONFLICT: &str = "WORKSPACE_VERSION_CONFLICT";
+    pub const WORKSPACE_BUSY: &str = "WORKSPACE_BUSY";
+    pub const WORKSPACE_NO_CHANGES: &str = "WORKSPACE_NO_CHANGES";
+    pub const CONTENT_NOT_FOUND: &str = "CONTENT_NOT_FOUND";
+    pub const INVALID_TAXONOMY: &str = "INVALID_TAXONOMY";
+    pub const CONTENT_REMOTE_ERROR: &str = "CONTENT_REMOTE_ERROR";
+    pub const PENDING_REVIEW_REQUIRED: &str = "PENDING_REVIEW_REQUIRED";
+    pub const TAXONOMY_MODEL_ERROR: &str = "TAXONOMY_MODEL_ERROR";
+    pub const CONTENT_PERSISTENCE_UNAVAILABLE: &str = "CONTENT_PERSISTENCE_UNAVAILABLE";
+    pub const CONTENT_WRITE_RETIRED: &str = "CONTENT_WRITE_RETIRED";
 }
 
 /// `{ code, message, data }`。

@@ -6,7 +6,7 @@
     "wasm:build": "node ../../scripts/build-article-html-wasm.mjs",
     "dev": "pnpm wasm:build && vite",
     "build": "pnpm wasm:build && vite build",
-    "test:core": "pnpm wasm:build && node ../../scripts/test-article-html-wasm.mjs && tsx --test build/page-template.test.ts build/page-bootstrap.test.ts common/client/client.test.ts common/client/mock-session.test.ts common/data/core.test.ts common/data/resource.test.ts common/validation/article-html.test.ts solid/data/use-data-resource.test.ts solid/queries/queries.test.ts desktop/src/pages/admin/editor-codemirror.test.ts desktop/src/pages/admin/editor-state.test.ts mobile/src/logic/browse-filter.test.ts mobile/src/logic/settings.test.ts",
+    "test:core": "pnpm wasm:build && node ../../scripts/test-article-html-wasm.mjs && tsx --test build/page-template.test.ts build/page-bootstrap.test.ts common/client/client.test.ts common/client/mock-session.test.ts common/data/core.test.ts common/data/resource.test.ts common/validation/article-html.test.ts solid/data/use-data-resource.test.ts solid/queries/queries.test.ts solid/queries/taxonomy-source.test.ts desktop/src/pages/admin/admin-workflow-state.test.ts desktop/src/pages/admin/editor-codemirror.test.ts desktop/src/pages/admin/editor-state.test.ts mobile/src/logic/browse-filter.test.ts mobile/src/logic/category-browser.test.ts mobile/src/logic/settings.test.ts",
     "typecheck": "pnpm wasm:build && tsc --noEmit",
     "lint": "oxlint --deny-warnings desktop mobile mobile-ui common solid build pages.registry.ts vite.config.ts",
     "format": "biome format --write .",

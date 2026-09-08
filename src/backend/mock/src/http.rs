@@ -16,7 +16,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use axum::Router;
-use axum::extract::{Query, State};
+use axum::extract::{DefaultBodyLimit, Query, State};
 use axum::http::{HeaderMap, Method, StatusCode, header};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{any, get};
@@ -27,9 +27,8 @@ use protocol::envelope::{codes, http_status};
 use protocol::scene;
 use protocol::wire::code;
 use protocol::{
-    ArticleBrowseQuery, ArticleGetQuery, ArticleId, ArticleListPage, ArticleListQuery,
-    ArticleTypeListQuery, ArticleTypeName, ArticleTypeRename, ArticleWrite, OperationFailure,
-    TermListQuery, TermRename, TermWrite, has_more,
+    ArticleBrowseQuery, ArticleGetQuery, ArticleListPage, ArticleListQuery, ArticleTypeListQuery,
+    OperationFailure, TermListQuery, has_more,
 };
 
 use crate::bff;
@@ -56,11 +55,57 @@ pub fn router(state: Arc<AppState>) -> Router {
             any(mobile_article_shelf),
         )
         .route("/api/public/t-shelf", any(t_shelf))
+        .route(scene::PUBLIC_TAXONOMY_ENDPOINT, any(public_taxonomy))
+        .route(
+            scene::MOBILE_CATEGORY_SHELF_ENDPOINT,
+            any(mobile_category_shelf),
+        )
         // 管理
+        .route(
+            scene::ADMIN_SESSION_ENDPOINT,
+            any(admin_session).layer(DefaultBodyLimit::max(8 * 1024)),
+        )
         .route("/api/admin/articles", any(admin_articles))
         .route("/api/admin/article-types", any(admin_article_types))
         .route("/api/admin/terms", any(admin_terms))
         .route("/api/admin/recommendations", any(admin_recommendations))
+        .route(
+            scene::ADMIN_CONTENT_WORKSPACE_ENDPOINT,
+            any(admin_content_workspace),
+        )
+        .route(
+            scene::ADMIN_CONTENT_ARTICLES_ENDPOINT,
+            any(admin_content_articles),
+        )
+        .route(
+            scene::ADMIN_CONTENT_ARTICLE_REMOVE_ENDPOINT,
+            any(admin_content_article_remove),
+        )
+        .route(
+            scene::ADMIN_CONTENT_TAXONOMY_ENDPOINT,
+            any(admin_content_taxonomy_save),
+        )
+        .route(
+            scene::ADMIN_CONTENT_TAXONOMY_ANALYZE_ENDPOINT,
+            any(admin_content_taxonomy_analyze),
+        )
+        .route(
+            scene::ADMIN_CONTENT_TAXONOMY_REVIEW_ENDPOINT,
+            any(admin_content_taxonomy_review),
+        )
+        .route(
+            scene::ADMIN_CONTENT_PREVIEW_ENDPOINT,
+            any(admin_content_preview),
+        )
+        .route(
+            scene::ADMIN_CONTENT_SUBMIT_ENDPOINT,
+            any(admin_content_submit),
+        )
+        .route(
+            scene::ADMIN_CONTENT_ABANDON_ENDPOINT,
+            any(admin_content_abandon),
+        )
+        .route(scene::ADMIN_CONTENT_SYNC_ENDPOINT, any(admin_content_sync))
         // Mock 自己的诊断面（描述场景与 session，而不是 Product 的 Data 调用计数）。
         .route("/mock/diagnostics", get(diagnostics))
         .fallback(not_found_plain)
@@ -81,6 +126,57 @@ async fn diagnostics(State(state): State<Arc<AppState>>) -> Response {
         .store
         .diagnostics(&state.bound_addr, state.started.elapsed().as_millis());
     envelope_response(StatusCode::OK, &Envelope::ok(payload), None)
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct AdminSessionBody {
+    #[serde(default)]
+    scene_code: Option<String>,
+}
+
+async fn admin_session(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    method: Method,
+    Query(params): Query<HashMap<String, String>>,
+    body: axum::body::Bytes,
+) -> Response {
+    let label = "admin session bypass";
+    let scope = session_scope(&headers);
+    let body_scene = serde_json::from_slice::<AdminSessionBody>(&body)
+        .ok()
+        .and_then(|payload| payload.scene_code);
+    let requested_scene = params
+        .get("sceneCode")
+        .map(String::as_str)
+        .or(body_scene.as_deref())
+        .unwrap_or_default();
+    if let Some(response) = gate(&state, label, requested_scene, &scope).await {
+        return response;
+    }
+    let valid = match method {
+        Method::POST => {
+            if body_scene.is_none() {
+                return invalid_json(&state, label);
+            }
+            scene::supports(
+                Method::POST.as_str(),
+                scene::ADMIN_SESSION_ENDPOINT,
+                requested_scene,
+            )
+        }
+        Method::DELETE => scene::supports(
+            Method::DELETE.as_str(),
+            scene::ADMIN_SESSION_ENDPOINT,
+            requested_scene,
+        ),
+        _ => return method_not_allowed(&state, label),
+    };
+    if !valid {
+        return unknown_scene_code(&state, label);
+    }
+    finish(&state, label, StatusCode::OK, &Envelope::ok(Value::Null))
 }
 
 // ---------- 场景注入 ----------
@@ -529,18 +625,6 @@ fn article_detail(
 struct AdminArticleBody {
     #[serde(default)]
     scene_code: Option<String>,
-    #[serde(default)]
-    id: Option<i64>,
-    #[serde(default)]
-    title: Option<String>,
-    #[serde(default)]
-    summary: Option<String>,
-    #[serde(default)]
-    article_type_id: Option<i64>,
-    #[serde(default)]
-    term_ids: Option<Vec<i64>>,
-    #[serde(default)]
-    content_html: Option<String>,
 }
 
 async fn admin_articles(
@@ -594,48 +678,16 @@ async fn admin_articles(
             let Ok(payload) = serde_json::from_slice::<AdminArticleBody>(&body) else {
                 return invalid_json(&state, label);
             };
-            let scene_name = payload.scene_code.as_deref().unwrap_or_default();
-            let outcome = match payload.scene_code.as_deref() {
-                Some(scene::ADMIN_ARTICLE_CREATE) => state.store.write(&scope, |domain| {
-                    domain
-                        .article_create(&article_write(&payload))
-                        .map(to_detail_value)
-                }),
-                Some(scene::ADMIN_ARTICLE_UPDATE) => state.store.write(&scope, |domain| {
-                    domain
-                        .article_update(&article_write(&payload))
-                        .map(to_detail_value)
-                }),
-                Some(scene::ADMIN_ARTICLE_PUBLISH) => state.store.write(&scope, |domain| {
-                    domain
-                        .article_publish(&ArticleId {
-                            id: payload.id.unwrap_or_default(),
-                        })
-                        .map(to_detail_value)
-                }),
-                Some(scene::ADMIN_ARTICLE_UNPUBLISH) => state.store.write(&scope, |domain| {
-                    domain
-                        .article_unpublish(&ArticleId {
-                            id: payload.id.unwrap_or_default(),
-                        })
-                        .map(to_detail_value)
-                }),
-                _ => return unknown_scene_code(&state, label),
-            };
-            write_response(&state, label, scene_name, &scope, outcome, started)
+            if !scene::supports(
+                "POST",
+                scene::ADMIN_ARTICLES_ENDPOINT,
+                payload.scene_code.as_deref().unwrap_or_default(),
+            ) {
+                return unknown_scene_code(&state, label);
+            }
+            retired_content_write(&state, label)
         }
         _ => method_not_allowed(&state, label),
-    }
-}
-
-fn article_write(payload: &AdminArticleBody) -> ArticleWrite {
-    ArticleWrite {
-        id: payload.id.unwrap_or_default(),
-        title: payload.title.clone().unwrap_or_default(),
-        summary: payload.summary.clone().unwrap_or_default(),
-        article_type_id: payload.article_type_id.unwrap_or_default(),
-        term_ids: payload.term_ids.clone().unwrap_or_default(),
-        content_html: payload.content_html.clone().unwrap_or_default(),
     }
 }
 
@@ -644,10 +696,6 @@ fn article_write(payload: &AdminArticleBody) -> ArticleWrite {
 struct NameBody {
     #[serde(default)]
     scene_code: Option<String>,
-    #[serde(default)]
-    id: Option<i64>,
-    #[serde(default)]
-    name: Option<String>,
 }
 
 async fn admin_article_types(
@@ -699,29 +747,14 @@ async fn admin_article_types(
             let Ok(payload) = serde_json::from_slice::<NameBody>(&body) else {
                 return invalid_json(&state, label);
             };
-            let scene_name = payload.scene_code.as_deref().unwrap_or_default();
-            let outcome = match payload.scene_code.as_deref() {
-                Some(scene::ADMIN_ARTICLE_TYPE_CREATE) => state.store.write(&scope, |domain| {
-                    domain
-                        .article_type_create(&ArticleTypeName {
-                            name: payload.name.unwrap_or_default(),
-                        })
-                        .map(|kind| {
-                            serde_json::to_value(&wire::to_types(std::slice::from_ref(&kind))[0])
-                                .unwrap_or(Value::Null)
-                        })
-                }),
-                Some(scene::ADMIN_ARTICLE_TYPE_UPDATE) => state.store.write(&scope, |domain| {
-                    domain
-                        .article_type_update(&ArticleTypeRename {
-                            id: payload.id.unwrap_or_default(),
-                            name: payload.name.unwrap_or_default(),
-                        })
-                        .map(|_| Value::Null)
-                }),
-                _ => return unknown_scene_code(&state, label),
-            };
-            write_response(&state, label, scene_name, &scope, outcome, started)
+            if !scene::supports(
+                "POST",
+                scene::ADMIN_ARTICLE_TYPES_ENDPOINT,
+                payload.scene_code.as_deref().unwrap_or_default(),
+            ) {
+                return unknown_scene_code(&state, label);
+            }
+            retired_content_write(&state, label)
         }
         // 与 Product 一致：非 GET/POST 的分类请求按 UNKNOWN_SCENE_CODE 处理。
         _ => unknown_scene_code(&state, label),
@@ -733,12 +766,6 @@ async fn admin_article_types(
 struct TermBody {
     #[serde(default)]
     scene_code: Option<String>,
-    #[serde(default)]
-    id: Option<i64>,
-    #[serde(default)]
-    name: Option<String>,
-    #[serde(default)]
-    kind: Option<String>,
 }
 
 async fn admin_terms(
@@ -790,31 +817,14 @@ async fn admin_terms(
             let Ok(payload) = serde_json::from_slice::<TermBody>(&body) else {
                 return invalid_json(&state, label);
             };
-            let scene_name = payload.scene_code.as_deref().unwrap_or_default();
-            let outcome = match payload.scene_code.as_deref() {
-                Some(scene::ADMIN_TERM_CREATE) => state.store.write(&scope, |domain| {
-                    domain
-                        .term_create(&TermWrite {
-                            id: 0,
-                            name: payload.name.clone().unwrap_or_default(),
-                            kind: payload.kind.clone().unwrap_or_default(),
-                        })
-                        .map(|term| {
-                            serde_json::to_value(&wire::to_terms(std::slice::from_ref(&term))[0])
-                                .unwrap_or(Value::Null)
-                        })
-                }),
-                Some(scene::ADMIN_TERM_UPDATE) => state.store.write(&scope, |domain| {
-                    domain
-                        .term_update(&TermRename {
-                            id: payload.id.unwrap_or_default(),
-                            name: payload.name.unwrap_or_default(),
-                        })
-                        .map(|_| Value::Null)
-                }),
-                _ => return unknown_scene_code(&state, label),
-            };
-            write_response(&state, label, scene_name, &scope, outcome, started)
+            if !scene::supports(
+                "POST",
+                scene::ADMIN_TERMS_ENDPOINT,
+                payload.scene_code.as_deref().unwrap_or_default(),
+            ) {
+                return unknown_scene_code(&state, label);
+            }
+            retired_content_write(&state, label)
         }
         // 与 Product 一致：非 GET/POST 的 term 请求按 UNKNOWN_SCENE_CODE 处理。
         _ => unknown_scene_code(&state, label),
@@ -827,7 +837,6 @@ async fn admin_recommendations(
     method: Method,
     body: axum::body::Bytes,
 ) -> Response {
-    let started = Instant::now();
     let scope = session_scope(&headers);
     let label = "POST /api/admin/recommendations";
     if let Some(response) = gate(&state, label, scene::ADMIN_RECOMMENDATION_GENERATE, &scope).await
@@ -848,18 +857,600 @@ async fn admin_recommendations(
     if payload.scene_code.as_deref() != Some(scene::ADMIN_RECOMMENDATION_GENERATE) {
         return unknown_scene_code(&state, label);
     }
-    // 管理端「刷新」：以最近更新的 6 篇已发布文章重建生效集合，并在当前 session 可见。
-    let outcome = state.store.write(&scope, |domain| {
-        Ok(to_details_value(&domain.recommendation_generate()))
+    retired_content_write(&state, label)
+}
+
+async fn public_taxonomy(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    method: Method,
+    Query(params): Query<HashMap<String, String>>,
+) -> Response {
+    let scope = session_scope(&headers);
+    let label = "GET /api/public/taxonomy";
+    if let Some(response) = gate(
+        &state,
+        label,
+        params.get("sceneCode").map_or("", String::as_str),
+        &scope,
+    )
+    .await
+    {
+        return response;
+    }
+    if method != Method::GET {
+        return method_not_allowed(&state, label);
+    }
+    if !scene::supports(
+        "GET",
+        scene::PUBLIC_TAXONOMY_ENDPOINT,
+        params.get("sceneCode").map_or("", String::as_str),
+    ) {
+        return unknown_scene_code(&state, label);
+    }
+    let value = state.store.read(&scope, |domain| {
+        taxonomy_json(&domain.content_workspace().1.taxonomy)
+    });
+    finish(&state, label, StatusCode::OK, &Envelope::ok(value))
+}
+
+async fn mobile_category_shelf(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    method: Method,
+    Query(params): Query<HashMap<String, String>>,
+) -> Response {
+    let scope = session_scope(&headers);
+    let label = "GET /api/public/mobile/category-shelf";
+    if let Some(response) = gate(
+        &state,
+        label,
+        params.get("sceneCode").map_or("", String::as_str),
+        &scope,
+    )
+    .await
+    {
+        return response;
+    }
+    if method != Method::GET {
+        return method_not_allowed(&state, label);
+    }
+    if !scene::supports(
+        "GET",
+        scene::MOBILE_CATEGORY_SHELF_ENDPOINT,
+        params.get("sceneCode").map_or("", String::as_str),
+    ) {
+        return unknown_scene_code(&state, label);
+    }
+    let selected = match params.get("category_id") {
+        Some(value) => match value.parse::<i64>() {
+            Ok(id) if id > 0 => Some(id),
+            _ => return invalid_json(&state, label),
+        },
+        None => None,
+    };
+    let result = state.store.read(&scope, |domain| domain.content_category_shelf(selected).map(|articles| { let taxonomy = taxonomy_json(&domain.content_workspace().1.taxonomy); let articles: Vec<_> = articles.into_iter().map(content_article_json).collect(); serde_json::json!({"taxonomy":taxonomy,"selectedCategoryId":selected,"total":articles.len(),"articles":articles}) }));
+    match result {
+        Ok(value) => finish(&state, label, StatusCode::OK, &Envelope::ok(value)),
+        Err(failure) => domain_failure(&state, label, &failure, Instant::now()),
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct ContentTaxonomyBody {
+    #[serde(default)]
+    scene_code: Option<String>,
+    expected_version: u64,
+    taxonomy: WireTaxonomy,
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct ContentVersionBody {
+    #[serde(default)]
+    scene_code: Option<String>,
+    expected_version: u64,
+    #[serde(default)]
+    article_ids: Vec<i64>,
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct WireTaxonomy {
+    version: u32,
+    next_category_id: i64,
+    next_tag_id: i64,
+    categories: Vec<WireCategory>,
+    tags: Vec<WireTag>,
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct WireCategory {
+    id: i64,
+    name: String,
+    parent_id: Option<i64>,
+    position: i32,
+}
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct WireTag {
+    id: i64,
+    name: String,
+}
+impl From<WireTaxonomy> for protocol::Taxonomy {
+    fn from(value: WireTaxonomy) -> Self {
+        Self {
+            version: value.version,
+            next_category_id: value.next_category_id,
+            next_tag_id: value.next_tag_id,
+            categories: value
+                .categories
+                .into_iter()
+                .map(|v| protocol::Category {
+                    id: v.id,
+                    name: v.name,
+                    parent_id: v.parent_id,
+                    position: v.position,
+                })
+                .collect(),
+            tags: value
+                .tags
+                .into_iter()
+                .map(|v| protocol::Tag {
+                    id: v.id,
+                    name: v.name,
+                })
+                .collect(),
+        }
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct ContentArticleInput {
+    #[serde(default)]
+    id: Option<i64>,
+    title: String,
+    summary: String,
+    category_ids: Vec<i64>,
+    tag_ids: Vec<i64>,
+    content_html: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct ContentArticleSaveBody {
+    scene_code: String,
+    expected_version: u64,
+    article: ContentArticleInput,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct ContentArticleRemoveBody {
+    scene_code: String,
+    expected_version: u64,
+    article_id: i64,
+}
+
+async fn admin_content_workspace(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    method: Method,
+    Query(params): Query<HashMap<String, String>>,
+) -> Response {
+    let scope = session_scope(&headers);
+    let label = "GET /api/admin/content/workspace";
+    if let Some(response) = gate(
+        &state,
+        label,
+        params.get("sceneCode").map_or("", String::as_str),
+        &scope,
+    )
+    .await
+    {
+        return response;
+    }
+    if method != Method::GET {
+        return method_not_allowed(&state, label);
+    }
+    if !scene::supports(
+        "GET",
+        scene::ADMIN_CONTENT_WORKSPACE_ENDPOINT,
+        params.get("sceneCode").map_or("", String::as_str),
+    ) {
+        return unknown_scene_code(&state, label);
+    }
+    let value = state.store.read(&scope, workspace_json);
+    finish(&state, label, StatusCode::OK, &Envelope::ok(value))
+}
+
+async fn admin_content_articles(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    method: Method,
+    Query(params): Query<HashMap<String, String>>,
+    body: axum::body::Bytes,
+) -> Response {
+    let scope = session_scope(&headers);
+    let label = "ADMIN /api/admin/content/articles";
+    let query_scene = params.get("sceneCode").map_or("", String::as_str);
+    if method == Method::GET {
+        if let Some(response) = gate(&state, label, query_scene, &scope).await {
+            return response;
+        }
+        if query_scene == scene::ADMIN_CONTENT_ARTICLE_LIST
+            && scene::supports("GET", scene::ADMIN_CONTENT_ARTICLES_ENDPOINT, query_scene)
+        {
+            let value = state.store.read(&scope, |domain| {
+                let (version, snapshot, _) = domain.content_workspace();
+                serde_json::json!({
+                    "version": version,
+                    "articles": snapshot.articles.iter().map(content_article_json).collect::<Vec<_>>(),
+                })
+            });
+            return finish(&state, label, StatusCode::OK, &Envelope::ok(value));
+        }
+        if query_scene == scene::ADMIN_CONTENT_ARTICLE_DETAIL
+            && scene::supports("GET", scene::ADMIN_CONTENT_ARTICLES_ENDPOINT, query_scene)
+        {
+            let Some(id) = params.get("id").and_then(|value| value.parse::<i64>().ok()) else {
+                return invalid_id(&state, label);
+            };
+            let value = state.store.read(&scope, |domain| {
+                let (version, snapshot, _) = domain.content_workspace();
+                snapshot
+                    .articles
+                    .iter()
+                    .find(|article| article.meta.id == id)
+                    .map(|article| {
+                        serde_json::json!({
+                            "version": version,
+                            "article": content_article_json(article),
+                        })
+                    })
+            });
+            return match value {
+                Some(value) => finish(&state, label, StatusCode::OK, &Envelope::ok(value)),
+                None => domain_failure(
+                    &state,
+                    label,
+                    &OperationFailure::new(codes::NOT_FOUND, "article not found"),
+                    Instant::now(),
+                ),
+            };
+        }
+        return unknown_scene_code(&state, label);
+    }
+    if method != Method::POST {
+        return method_not_allowed(&state, label);
+    }
+    let Ok(payload) = serde_json::from_slice::<ContentArticleSaveBody>(&body) else {
+        return invalid_json(&state, label);
+    };
+    if !scene::supports(
+        "POST",
+        scene::ADMIN_CONTENT_ARTICLES_ENDPOINT,
+        &payload.scene_code,
+    ) {
+        return unknown_scene_code(&state, label);
+    }
+    if let Some(response) = gate(&state, label, &payload.scene_code, &scope).await {
+        return response;
+    }
+    let started = Instant::now();
+    let result = state.store.write(&scope, |domain| {
+        let article = payload.article;
+        let saved = domain.content_save_article(
+            payload.expected_version,
+            crate::domain::ContentArticleDraft {
+                id: article.id,
+                title: article.title,
+                summary: article.summary,
+                category_ids: article.category_ids,
+                tag_ids: article.tag_ids,
+                content_html: article.content_html,
+            },
+        )?;
+        Ok(serde_json::json!({
+            "workspace": workspace_json(domain),
+            "article": content_article_json(&saved),
+        }))
+    });
+    write_response(&state, label, &payload.scene_code, &scope, result, started)
+}
+
+async fn admin_content_article_remove(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    method: Method,
+    body: axum::body::Bytes,
+) -> Response {
+    let scope = session_scope(&headers);
+    let label = "POST /api/admin/content/articles/remove";
+    if method != Method::POST {
+        return method_not_allowed(&state, label);
+    }
+    let Ok(payload) = serde_json::from_slice::<ContentArticleRemoveBody>(&body) else {
+        return invalid_json(&state, label);
+    };
+    if !scene::supports(
+        "POST",
+        scene::ADMIN_CONTENT_ARTICLE_REMOVE_ENDPOINT,
+        &payload.scene_code,
+    ) {
+        return unknown_scene_code(&state, label);
+    }
+    if let Some(response) = gate(&state, label, &payload.scene_code, &scope).await {
+        return response;
+    }
+    let started = Instant::now();
+    let result = state.store.write(&scope, |domain| {
+        domain.content_remove_article(payload.expected_version, payload.article_id)?;
+        Ok(workspace_json(domain))
+    });
+    write_response(&state, label, &payload.scene_code, &scope, result, started)
+}
+async fn admin_content_taxonomy_save(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    method: Method,
+    body: axum::body::Bytes,
+) -> Response {
+    let scope = session_scope(&headers);
+    let label = "POST /api/admin/content/taxonomy";
+    if method != Method::POST {
+        return method_not_allowed(&state, label);
+    }
+    let Ok(payload) = serde_json::from_slice::<ContentTaxonomyBody>(&body) else {
+        return invalid_json(&state, label);
+    };
+    let scene_name = payload.scene_code.as_deref().unwrap_or_default();
+    if !scene::supports("POST", scene::ADMIN_CONTENT_TAXONOMY_ENDPOINT, scene_name) {
+        return unknown_scene_code(&state, label);
+    }
+    if let Some(response) = gate(&state, label, scene_name, &scope).await {
+        return response;
+    }
+    let result = state.store.write(&scope, |domain| {
+        domain
+            .content_save_taxonomy(payload.expected_version, payload.taxonomy.into())
+            .map(|_| workspace_json(domain))
+    });
+    write_response(&state, label, scene_name, &scope, result, Instant::now())
+}
+async fn admin_content_taxonomy_analyze(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    method: Method,
+    body: axum::body::Bytes,
+) -> Response {
+    content_version_mutation(
+        state,
+        headers,
+        method,
+        body,
+        ContentMutationRoute {
+            endpoint: scene::ADMIN_CONTENT_TAXONOMY_ANALYZE_ENDPOINT,
+            scene: scene::ADMIN_CONTENT_TAXONOMY_ANALYZE,
+            label: "POST /api/admin/content/taxonomy/analyze",
+        },
+        |domain, body| {
+            if body.article_ids.iter().any(|id| {
+                !domain
+                    .content_workspace()
+                    .1
+                    .articles
+                    .iter()
+                    .any(|article| article.meta.id == *id)
+            }) {
+                return Err(OperationFailure::new(
+                    codes::INVALID_PAYLOAD,
+                    "articleIds contains an unknown article",
+                ));
+            }
+            domain.content_analyze(body.expected_version)
+        },
+    )
+    .await
+}
+async fn admin_content_taxonomy_review(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    method: Method,
+    body: axum::body::Bytes,
+) -> Response {
+    content_version_mutation(
+        state,
+        headers,
+        method,
+        body,
+        ContentMutationRoute {
+            endpoint: scene::ADMIN_CONTENT_TAXONOMY_REVIEW_ENDPOINT,
+            scene: scene::ADMIN_CONTENT_TAXONOMY_REVIEW,
+            label: "POST /api/admin/content/taxonomy/review",
+        },
+        |domain, body| domain.content_review(body.expected_version),
+    )
+    .await
+}
+async fn admin_content_submit(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    method: Method,
+    body: axum::body::Bytes,
+) -> Response {
+    content_version_mutation(
+        state,
+        headers,
+        method,
+        body,
+        ContentMutationRoute {
+            endpoint: scene::ADMIN_CONTENT_SUBMIT_ENDPOINT,
+            scene: scene::ADMIN_CONTENT_SUBMIT,
+            label: "POST /api/admin/content/submit",
+        },
+        |domain, body| domain.content_submit(body.expected_version),
+    )
+    .await
+}
+async fn admin_content_abandon(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    method: Method,
+    body: axum::body::Bytes,
+) -> Response {
+    content_version_mutation(
+        state,
+        headers,
+        method,
+        body,
+        ContentMutationRoute {
+            endpoint: scene::ADMIN_CONTENT_ABANDON_ENDPOINT,
+            scene: scene::ADMIN_CONTENT_ABANDON,
+            label: "POST /api/admin/content/abandon",
+        },
+        |domain, body| domain.content_abandon(body.expected_version),
+    )
+    .await
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct ContentSyncBody {
+    #[serde(default)]
+    scene_code: Option<String>,
+}
+
+async fn admin_content_sync(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    method: Method,
+    Query(params): Query<HashMap<String, String>>,
+    body: axum::body::Bytes,
+) -> Response {
+    let scope = session_scope(&headers);
+    let label = "POST /api/admin/content/sync";
+    if method == Method::GET {
+        if params.get("sceneCode").map(String::as_str) != Some(scene::ADMIN_CONTENT_SYNC_STATUS) {
+            return unknown_scene_code(&state, label);
+        }
+        return finish(
+            &state,
+            label,
+            StatusCode::OK,
+            &Envelope::ok(serde_json::json!({ "status": "idle" })),
+        );
+    }
+    if method != Method::POST {
+        return method_not_allowed(&state, label);
+    }
+    let Ok(payload) = serde_json::from_slice::<ContentSyncBody>(&body) else {
+        return invalid_json(&state, label);
+    };
+    if payload.scene_code.as_deref() != Some(scene::ADMIN_CONTENT_SYNC) {
+        return unknown_scene_code(&state, label);
+    }
+    if let Some(response) = gate(&state, label, scene::ADMIN_CONTENT_SYNC, &scope).await {
+        return response;
+    }
+    finish(
+        &state,
+        label,
+        StatusCode::OK,
+        &Envelope::ok(serde_json::json!({
+            "status": "succeeded",
+            "commit": "mock-main-1",
+            "articleCount": state.store.read(&scope, |domain| domain.content_workspace().1.articles.len()),
+        })),
+    )
+}
+
+#[derive(Clone, Copy)]
+struct ContentMutationRoute {
+    endpoint: &'static str,
+    scene: &'static str,
+    label: &'static str,
+}
+
+async fn content_version_mutation(
+    state: Arc<AppState>,
+    headers: HeaderMap,
+    method: Method,
+    body: axum::body::Bytes,
+    route: ContentMutationRoute,
+    mutation: impl FnOnce(
+        &mut crate::domain::DomainState,
+        &ContentVersionBody,
+    ) -> Result<(), OperationFailure>,
+) -> Response {
+    let scope = session_scope(&headers);
+    if method != Method::POST {
+        return method_not_allowed(&state, route.label);
+    }
+    let Ok(payload) = serde_json::from_slice::<ContentVersionBody>(&body) else {
+        return invalid_json(&state, route.label);
+    };
+    if payload.scene_code.as_deref() != Some(route.scene)
+        || !scene::supports("POST", route.endpoint, route.scene)
+    {
+        return unknown_scene_code(&state, route.label);
+    }
+    if let Some(response) = gate(&state, route.label, route.scene, &scope).await {
+        return response;
+    }
+    let result = state.store.write(&scope, |domain| {
+        mutation(domain, &payload).map(|_| workspace_json(domain))
     });
     write_response(
         &state,
-        label,
-        scene::ADMIN_RECOMMENDATION_GENERATE,
+        route.label,
+        route.scene,
         &scope,
-        outcome,
-        started,
+        result,
+        Instant::now(),
     )
+}
+async fn admin_content_preview(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    method: Method,
+    Query(params): Query<HashMap<String, String>>,
+) -> Response {
+    let scope = session_scope(&headers);
+    let label = "GET /api/admin/content/preview";
+    if let Some(response) = gate(
+        &state,
+        label,
+        params.get("sceneCode").map_or("", String::as_str),
+        &scope,
+    )
+    .await
+    {
+        return response;
+    }
+    if method != Method::GET {
+        return method_not_allowed(&state, label);
+    }
+    if !scene::supports(
+        "GET",
+        scene::ADMIN_CONTENT_PREVIEW_ENDPOINT,
+        params.get("sceneCode").map_or("", String::as_str),
+    ) {
+        return unknown_scene_code(&state, label);
+    }
+    let value=state.store.read(&scope,|domain|{let(version,current,_)=domain.content_workspace();let taxonomy=domain.content_pending().map_or(&current.taxonomy,|pending|&pending.taxonomy);serde_json::json!({"version":version,"taxonomy":taxonomy_json(taxonomy),"changedArticles":[],"diff":"","warnings":[]})});
+    finish(&state, label, StatusCode::OK, &Envelope::ok(value))
+}
+
+fn taxonomy_json(value: &protocol::Taxonomy) -> Value {
+    serde_json::json!({"version":value.version,"nextCategoryId":value.next_category_id,"nextTagId":value.next_tag_id,"categories":value.categories.iter().map(|v|serde_json::json!({"id":v.id,"name":v.name,"parentId":v.parent_id,"position":v.position})).collect::<Vec<_>>(),"tags":value.tags.iter().map(|v|serde_json::json!({"id":v.id,"name":v.name})).collect::<Vec<_>>()})
+}
+fn content_article_json(value: &protocol::ContentSnapshotArticle) -> Value {
+    serde_json::json!({"id":value.meta.id,"title":value.meta.title,"summary":value.meta.summary,"updatedAt":value.meta.updated_at,"createdAt":value.meta.created_at,"publishedAt":value.meta.published_at,"categoryIds":value.meta.category_ids,"tagIds":value.meta.tag_ids,"contentHtml":value.content_html})
+}
+fn workspace_json(domain: &crate::domain::DomainState) -> Value {
+    let (version, snapshot, pull) = domain.content_workspace();
+    serde_json::json!({"version":version,"status":if pull.is_some(){"submitted"}else if version>0{"saved"}else{"clean"},"taxonomy":taxonomy_json(&snapshot.taxonomy),"articles":snapshot.articles.iter().map(content_article_json).collect::<Vec<_>>(),"pullRequest":pull.map(|number|serde_json::json!({"number":number,"branch":"content/mock-1","commit":"mock-commit-1"}))})
 }
 
 // ---------- 公共辅助 ----------
@@ -949,10 +1540,6 @@ fn to_detail_value(detail: protocol::ArticleDetail) -> Value {
     .unwrap_or(Value::Null)
 }
 
-fn to_details_value(details: &[protocol::ArticleDetail]) -> Value {
-    serde_json::to_value(wire::to_details(details)).unwrap_or(Value::Null)
-}
-
 fn unknown_scene_code(state: &Arc<AppState>, label: &str) -> Response {
     finish(
         state,
@@ -989,6 +1576,18 @@ fn invalid_json(state: &Arc<AppState>, label: &str) -> Response {
         label,
         StatusCode::BAD_REQUEST,
         &Envelope::<Value>::failure(code::INVALID_JSON, "request body is not valid JSON"),
+    )
+}
+
+fn retired_content_write(state: &Arc<AppState>, label: &str) -> Response {
+    finish(
+        state,
+        label,
+        StatusCode::GONE,
+        &Envelope::<Value>::failure(
+            code::CONTENT_WRITE_RETIRED,
+            "direct content writes are retired; use the versioned content workspace",
+        ),
     )
 }
 
@@ -1056,7 +1655,6 @@ fn required_id(params: &HashMap<String, String>) -> Option<i64> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use protocol::ArticleWrite;
 
     fn state(scenario: crate::scenario::Scenario) -> Arc<AppState> {
         Arc::new(AppState {
@@ -1136,25 +1734,5 @@ mod tests {
         assert_eq!(non_empty(Some(&"  ".to_owned())), None);
         assert_eq!(required_id(&params(&[("id", "12")])), Some(12));
         assert_eq!(required_id(&params(&[("id", "x")])), None);
-        let write = article_write(&AdminArticleBody {
-            scene_code: None,
-            id: Some(4),
-            title: Some("t".to_owned()),
-            summary: None,
-            article_type_id: None,
-            term_ids: Some(vec![1]),
-            content_html: None,
-        });
-        assert_eq!(
-            write,
-            ArticleWrite {
-                id: 4,
-                title: "t".to_owned(),
-                summary: String::new(),
-                article_type_id: 0,
-                term_ids: vec![1],
-                content_html: String::new(),
-            }
-        );
     }
 }

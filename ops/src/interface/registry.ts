@@ -1,8 +1,10 @@
 import { defineCommand, defineGroup, type CommandContext, type CommandDefinition } from '../domain/commands.ts';
 import { runWebQuality } from '../application/commands.ts';
 import { runCheck } from '../application/check.ts';
+import { runAdminCredentialCommand } from '../application/admin-auth.ts';
+import { initializeContentRepository } from '../application/content-repository.ts';
 import { runDeliveryBuild, runRuntimeMode, type RuntimePorts } from '../application/runtime.ts';
-import { planMode, MOCK_SCENARIOS, DATA_MODES } from '../domain/runtime.ts';
+import { planMode, MOCK_SCENARIOS, DATA_MODES, CONTENT_SOURCES } from '../domain/runtime.ts';
 import { PORT_MIN, PORT_MAX } from '../domain/port-allocation.ts';
 
 const FAILURE = { code: 20, meaning: '执行失败（构建失败、端口耗尽、服务启动失败或运行中的服务退出）' };
@@ -20,6 +22,7 @@ function runtimePorts(context: CommandContext): RuntimePorts {
     fs: context.fs,
     signals: context.signals,
     root: context.workspace.root,
+    environment: context.environment,
   };
 }
 
@@ -32,6 +35,27 @@ export const commandDefinitions: readonly CommandDefinition[] = [
   defineCommand({ path: ['quality', 'check'], summary: '执行项目质量检查', description: '运行 Rust 三件套（cargo fmt --all --check、cargo clippy -D warnings、cargo test --workspace）、ops 契约测试、前端 typecheck/lint/format/test/build 和前后端架构边界检查。', examples: ['ops quality check'], exitCodes: [{ code: 0, meaning: '检查通过' }, { code: 20, meaning: '检查失败' }] }, ({ workspace, process, fs, reporter, dryRun }) => { if (dryRun) { reporter.section('quality check dry-run'); reporter.info('将执行 cargo fmt --all --check、cargo clippy --workspace --all-targets -- -D warnings、cargo test --workspace、ops 契约测试、pnpm typecheck/lint/format:check/test:core/build 和前后端架构边界检查'); return 0; } return runCheck(workspace, process, fs, reporter).then((ok) => ok ? 0 : 20); }),
   defineCommand({ path: ['quality', 'lint'], summary: '运行前端 Oxlint', description: '使用 pnpm 执行 blog-web 的 lint 脚本，并将 warning 视为失败。', examples: ['ops quality lint'], exitCodes: [{ code: 0, meaning: 'lint 通过' }, { code: 20, meaning: 'lint 失败' }] }, ({ workspace, process, reporter, dryRun }) => { if (dryRun) { reporter.section('quality lint dry-run'); reporter.info('pnpm -C src/frontend run lint'); return 0; } return runWebQuality(workspace, process, reporter, 'lint').then((ok) => ok ? 0 : 20); }),
   defineCommand({ path: ['quality', 'format'], summary: '格式化前端源文件', description: '不带 --check 时写入 Biome 格式化结果；带 --check 时只检查、不修改文件。', examples: ['ops quality format --check'], options: [{ name: 'check', model: { kind: 'switch' }, description: '只检查格式，不写入文件' }], exitCodes: [{ code: 0, meaning: '格式化通过' }, { code: 20, meaning: '格式化失败或存在未格式化文件' }] }, ({ workspace, process, reporter, dryRun }, args) => { const check = args.check === true; if (dryRun) { reporter.section('quality format dry-run'); reporter.info(`pnpm -C src/frontend run ${check ? 'format:check' : 'format'}`); return 0; } return runWebQuality(workspace, process, reporter, check ? 'format:check' : 'format').then((ok) => ok ? 0 : 20); }),
+  defineCommand({
+    path: ['admin', 'credentials', 'init'],
+    summary: '初始化管理端密码、TOTP 与恢复码',
+    description: '通过 TTY 隐藏输入密码，生成 Argon2id 哈希、TOTP secret 与一次性恢复码；敏感值不进入 argv 或 ops 日志。',
+    examples: ['ops admin credentials init'],
+    exitCodes: [{ code: 0, meaning: '凭证初始化成功' }, FAILURE],
+  }, (context) => runAdminCredentialCommand(context, 'init')),
+  defineCommand({
+    path: ['admin', 'recovery', 'regenerate'],
+    summary: '重新生成管理端恢复码',
+    description: '通过 TTY 验证当前密码并原子替换恢复码；新恢复码只在当前终端显示一次。',
+    examples: ['ops admin recovery regenerate'],
+    exitCodes: [{ code: 0, meaning: '恢复码重新生成成功' }, FAILURE],
+  }, (context) => runAdminCredentialCommand(context, 'recovery-regenerate')),
+  defineCommand({
+    path: ['content', 'repository', 'init'],
+    summary: '初始化空 GitHub 内容仓库',
+    description: '使用显式 BLOG_CONTENT_REPO 与 BLOG_CONTENT_TOKEN 创建合法空 taxonomy 和 main；不写示例文章或凭证，重复执行会校验并幂等成功。',
+    examples: ['BLOG_CONTENT_REPO=owner/repository BLOG_CONTENT_TOKEN=... ops content repository init'],
+    exitCodes: [{ code: 0, meaning: '初始化成功或仓库已经是合法空状态' }, FAILURE],
+  }, initializeContentRepository),
   defineCommand({
     path: ['delivery', 'build'],
     summary: '构建前端与 Rust 交付物',
@@ -55,26 +79,28 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     path: ['runtime', 'backend'],
     summary: '后端 API 栈: Product + Data（无页面）',
     description: '启动 Rust Product API-only 与 Rust Data Server（显式选择 mock 或 test；mock 不创建 SQLite 文件）；不挂载前端、不启动 Vite，因此没有页面入口，只有 API 基址。',
-    examples: ['ops runtime backend --data test --product-port 8080 --data-port 8081', 'ops runtime backend --data mock --product-port 18080 --data-port 18081'],
+    examples: ['ops runtime backend --data test --content-source fixture --product-port 8080 --data-port 8081', 'ops runtime backend --data prod --content-source github --product-port 18080 --data-port 18081'],
     options: [
       { name: 'data', description: '数据语义（必须显式选择）', model: { kind: 'enum', values: DATA_MODES } },
+      { name: 'content-source', description: '内容来源（必须显式选择；fixture 不读取 GitHub 凭证）', model: { kind: 'enum', values: CONTENT_SOURCES } },
       portOption('product-port', 'Product 候选端口'),
       portOption('data-port', 'Data 候选端口'),
     ],
     exitCodes: [{ code: 0, meaning: '--dry-run 打印计划（运行中的模式没有 0 退出路径，正常停止只能是 130/143）' }, FAILURE, SIGINT, SIGTERM],
-  }, (context, args) => runRuntimeMode(planMode({ mode: 'backend', dataMode: args.data, productPort: args['product-port'], dataPort: args['data-port'] }), runtimePorts(context), { dryRun: context.dryRun, json: context.json })),
+  }, (context, args) => runRuntimeMode(planMode({ mode: 'backend', dataMode: args.data, contentSource: args['content-source'], productPort: args['product-port'], dataPort: args['data-port'] }), runtimePorts(context), { dryRun: context.dryRun, json: context.json })),
   defineCommand({
     path: ['runtime', 'integration'],
     summary: '集成栈: 先构建前端，Product 挂载 web/dist',
     description: '先构建 web/dist（--watch 时持续重建），再启动 Rust Product（挂载 web/dist，页面与 /api 同源）与 Rust Data(test)；不启动 Vite。最终访问地址是 Product 地址。这是原 ops runtime serve 的迁移目标。',
-    examples: ['ops runtime integration --product-port 8080 --data-port 8081', 'ops runtime integration --watch --product-port 8080 --data-port 8081'],
+    examples: ['ops runtime integration --content-source fixture --product-port 8080 --data-port 8081', 'ops runtime integration --watch --content-source github --product-port 8080 --data-port 8081'],
     options: [
       { name: 'watch', model: { kind: 'switch' }, description: '持续重建 web/dist；构建失败会停止服务栈' },
+      { name: 'content-source', description: '内容来源（必须显式选择；fixture 不读取 GitHub 凭证）', model: { kind: 'enum', values: CONTENT_SOURCES } },
       portOption('product-port', 'Product 候选端口'),
       portOption('data-port', 'Data 候选端口'),
     ],
     exitCodes: [{ code: 0, meaning: '--dry-run 打印计划（运行中的模式没有 0 退出路径，正常停止只能是 130/143）' }, FAILURE, SIGINT, SIGTERM],
-  }, (context, args) => runRuntimeMode(planMode({ mode: 'integration', watch: args.watch, productPort: args['product-port'], dataPort: args['data-port'] }), runtimePorts(context), { dryRun: context.dryRun, json: context.json })),
+  }, (context, args) => runRuntimeMode(planMode({ mode: 'integration', watch: args.watch, contentSource: args['content-source'], productPort: args['product-port'], dataPort: args['data-port'] }), runtimePorts(context), { dryRun: context.dryRun, json: context.json })),
 ];
 
 export const groupDefinitions = [
@@ -87,5 +113,7 @@ export const groupDefinitions = [
     order: 30,
     workflow: '本地运行与联调',
   }),
-  defineGroup({ path: ['delivery'], summary: '交付', description: '构建前端与 Rust 交付物。', order: 40, workflow: '交付前构建' }),
+  defineGroup({ path: ['admin'], summary: '管理鉴权', description: '初始化单管理员凭证并维护一次性恢复码。', order: 35, workflow: '管理端凭证运维' }),
+  defineGroup({ path: ['content'], summary: '内容仓库', description: '初始化和维护 GitHub 内容真源。', order: 40, workflow: '内容仓库运维' }),
+  defineGroup({ path: ['delivery'], summary: '交付', description: '构建前端与 Rust 交付物。', order: 50, workflow: '交付前构建' }),
 ] as const;

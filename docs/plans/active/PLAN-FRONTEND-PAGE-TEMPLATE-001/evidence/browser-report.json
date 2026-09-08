@@ -1,6 +1,6 @@
 {
   "origin": "http://127.0.0.1:18084",
-  "startedAt": "2026-09-06T19:10:48.883Z",
+  "startedAt": "2026-09-07T22:56:19.399Z",
   "checks": [
     {
       "message": "desktop T shelf: initial load uses one shelf request",
@@ -112,131 +112,1335 @@
       "detail": []
     },
     {
-      "message": "mobile F shelf: section selection remains stable through scroll",
+      "message": "mobileCategoryShelfIndex: initial category request",
+      "passed": true,
+      "detail": [
+        "http://127.0.0.1:18084/api/public/mobile/category-shelf?sceneCode=public.mobile_category_shelf",
+        "http://127.0.0.1:18084/api/public/mobile/category-shelf?sceneCode=public.mobile_category_shelf&category_id=1"
+      ]
+    },
+    {
+      "message": "mobileCategoryShelfIndex: initial root selected",
       "passed": true,
       "detail": {
-        "selected": "tab-type-3",
-        "scrollY": 596,
-        "targetTop": 91.796875,
-        "targetId": "shelf-type-3"
+        "selectedRoot": "tab-1",
+        "selectedChild": "tab-all",
+        "categoryId": "1",
+        "hrefs": [
+          "/m/articles/detail.html?id=11",
+          "/m/articles/detail.html?id=10",
+          "/m/articles/detail.html?id=9",
+          "/m/articles/detail.html?id=5",
+          "/m/articles/detail.html?id=13",
+          "/m/articles/detail.html?id=14",
+          "/m/articles/detail.html?id=15",
+          "/m/articles/detail.html?id=16",
+          "/m/articles/detail.html?id=17",
+          "/m/articles/detail.html?id=18",
+          "/m/articles/detail.html?id=19",
+          "/m/articles/detail.html?id=20",
+          "/m/articles/detail.html?id=25",
+          "/m/articles/detail.html?id=26",
+          "/m/articles/detail.html?id=27",
+          "/m/articles/detail.html?id=28",
+          "/m/articles/detail.html?id=29",
+          "/m/articles/detail.html?id=30",
+          "/m/articles/detail.html?id=31",
+          "/m/articles/detail.html?id=32",
+          "/m/articles/detail.html?id=37",
+          "/m/articles/detail.html?id=38",
+          "/m/articles/detail.html?id=39",
+          "/m/articles/detail.html?id=40",
+          "/m/articles/detail.html?id=41",
+          "/m/articles/detail.html?id=42",
+          "/m/articles/detail.html?id=43",
+          "/m/articles/detail.html?id=44"
+        ],
+        "uniqueArticleCount": 28,
+        "total": 28,
+        "scrollY": 0,
+        "url": "http://127.0.0.1:18084/m/articles/index.html?category_id=1"
       }
     },
     {
-      "message": "mobile F shelf: selecting section scrolls to its shelf",
+      "message": "mobileCategoryShelfIndex: initial child selected",
       "passed": true,
       "detail": {
-        "before": {
-          "selected": "tab-recommendation",
-          "scrollY": 0,
-          "sections": [
-            "shelf-recommendation",
-            "shelf-type-3",
-            "shelf-type-1",
-            "shelf-type-2"
-          ]
+        "selectedRoot": "tab-1",
+        "selectedChild": "tab-all",
+        "categoryId": "1",
+        "hrefs": [
+          "/m/articles/detail.html?id=11",
+          "/m/articles/detail.html?id=10",
+          "/m/articles/detail.html?id=9",
+          "/m/articles/detail.html?id=5",
+          "/m/articles/detail.html?id=13",
+          "/m/articles/detail.html?id=14",
+          "/m/articles/detail.html?id=15",
+          "/m/articles/detail.html?id=16",
+          "/m/articles/detail.html?id=17",
+          "/m/articles/detail.html?id=18",
+          "/m/articles/detail.html?id=19",
+          "/m/articles/detail.html?id=20",
+          "/m/articles/detail.html?id=25",
+          "/m/articles/detail.html?id=26",
+          "/m/articles/detail.html?id=27",
+          "/m/articles/detail.html?id=28",
+          "/m/articles/detail.html?id=29",
+          "/m/articles/detail.html?id=30",
+          "/m/articles/detail.html?id=31",
+          "/m/articles/detail.html?id=32",
+          "/m/articles/detail.html?id=37",
+          "/m/articles/detail.html?id=38",
+          "/m/articles/detail.html?id=39",
+          "/m/articles/detail.html?id=40",
+          "/m/articles/detail.html?id=41",
+          "/m/articles/detail.html?id=42",
+          "/m/articles/detail.html?id=43",
+          "/m/articles/detail.html?id=44"
+        ],
+        "uniqueArticleCount": 28,
+        "total": 28,
+        "scrollY": 0,
+        "url": "http://127.0.0.1:18084/m/articles/index.html?category_id=1"
+      }
+    },
+    {
+      "message": "mobileCategoryShelfIndex: category rails remain mounted while loading",
+      "passed": true,
+      "detail": {
+        "rootTabs": 2,
+        "childTabs": 3,
+        "activeElementId": "tab-2",
+        "busy": "true"
+      }
+    },
+    {
+      "message": "mobileCategoryShelfIndex: category tab keeps focus while loading",
+      "passed": true,
+      "detail": {
+        "rootTabs": 2,
+        "childTabs": 3,
+        "activeElementId": "tab-2",
+        "busy": "true"
+      }
+    },
+    {
+      "message": "mobileCategoryShelfIndex: category Back restores URL",
+      "passed": true,
+      "detail": {
+        "categoryHistoryLeaving": {
+          "selectedRoot": "tab-1",
+          "selectedChild": "tab-all",
+          "categoryId": "1",
+          "hrefs": [
+            "/m/articles/detail.html?id=11",
+            "/m/articles/detail.html?id=10",
+            "/m/articles/detail.html?id=9",
+            "/m/articles/detail.html?id=5",
+            "/m/articles/detail.html?id=13",
+            "/m/articles/detail.html?id=14",
+            "/m/articles/detail.html?id=15",
+            "/m/articles/detail.html?id=16",
+            "/m/articles/detail.html?id=17",
+            "/m/articles/detail.html?id=18",
+            "/m/articles/detail.html?id=19",
+            "/m/articles/detail.html?id=20",
+            "/m/articles/detail.html?id=25",
+            "/m/articles/detail.html?id=26",
+            "/m/articles/detail.html?id=27",
+            "/m/articles/detail.html?id=28",
+            "/m/articles/detail.html?id=29",
+            "/m/articles/detail.html?id=30",
+            "/m/articles/detail.html?id=31",
+            "/m/articles/detail.html?id=32",
+            "/m/articles/detail.html?id=37",
+            "/m/articles/detail.html?id=38",
+            "/m/articles/detail.html?id=39",
+            "/m/articles/detail.html?id=40",
+            "/m/articles/detail.html?id=41",
+            "/m/articles/detail.html?id=42",
+            "/m/articles/detail.html?id=43",
+            "/m/articles/detail.html?id=44"
+          ],
+          "uniqueArticleCount": 28,
+          "total": 28,
+          "scrollY": 480,
+          "url": "http://127.0.0.1:18084/m/articles/index.html?category_id=1"
         },
-        "focused": {
-          "selected": "tab-type-3",
-          "scrollY": 596,
-          "targetTop": 91.796875,
-          "targetId": "shelf-type-3"
+        "categoryHistoryRestored": {
+          "selectedRoot": "tab-1",
+          "selectedChild": "tab-all",
+          "categoryId": "1",
+          "hrefs": [
+            "/m/articles/detail.html?id=11",
+            "/m/articles/detail.html?id=10",
+            "/m/articles/detail.html?id=9",
+            "/m/articles/detail.html?id=5",
+            "/m/articles/detail.html?id=13",
+            "/m/articles/detail.html?id=14",
+            "/m/articles/detail.html?id=15",
+            "/m/articles/detail.html?id=16",
+            "/m/articles/detail.html?id=17",
+            "/m/articles/detail.html?id=18",
+            "/m/articles/detail.html?id=19",
+            "/m/articles/detail.html?id=20",
+            "/m/articles/detail.html?id=25",
+            "/m/articles/detail.html?id=26",
+            "/m/articles/detail.html?id=27",
+            "/m/articles/detail.html?id=28",
+            "/m/articles/detail.html?id=29",
+            "/m/articles/detail.html?id=30",
+            "/m/articles/detail.html?id=31",
+            "/m/articles/detail.html?id=32",
+            "/m/articles/detail.html?id=37",
+            "/m/articles/detail.html?id=38",
+            "/m/articles/detail.html?id=39",
+            "/m/articles/detail.html?id=40",
+            "/m/articles/detail.html?id=41",
+            "/m/articles/detail.html?id=42",
+            "/m/articles/detail.html?id=43",
+            "/m/articles/detail.html?id=44"
+          ],
+          "uniqueArticleCount": 28,
+          "total": 28,
+          "scrollY": 480,
+          "historyShelf": {
+            "sectionId": "1",
+            "scrollY": 480
+          },
+          "url": "http://127.0.0.1:18084/m/articles/index.html?category_id=1"
         }
       }
     },
     {
-      "message": "mobile F shelf: selected section reaches sticky reading position",
+      "message": "mobileCategoryShelfIndex: category Back restores selection",
       "passed": true,
       "detail": {
-        "selected": "tab-type-3",
-        "scrollY": 596,
-        "targetTop": 91.796875,
-        "targetId": "shelf-type-3"
+        "categoryHistoryLeaving": {
+          "selectedRoot": "tab-1",
+          "selectedChild": "tab-all",
+          "categoryId": "1",
+          "hrefs": [
+            "/m/articles/detail.html?id=11",
+            "/m/articles/detail.html?id=10",
+            "/m/articles/detail.html?id=9",
+            "/m/articles/detail.html?id=5",
+            "/m/articles/detail.html?id=13",
+            "/m/articles/detail.html?id=14",
+            "/m/articles/detail.html?id=15",
+            "/m/articles/detail.html?id=16",
+            "/m/articles/detail.html?id=17",
+            "/m/articles/detail.html?id=18",
+            "/m/articles/detail.html?id=19",
+            "/m/articles/detail.html?id=20",
+            "/m/articles/detail.html?id=25",
+            "/m/articles/detail.html?id=26",
+            "/m/articles/detail.html?id=27",
+            "/m/articles/detail.html?id=28",
+            "/m/articles/detail.html?id=29",
+            "/m/articles/detail.html?id=30",
+            "/m/articles/detail.html?id=31",
+            "/m/articles/detail.html?id=32",
+            "/m/articles/detail.html?id=37",
+            "/m/articles/detail.html?id=38",
+            "/m/articles/detail.html?id=39",
+            "/m/articles/detail.html?id=40",
+            "/m/articles/detail.html?id=41",
+            "/m/articles/detail.html?id=42",
+            "/m/articles/detail.html?id=43",
+            "/m/articles/detail.html?id=44"
+          ],
+          "uniqueArticleCount": 28,
+          "total": 28,
+          "scrollY": 480,
+          "url": "http://127.0.0.1:18084/m/articles/index.html?category_id=1"
+        },
+        "categoryHistoryRestored": {
+          "selectedRoot": "tab-1",
+          "selectedChild": "tab-all",
+          "categoryId": "1",
+          "hrefs": [
+            "/m/articles/detail.html?id=11",
+            "/m/articles/detail.html?id=10",
+            "/m/articles/detail.html?id=9",
+            "/m/articles/detail.html?id=5",
+            "/m/articles/detail.html?id=13",
+            "/m/articles/detail.html?id=14",
+            "/m/articles/detail.html?id=15",
+            "/m/articles/detail.html?id=16",
+            "/m/articles/detail.html?id=17",
+            "/m/articles/detail.html?id=18",
+            "/m/articles/detail.html?id=19",
+            "/m/articles/detail.html?id=20",
+            "/m/articles/detail.html?id=25",
+            "/m/articles/detail.html?id=26",
+            "/m/articles/detail.html?id=27",
+            "/m/articles/detail.html?id=28",
+            "/m/articles/detail.html?id=29",
+            "/m/articles/detail.html?id=30",
+            "/m/articles/detail.html?id=31",
+            "/m/articles/detail.html?id=32",
+            "/m/articles/detail.html?id=37",
+            "/m/articles/detail.html?id=38",
+            "/m/articles/detail.html?id=39",
+            "/m/articles/detail.html?id=40",
+            "/m/articles/detail.html?id=41",
+            "/m/articles/detail.html?id=42",
+            "/m/articles/detail.html?id=43",
+            "/m/articles/detail.html?id=44"
+          ],
+          "uniqueArticleCount": 28,
+          "total": 28,
+          "scrollY": 480,
+          "historyShelf": {
+            "sectionId": "1",
+            "scrollY": 480
+          },
+          "url": "http://127.0.0.1:18084/m/articles/index.html?category_id=1"
+        }
       }
     },
     {
-      "message": "mobile detail: referrer remains F shelf route",
+      "message": "mobileCategoryShelfIndex: category Back restores scroll position",
       "passed": true,
       "detail": {
-        "url": "http://127.0.0.1:18084/m/articles/detail.html?id=48",
-        "referrer": "http://127.0.0.1:18084/m/articles/index.html",
-        "title": "追加样本 #48 · Announcements"
+        "categoryHistoryLeaving": {
+          "selectedRoot": "tab-1",
+          "selectedChild": "tab-all",
+          "categoryId": "1",
+          "hrefs": [
+            "/m/articles/detail.html?id=11",
+            "/m/articles/detail.html?id=10",
+            "/m/articles/detail.html?id=9",
+            "/m/articles/detail.html?id=5",
+            "/m/articles/detail.html?id=13",
+            "/m/articles/detail.html?id=14",
+            "/m/articles/detail.html?id=15",
+            "/m/articles/detail.html?id=16",
+            "/m/articles/detail.html?id=17",
+            "/m/articles/detail.html?id=18",
+            "/m/articles/detail.html?id=19",
+            "/m/articles/detail.html?id=20",
+            "/m/articles/detail.html?id=25",
+            "/m/articles/detail.html?id=26",
+            "/m/articles/detail.html?id=27",
+            "/m/articles/detail.html?id=28",
+            "/m/articles/detail.html?id=29",
+            "/m/articles/detail.html?id=30",
+            "/m/articles/detail.html?id=31",
+            "/m/articles/detail.html?id=32",
+            "/m/articles/detail.html?id=37",
+            "/m/articles/detail.html?id=38",
+            "/m/articles/detail.html?id=39",
+            "/m/articles/detail.html?id=40",
+            "/m/articles/detail.html?id=41",
+            "/m/articles/detail.html?id=42",
+            "/m/articles/detail.html?id=43",
+            "/m/articles/detail.html?id=44"
+          ],
+          "uniqueArticleCount": 28,
+          "total": 28,
+          "scrollY": 480,
+          "url": "http://127.0.0.1:18084/m/articles/index.html?category_id=1"
+        },
+        "categoryHistoryRestored": {
+          "selectedRoot": "tab-1",
+          "selectedChild": "tab-all",
+          "categoryId": "1",
+          "hrefs": [
+            "/m/articles/detail.html?id=11",
+            "/m/articles/detail.html?id=10",
+            "/m/articles/detail.html?id=9",
+            "/m/articles/detail.html?id=5",
+            "/m/articles/detail.html?id=13",
+            "/m/articles/detail.html?id=14",
+            "/m/articles/detail.html?id=15",
+            "/m/articles/detail.html?id=16",
+            "/m/articles/detail.html?id=17",
+            "/m/articles/detail.html?id=18",
+            "/m/articles/detail.html?id=19",
+            "/m/articles/detail.html?id=20",
+            "/m/articles/detail.html?id=25",
+            "/m/articles/detail.html?id=26",
+            "/m/articles/detail.html?id=27",
+            "/m/articles/detail.html?id=28",
+            "/m/articles/detail.html?id=29",
+            "/m/articles/detail.html?id=30",
+            "/m/articles/detail.html?id=31",
+            "/m/articles/detail.html?id=32",
+            "/m/articles/detail.html?id=37",
+            "/m/articles/detail.html?id=38",
+            "/m/articles/detail.html?id=39",
+            "/m/articles/detail.html?id=40",
+            "/m/articles/detail.html?id=41",
+            "/m/articles/detail.html?id=42",
+            "/m/articles/detail.html?id=43",
+            "/m/articles/detail.html?id=44"
+          ],
+          "uniqueArticleCount": 28,
+          "total": 28,
+          "scrollY": 480,
+          "historyShelf": {
+            "sectionId": "1",
+            "scrollY": 480
+          },
+          "url": "http://127.0.0.1:18084/m/articles/index.html?category_id=1"
+        }
       }
     },
     {
-      "message": "mobile detail return: browser restores F shelf scroll position",
+      "message": "mobileCategoryShelfIndex: root category selection",
       "passed": true,
       "detail": {
-        "focused": {
-          "selected": "tab-type-3",
-          "scrollY": 596,
-          "targetTop": 91.796875,
-          "targetId": "shelf-type-3"
+        "selectedRoot": "tab-2",
+        "selectedChild": "tab-all",
+        "categoryId": "2",
+        "hrefs": [
+          "/m/articles/detail.html?id=12",
+          "/m/articles/detail.html?id=8",
+          "/m/articles/detail.html?id=7",
+          "/m/articles/detail.html?id=6",
+          "/m/articles/detail.html?id=4",
+          "/m/articles/detail.html?id=21",
+          "/m/articles/detail.html?id=22",
+          "/m/articles/detail.html?id=23",
+          "/m/articles/detail.html?id=24",
+          "/m/articles/detail.html?id=33",
+          "/m/articles/detail.html?id=34",
+          "/m/articles/detail.html?id=35",
+          "/m/articles/detail.html?id=36",
+          "/m/articles/detail.html?id=45",
+          "/m/articles/detail.html?id=46",
+          "/m/articles/detail.html?id=47",
+          "/m/articles/detail.html?id=48"
+        ],
+        "uniqueArticleCount": 17,
+        "total": 17,
+        "scrollY": 504,
+        "url": "http://127.0.0.1:18084/m/articles/index.html?category_id=2"
+      }
+    },
+    {
+      "message": "mobileCategoryShelfIndex: root category refetch",
+      "passed": true,
+      "detail": [
+        "http://127.0.0.1:18084/api/public/mobile/category-shelf?sceneCode=public.mobile_category_shelf&category_id=2"
+      ]
+    },
+    {
+      "message": "mobileCategoryShelfIndex: parent aggregate deduplicates articles",
+      "passed": true,
+      "detail": {
+        "selectedRoot": "tab-2",
+        "selectedChild": "tab-all",
+        "categoryId": "2",
+        "hrefs": [
+          "/m/articles/detail.html?id=12",
+          "/m/articles/detail.html?id=8",
+          "/m/articles/detail.html?id=7",
+          "/m/articles/detail.html?id=6",
+          "/m/articles/detail.html?id=4",
+          "/m/articles/detail.html?id=21",
+          "/m/articles/detail.html?id=22",
+          "/m/articles/detail.html?id=23",
+          "/m/articles/detail.html?id=24",
+          "/m/articles/detail.html?id=33",
+          "/m/articles/detail.html?id=34",
+          "/m/articles/detail.html?id=35",
+          "/m/articles/detail.html?id=36",
+          "/m/articles/detail.html?id=45",
+          "/m/articles/detail.html?id=46",
+          "/m/articles/detail.html?id=47",
+          "/m/articles/detail.html?id=48"
+        ],
+        "uniqueArticleCount": 17,
+        "total": 17,
+        "scrollY": 504,
+        "url": "http://127.0.0.1:18084/m/articles/index.html?category_id=2"
+      }
+    },
+    {
+      "message": "mobileCategoryShelfIndex: parent aggregate total matches cards",
+      "passed": true,
+      "detail": {
+        "selectedRoot": "tab-2",
+        "selectedChild": "tab-all",
+        "categoryId": "2",
+        "hrefs": [
+          "/m/articles/detail.html?id=12",
+          "/m/articles/detail.html?id=8",
+          "/m/articles/detail.html?id=7",
+          "/m/articles/detail.html?id=6",
+          "/m/articles/detail.html?id=4",
+          "/m/articles/detail.html?id=21",
+          "/m/articles/detail.html?id=22",
+          "/m/articles/detail.html?id=23",
+          "/m/articles/detail.html?id=24",
+          "/m/articles/detail.html?id=33",
+          "/m/articles/detail.html?id=34",
+          "/m/articles/detail.html?id=35",
+          "/m/articles/detail.html?id=36",
+          "/m/articles/detail.html?id=45",
+          "/m/articles/detail.html?id=46",
+          "/m/articles/detail.html?id=47",
+          "/m/articles/detail.html?id=48"
+        ],
+        "uniqueArticleCount": 17,
+        "total": 17,
+        "scrollY": 504,
+        "url": "http://127.0.0.1:18084/m/articles/index.html?category_id=2"
+      }
+    },
+    {
+      "message": "mobileCategoryShelfIndex: child category selection",
+      "passed": true,
+      "detail": {
+        "selectedRoot": "tab-2",
+        "selectedChild": "tab-5",
+        "categoryId": "5",
+        "hrefs": [
+          "/m/articles/detail.html?id=12",
+          "/m/articles/detail.html?id=8",
+          "/m/articles/detail.html?id=6",
+          "/m/articles/detail.html?id=21",
+          "/m/articles/detail.html?id=22",
+          "/m/articles/detail.html?id=23",
+          "/m/articles/detail.html?id=33",
+          "/m/articles/detail.html?id=34",
+          "/m/articles/detail.html?id=35",
+          "/m/articles/detail.html?id=45",
+          "/m/articles/detail.html?id=46",
+          "/m/articles/detail.html?id=47"
+        ],
+        "uniqueArticleCount": 12,
+        "total": 12,
+        "scrollY": 0,
+        "url": "http://127.0.0.1:18084/m/articles/index.html?category_id=5"
+      }
+    },
+    {
+      "message": "mobileCategoryShelfIndex: child category refetch",
+      "passed": true,
+      "detail": [
+        "http://127.0.0.1:18084/api/public/mobile/category-shelf?sceneCode=public.mobile_category_shelf&category_id=5"
+      ]
+    },
+    {
+      "message": "mobileCategoryShelfIndex: child articles stay deduplicated",
+      "passed": true,
+      "detail": {
+        "selectedRoot": "tab-2",
+        "selectedChild": "tab-5",
+        "categoryId": "5",
+        "hrefs": [
+          "/m/articles/detail.html?id=12",
+          "/m/articles/detail.html?id=8",
+          "/m/articles/detail.html?id=6",
+          "/m/articles/detail.html?id=21",
+          "/m/articles/detail.html?id=22",
+          "/m/articles/detail.html?id=23",
+          "/m/articles/detail.html?id=33",
+          "/m/articles/detail.html?id=34",
+          "/m/articles/detail.html?id=35",
+          "/m/articles/detail.html?id=45",
+          "/m/articles/detail.html?id=46",
+          "/m/articles/detail.html?id=47"
+        ],
+        "uniqueArticleCount": 12,
+        "total": 12,
+        "scrollY": 0,
+        "url": "http://127.0.0.1:18084/m/articles/index.html?category_id=5"
+      }
+    },
+    {
+      "message": "mobileCategoryShelfIndex: history scenario has an article",
+      "passed": true,
+      "detail": {
+        "selectedRoot": "tab-2",
+        "selectedChild": "tab-all",
+        "categoryId": "2",
+        "hrefs": [
+          "/m/articles/detail.html?id=12",
+          "/m/articles/detail.html?id=8",
+          "/m/articles/detail.html?id=7",
+          "/m/articles/detail.html?id=6",
+          "/m/articles/detail.html?id=4",
+          "/m/articles/detail.html?id=21",
+          "/m/articles/detail.html?id=22",
+          "/m/articles/detail.html?id=23",
+          "/m/articles/detail.html?id=24",
+          "/m/articles/detail.html?id=33",
+          "/m/articles/detail.html?id=34",
+          "/m/articles/detail.html?id=35",
+          "/m/articles/detail.html?id=36",
+          "/m/articles/detail.html?id=45",
+          "/m/articles/detail.html?id=46",
+          "/m/articles/detail.html?id=47",
+          "/m/articles/detail.html?id=48"
+        ],
+        "uniqueArticleCount": 17,
+        "total": 17,
+        "scrollY": 640,
+        "url": "http://127.0.0.1:18084/m/articles/index.html?category_id=2"
+      }
+    },
+    {
+      "message": "mobileCategoryShelfIndex: detail referrer remains category shelf route",
+      "passed": true,
+      "detail": {
+        "url": "http://127.0.0.1:18084/m/articles/detail.html?id=12",
+        "referrer": "http://127.0.0.1:18084/m/articles/index.html?category_id=2",
+        "title": "Ops runtime 验收清单"
+      }
+    },
+    {
+      "message": "mobileCategoryShelfIndex: history restores category URL",
+      "passed": true,
+      "detail": {
+        "leaving": {
+          "selectedRoot": "tab-2",
+          "selectedChild": "tab-all",
+          "categoryId": "2",
+          "hrefs": [
+            "/m/articles/detail.html?id=12",
+            "/m/articles/detail.html?id=8",
+            "/m/articles/detail.html?id=7",
+            "/m/articles/detail.html?id=6",
+            "/m/articles/detail.html?id=4",
+            "/m/articles/detail.html?id=21",
+            "/m/articles/detail.html?id=22",
+            "/m/articles/detail.html?id=23",
+            "/m/articles/detail.html?id=24",
+            "/m/articles/detail.html?id=33",
+            "/m/articles/detail.html?id=34",
+            "/m/articles/detail.html?id=35",
+            "/m/articles/detail.html?id=36",
+            "/m/articles/detail.html?id=45",
+            "/m/articles/detail.html?id=46",
+            "/m/articles/detail.html?id=47",
+            "/m/articles/detail.html?id=48"
+          ],
+          "uniqueArticleCount": 17,
+          "total": 17,
+          "scrollY": 640,
+          "url": "http://127.0.0.1:18084/m/articles/index.html?category_id=2"
         },
         "restored": {
-          "scrollY": 596,
-          "selected": "tab-type-3"
+          "selectedRoot": "tab-2",
+          "selectedChild": "tab-all",
+          "categoryId": "2",
+          "hrefs": [
+            "/m/articles/detail.html?id=12",
+            "/m/articles/detail.html?id=8",
+            "/m/articles/detail.html?id=7",
+            "/m/articles/detail.html?id=6",
+            "/m/articles/detail.html?id=4",
+            "/m/articles/detail.html?id=21",
+            "/m/articles/detail.html?id=22",
+            "/m/articles/detail.html?id=23",
+            "/m/articles/detail.html?id=24",
+            "/m/articles/detail.html?id=33",
+            "/m/articles/detail.html?id=34",
+            "/m/articles/detail.html?id=35",
+            "/m/articles/detail.html?id=36",
+            "/m/articles/detail.html?id=45",
+            "/m/articles/detail.html?id=46",
+            "/m/articles/detail.html?id=47",
+            "/m/articles/detail.html?id=48"
+          ],
+          "uniqueArticleCount": 17,
+          "total": 17,
+          "scrollY": 640,
+          "historyShelf": {
+            "sectionId": "2",
+            "scrollY": 640
+          },
+          "url": "http://127.0.0.1:18084/m/articles/index.html?category_id=2"
         }
       }
     },
     {
-      "message": "mobile F shelf and history: no page errors",
+      "message": "mobileCategoryShelfIndex: history restores category selection",
+      "passed": true,
+      "detail": {
+        "leaving": {
+          "selectedRoot": "tab-2",
+          "selectedChild": "tab-all",
+          "categoryId": "2",
+          "hrefs": [
+            "/m/articles/detail.html?id=12",
+            "/m/articles/detail.html?id=8",
+            "/m/articles/detail.html?id=7",
+            "/m/articles/detail.html?id=6",
+            "/m/articles/detail.html?id=4",
+            "/m/articles/detail.html?id=21",
+            "/m/articles/detail.html?id=22",
+            "/m/articles/detail.html?id=23",
+            "/m/articles/detail.html?id=24",
+            "/m/articles/detail.html?id=33",
+            "/m/articles/detail.html?id=34",
+            "/m/articles/detail.html?id=35",
+            "/m/articles/detail.html?id=36",
+            "/m/articles/detail.html?id=45",
+            "/m/articles/detail.html?id=46",
+            "/m/articles/detail.html?id=47",
+            "/m/articles/detail.html?id=48"
+          ],
+          "uniqueArticleCount": 17,
+          "total": 17,
+          "scrollY": 640,
+          "url": "http://127.0.0.1:18084/m/articles/index.html?category_id=2"
+        },
+        "restored": {
+          "selectedRoot": "tab-2",
+          "selectedChild": "tab-all",
+          "categoryId": "2",
+          "hrefs": [
+            "/m/articles/detail.html?id=12",
+            "/m/articles/detail.html?id=8",
+            "/m/articles/detail.html?id=7",
+            "/m/articles/detail.html?id=6",
+            "/m/articles/detail.html?id=4",
+            "/m/articles/detail.html?id=21",
+            "/m/articles/detail.html?id=22",
+            "/m/articles/detail.html?id=23",
+            "/m/articles/detail.html?id=24",
+            "/m/articles/detail.html?id=33",
+            "/m/articles/detail.html?id=34",
+            "/m/articles/detail.html?id=35",
+            "/m/articles/detail.html?id=36",
+            "/m/articles/detail.html?id=45",
+            "/m/articles/detail.html?id=46",
+            "/m/articles/detail.html?id=47",
+            "/m/articles/detail.html?id=48"
+          ],
+          "uniqueArticleCount": 17,
+          "total": 17,
+          "scrollY": 640,
+          "historyShelf": {
+            "sectionId": "2",
+            "scrollY": 640
+          },
+          "url": "http://127.0.0.1:18084/m/articles/index.html?category_id=2"
+        }
+      }
+    },
+    {
+      "message": "mobileCategoryShelfIndex: history restores scroll position",
+      "passed": true,
+      "detail": {
+        "leaving": {
+          "selectedRoot": "tab-2",
+          "selectedChild": "tab-all",
+          "categoryId": "2",
+          "hrefs": [
+            "/m/articles/detail.html?id=12",
+            "/m/articles/detail.html?id=8",
+            "/m/articles/detail.html?id=7",
+            "/m/articles/detail.html?id=6",
+            "/m/articles/detail.html?id=4",
+            "/m/articles/detail.html?id=21",
+            "/m/articles/detail.html?id=22",
+            "/m/articles/detail.html?id=23",
+            "/m/articles/detail.html?id=24",
+            "/m/articles/detail.html?id=33",
+            "/m/articles/detail.html?id=34",
+            "/m/articles/detail.html?id=35",
+            "/m/articles/detail.html?id=36",
+            "/m/articles/detail.html?id=45",
+            "/m/articles/detail.html?id=46",
+            "/m/articles/detail.html?id=47",
+            "/m/articles/detail.html?id=48"
+          ],
+          "uniqueArticleCount": 17,
+          "total": 17,
+          "scrollY": 640,
+          "url": "http://127.0.0.1:18084/m/articles/index.html?category_id=2"
+        },
+        "restored": {
+          "selectedRoot": "tab-2",
+          "selectedChild": "tab-all",
+          "categoryId": "2",
+          "hrefs": [
+            "/m/articles/detail.html?id=12",
+            "/m/articles/detail.html?id=8",
+            "/m/articles/detail.html?id=7",
+            "/m/articles/detail.html?id=6",
+            "/m/articles/detail.html?id=4",
+            "/m/articles/detail.html?id=21",
+            "/m/articles/detail.html?id=22",
+            "/m/articles/detail.html?id=23",
+            "/m/articles/detail.html?id=24",
+            "/m/articles/detail.html?id=33",
+            "/m/articles/detail.html?id=34",
+            "/m/articles/detail.html?id=35",
+            "/m/articles/detail.html?id=36",
+            "/m/articles/detail.html?id=45",
+            "/m/articles/detail.html?id=46",
+            "/m/articles/detail.html?id=47",
+            "/m/articles/detail.html?id=48"
+          ],
+          "uniqueArticleCount": 17,
+          "total": 17,
+          "scrollY": 640,
+          "historyShelf": {
+            "sectionId": "2",
+            "scrollY": 640
+          },
+          "url": "http://127.0.0.1:18084/m/articles/index.html?category_id=2"
+        }
+      }
+    },
+    {
+      "message": "mobileCategoryShelfIndex and history: no page errors",
       "passed": true,
       "detail": []
     },
     {
-      "message": "mobile browse: load more appends article cards",
+      "message": "mobileCategoryShelfList: initial category request",
+      "passed": true,
+      "detail": [
+        "http://127.0.0.1:18084/api/public/mobile/category-shelf?sceneCode=public.mobile_category_shelf",
+        "http://127.0.0.1:18084/api/public/mobile/category-shelf?sceneCode=public.mobile_category_shelf&category_id=1"
+      ]
+    },
+    {
+      "message": "mobileCategoryShelfList: initial root selected",
       "passed": true,
       "detail": {
-        "initial": {
-          "cards": 20,
-          "progress": "已载 20 / 45 篇加载更多",
-          "url": "http://127.0.0.1:18084/m/articles/list.html"
+        "selectedRoot": "tab-1",
+        "selectedChild": "tab-all",
+        "categoryId": "1",
+        "hrefs": [
+          "/m/articles/detail.html?id=11",
+          "/m/articles/detail.html?id=10",
+          "/m/articles/detail.html?id=9",
+          "/m/articles/detail.html?id=5",
+          "/m/articles/detail.html?id=13",
+          "/m/articles/detail.html?id=14",
+          "/m/articles/detail.html?id=15",
+          "/m/articles/detail.html?id=16",
+          "/m/articles/detail.html?id=17",
+          "/m/articles/detail.html?id=18",
+          "/m/articles/detail.html?id=19",
+          "/m/articles/detail.html?id=20",
+          "/m/articles/detail.html?id=25",
+          "/m/articles/detail.html?id=26",
+          "/m/articles/detail.html?id=27",
+          "/m/articles/detail.html?id=28",
+          "/m/articles/detail.html?id=29",
+          "/m/articles/detail.html?id=30",
+          "/m/articles/detail.html?id=31",
+          "/m/articles/detail.html?id=32",
+          "/m/articles/detail.html?id=37",
+          "/m/articles/detail.html?id=38",
+          "/m/articles/detail.html?id=39",
+          "/m/articles/detail.html?id=40",
+          "/m/articles/detail.html?id=41",
+          "/m/articles/detail.html?id=42",
+          "/m/articles/detail.html?id=43",
+          "/m/articles/detail.html?id=44"
+        ],
+        "uniqueArticleCount": 28,
+        "total": 28,
+        "scrollY": 0,
+        "url": "http://127.0.0.1:18084/m/articles/list.html?category_id=1"
+      }
+    },
+    {
+      "message": "mobileCategoryShelfList: initial child selected",
+      "passed": true,
+      "detail": {
+        "selectedRoot": "tab-1",
+        "selectedChild": "tab-all",
+        "categoryId": "1",
+        "hrefs": [
+          "/m/articles/detail.html?id=11",
+          "/m/articles/detail.html?id=10",
+          "/m/articles/detail.html?id=9",
+          "/m/articles/detail.html?id=5",
+          "/m/articles/detail.html?id=13",
+          "/m/articles/detail.html?id=14",
+          "/m/articles/detail.html?id=15",
+          "/m/articles/detail.html?id=16",
+          "/m/articles/detail.html?id=17",
+          "/m/articles/detail.html?id=18",
+          "/m/articles/detail.html?id=19",
+          "/m/articles/detail.html?id=20",
+          "/m/articles/detail.html?id=25",
+          "/m/articles/detail.html?id=26",
+          "/m/articles/detail.html?id=27",
+          "/m/articles/detail.html?id=28",
+          "/m/articles/detail.html?id=29",
+          "/m/articles/detail.html?id=30",
+          "/m/articles/detail.html?id=31",
+          "/m/articles/detail.html?id=32",
+          "/m/articles/detail.html?id=37",
+          "/m/articles/detail.html?id=38",
+          "/m/articles/detail.html?id=39",
+          "/m/articles/detail.html?id=40",
+          "/m/articles/detail.html?id=41",
+          "/m/articles/detail.html?id=42",
+          "/m/articles/detail.html?id=43",
+          "/m/articles/detail.html?id=44"
+        ],
+        "uniqueArticleCount": 28,
+        "total": 28,
+        "scrollY": 0,
+        "url": "http://127.0.0.1:18084/m/articles/list.html?category_id=1"
+      }
+    },
+    {
+      "message": "mobileCategoryShelfList: category rails remain mounted while loading",
+      "passed": true,
+      "detail": {
+        "rootTabs": 2,
+        "childTabs": 3,
+        "activeElementId": "tab-2",
+        "busy": "true"
+      }
+    },
+    {
+      "message": "mobileCategoryShelfList: category tab keeps focus while loading",
+      "passed": true,
+      "detail": {
+        "rootTabs": 2,
+        "childTabs": 3,
+        "activeElementId": "tab-2",
+        "busy": "true"
+      }
+    },
+    {
+      "message": "mobileCategoryShelfList: category Back restores URL",
+      "passed": true,
+      "detail": {
+        "categoryHistoryLeaving": {
+          "selectedRoot": "tab-1",
+          "selectedChild": "tab-all",
+          "categoryId": "1",
+          "hrefs": [
+            "/m/articles/detail.html?id=11",
+            "/m/articles/detail.html?id=10",
+            "/m/articles/detail.html?id=9",
+            "/m/articles/detail.html?id=5",
+            "/m/articles/detail.html?id=13",
+            "/m/articles/detail.html?id=14",
+            "/m/articles/detail.html?id=15",
+            "/m/articles/detail.html?id=16",
+            "/m/articles/detail.html?id=17",
+            "/m/articles/detail.html?id=18",
+            "/m/articles/detail.html?id=19",
+            "/m/articles/detail.html?id=20",
+            "/m/articles/detail.html?id=25",
+            "/m/articles/detail.html?id=26",
+            "/m/articles/detail.html?id=27",
+            "/m/articles/detail.html?id=28",
+            "/m/articles/detail.html?id=29",
+            "/m/articles/detail.html?id=30",
+            "/m/articles/detail.html?id=31",
+            "/m/articles/detail.html?id=32",
+            "/m/articles/detail.html?id=37",
+            "/m/articles/detail.html?id=38",
+            "/m/articles/detail.html?id=39",
+            "/m/articles/detail.html?id=40",
+            "/m/articles/detail.html?id=41",
+            "/m/articles/detail.html?id=42",
+            "/m/articles/detail.html?id=43",
+            "/m/articles/detail.html?id=44"
+          ],
+          "uniqueArticleCount": 28,
+          "total": 28,
+          "scrollY": 480,
+          "url": "http://127.0.0.1:18084/m/articles/list.html?category_id=1"
         },
-        "afterMore": {
-          "cards": 40,
-          "progress": "已载 40 / 45 篇加载更多"
+        "categoryHistoryRestored": {
+          "selectedRoot": "tab-1",
+          "selectedChild": "tab-all",
+          "categoryId": "1",
+          "hrefs": [
+            "/m/articles/detail.html?id=11",
+            "/m/articles/detail.html?id=10",
+            "/m/articles/detail.html?id=9",
+            "/m/articles/detail.html?id=5",
+            "/m/articles/detail.html?id=13",
+            "/m/articles/detail.html?id=14",
+            "/m/articles/detail.html?id=15",
+            "/m/articles/detail.html?id=16",
+            "/m/articles/detail.html?id=17",
+            "/m/articles/detail.html?id=18",
+            "/m/articles/detail.html?id=19",
+            "/m/articles/detail.html?id=20",
+            "/m/articles/detail.html?id=25",
+            "/m/articles/detail.html?id=26",
+            "/m/articles/detail.html?id=27",
+            "/m/articles/detail.html?id=28",
+            "/m/articles/detail.html?id=29",
+            "/m/articles/detail.html?id=30",
+            "/m/articles/detail.html?id=31",
+            "/m/articles/detail.html?id=32",
+            "/m/articles/detail.html?id=37",
+            "/m/articles/detail.html?id=38",
+            "/m/articles/detail.html?id=39",
+            "/m/articles/detail.html?id=40",
+            "/m/articles/detail.html?id=41",
+            "/m/articles/detail.html?id=42",
+            "/m/articles/detail.html?id=43",
+            "/m/articles/detail.html?id=44"
+          ],
+          "uniqueArticleCount": 28,
+          "total": 28,
+          "scrollY": 480,
+          "historyShelf": {
+            "sectionId": "1",
+            "scrollY": 480
+          },
+          "url": "http://127.0.0.1:18084/m/articles/list.html?category_id=1"
         }
       }
     },
     {
-      "message": "mobile browse: load more requests second page",
-      "passed": true,
-      "detail": [
-        "http://127.0.0.1:18084/api/public/articles?sceneCode=public.article_browse&page=2"
-      ]
-    },
-    {
-      "message": "mobile browse: type selection refetches with type id",
-      "passed": true,
-      "detail": [
-        "http://127.0.0.1:18084/api/public/articles?sceneCode=public.article_browse&type_id=3"
-      ]
-    },
-    {
-      "message": "mobile browse: topic selection refetches with topic id",
-      "passed": true,
-      "detail": [
-        "http://127.0.0.1:18084/api/public/articles?sceneCode=public.article_browse&type_id=3&topic_id=1"
-      ]
-    },
-    {
-      "message": "mobile browse: tag selection refetches with tag id",
-      "passed": true,
-      "detail": [
-        "http://127.0.0.1:18084/api/public/articles?sceneCode=public.article_browse&type_id=3&topic_id=1&tag_id=3"
-      ]
-    },
-    {
-      "message": "mobile browse: third-level tag control remains visible after selection",
+      "message": "mobileCategoryShelfList: category Back restores selection",
       "passed": true,
       "detail": {
-        "cards": 0,
-        "url": "http://127.0.0.1:18084/m/articles/list.html?type=3&topic=1&tag=3",
-        "tagVisible": true
+        "categoryHistoryLeaving": {
+          "selectedRoot": "tab-1",
+          "selectedChild": "tab-all",
+          "categoryId": "1",
+          "hrefs": [
+            "/m/articles/detail.html?id=11",
+            "/m/articles/detail.html?id=10",
+            "/m/articles/detail.html?id=9",
+            "/m/articles/detail.html?id=5",
+            "/m/articles/detail.html?id=13",
+            "/m/articles/detail.html?id=14",
+            "/m/articles/detail.html?id=15",
+            "/m/articles/detail.html?id=16",
+            "/m/articles/detail.html?id=17",
+            "/m/articles/detail.html?id=18",
+            "/m/articles/detail.html?id=19",
+            "/m/articles/detail.html?id=20",
+            "/m/articles/detail.html?id=25",
+            "/m/articles/detail.html?id=26",
+            "/m/articles/detail.html?id=27",
+            "/m/articles/detail.html?id=28",
+            "/m/articles/detail.html?id=29",
+            "/m/articles/detail.html?id=30",
+            "/m/articles/detail.html?id=31",
+            "/m/articles/detail.html?id=32",
+            "/m/articles/detail.html?id=37",
+            "/m/articles/detail.html?id=38",
+            "/m/articles/detail.html?id=39",
+            "/m/articles/detail.html?id=40",
+            "/m/articles/detail.html?id=41",
+            "/m/articles/detail.html?id=42",
+            "/m/articles/detail.html?id=43",
+            "/m/articles/detail.html?id=44"
+          ],
+          "uniqueArticleCount": 28,
+          "total": 28,
+          "scrollY": 480,
+          "url": "http://127.0.0.1:18084/m/articles/list.html?category_id=1"
+        },
+        "categoryHistoryRestored": {
+          "selectedRoot": "tab-1",
+          "selectedChild": "tab-all",
+          "categoryId": "1",
+          "hrefs": [
+            "/m/articles/detail.html?id=11",
+            "/m/articles/detail.html?id=10",
+            "/m/articles/detail.html?id=9",
+            "/m/articles/detail.html?id=5",
+            "/m/articles/detail.html?id=13",
+            "/m/articles/detail.html?id=14",
+            "/m/articles/detail.html?id=15",
+            "/m/articles/detail.html?id=16",
+            "/m/articles/detail.html?id=17",
+            "/m/articles/detail.html?id=18",
+            "/m/articles/detail.html?id=19",
+            "/m/articles/detail.html?id=20",
+            "/m/articles/detail.html?id=25",
+            "/m/articles/detail.html?id=26",
+            "/m/articles/detail.html?id=27",
+            "/m/articles/detail.html?id=28",
+            "/m/articles/detail.html?id=29",
+            "/m/articles/detail.html?id=30",
+            "/m/articles/detail.html?id=31",
+            "/m/articles/detail.html?id=32",
+            "/m/articles/detail.html?id=37",
+            "/m/articles/detail.html?id=38",
+            "/m/articles/detail.html?id=39",
+            "/m/articles/detail.html?id=40",
+            "/m/articles/detail.html?id=41",
+            "/m/articles/detail.html?id=42",
+            "/m/articles/detail.html?id=43",
+            "/m/articles/detail.html?id=44"
+          ],
+          "uniqueArticleCount": 28,
+          "total": 28,
+          "scrollY": 480,
+          "historyShelf": {
+            "sectionId": "1",
+            "scrollY": 480
+          },
+          "url": "http://127.0.0.1:18084/m/articles/list.html?category_id=1"
+        }
       }
     },
     {
-      "message": "mobile F browse: no page errors",
+      "message": "mobileCategoryShelfList: category Back restores scroll position",
+      "passed": true,
+      "detail": {
+        "categoryHistoryLeaving": {
+          "selectedRoot": "tab-1",
+          "selectedChild": "tab-all",
+          "categoryId": "1",
+          "hrefs": [
+            "/m/articles/detail.html?id=11",
+            "/m/articles/detail.html?id=10",
+            "/m/articles/detail.html?id=9",
+            "/m/articles/detail.html?id=5",
+            "/m/articles/detail.html?id=13",
+            "/m/articles/detail.html?id=14",
+            "/m/articles/detail.html?id=15",
+            "/m/articles/detail.html?id=16",
+            "/m/articles/detail.html?id=17",
+            "/m/articles/detail.html?id=18",
+            "/m/articles/detail.html?id=19",
+            "/m/articles/detail.html?id=20",
+            "/m/articles/detail.html?id=25",
+            "/m/articles/detail.html?id=26",
+            "/m/articles/detail.html?id=27",
+            "/m/articles/detail.html?id=28",
+            "/m/articles/detail.html?id=29",
+            "/m/articles/detail.html?id=30",
+            "/m/articles/detail.html?id=31",
+            "/m/articles/detail.html?id=32",
+            "/m/articles/detail.html?id=37",
+            "/m/articles/detail.html?id=38",
+            "/m/articles/detail.html?id=39",
+            "/m/articles/detail.html?id=40",
+            "/m/articles/detail.html?id=41",
+            "/m/articles/detail.html?id=42",
+            "/m/articles/detail.html?id=43",
+            "/m/articles/detail.html?id=44"
+          ],
+          "uniqueArticleCount": 28,
+          "total": 28,
+          "scrollY": 480,
+          "url": "http://127.0.0.1:18084/m/articles/list.html?category_id=1"
+        },
+        "categoryHistoryRestored": {
+          "selectedRoot": "tab-1",
+          "selectedChild": "tab-all",
+          "categoryId": "1",
+          "hrefs": [
+            "/m/articles/detail.html?id=11",
+            "/m/articles/detail.html?id=10",
+            "/m/articles/detail.html?id=9",
+            "/m/articles/detail.html?id=5",
+            "/m/articles/detail.html?id=13",
+            "/m/articles/detail.html?id=14",
+            "/m/articles/detail.html?id=15",
+            "/m/articles/detail.html?id=16",
+            "/m/articles/detail.html?id=17",
+            "/m/articles/detail.html?id=18",
+            "/m/articles/detail.html?id=19",
+            "/m/articles/detail.html?id=20",
+            "/m/articles/detail.html?id=25",
+            "/m/articles/detail.html?id=26",
+            "/m/articles/detail.html?id=27",
+            "/m/articles/detail.html?id=28",
+            "/m/articles/detail.html?id=29",
+            "/m/articles/detail.html?id=30",
+            "/m/articles/detail.html?id=31",
+            "/m/articles/detail.html?id=32",
+            "/m/articles/detail.html?id=37",
+            "/m/articles/detail.html?id=38",
+            "/m/articles/detail.html?id=39",
+            "/m/articles/detail.html?id=40",
+            "/m/articles/detail.html?id=41",
+            "/m/articles/detail.html?id=42",
+            "/m/articles/detail.html?id=43",
+            "/m/articles/detail.html?id=44"
+          ],
+          "uniqueArticleCount": 28,
+          "total": 28,
+          "scrollY": 480,
+          "historyShelf": {
+            "sectionId": "1",
+            "scrollY": 480
+          },
+          "url": "http://127.0.0.1:18084/m/articles/list.html?category_id=1"
+        }
+      }
+    },
+    {
+      "message": "mobileCategoryShelfList: root category selection",
+      "passed": true,
+      "detail": {
+        "selectedRoot": "tab-2",
+        "selectedChild": "tab-all",
+        "categoryId": "2",
+        "hrefs": [
+          "/m/articles/detail.html?id=12",
+          "/m/articles/detail.html?id=8",
+          "/m/articles/detail.html?id=7",
+          "/m/articles/detail.html?id=6",
+          "/m/articles/detail.html?id=4",
+          "/m/articles/detail.html?id=21",
+          "/m/articles/detail.html?id=22",
+          "/m/articles/detail.html?id=23",
+          "/m/articles/detail.html?id=24",
+          "/m/articles/detail.html?id=33",
+          "/m/articles/detail.html?id=34",
+          "/m/articles/detail.html?id=35",
+          "/m/articles/detail.html?id=36",
+          "/m/articles/detail.html?id=45",
+          "/m/articles/detail.html?id=46",
+          "/m/articles/detail.html?id=47",
+          "/m/articles/detail.html?id=48"
+        ],
+        "uniqueArticleCount": 17,
+        "total": 17,
+        "scrollY": 504,
+        "url": "http://127.0.0.1:18084/m/articles/list.html?category_id=2"
+      }
+    },
+    {
+      "message": "mobileCategoryShelfList: root category refetch",
+      "passed": true,
+      "detail": [
+        "http://127.0.0.1:18084/api/public/mobile/category-shelf?sceneCode=public.mobile_category_shelf&category_id=2"
+      ]
+    },
+    {
+      "message": "mobileCategoryShelfList: parent aggregate deduplicates articles",
+      "passed": true,
+      "detail": {
+        "selectedRoot": "tab-2",
+        "selectedChild": "tab-all",
+        "categoryId": "2",
+        "hrefs": [
+          "/m/articles/detail.html?id=12",
+          "/m/articles/detail.html?id=8",
+          "/m/articles/detail.html?id=7",
+          "/m/articles/detail.html?id=6",
+          "/m/articles/detail.html?id=4",
+          "/m/articles/detail.html?id=21",
+          "/m/articles/detail.html?id=22",
+          "/m/articles/detail.html?id=23",
+          "/m/articles/detail.html?id=24",
+          "/m/articles/detail.html?id=33",
+          "/m/articles/detail.html?id=34",
+          "/m/articles/detail.html?id=35",
+          "/m/articles/detail.html?id=36",
+          "/m/articles/detail.html?id=45",
+          "/m/articles/detail.html?id=46",
+          "/m/articles/detail.html?id=47",
+          "/m/articles/detail.html?id=48"
+        ],
+        "uniqueArticleCount": 17,
+        "total": 17,
+        "scrollY": 504,
+        "url": "http://127.0.0.1:18084/m/articles/list.html?category_id=2"
+      }
+    },
+    {
+      "message": "mobileCategoryShelfList: parent aggregate total matches cards",
+      "passed": true,
+      "detail": {
+        "selectedRoot": "tab-2",
+        "selectedChild": "tab-all",
+        "categoryId": "2",
+        "hrefs": [
+          "/m/articles/detail.html?id=12",
+          "/m/articles/detail.html?id=8",
+          "/m/articles/detail.html?id=7",
+          "/m/articles/detail.html?id=6",
+          "/m/articles/detail.html?id=4",
+          "/m/articles/detail.html?id=21",
+          "/m/articles/detail.html?id=22",
+          "/m/articles/detail.html?id=23",
+          "/m/articles/detail.html?id=24",
+          "/m/articles/detail.html?id=33",
+          "/m/articles/detail.html?id=34",
+          "/m/articles/detail.html?id=35",
+          "/m/articles/detail.html?id=36",
+          "/m/articles/detail.html?id=45",
+          "/m/articles/detail.html?id=46",
+          "/m/articles/detail.html?id=47",
+          "/m/articles/detail.html?id=48"
+        ],
+        "uniqueArticleCount": 17,
+        "total": 17,
+        "scrollY": 504,
+        "url": "http://127.0.0.1:18084/m/articles/list.html?category_id=2"
+      }
+    },
+    {
+      "message": "mobileCategoryShelfList: child category selection",
+      "passed": true,
+      "detail": {
+        "selectedRoot": "tab-2",
+        "selectedChild": "tab-5",
+        "categoryId": "5",
+        "hrefs": [
+          "/m/articles/detail.html?id=12",
+          "/m/articles/detail.html?id=8",
+          "/m/articles/detail.html?id=6",
+          "/m/articles/detail.html?id=21",
+          "/m/articles/detail.html?id=22",
+          "/m/articles/detail.html?id=23",
+          "/m/articles/detail.html?id=33",
+          "/m/articles/detail.html?id=34",
+          "/m/articles/detail.html?id=35",
+          "/m/articles/detail.html?id=45",
+          "/m/articles/detail.html?id=46",
+          "/m/articles/detail.html?id=47"
+        ],
+        "uniqueArticleCount": 12,
+        "total": 12,
+        "scrollY": 504,
+        "url": "http://127.0.0.1:18084/m/articles/list.html?category_id=5"
+      }
+    },
+    {
+      "message": "mobileCategoryShelfList: child category refetch",
+      "passed": true,
+      "detail": [
+        "http://127.0.0.1:18084/api/public/mobile/category-shelf?sceneCode=public.mobile_category_shelf&category_id=5"
+      ]
+    },
+    {
+      "message": "mobileCategoryShelfList: child articles stay deduplicated",
+      "passed": true,
+      "detail": {
+        "selectedRoot": "tab-2",
+        "selectedChild": "tab-5",
+        "categoryId": "5",
+        "hrefs": [
+          "/m/articles/detail.html?id=12",
+          "/m/articles/detail.html?id=8",
+          "/m/articles/detail.html?id=6",
+          "/m/articles/detail.html?id=21",
+          "/m/articles/detail.html?id=22",
+          "/m/articles/detail.html?id=23",
+          "/m/articles/detail.html?id=33",
+          "/m/articles/detail.html?id=34",
+          "/m/articles/detail.html?id=35",
+          "/m/articles/detail.html?id=45",
+          "/m/articles/detail.html?id=46",
+          "/m/articles/detail.html?id=47"
+        ],
+        "uniqueArticleCount": 12,
+        "total": 12,
+        "scrollY": 504,
+        "url": "http://127.0.0.1:18084/m/articles/list.html?category_id=5"
+      }
+    },
+    {
+      "message": "mobileCategoryShelfList: no page errors",
       "passed": true,
       "detail": []
     }
@@ -318,79 +1522,476 @@
         "http://127.0.0.1:18084/api/public/t-shelf?sceneCode=public.t_shelf&surface=recommendation&filter_id=3"
       ]
     },
-    "mobileFShelf": {
-      "before": {
-        "selected": "tab-recommendation",
-        "scrollY": 0,
-        "sections": [
-          "shelf-recommendation",
-          "shelf-type-3",
-          "shelf-type-1",
-          "shelf-type-2"
-        ]
-      },
-      "nextId": "tab-type-3",
-      "focused": {
-        "selected": "tab-type-3",
-        "scrollY": 596,
-        "targetTop": 91.796875,
-        "targetId": "shelf-type-3"
-      },
-      "href": "http://127.0.0.1:18084/m/articles/detail.html?id=48",
-      "beforeNavigate": {
-        "scrollY": 596,
-        "selected": "tab-type-3"
-      },
-      "detail": {
-        "url": "http://127.0.0.1:18084/m/articles/detail.html?id=48",
-        "referrer": "http://127.0.0.1:18084/m/articles/index.html",
-        "title": "追加样本 #48 · Announcements"
-      },
-      "restored": {
-        "scrollY": 596,
-        "selected": "tab-type-3"
-      }
-    },
-    "mobileBrowse": {
+    "mobileCategoryShelfIndex": {
       "initial": {
-        "cards": 20,
-        "progress": "已载 20 / 45 篇加载更多",
-        "url": "http://127.0.0.1:18084/m/articles/list.html"
+        "selectedRoot": "tab-1",
+        "selectedChild": "tab-all",
+        "categoryId": "1",
+        "hrefs": [
+          "/m/articles/detail.html?id=11",
+          "/m/articles/detail.html?id=10",
+          "/m/articles/detail.html?id=9",
+          "/m/articles/detail.html?id=5",
+          "/m/articles/detail.html?id=13",
+          "/m/articles/detail.html?id=14",
+          "/m/articles/detail.html?id=15",
+          "/m/articles/detail.html?id=16",
+          "/m/articles/detail.html?id=17",
+          "/m/articles/detail.html?id=18",
+          "/m/articles/detail.html?id=19",
+          "/m/articles/detail.html?id=20",
+          "/m/articles/detail.html?id=25",
+          "/m/articles/detail.html?id=26",
+          "/m/articles/detail.html?id=27",
+          "/m/articles/detail.html?id=28",
+          "/m/articles/detail.html?id=29",
+          "/m/articles/detail.html?id=30",
+          "/m/articles/detail.html?id=31",
+          "/m/articles/detail.html?id=32",
+          "/m/articles/detail.html?id=37",
+          "/m/articles/detail.html?id=38",
+          "/m/articles/detail.html?id=39",
+          "/m/articles/detail.html?id=40",
+          "/m/articles/detail.html?id=41",
+          "/m/articles/detail.html?id=42",
+          "/m/articles/detail.html?id=43",
+          "/m/articles/detail.html?id=44"
+        ],
+        "uniqueArticleCount": 28,
+        "total": 28,
+        "scrollY": 0,
+        "url": "http://127.0.0.1:18084/m/articles/index.html?category_id=1"
       },
       "initialRequests": [
-        "http://127.0.0.1:18084/api/public/articles?sceneCode=public.article_browse"
+        "http://127.0.0.1:18084/api/public/mobile/category-shelf?sceneCode=public.mobile_category_shelf",
+        "http://127.0.0.1:18084/api/public/mobile/category-shelf?sceneCode=public.mobile_category_shelf&category_id=1"
       ],
-      "afterMore": {
-        "cards": 40,
-        "progress": "已载 40 / 45 篇加载更多"
+      "categoryHistory": {
+        "scroll": {
+          "maxScroll": 3176,
+          "requestedScroll": 480
+        },
+        "leaving": {
+          "selectedRoot": "tab-1",
+          "selectedChild": "tab-all",
+          "categoryId": "1",
+          "hrefs": [
+            "/m/articles/detail.html?id=11",
+            "/m/articles/detail.html?id=10",
+            "/m/articles/detail.html?id=9",
+            "/m/articles/detail.html?id=5",
+            "/m/articles/detail.html?id=13",
+            "/m/articles/detail.html?id=14",
+            "/m/articles/detail.html?id=15",
+            "/m/articles/detail.html?id=16",
+            "/m/articles/detail.html?id=17",
+            "/m/articles/detail.html?id=18",
+            "/m/articles/detail.html?id=19",
+            "/m/articles/detail.html?id=20",
+            "/m/articles/detail.html?id=25",
+            "/m/articles/detail.html?id=26",
+            "/m/articles/detail.html?id=27",
+            "/m/articles/detail.html?id=28",
+            "/m/articles/detail.html?id=29",
+            "/m/articles/detail.html?id=30",
+            "/m/articles/detail.html?id=31",
+            "/m/articles/detail.html?id=32",
+            "/m/articles/detail.html?id=37",
+            "/m/articles/detail.html?id=38",
+            "/m/articles/detail.html?id=39",
+            "/m/articles/detail.html?id=40",
+            "/m/articles/detail.html?id=41",
+            "/m/articles/detail.html?id=42",
+            "/m/articles/detail.html?id=43",
+            "/m/articles/detail.html?id=44"
+          ],
+          "uniqueArticleCount": 28,
+          "total": 28,
+          "scrollY": 480,
+          "url": "http://127.0.0.1:18084/m/articles/index.html?category_id=1"
+        },
+        "destinationRootId": "2",
+        "loading": {
+          "rootTabs": 2,
+          "childTabs": 3,
+          "activeElementId": "tab-2",
+          "busy": "true"
+        },
+        "restored": {
+          "selectedRoot": "tab-1",
+          "selectedChild": "tab-all",
+          "categoryId": "1",
+          "hrefs": [
+            "/m/articles/detail.html?id=11",
+            "/m/articles/detail.html?id=10",
+            "/m/articles/detail.html?id=9",
+            "/m/articles/detail.html?id=5",
+            "/m/articles/detail.html?id=13",
+            "/m/articles/detail.html?id=14",
+            "/m/articles/detail.html?id=15",
+            "/m/articles/detail.html?id=16",
+            "/m/articles/detail.html?id=17",
+            "/m/articles/detail.html?id=18",
+            "/m/articles/detail.html?id=19",
+            "/m/articles/detail.html?id=20",
+            "/m/articles/detail.html?id=25",
+            "/m/articles/detail.html?id=26",
+            "/m/articles/detail.html?id=27",
+            "/m/articles/detail.html?id=28",
+            "/m/articles/detail.html?id=29",
+            "/m/articles/detail.html?id=30",
+            "/m/articles/detail.html?id=31",
+            "/m/articles/detail.html?id=32",
+            "/m/articles/detail.html?id=37",
+            "/m/articles/detail.html?id=38",
+            "/m/articles/detail.html?id=39",
+            "/m/articles/detail.html?id=40",
+            "/m/articles/detail.html?id=41",
+            "/m/articles/detail.html?id=42",
+            "/m/articles/detail.html?id=43",
+            "/m/articles/detail.html?id=44"
+          ],
+          "uniqueArticleCount": 28,
+          "total": 28,
+          "scrollY": 480,
+          "historyShelf": {
+            "sectionId": "1",
+            "scrollY": 480
+          },
+          "url": "http://127.0.0.1:18084/m/articles/index.html?category_id=1"
+        }
       },
-      "moreRequests": [
-        "http://127.0.0.1:18084/api/public/articles?sceneCode=public.article_browse&page=2"
-      ],
-      "typeId": "3",
-      "afterType": {
-        "cards": 5,
-        "url": "http://127.0.0.1:18084/m/articles/list.html?type=3"
+      "rootId": "2",
+      "root": {
+        "selectedRoot": "tab-2",
+        "selectedChild": "tab-all",
+        "categoryId": "2",
+        "hrefs": [
+          "/m/articles/detail.html?id=12",
+          "/m/articles/detail.html?id=8",
+          "/m/articles/detail.html?id=7",
+          "/m/articles/detail.html?id=6",
+          "/m/articles/detail.html?id=4",
+          "/m/articles/detail.html?id=21",
+          "/m/articles/detail.html?id=22",
+          "/m/articles/detail.html?id=23",
+          "/m/articles/detail.html?id=24",
+          "/m/articles/detail.html?id=33",
+          "/m/articles/detail.html?id=34",
+          "/m/articles/detail.html?id=35",
+          "/m/articles/detail.html?id=36",
+          "/m/articles/detail.html?id=45",
+          "/m/articles/detail.html?id=46",
+          "/m/articles/detail.html?id=47",
+          "/m/articles/detail.html?id=48"
+        ],
+        "uniqueArticleCount": 17,
+        "total": 17,
+        "scrollY": 504,
+        "url": "http://127.0.0.1:18084/m/articles/index.html?category_id=2"
       },
-      "typeRequests": [
-        "http://127.0.0.1:18084/api/public/articles?sceneCode=public.article_browse&type_id=3"
+      "rootRequests": [
+        "http://127.0.0.1:18084/api/public/mobile/category-shelf?sceneCode=public.mobile_category_shelf&category_id=2"
       ],
-      "topicId": "1",
-      "topicRequests": [
-        "http://127.0.0.1:18084/api/public/articles?sceneCode=public.article_browse&type_id=3&topic_id=1"
+      "childId": "5",
+      "child": {
+        "selectedRoot": "tab-2",
+        "selectedChild": "tab-5",
+        "categoryId": "5",
+        "hrefs": [
+          "/m/articles/detail.html?id=12",
+          "/m/articles/detail.html?id=8",
+          "/m/articles/detail.html?id=6",
+          "/m/articles/detail.html?id=21",
+          "/m/articles/detail.html?id=22",
+          "/m/articles/detail.html?id=23",
+          "/m/articles/detail.html?id=33",
+          "/m/articles/detail.html?id=34",
+          "/m/articles/detail.html?id=35",
+          "/m/articles/detail.html?id=45",
+          "/m/articles/detail.html?id=46",
+          "/m/articles/detail.html?id=47"
+        ],
+        "uniqueArticleCount": 12,
+        "total": 12,
+        "scrollY": 0,
+        "url": "http://127.0.0.1:18084/m/articles/index.html?category_id=5"
+      },
+      "childRequests": [
+        "http://127.0.0.1:18084/api/public/mobile/category-shelf?sceneCode=public.mobile_category_shelf&category_id=5"
       ],
-      "tagId": "3",
-      "tagRequests": [
-        "http://127.0.0.1:18084/api/public/articles?sceneCode=public.article_browse&type_id=3&topic_id=1&tag_id=3"
-      ],
-      "final": {
-        "cards": 0,
-        "url": "http://127.0.0.1:18084/m/articles/list.html?type=3&topic=1&tag=3",
-        "tagVisible": true
+      "beforeNavigate": {
+        "maxScroll": 1792,
+        "url": "http://127.0.0.1:18084/m/articles/index.html?category_id=2"
+      },
+      "leaving": {
+        "selectedRoot": "tab-2",
+        "selectedChild": "tab-all",
+        "categoryId": "2",
+        "hrefs": [
+          "/m/articles/detail.html?id=12",
+          "/m/articles/detail.html?id=8",
+          "/m/articles/detail.html?id=7",
+          "/m/articles/detail.html?id=6",
+          "/m/articles/detail.html?id=4",
+          "/m/articles/detail.html?id=21",
+          "/m/articles/detail.html?id=22",
+          "/m/articles/detail.html?id=23",
+          "/m/articles/detail.html?id=24",
+          "/m/articles/detail.html?id=33",
+          "/m/articles/detail.html?id=34",
+          "/m/articles/detail.html?id=35",
+          "/m/articles/detail.html?id=36",
+          "/m/articles/detail.html?id=45",
+          "/m/articles/detail.html?id=46",
+          "/m/articles/detail.html?id=47",
+          "/m/articles/detail.html?id=48"
+        ],
+        "uniqueArticleCount": 17,
+        "total": 17,
+        "scrollY": 640,
+        "url": "http://127.0.0.1:18084/m/articles/index.html?category_id=2"
+      },
+      "href": "/m/articles/detail.html?id=12",
+      "detail": {
+        "url": "http://127.0.0.1:18084/m/articles/detail.html?id=12",
+        "referrer": "http://127.0.0.1:18084/m/articles/index.html?category_id=2",
+        "title": "Ops runtime 验收清单"
+      },
+      "restored": {
+        "selectedRoot": "tab-2",
+        "selectedChild": "tab-all",
+        "categoryId": "2",
+        "hrefs": [
+          "/m/articles/detail.html?id=12",
+          "/m/articles/detail.html?id=8",
+          "/m/articles/detail.html?id=7",
+          "/m/articles/detail.html?id=6",
+          "/m/articles/detail.html?id=4",
+          "/m/articles/detail.html?id=21",
+          "/m/articles/detail.html?id=22",
+          "/m/articles/detail.html?id=23",
+          "/m/articles/detail.html?id=24",
+          "/m/articles/detail.html?id=33",
+          "/m/articles/detail.html?id=34",
+          "/m/articles/detail.html?id=35",
+          "/m/articles/detail.html?id=36",
+          "/m/articles/detail.html?id=45",
+          "/m/articles/detail.html?id=46",
+          "/m/articles/detail.html?id=47",
+          "/m/articles/detail.html?id=48"
+        ],
+        "uniqueArticleCount": 17,
+        "total": 17,
+        "scrollY": 640,
+        "historyShelf": {
+          "sectionId": "2",
+          "scrollY": 640
+        },
+        "url": "http://127.0.0.1:18084/m/articles/index.html?category_id=2"
       }
+    },
+    "mobileCategoryShelfList": {
+      "initial": {
+        "selectedRoot": "tab-1",
+        "selectedChild": "tab-all",
+        "categoryId": "1",
+        "hrefs": [
+          "/m/articles/detail.html?id=11",
+          "/m/articles/detail.html?id=10",
+          "/m/articles/detail.html?id=9",
+          "/m/articles/detail.html?id=5",
+          "/m/articles/detail.html?id=13",
+          "/m/articles/detail.html?id=14",
+          "/m/articles/detail.html?id=15",
+          "/m/articles/detail.html?id=16",
+          "/m/articles/detail.html?id=17",
+          "/m/articles/detail.html?id=18",
+          "/m/articles/detail.html?id=19",
+          "/m/articles/detail.html?id=20",
+          "/m/articles/detail.html?id=25",
+          "/m/articles/detail.html?id=26",
+          "/m/articles/detail.html?id=27",
+          "/m/articles/detail.html?id=28",
+          "/m/articles/detail.html?id=29",
+          "/m/articles/detail.html?id=30",
+          "/m/articles/detail.html?id=31",
+          "/m/articles/detail.html?id=32",
+          "/m/articles/detail.html?id=37",
+          "/m/articles/detail.html?id=38",
+          "/m/articles/detail.html?id=39",
+          "/m/articles/detail.html?id=40",
+          "/m/articles/detail.html?id=41",
+          "/m/articles/detail.html?id=42",
+          "/m/articles/detail.html?id=43",
+          "/m/articles/detail.html?id=44"
+        ],
+        "uniqueArticleCount": 28,
+        "total": 28,
+        "scrollY": 0,
+        "url": "http://127.0.0.1:18084/m/articles/list.html?category_id=1"
+      },
+      "initialRequests": [
+        "http://127.0.0.1:18084/api/public/mobile/category-shelf?sceneCode=public.mobile_category_shelf",
+        "http://127.0.0.1:18084/api/public/mobile/category-shelf?sceneCode=public.mobile_category_shelf&category_id=1"
+      ],
+      "categoryHistory": {
+        "scroll": {
+          "maxScroll": 3176,
+          "requestedScroll": 480
+        },
+        "leaving": {
+          "selectedRoot": "tab-1",
+          "selectedChild": "tab-all",
+          "categoryId": "1",
+          "hrefs": [
+            "/m/articles/detail.html?id=11",
+            "/m/articles/detail.html?id=10",
+            "/m/articles/detail.html?id=9",
+            "/m/articles/detail.html?id=5",
+            "/m/articles/detail.html?id=13",
+            "/m/articles/detail.html?id=14",
+            "/m/articles/detail.html?id=15",
+            "/m/articles/detail.html?id=16",
+            "/m/articles/detail.html?id=17",
+            "/m/articles/detail.html?id=18",
+            "/m/articles/detail.html?id=19",
+            "/m/articles/detail.html?id=20",
+            "/m/articles/detail.html?id=25",
+            "/m/articles/detail.html?id=26",
+            "/m/articles/detail.html?id=27",
+            "/m/articles/detail.html?id=28",
+            "/m/articles/detail.html?id=29",
+            "/m/articles/detail.html?id=30",
+            "/m/articles/detail.html?id=31",
+            "/m/articles/detail.html?id=32",
+            "/m/articles/detail.html?id=37",
+            "/m/articles/detail.html?id=38",
+            "/m/articles/detail.html?id=39",
+            "/m/articles/detail.html?id=40",
+            "/m/articles/detail.html?id=41",
+            "/m/articles/detail.html?id=42",
+            "/m/articles/detail.html?id=43",
+            "/m/articles/detail.html?id=44"
+          ],
+          "uniqueArticleCount": 28,
+          "total": 28,
+          "scrollY": 480,
+          "url": "http://127.0.0.1:18084/m/articles/list.html?category_id=1"
+        },
+        "destinationRootId": "2",
+        "loading": {
+          "rootTabs": 2,
+          "childTabs": 3,
+          "activeElementId": "tab-2",
+          "busy": "true"
+        },
+        "restored": {
+          "selectedRoot": "tab-1",
+          "selectedChild": "tab-all",
+          "categoryId": "1",
+          "hrefs": [
+            "/m/articles/detail.html?id=11",
+            "/m/articles/detail.html?id=10",
+            "/m/articles/detail.html?id=9",
+            "/m/articles/detail.html?id=5",
+            "/m/articles/detail.html?id=13",
+            "/m/articles/detail.html?id=14",
+            "/m/articles/detail.html?id=15",
+            "/m/articles/detail.html?id=16",
+            "/m/articles/detail.html?id=17",
+            "/m/articles/detail.html?id=18",
+            "/m/articles/detail.html?id=19",
+            "/m/articles/detail.html?id=20",
+            "/m/articles/detail.html?id=25",
+            "/m/articles/detail.html?id=26",
+            "/m/articles/detail.html?id=27",
+            "/m/articles/detail.html?id=28",
+            "/m/articles/detail.html?id=29",
+            "/m/articles/detail.html?id=30",
+            "/m/articles/detail.html?id=31",
+            "/m/articles/detail.html?id=32",
+            "/m/articles/detail.html?id=37",
+            "/m/articles/detail.html?id=38",
+            "/m/articles/detail.html?id=39",
+            "/m/articles/detail.html?id=40",
+            "/m/articles/detail.html?id=41",
+            "/m/articles/detail.html?id=42",
+            "/m/articles/detail.html?id=43",
+            "/m/articles/detail.html?id=44"
+          ],
+          "uniqueArticleCount": 28,
+          "total": 28,
+          "scrollY": 480,
+          "historyShelf": {
+            "sectionId": "1",
+            "scrollY": 480
+          },
+          "url": "http://127.0.0.1:18084/m/articles/list.html?category_id=1"
+        }
+      },
+      "rootId": "2",
+      "root": {
+        "selectedRoot": "tab-2",
+        "selectedChild": "tab-all",
+        "categoryId": "2",
+        "hrefs": [
+          "/m/articles/detail.html?id=12",
+          "/m/articles/detail.html?id=8",
+          "/m/articles/detail.html?id=7",
+          "/m/articles/detail.html?id=6",
+          "/m/articles/detail.html?id=4",
+          "/m/articles/detail.html?id=21",
+          "/m/articles/detail.html?id=22",
+          "/m/articles/detail.html?id=23",
+          "/m/articles/detail.html?id=24",
+          "/m/articles/detail.html?id=33",
+          "/m/articles/detail.html?id=34",
+          "/m/articles/detail.html?id=35",
+          "/m/articles/detail.html?id=36",
+          "/m/articles/detail.html?id=45",
+          "/m/articles/detail.html?id=46",
+          "/m/articles/detail.html?id=47",
+          "/m/articles/detail.html?id=48"
+        ],
+        "uniqueArticleCount": 17,
+        "total": 17,
+        "scrollY": 504,
+        "url": "http://127.0.0.1:18084/m/articles/list.html?category_id=2"
+      },
+      "rootRequests": [
+        "http://127.0.0.1:18084/api/public/mobile/category-shelf?sceneCode=public.mobile_category_shelf&category_id=2"
+      ],
+      "childId": "5",
+      "child": {
+        "selectedRoot": "tab-2",
+        "selectedChild": "tab-5",
+        "categoryId": "5",
+        "hrefs": [
+          "/m/articles/detail.html?id=12",
+          "/m/articles/detail.html?id=8",
+          "/m/articles/detail.html?id=6",
+          "/m/articles/detail.html?id=21",
+          "/m/articles/detail.html?id=22",
+          "/m/articles/detail.html?id=23",
+          "/m/articles/detail.html?id=33",
+          "/m/articles/detail.html?id=34",
+          "/m/articles/detail.html?id=35",
+          "/m/articles/detail.html?id=45",
+          "/m/articles/detail.html?id=46",
+          "/m/articles/detail.html?id=47"
+        ],
+        "uniqueArticleCount": 12,
+        "total": 12,
+        "scrollY": 504,
+        "url": "http://127.0.0.1:18084/m/articles/list.html?category_id=5"
+      },
+      "childRequests": [
+        "http://127.0.0.1:18084/api/public/mobile/category-shelf?sceneCode=public.mobile_category_shelf&category_id=5"
+      ]
     }
   },
   "errors": [],
   "passed": true,
-  "finishedAt": "2026-09-06T19:10:51.162Z"
+  "finishedAt": "2026-09-07T22:56:21.389Z"
 }

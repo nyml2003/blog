@@ -285,8 +285,8 @@ fn product_serves_public_articles_through_data() {
     );
     let calls = diagnostics["dataCallsTotal"].as_u64().unwrap();
     assert_eq!(
-        calls, 3,
-        "one Data call per public request, independent of item count"
+        calls, 6,
+        "workflow read, snapshot read and initial workflow write plus one Data call per public request"
     );
 
     // Product 侧日志：调用数与条目数记录在案（验收 6 的日志证据）。

@@ -4,7 +4,7 @@ id: SPEC-FRONTEND-PAGE-TEMPLATE-001
 status: draft
 owner: frontend
 plan_id: PLAN-FRONTEND-PAGE-TEMPLATE-001
-last_reviewed: 2026-09-07
+last_reviewed: 2026-09-08
 ---
 
 # 前端页面模板与接入统一（注册表驱动）
@@ -74,9 +74,16 @@ Then 各页功能、视觉、首绘行为零回归（title 等元数据变化除
 
 ## 测试/验收证据
 
-- 自动化机制测试（2026-09-07）：注册表固定 16 页 / 20 alias；逐页断言 charset、viewport、theme-color、中文 title、入口脚本；生成器断言手写 HTML 零残留；逐入口断言 `definePage` 且无 `getElementById("app")`；Mobile 逐页断言单一 CSS 入口与集中顺序。
+- 自动化机制测试（2026-09-08）：注册表固定 17 页 / 22 alias；逐页断言 charset、
+  viewport、theme-color、中文 title、入口脚本；生成器断言手写 HTML 零残留；逐入口
+  断言 `definePage` 且无 `getElementById("app")`；Mobile 逐页断言单一 CSS 入口与集中顺序。
 - bootstrap 测试（2026-09-07）：全部 6 个 Mobile 页面并发转换只触发一次子构建；设置存储合法值、回退值、存储异常与同步应用场景通过。
-- 前端门禁（2026-09-07）：`pnpm --dir src/frontend typecheck`、`lint`、`format:check`、`build`、`test:core` 通过；核心测试共 76 项，其中页面机制与设置 bootstrap 13 项。
-- 产物走查（2026-09-07）：`dist` 含 16 个既有页面路径、无 `.generated` 残留，`page-routes.json` 含 20 条唯一 alias 并包含 `/m/settings/index.html`。
+- 前端门禁（2026-09-08）：`typecheck`、`lint`、`format:check`、`build`、`test:core`
+  通过；核心测试共 107 项，Native/WASM parity 287 通过。
+- 产物走查（2026-09-08）：`dist` 含 17 个页面路径、无 `.generated` 残留，
+  `page-routes.json` 含 22 条唯一 alias 并包含 `/admin/login.html` 与 `/m/settings/index.html`。
 - Product 证据（2026-09-07）：`cargo test --manifest-path src/Cargo.toml -p product static_files` 的 3 项路由清单测试通过；`full_public_admin_contract_and_static_mount` 通过并覆盖 Mobile 设置页。
+- 浏览器证据（2026-09-08 06:56，Asia/Shanghai）：当前源码重建 integration 后 52 项
+  脚本连续两次通过，覆盖 Desktop/Mobile T 型筛选、两个 Mobile 分类 F 型入口、history
+  恢复和 loading 焦点稳定，页面错误 0；第二次报告替换旧 28 项报告。
 - 人工验收：待用户执行抽样 head / title、首绘防闪屏和各页功能冒烟；未以自动化证据替代产品验收。

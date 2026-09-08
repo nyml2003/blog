@@ -78,7 +78,7 @@ fn empty_scenario_returns_valid_empty_collections_on_every_read() {
     assert_eq!(response.status, 404);
     assert_envelope(&response, "ARTICLE_NOT_FOUND");
 
-    // 写端点仍然生效：空世界里创建第一篇文章，id 从 1 开始。
+    // 旧写端点在所有场景中都已退役，空世界保持为空。
     let response = post(
         port,
         "/api/admin/articles",
@@ -88,12 +88,11 @@ fn empty_scenario_returns_valid_empty_collections_on_every_read() {
         ),
         Some("empty-session"),
     );
-    assert_eq!(response.status, 200);
-    assert_eq!(response.data()["id"], 1);
-    assert_eq!(response.data()["status"], "draft");
+    assert_eq!(response.status, 410);
+    assert_envelope(&response, "CONTENT_WRITE_RETIRED");
 
     let response = get_with(port, &admin_list(), Some("empty-session"));
-    assert_eq!(response.data()["total"], 1);
+    assert_eq!(response.data()["total"], 0);
 
     let status = server.signal("-TERM");
     assert!(status.success());
@@ -136,7 +135,7 @@ fn slow_scenario_delays_api_calls_but_not_readiness() {
         &article_body("admin.recommendation_generate", ""),
         Some("slow-session"),
     );
-    assert_eq!(response.status, 200);
+    assert_eq!(response.status, 410);
     assert!(
         started.elapsed() >= Duration::from_millis(mock::scenario::SLOW_DELAY_MS) - CELL,
         "writes are delayed by the same scenario delay"
@@ -243,19 +242,19 @@ fn malformed_response_scenario_breaks_the_protocol_but_stays_a_valid_http_respon
     assert_eq!(response.status, 400);
     assert!(serde_json::from_str::<serde_json::Value>(&response.body).is_err());
 
-    // 写仍生效：状态被修改，但客户端拿不到可解析的响应。
+    // 旧写路径仍退役，场景继续破坏它的响应体。
     let response = post(
         port,
         "/api/admin/articles",
         &article_body("admin.article_create", r#""title":"stored but unreadable""#),
         Some("malformed-session"),
     );
-    assert_eq!(response.status, 200);
+    assert_eq!(response.status, 410);
     assert!(serde_json::from_str::<serde_json::Value>(&response.body).is_err());
 
     let diagnostics = get(port, "/mock/diagnostics").data();
     assert_eq!(diagnostics["scenario"], "malformed-response");
-    assert_eq!(diagnostics["requests"]["writesAttempted"], 1);
+    assert_eq!(diagnostics["requests"]["writesAttempted"], 0);
     assert!(diagnostics["requests"]["faultsServed"].as_u64().unwrap() > 0);
 
     // 诊断端点本身仍可解析（它不是业务响应，不经过场景注入）。

@@ -291,6 +291,14 @@ pub enum DataOperation {
     RecommendationGenerate,
     /// mobile shelf 读模型输入：类型 + 完整筛选结果 + 推荐（固定查询数）。
     ArticleShelf(ArticleShelfQuery),
+    /// Replace the authoritative content cache and source commit in one transaction.
+    ContentSnapshotReplace(crate::taxonomy::ContentSnapshotReplace),
+    /// Read the last successfully imported content snapshot, if any.
+    ContentSnapshotGet,
+    /// Persist Product's complete workspace and pending-review state with optimistic concurrency.
+    ContentWorkflowWrite(Box<crate::taxonomy::ContentWorkflowWrite>),
+    /// Recover Product's complete workspace and pending-review state at startup.
+    ContentWorkflowGet,
 }
 
 impl DataOperation {
@@ -318,6 +326,10 @@ impl DataOperation {
             DataOperation::RecommendationCurrent => "recommendation_current",
             DataOperation::RecommendationGenerate => "recommendation_generate",
             DataOperation::ArticleShelf(_) => "article_shelf",
+            DataOperation::ContentSnapshotReplace(_) => "content_snapshot_replace",
+            DataOperation::ContentSnapshotGet => "content_snapshot_get",
+            DataOperation::ContentWorkflowWrite(_) => "content_workflow_write",
+            DataOperation::ContentWorkflowGet => "content_workflow_get",
         }
     }
 
@@ -344,6 +356,8 @@ impl DataOperation {
                 | DataOperation::TermCreate(_)
                 | DataOperation::TermUpdate(_)
                 | DataOperation::RecommendationGenerate
+                | DataOperation::ContentSnapshotReplace(_)
+                | DataOperation::ContentWorkflowWrite(_)
         )
     }
 
@@ -367,6 +381,10 @@ impl DataOperation {
                 RECOMMENDATION_LIMIT
             }
             DataOperation::ArticleShelf(_) => usize::MAX,
+            DataOperation::ContentSnapshotGet
+            | DataOperation::ContentSnapshotReplace(_)
+            | DataOperation::ContentWorkflowGet
+            | DataOperation::ContentWorkflowWrite(_) => 1,
             _ => 0,
         }
     }
@@ -396,6 +414,10 @@ pub const OPERATION_NAMES: &[&str] = &[
     "recommendation_current",
     "recommendation_generate",
     "article_shelf",
+    "content_snapshot_replace",
+    "content_snapshot_get",
+    "content_workflow_write",
+    "content_workflow_get",
 ];
 
 /// 列表投影：列表调用不返回正文 HTML（ARCH-DATA-API mobile shelf 同一取舍）。
@@ -542,6 +564,8 @@ pub enum DataOutcome {
     Recommendation(Vec<ArticleDetail>),
     /// mobile shelf 读模型输入。
     ArticleShelf(ArticleShelfData),
+    ContentSnapshot(Option<crate::taxonomy::StoredContentSnapshot>),
+    ContentWorkflow(Option<crate::taxonomy::StoredContentWorkflow>),
 }
 
 impl DataOutcome {
@@ -558,6 +582,8 @@ impl DataOutcome {
             DataOutcome::ArticleType(_) | DataOutcome::Term(_) | DataOutcome::Unit(_) => 1,
             DataOutcome::Recommendation(items) => items.len(),
             DataOutcome::ArticleShelf(data) => data.articles.len(),
+            DataOutcome::ContentSnapshot(snapshot) => usize::from(snapshot.is_some()),
+            DataOutcome::ContentWorkflow(workflow) => usize::from(workflow.is_some()),
         }
     }
 }

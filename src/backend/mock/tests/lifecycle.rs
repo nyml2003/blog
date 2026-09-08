@@ -68,8 +68,13 @@ fn cli_rejects_unknown_options_and_prints_help_on_request() {
         );
     }
 
-    // 缺省启动形态（无参数）也是合法的：绑定默认候选端口 9090 的进程立刻被杀掉。
+    let (code, _stdout, stderr) = run_cli(&[]);
+    assert_eq!(code, 10);
+    assert!(stderr.contains("--admin-auth bypass"), "{stderr}");
+
+    // 监听和场景可缺省，但 Mock 鉴权直通必须显式声明。
     let mut child = Command::new(mock_binary())
+        .args(["--admin-auth", "bypass"])
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
         .spawn()
@@ -183,8 +188,7 @@ fn graceful_shutdown_is_two_phase_for_sigint_and_sigterm() {
 }
 
 #[test]
-fn restart_reinitializes_all_state() {
-    // 同一进程内跨请求的状态，在进程重启后不残留（PLAN：每次启动重新初始化）。
+fn retired_writes_do_not_create_state_across_restart() {
     let mut first = Server::start(&["--listen", "127.0.0.1:0", "--scenario", "default"]);
     let port = first.port;
     let response = post(
@@ -196,10 +200,10 @@ fn restart_reinitializes_all_state() {
         ),
         Some("t1"),
     );
-    assert_eq!(response.status, 200);
+    assert_eq!(response.status, 410);
     assert_eq!(
         get_with(port, &admin_list(), Some("t1")).data()["total"],
-        49
+        48
     );
     let _ = first.signal("-TERM");
 

@@ -25,12 +25,30 @@ pub const DEFAULT_DATA_ADDR: &str = "http://127.0.0.1:8081";
 pub const DATA_ADDR_ENV: &str = "BLOG_DATA_ADDR";
 /// `web/dist` 路径 → Product（Spec「环境变量与配置注入」表 / 附录 A）。
 pub const WEB_DIR_ENV: &str = "BLOG_WEB_DIR";
+pub const CONTENT_REPO_ENV: &str = "BLOG_CONTENT_REPO";
+pub const CONTENT_TOKEN_ENV: &str = "BLOG_CONTENT_TOKEN";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ContentSource {
+    Fixture,
+    Github,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProductAction {
+    Serve,
+    InitializeContentRepository,
+}
 
 #[derive(Debug, Clone)]
 pub struct Cli {
+    pub action: ProductAction,
     pub listen: std::net::SocketAddr,
     pub data_addr: String,
     pub web_dir: Option<PathBuf>,
+    pub content_source: ContentSource,
+    pub content_repo: Option<String>,
+    pub content_token: Option<String>,
 }
 
 #[derive(Debug)]
@@ -44,10 +62,18 @@ impl Cli {
     where
         I: IntoIterator<Item = String>,
     {
+        let values: Vec<String> = args.into_iter().collect();
+        if values
+            .first()
+            .is_some_and(|value| value == "content-repository")
+        {
+            return parse_repository_action(&values);
+        }
         let mut listen: Option<std::net::SocketAddr> = None;
         let mut data_addr: Option<String> = None;
         let mut web_dir: Option<PathBuf> = None;
-        let mut args = args.into_iter().peekable();
+        let mut content_source = None;
+        let mut args = values.into_iter().peekable();
 
         while let Some(arg) = args.next() {
             match arg.as_str() {
@@ -83,6 +109,18 @@ impl Cli {
                     }
                     web_dir = Some(PathBuf::from(value));
                 }
+                "--content-source" => {
+                    let value = args.next().ok_or_else(|| missing("--content-source"))?;
+                    content_source = Some(match value.as_str() {
+                        "fixture" => ContentSource::Fixture,
+                        "github" => ContentSource::Github,
+                        _ => {
+                            return Err(CliError::Usage(
+                                "--content-source expects fixture or github".to_owned(),
+                            ));
+                        }
+                    });
+                }
                 other => {
                     return Err(CliError::Usage(format!(
                         "unknown option '{other}'; run `product --help` for usage"
@@ -91,7 +129,13 @@ impl Cli {
             }
         }
 
+        let content_source = content_source.unwrap_or(ContentSource::Fixture);
+        let (content_repo, content_token) = match content_source {
+            ContentSource::Fixture => (None, None),
+            ContentSource::Github => (read_env(CONTENT_REPO_ENV), read_env(CONTENT_TOKEN_ENV)),
+        };
         Ok(Self {
+            action: ProductAction::Serve,
             listen: listen.unwrap_or_else(|| {
                 DEFAULT_LISTEN
                     .parse()
@@ -99,8 +143,34 @@ impl Cli {
             }),
             data_addr: resolve_data_addr(data_addr, read_env(DATA_ADDR_ENV)),
             web_dir: web_dir.or_else(|| read_env(WEB_DIR_ENV).map(PathBuf::from)),
+            content_source,
+            content_repo,
+            content_token,
         })
     }
+}
+
+fn parse_repository_action(values: &[String]) -> Result<Cli, CliError> {
+    if values == ["content-repository", "init"] {
+        return Ok(Cli {
+            action: ProductAction::InitializeContentRepository,
+            listen: DEFAULT_LISTEN
+                .parse()
+                .expect("default listen address is valid"),
+            data_addr: DEFAULT_DATA_ADDR.to_owned(),
+            web_dir: None,
+            content_source: ContentSource::Github,
+            content_repo: read_env(CONTENT_REPO_ENV),
+            content_token: read_env(CONTENT_TOKEN_ENV),
+        });
+    }
+    if values == ["content-repository", "init", "--help"] {
+        return Err(CliError::Help(repository_init_usage()));
+    }
+    Err(CliError::Usage(
+        "expected `product content-repository init`; no additional arguments are accepted"
+            .to_owned(),
+    ))
 }
 
 fn read_env(name: &str) -> Option<String> {
@@ -138,22 +208,37 @@ pub fn usage() -> String {
          \n\
          USAGE:\n    \
          product [OPTIONS]\n\
+         product content-repository init\n\
          \n\
          OPTIONS:\n    \
          --listen <IP:PORT>    Listen address (loopback only, default {DEFAULT_LISTEN})\n    \
          --data-addr <URL>     Data server address (default {DEFAULT_DATA_ADDR})\n    \
          --web-dir <PATH>      Static frontend dir (integration; not mounted in this batch)\n    \
+         --content-source <fixture|github>  Explicit content source (default fixture)\n    \
          -h, --help            Print this help\n\
          \n\
          ENVIRONMENT:\n    \
          {DATA_ADDR_ENV}      Data server address injected by ops\n    \
          {WEB_DIR_ENV}        Static frontend dir injected by ops (integration)\n\
+         {CONTENT_REPO_ENV}   owner/repository, read only in explicit github mode\n    \
+         {CONTENT_TOKEN_ENV}  repository PAT, read only in explicit github mode\n\
          \n\
          ENDPOINTS:\n    \
          GET /healthz\n    \
          GET /api/public/articles      sceneCode=public.article_list\n    \
          GET /api/public/t-shelf       sceneCode=public.t_shelf\n    \
          GET /product/diagnostics      injected config + Data call counters"
+    )
+}
+
+fn repository_init_usage() -> String {
+    format!(
+        "product content-repository init - initialize an empty GitHub content repository\n\
+         \n\
+         USAGE:\n    product content-repository init\n\
+         \n\
+         ENVIRONMENT:\n    {CONTENT_REPO_ENV}   owner/repository\n    \
+         {CONTENT_TOKEN_ENV}  repository PAT"
     )
 }
 
@@ -201,6 +286,23 @@ mod tests {
         assert!(matches!(
             Cli::parse(args(&["--help"])),
             Err(CliError::Help(_))
+        ));
+    }
+
+    #[test]
+    fn github_serve_mode_keeps_missing_credentials_as_runtime_unavailability() {
+        let parsed = Cli::parse(args(&["--content-source", "github"])).unwrap();
+        assert_eq!(parsed.action, ProductAction::Serve);
+        assert_eq!(parsed.content_source, ContentSource::Github);
+    }
+
+    #[test]
+    fn repository_initialization_is_an_explicit_action() {
+        let parsed = Cli::parse(args(&["content-repository", "init"])).unwrap();
+        assert_eq!(parsed.action, ProductAction::InitializeContentRepository);
+        assert!(matches!(
+            Cli::parse(args(&["content-repository", "init", "extra"])),
+            Err(CliError::Usage(_))
         ));
     }
 }

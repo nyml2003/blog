@@ -2,7 +2,13 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { CLIENT_API_ROUTES, createClient } from "./client";
-import { createJsonTransport } from "../data/transport";
+import {
+  createAdminAuthFetch,
+  adminLoginPath,
+  adminNextFromSearch,
+  safeAdminNext,
+} from "./admin-session-browser";
+import { createJsonTransport, type TransportRequest } from "../data/transport";
 import { parseArticle } from "./domain";
 
 // ArticleListItem wire fields from src/core/protocol/src/wire.rs.
@@ -35,7 +41,7 @@ function clientRespondingWith(data: unknown) {
 }
 
 type GoldenRoute = {
-  method: "GET" | "POST";
+  method: "GET" | "POST" | "DELETE";
   endpoint: string;
   sceneCode: string;
 };
@@ -143,6 +149,424 @@ test("T shelf requests keep surface and selected filter in the protocol boundary
     assert.equal(result.value.selectedFilterId, "7");
     assert.equal(result.value.articles[0]?.title, "边界治理");
   }
+});
+
+test("category shelf and workspace commands keep taxonomy workflow fields at the client boundary", async () => {
+  const taxonomy = {
+    version: 1,
+    nextCategoryId: 3,
+    nextTagId: 2,
+    categories: [
+      { id: 1, name: "工程", parentId: null, position: 10 },
+      { id: 2, name: "Rust", parentId: 1, position: 10 },
+    ],
+    tags: [{ id: 1, name: "性能" }],
+  };
+  const workspace = {
+    version: 4,
+    status: "saved",
+    taxonomy,
+    articles: [{ id: 8, title: "边界", categoryIds: [2], tagIds: [1] }],
+    pullRequest: null,
+  };
+  const shelf = {
+    taxonomy,
+    selectedCategoryId: 1,
+    articles: [
+      {
+        id: 8,
+        title: "边界",
+        summary: "分类",
+        updatedAt: "2026-09-08T00:00:00Z",
+        categoryIds: [2],
+        tagIds: [1],
+      },
+    ],
+    total: 1,
+  };
+  const requests: Array<{
+    path: string;
+    method: string;
+    body: unknown;
+  }> = [];
+  const client = createClient({
+    request: async <T>(request: {
+      path: string;
+      method: "GET" | "POST" | "DELETE";
+      body?: unknown;
+    }) => {
+      requests.push({
+        path: request.path,
+        method: request.method,
+        body: request.body,
+      });
+      const value = request.path.includes("category-shelf") ? shelf : workspace;
+      return { ok: true, value } as { ok: true; value: T };
+    },
+  });
+
+  const shelfResult = await client.contentTaxonomy
+    .getCategoryShelf({ categoryId: 1 })
+    .start();
+  assert.equal(shelfResult.ok, true);
+  assert.equal(
+    requests[0]?.path,
+    "/api/public/mobile/category-shelf?sceneCode=public.mobile_category_shelf&category_id=1",
+  );
+
+  if (!shelfResult.ok) assert.fail("category shelf must decode");
+  const normalizedTaxonomy = shelfResult.value.taxonomy;
+  await client.contentTaxonomy
+    .save({ expectedVersion: 4, taxonomy: normalizedTaxonomy })
+    .start();
+  assert.deepEqual(requests[1]?.body, {
+    sceneCode: "admin.content_taxonomy_save",
+    expectedVersion: 4,
+    taxonomy,
+  });
+  await client.contentTaxonomy
+    .analyze({ expectedVersion: 5, articleIds: [8] })
+    .start();
+  assert.deepEqual(requests[2]?.body, {
+    sceneCode: "admin.content_taxonomy_analyze",
+    expectedVersion: 5,
+    articleIds: [8],
+  });
+
+  const workspaceResult = await client.contentTaxonomy.getWorkspace().start();
+  assert.equal(workspaceResult.ok, true);
+  if (!workspaceResult.ok) assert.fail("workspace must decode");
+  assert.equal(workspaceResult.value.pullRequest, undefined);
+});
+
+test("admin session requests keep credentials only in the login body", async () => {
+  const requests: TransportRequest[] = [];
+  const client = createClient({
+    request: async <T>(request: TransportRequest) => {
+      requests.push(request);
+      return { ok: true, value: null as T };
+    },
+  });
+
+  assert.deepEqual(
+    await client.adminSession
+      .login({
+        password: "correct horse battery staple",
+        verification: { kind: "totp", code: "123456" },
+      })
+      .start(),
+    { ok: true, value: undefined },
+  );
+  assert.deepEqual(
+    {
+      path: requests[0]?.path,
+      method: requests[0]?.method,
+      body: requests[0]?.body,
+    },
+    {
+      path: "/api/admin/session",
+      method: "POST",
+      body: {
+        sceneCode: "admin.session.create",
+        password: "correct horse battery staple",
+        verification: { kind: "totp", code: "123456" },
+      },
+    },
+  );
+
+  assert.deepEqual(await client.adminSession.logout().start(), {
+    ok: true,
+    value: undefined,
+  });
+  assert.deepEqual(
+    {
+      path: requests[1]?.path,
+      method: requests[1]?.method,
+      body: requests[1]?.body,
+    },
+    {
+      path: "/api/admin/session?sceneCode=admin.session.delete",
+      method: "DELETE",
+      body: undefined,
+    },
+  );
+});
+
+test("content abandon and sync commands use the versioned runtime routes", async () => {
+  const requests: TransportRequest[] = [];
+  const workspace = {
+    version: 5,
+    status: "clean",
+    taxonomy: {
+      version: 1,
+      nextCategoryId: 2,
+      nextTagId: 1,
+      categories: [{ id: 1, name: "工程", parentId: null, position: 10 }],
+      tags: [],
+    },
+    articles: [],
+    pullRequest: null,
+  };
+  const client = createClient({
+    request: async <T>(request: TransportRequest) => {
+      requests.push(request);
+      if (request.path === "/api/admin/content/abandon") {
+        return { ok: true, value: workspace as T };
+      }
+      if (request.method === "POST") {
+        return {
+          ok: true,
+          value: {
+            status: "succeeded",
+            commit: "abc123",
+            articleCount: 4,
+          } as T,
+        };
+      }
+      return {
+        ok: true,
+        value: {
+          status: "failed",
+          commit: "def456",
+          message: "invalid snapshot",
+          lastSuccessCommit: null,
+        } as T,
+      };
+    },
+  });
+
+  const abandoned = await client.contentTaxonomy
+    .abandon({ expectedVersion: 5 })
+    .start();
+  assert.equal(abandoned.ok, true);
+  assert.deepEqual(requests[0]?.body, {
+    sceneCode: "admin.content_abandon",
+    expectedVersion: 5,
+  });
+
+  const synchronized = await client.contentTaxonomy.synchronize().start();
+  assert.deepEqual(synchronized, {
+    ok: true,
+    value: { status: "succeeded", commit: "abc123", articleCount: 4 },
+  });
+  assert.deepEqual(
+    {
+      path: requests[1]?.path,
+      method: requests[1]?.method,
+      body: requests[1]?.body,
+    },
+    {
+      path: "/api/admin/content/sync",
+      method: "POST",
+      body: { sceneCode: "admin.content_sync" },
+    },
+  );
+
+  const status = await client.contentTaxonomy.getSyncStatus().start();
+  assert.deepEqual(status, {
+    ok: true,
+    value: {
+      status: "failed",
+      commit: "def456",
+      message: "invalid snapshot",
+      lastSuccessCommit: undefined,
+    },
+  });
+  assert.equal(
+    requests[2]?.path,
+    "/api/admin/content/sync?sceneCode=admin.content_sync_status",
+  );
+  assert.equal(requests[2]?.method, "GET");
+});
+
+test("workspace article routes keep versioned writes and authoritative save data", async () => {
+  const requests: TransportRequest[] = [];
+  const taxonomy = {
+    version: 1,
+    nextCategoryId: 3,
+    nextTagId: 2,
+    categories: [
+      { id: 1, name: "工程", parentId: null, position: 10 },
+      { id: 2, name: "Rust", parentId: 1, position: 10 },
+    ],
+    tags: [{ id: 1, name: "性能" }],
+  };
+  const article = {
+    id: 17,
+    title: "边界治理",
+    summary: "工作区写入",
+    categoryIds: [2],
+    tagIds: [1],
+    contentHtml: "<p>正文</p>",
+    createdAt: "2026-09-08T00:00:00Z",
+    updatedAt: "2026-09-08T01:00:00Z",
+    publishedAt: null,
+  };
+  const workspace = {
+    version: 6,
+    status: "saved",
+    taxonomy,
+    articles: [{ id: 17, title: "边界治理", categoryIds: [2], tagIds: [1] }],
+    pullRequest: null,
+  };
+  const client = createClient({
+    request: async <T>(request: TransportRequest) => {
+      requests.push(request);
+      const sceneCode =
+        request.body !== undefined &&
+        request.body !== null &&
+        typeof request.body === "object" &&
+        "sceneCode" in request.body
+          ? request.body.sceneCode
+          : undefined;
+      if (sceneCode === "admin.content_article_save") {
+        return { ok: true, value: { workspace, article } as T };
+      }
+      if (sceneCode === "admin.content_article_remove") {
+        return { ok: true, value: workspace as T };
+      }
+      if (request.path.includes("admin.content_article_detail")) {
+        return { ok: true, value: { version: 5, article } as T };
+      }
+      return { ok: true, value: { version: 5, articles: [article] } as T };
+    },
+  });
+
+  const listed = await client.contentTaxonomy.listArticles().start();
+  assert.equal(listed.ok, true);
+  assert.equal(
+    requests[0]?.path,
+    "/api/admin/content/articles?sceneCode=admin.content_article_list",
+  );
+  if (!listed.ok) assert.fail("article list must decode");
+  assert.equal(listed.value.articles[0]?.publishedAt, undefined);
+
+  const detailed = await client.contentTaxonomy.getArticle(17).start();
+  assert.equal(detailed.ok, true);
+  assert.equal(
+    requests[1]?.path,
+    "/api/admin/content/articles?sceneCode=admin.content_article_detail&id=17",
+  );
+
+  const saved = await client.contentTaxonomy
+    .saveArticle({
+      kind: "create",
+      expectedVersion: 5,
+      article: {
+        title: "边界治理",
+        summary: "工作区写入",
+        categoryIds: [2],
+        tagIds: [1],
+        contentHtml: "<p>正文</p>",
+      },
+    })
+    .start();
+  assert.equal(saved.ok, true);
+  if (!saved.ok) assert.fail("saved article must decode");
+  assert.equal(saved.value.article.id, 17);
+  assert.equal(saved.value.workspace.version, 6);
+  assert.deepEqual(requests[2]?.body, {
+    sceneCode: "admin.content_article_save",
+    expectedVersion: 5,
+    article: {
+      title: "边界治理",
+      summary: "工作区写入",
+      categoryIds: [2],
+      tagIds: [1],
+      contentHtml: "<p>正文</p>",
+    },
+  });
+
+  const removed = await client.contentTaxonomy
+    .removeArticle({ expectedVersion: 6, articleId: 17 })
+    .start();
+  assert.equal(removed.ok, true);
+  assert.deepEqual(
+    {
+      path: requests[3]?.path,
+      method: requests[3]?.method,
+      body: requests[3]?.body,
+    },
+    {
+      path: "/api/admin/content/articles/remove",
+      method: "POST",
+      body: {
+        sceneCode: "admin.content_article_remove",
+        expectedVersion: 6,
+        articleId: 17,
+      },
+    },
+  );
+});
+
+test("admin next paths stay within admin and do not loop through login", () => {
+  const origin = "https://notes.example";
+  assert.equal(
+    safeAdminNext("/admin/articles/edit.html?id=7", origin),
+    "/admin/articles/edit.html?id=7",
+  );
+  assert.equal(
+    adminNextFromSearch(
+      `?next=${encodeURIComponent("/admin/terms/index.html?kind=tag")}`,
+      origin,
+    ),
+    "/admin/terms/index.html?kind=tag",
+  );
+  for (const unsafe of [
+    null,
+    "/",
+    "//attacker.example/admin/",
+    "/admin/../articles/index.html",
+    "/admin/%5c%5cattacker.example",
+    "/admin/login.html?next=%2Fadmin%2Findex.html",
+    "https://notes.example/admin/index.html",
+  ]) {
+    assert.equal(safeAdminNext(unsafe, origin), "/admin/index.html");
+  }
+});
+
+test("admin API 401 redirects to login while session and public failures stay local", async () => {
+  const redirects: string[] = [];
+  const location = {
+    origin: "https://notes.example",
+    pathname: "/admin/articles/edit.html",
+    search: "?id=7",
+  };
+  const fetcher: typeof fetch = async () =>
+    new Response(
+      JSON.stringify({ code: "UNAUTHORIZED", message: "请登录", data: null }),
+      { status: 401, headers: { "Content-Type": "application/json" } },
+    );
+  const adminFetch = createAdminAuthFetch({
+    fetcher,
+    readLocation: () => location,
+    beforeRedirect: () => redirects.push("before-redirect"),
+    replaceLocation: (path) => redirects.push(path),
+  });
+
+  await adminFetch("/api/admin/articles?sceneCode=admin.article_list");
+  assert.equal(redirects.length, 2);
+  assert.equal(redirects[0], "before-redirect");
+  const redirect = new URL(redirects[1], location.origin);
+  assert.equal(redirect.pathname, "/admin/login.html");
+  assert.equal(
+    redirect.searchParams.get("next"),
+    "/admin/articles/edit.html?id=7",
+  );
+  assert.equal(adminLoginPath(location), redirects[1]);
+
+  await adminFetch("/api/admin/session");
+  await adminFetch("/api/public/articles");
+  await adminFetch("https://other.example/api/admin/articles");
+  assert.equal(redirects.length, 2);
+});
+
+test("admin login source does not persist or log credentials", () => {
+  const source = readFileSync(
+    new URL("../../desktop/src/pages/admin/login.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.doesNotMatch(source, /localStorage|sessionStorage|console\./);
 });
 
 test("public and admin lists decode body-free wire items and preserve totals", async () => {

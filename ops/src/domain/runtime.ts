@@ -30,7 +30,13 @@ export const INJECTION_ENV = {
   dataAddr: 'BLOG_DATA_ADDR',
   webDir: 'BLOG_WEB_DIR',
   databasePath: 'BLOG_DATABASE_PATH',
+  contentRepo: 'BLOG_CONTENT_REPO',
+  contentToken: 'BLOG_CONTENT_TOKEN',
+  taxonomyModelProvider: 'BLOG_TAXONOMY_MODEL_PROVIDER',
+  taxonomyModelCommand: 'BLOG_TAXONOMY_MODEL_COMMAND',
 } as const;
+export const CONTENT_SOURCES = ['fixture', 'github'] as const;
+export type ContentSource = (typeof CONTENT_SOURCES)[number];
 
 export interface BuildStep {
   label: string;
@@ -55,12 +61,13 @@ export interface ModePlan {
   dataMode: DataMode | null;
   scenario: MockScenario | null;
   watch: boolean;
+  contentSource: ContentSource;
 }
 
 export type ModeOptions =
   | { mode: 'dev'; scenario: MockScenario; webPort: number; mockPort: number }
-  | { mode: 'backend'; dataMode: DataMode; productPort: number; dataPort: number }
-  | { mode: 'integration'; watch: boolean; productPort: number; dataPort: number };
+  | { mode: 'backend'; dataMode: DataMode; productPort: number; dataPort: number; contentSource?: ContentSource }
+  | { mode: 'integration'; watch: boolean; productPort: number; dataPort: number; contentSource?: ContentSource };
 
 function requirePort(port: number): number {
   if (!isModelValue({ kind: 'int32', min: PORT_MIN, max: PORT_MAX }, port)) {
@@ -87,6 +94,7 @@ export function planMode(options: ModeOptions): ModePlan {
       dataMode: null,
       scenario: options.scenario,
       watch: false,
+      contentSource: 'fixture',
     };
   }
   if (options.mode !== 'backend' && options.mode !== 'integration') {
@@ -109,6 +117,7 @@ export function planMode(options: ModeOptions): ModePlan {
     dataMode: options.mode === 'integration' ? 'test' : options.dataMode,
     scenario: null,
     watch,
+    contentSource: options.contentSource ?? 'fixture',
   };
 }
 

@@ -6,10 +6,12 @@
 //! 收到 SIGTERM 才按既定顺序退出。
 
 use std::io::{BufRead, BufReader, Read, Write};
-use std::net::TcpStream;
+use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
+use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
 const PORT: u16 = 18241;
@@ -17,10 +19,14 @@ const PORT: u16 = 18241;
 struct Server {
     child: Child,
     lines: Arc<Mutex<Vec<String>>>,
+    data_addr: std::net::SocketAddr,
+    data_stop: Arc<AtomicBool>,
+    data_thread: Option<JoinHandle<()>>,
 }
 
 impl Server {
     fn start() -> Self {
+        let (data_addr, data_stop, data_thread) = start_data_stub();
         let path = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
             .join("..")
             .join("debug")
@@ -33,6 +39,7 @@ impl Server {
         let mut child = Command::new(path)
             .arg("--listen")
             .arg(format!("127.0.0.1:{PORT}"))
+            .env("BLOG_DATA_ADDR", format!("http://{data_addr}"))
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()
@@ -54,7 +61,13 @@ impl Server {
                 }
             });
         }
-        Self { child, lines }
+        Self {
+            child,
+            lines,
+            data_addr,
+            data_stop,
+            data_thread: Some(data_thread),
+        }
     }
 
     fn lines(&self) -> Vec<String> {
@@ -70,14 +83,73 @@ impl Drop for Server {
     fn drop(&mut self) {
         let _ = self.child.kill();
         let _ = self.child.wait();
+        self.data_stop.store(true, Ordering::Release);
+        let _ = TcpStream::connect(self.data_addr);
+        if let Some(thread) = self.data_thread.take() {
+            let _ = thread.join();
+        }
     }
+}
+
+fn start_data_stub() -> (std::net::SocketAddr, Arc<AtomicBool>, JoinHandle<()>) {
+    let listener = TcpListener::bind(("127.0.0.1", 0)).expect("bind Data stub");
+    let addr = listener.local_addr().expect("Data stub address");
+    let stop = Arc::new(AtomicBool::new(false));
+    let thread_stop = stop.clone();
+    let thread = std::thread::spawn(move || {
+        for stream in listener.incoming() {
+            if thread_stop.load(Ordering::Acquire) {
+                break;
+            }
+            let mut stream = stream.expect("accept Data stub request");
+            stream
+                .set_read_timeout(Some(Duration::from_secs(2)))
+                .expect("set Data stub read timeout");
+            let mut request = [0_u8; 8192];
+            let read = stream.read(&mut request).expect("read Data stub request");
+            let request = String::from_utf8_lossy(&request[..read]);
+            let (content_type, body) = if request.starts_with("GET /healthz ") {
+                ("text/plain", "ok\n".to_owned())
+            } else {
+                let payload = request.split("\r\n\r\n").nth(1).unwrap_or_default();
+                let operation: serde_json::Value =
+                    serde_json::from_str(payload).expect("typed Data request JSON");
+                let body = match operation["operation"].as_str() {
+                    Some("content_workflow_get") => r#"{"code":"OK","message":"","data":{"outcome":"content_workflow","payload":null}}"#.to_owned(),
+                    Some("content_snapshot_get") => r#"{"code":"OK","message":"","data":{"outcome":"content_snapshot","payload":null}}"#.to_owned(),
+                    Some("content_workflow_write") => serde_json::json!({
+                        "code": "OK",
+                        "message": "",
+                        "data": {
+                            "outcome": "content_workflow",
+                            "payload": {
+                                "revision": 1,
+                                "state": operation["payload"]["state"].clone(),
+                            }
+                        }
+                    })
+                    .to_string(),
+                    other => panic!("unexpected Data operation: {other:?}"),
+                };
+                ("application/json", body)
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: {content_type}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                body.len()
+            );
+            stream
+                .write_all(response.as_bytes())
+                .expect("write Data stub response");
+        }
+    });
+    (addr, stop, thread)
 }
 
 #[test]
 fn product_stays_resident_across_the_drain_budget_and_exits_on_sigterm() {
     let mut server = Server::start();
 
-    // 等待就绪（就绪探测最多 2s，Data 缺席只记录不失败）。
+    // 等待就绪；Data stub 明确返回空 content snapshot。
     let deadline = Instant::now() + Duration::from_secs(10);
     loop {
         if TcpStream::connect(("127.0.0.1", PORT)).is_ok() {

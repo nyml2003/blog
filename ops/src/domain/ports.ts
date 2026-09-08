@@ -1,6 +1,21 @@
 export interface ProcessResult { code: number; stdout: string; stderr: string }
-export interface ProcessPort { run(command: string, args: string[], cwd: string): Promise<ProcessResult> }
-export interface FsPort { read(path: string): Promise<string>; exists(path: string): Promise<boolean>; files(root: string): Promise<string[]>; mkdir(path: string): Promise<void> }
+export interface ProcessPort {
+  /** Single-shot children inherit system variables but no ambient BLOG_* values. */
+  run(command: string, args: string[], cwd: string, env?: Readonly<Record<string, string>>): Promise<ProcessResult>
+  /** Sensitive helpers inherit the terminal; credentials are read from the TTY, never argv. */
+  runInteractive?(command: string, args: string[], cwd: string, env?: Readonly<Record<string, string>>): Promise<number>
+}
+export interface FileMetadata { kind: 'file' | 'directory' | 'symlink' | 'other'; mode: number; uid: number }
+export interface SecureFile { content: string; metadata: FileMetadata }
+export interface FsPort {
+  read(path: string): Promise<string>;
+  exists(path: string): Promise<boolean>;
+  files(root: string): Promise<string[]>;
+  mkdir(path: string): Promise<void>;
+  inspect?(path: string): Promise<FileMetadata>;
+  readSecure?(path: string, maxBytes: number): Promise<SecureFile>;
+  effectiveUid?(): number | undefined;
+}
 
 export interface Reporter { section(title: string): void; ok(message: string): void; fail(message: string): void; info(message: string): void }
 
@@ -18,7 +33,7 @@ export interface SpawnRequest {
   command: string;
   args: readonly string[];
   cwd: string;
-  /** Overrides the inherited environment; ops-computed values always win over the caller's shell. */
+  /** Explicit BLOG_* allowlist for this child; ambient BLOG_* values are always removed first. */
   env?: Readonly<Record<string, string>>;
 }
 

@@ -22,10 +22,11 @@ class Harness {
   readonly json: unknown[] = [];
   readonly errors: string[] = [];
   readonly killed: string[] = [];
-  readonly runs: Array<{ command: string; args: string[]; cwd: string }> = [];
+  readonly runs: Array<{ command: string; args: string[]; cwd: string; env?: Readonly<Record<string, string>> }> = [];
   freePorts = new Set<number>();
   binaries = new Set<string>(['/repo/target/debug/mock', '/repo/target/debug/data', '/repo/target/debug/product']);
   runCode = 0;
+  environment: NodeJS.ProcessEnv | undefined;
   readyWhen: (role: string) => boolean = () => true;
   private signalListener: ((signal: NodeJS.Signals) => void) | undefined;
   readonly signalPort = {
@@ -43,8 +44,8 @@ class Harness {
     const harness = this;
     return {
       process: {
-        async run(command, args, cwd) {
-          harness.runs.push({ command, args, cwd });
+        async run(command, args, cwd, env) {
+          harness.runs.push({ command, args, cwd, env });
           return { code: harness.runCode, stdout: '', stderr: harness.runCode === 0 ? '' : 'build error line' };
         },
       },
@@ -74,6 +75,7 @@ class Harness {
       fs: harness.fs,
       signals: harness.signalPort,
       root: harness.root,
+      environment: harness.environment,
     };
   }
 
@@ -138,16 +140,31 @@ function options(overrides: Record<string, unknown> = {}) {
 
 test('dev starts mock before vite and injects the mock address vite must use', async () => {
   const harness = new Harness();
+  harness.environment = {
+    BLOG_TAXONOMY_MODEL_PROVIDER: 'claude-cli',
+    BLOG_TAXONOMY_MODEL_COMMAND: '/private/model-command',
+  };
   const pending = runRuntimeMode(planMode({ mode: 'dev', scenario: 'default', webPort: 5173, mockPort: 9090 }), harness.ports(), options());
   await tick();
   const specs = harness.spawns;
   assert.deepEqual(specs.map((process) => process.role), ['mock', 'web']);
   assert.equal(specs[0]!.command, '/repo/target/debug/mock');
-  assert.deepEqual(specs[0]!.args, ['--listen', '127.0.0.1:9090', '--scenario', 'default']);
+  assert.deepEqual(specs[0]!.args, [
+    '--listen',
+    '127.0.0.1:9090',
+    '--scenario',
+    'default',
+    '--admin-auth',
+    'bypass',
+  ]);
   if (!specs[1]) throw new Error('second spawn missing: ' + JSON.stringify(specs));
   assert.equal(specs[1]!.command, 'pnpm');
   assert.match(specs[1]!.args.join(' '), /-C src\/frontend run dev/);
   assert.equal(specs[1]!.env?.BLOG_API_ORIGIN, 'http://127.0.0.1:9090');
+  for (const request of specs) {
+    assert.equal(request.env?.BLOG_TAXONOMY_MODEL_PROVIDER, undefined);
+    assert.equal(request.env?.BLOG_TAXONOMY_MODEL_COMMAND, undefined);
+  }
   const mock = harness.group.members[0] as FakeProcess;
   const web = harness.group.members[1] as FakeProcess;
   assert.equal(harness.group.stopping, false);
@@ -168,7 +185,7 @@ test('backend allocates data first and points product at the actual data address
   const data = harness.spawns[0]!;
   assert.deepEqual(data.args, ['--listen', '127.0.0.1:8082', '--data-semantics', 'test'], 'the busy candidate port is skipped by +1');
   assert.equal(data.env?.BLOG_DATABASE_PATH, join('/repo', 'target', 'test-dbs', `${process.pid}.db`));
-  assert.deepEqual(harness.spawns[1]!.args, ['--listen', '127.0.0.1:18080']);
+  assert.deepEqual(harness.spawns[1]!.args, ['--listen', '127.0.0.1:18080', '--content-source', 'fixture']);
   assert.equal(harness.spawns[1]!.env?.BLOG_DATA_ADDR, 'http://127.0.0.1:8082');
   assert.equal(harness.spawns[1]!.env?.BLOG_WEB_DIR, undefined, 'backend never mounts a frontend');
   assert.match(data.env?.BLOG_DATABASE_PATH ?? '', /target\/test-dbs\/\d+\.db/);
@@ -177,14 +194,185 @@ test('backend allocates data first and points product at the actual data address
   assert.equal(await pending, 130);
 });
 
+test('content source selection isolates credentials and injects model configuration only into Product', async () => {
+  const fixture = new Harness();
+  fixture.environment = {
+    BLOG_CONTENT_REPO: 'owner/private',
+    BLOG_CONTENT_TOKEN: 'ambient-secret',
+    BLOG_TAXONOMY_MODEL_PROVIDER: 'claude-cli',
+    BLOG_TAXONOMY_MODEL_COMMAND: '/private/model-command',
+  };
+  const fixtureRun = runRuntimeMode(
+    planMode({ mode: 'backend', dataMode: 'mock', productPort: 18080, dataPort: 18081, contentSource: 'fixture' }),
+    fixture.ports(),
+    options(),
+  );
+  await tick();
+  const fixtureProduct = fixture.spawns.find((process) => process.role === 'product')!;
+  assert.equal(fixtureProduct.env?.BLOG_CONTENT_REPO, undefined);
+  assert.equal(fixtureProduct.env?.BLOG_CONTENT_TOKEN, undefined);
+  assert.equal(fixtureProduct.env?.BLOG_TAXONOMY_MODEL_PROVIDER, 'claude-cli');
+  assert.equal(fixtureProduct.env?.BLOG_TAXONOMY_MODEL_COMMAND, '/private/model-command');
+  assert.doesNotMatch(fixtureProduct.args.join('\0'), /claude-cli|model-command/);
+  const fixtureData = fixture.spawns.find((process) => process.role === 'data')!;
+  assert.equal(fixtureData.env?.BLOG_TAXONOMY_MODEL_PROVIDER, undefined);
+  assert.equal(fixtureData.env?.BLOG_TAXONOMY_MODEL_COMMAND, undefined);
+  assert.match(fixtureProduct.args.join(' '), /--content-source fixture/);
+  fixture.emit('SIGINT');
+  assert.equal(await fixtureRun, 130);
+
+  const github = new Harness();
+  github.environment = {
+    BLOG_CONTENT_REPO: 'owner/private',
+    BLOG_CONTENT_TOKEN: 'configured-secret',
+    BLOG_TAXONOMY_MODEL_PROVIDER: 'claude-cli',
+    BLOG_TAXONOMY_MODEL_COMMAND: '/private/model-command',
+  };
+  const githubRun = runRuntimeMode(
+    planMode({ mode: 'backend', dataMode: 'mock', productPort: 18080, dataPort: 18081, contentSource: 'github' }),
+    github.ports(),
+    options(),
+  );
+  await tick();
+  const githubProduct = github.spawns.find((process) => process.role === 'product')!;
+  assert.equal(githubProduct.env?.BLOG_CONTENT_REPO, 'owner/private');
+  assert.equal(githubProduct.env?.BLOG_CONTENT_TOKEN, 'configured-secret');
+  assert.equal(githubProduct.env?.BLOG_TAXONOMY_MODEL_PROVIDER, 'claude-cli');
+  assert.equal(githubProduct.env?.BLOG_TAXONOMY_MODEL_COMMAND, '/private/model-command');
+  assert.doesNotMatch(githubProduct.args.join('\0'), /claude-cli|model-command/);
+  assert.match(githubProduct.args.join(' '), /--content-source github/);
+  github.emit('SIGINT');
+  assert.equal(await githubRun, 130);
+
+  const unavailable = new Harness();
+  unavailable.environment = {
+    BLOG_TAXONOMY_MODEL_PROVIDER: '   ',
+    BLOG_TAXONOMY_MODEL_COMMAND: '',
+  };
+  const unavailableRun = runRuntimeMode(
+    planMode({ mode: 'backend', dataMode: 'mock', productPort: 18080, dataPort: 18081, contentSource: 'github' }),
+    unavailable.ports(),
+    options(),
+  );
+  await tick();
+  const unavailableProduct = unavailable.spawns.find((process) => process.role === 'product')!;
+  assert.equal(unavailableProduct.env?.BLOG_CONTENT_REPO, undefined);
+  assert.equal(unavailableProduct.env?.BLOG_CONTENT_TOKEN, undefined);
+  assert.equal(unavailableProduct.env?.BLOG_TAXONOMY_MODEL_PROVIDER, undefined);
+  assert.equal(unavailableProduct.env?.BLOG_TAXONOMY_MODEL_COMMAND, undefined);
+  assert.match(unavailableProduct.args.join(' '), /--content-source github/);
+  unavailable.emit('SIGINT');
+  assert.equal(await unavailableRun, 130);
+});
+
+test('secure admin credentials are injected only into Product', async () => {
+  const harness = new Harness();
+  const stateDirectory = '/state/blog/admin-auth';
+  const credentialsPath = `${stateDirectory}/credentials.env`;
+  harness.environment = { XDG_STATE_HOME: '/state' };
+  harness.fs = {
+    read: async () => '',
+    exists: async (path) => path === credentialsPath,
+    files: async () => [],
+    mkdir: async () => undefined,
+    inspect: async () => ({ kind: 'directory', mode: 0o700, uid: 1000 }),
+    readSecure: async () => ({
+      content: [
+        'BLOG_ADMIN_PASSWORD_HASH=$argon2id$v=19$m=65536,t=3,p=1$c2FsdA$hash',
+        'BLOG_ADMIN_TOTP_SECRET=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+        `BLOG_ADMIN_RUNTIME_DIR=${stateDirectory}`,
+        '',
+      ].join('\n'),
+      metadata: { kind: 'file', mode: 0o600, uid: 1000 },
+    }),
+    effectiveUid: () => 1000,
+  };
+  const pending = runRuntimeMode(
+    planMode({
+      mode: 'backend',
+      dataMode: 'mock',
+      productPort: 18080,
+      dataPort: 18081,
+      contentSource: 'fixture',
+    }),
+    harness.ports(),
+    options(),
+  );
+  await tick();
+  const data = harness.spawns.find((process) => process.role === 'data')!;
+  const product = harness.spawns.find((process) => process.role === 'product')!;
+  assert.equal(data.env?.BLOG_ADMIN_PASSWORD_HASH, undefined);
+  assert.equal(data.env?.BLOG_ADMIN_TOTP_SECRET, undefined);
+  assert.equal(data.env?.BLOG_ADMIN_RUNTIME_DIR, undefined);
+  assert.equal(
+    product.env?.BLOG_ADMIN_PASSWORD_HASH,
+    '$argon2id$v=19$m=65536,t=3,p=1$c2FsdA$hash',
+  );
+  assert.equal(product.env?.BLOG_ADMIN_TOTP_SECRET, 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA');
+  assert.equal(product.env?.BLOG_ADMIN_RUNTIME_DIR, stateDirectory);
+  harness.emit('SIGINT');
+  assert.equal(await pending, 130);
+});
+
+test('insecure admin credential permissions stop before Product starts', async () => {
+  const harness = new Harness();
+  const stateDirectory = '/state/blog/admin-auth';
+  const credentialsPath = `${stateDirectory}/credentials.env`;
+  harness.environment = { XDG_STATE_HOME: '/state' };
+  harness.fs = {
+    read: async () => '',
+    exists: async (path) => path === credentialsPath,
+    files: async () => [],
+    mkdir: async () => undefined,
+    inspect: async () => ({ kind: 'directory', mode: 0o700, uid: 1000 }),
+    readSecure: async () => ({
+      content: 'must-not-appear-in-diagnostics',
+      metadata: { kind: 'file', mode: 0o644, uid: 1000 },
+    }),
+    effectiveUid: () => 1000,
+  };
+  const code = await runRuntimeMode(
+    planMode({
+      mode: 'backend',
+      dataMode: 'mock',
+      productPort: 18080,
+      dataPort: 18081,
+      contentSource: 'fixture',
+    }),
+    harness.ports(),
+    options({ json: true }),
+  );
+  assert.equal(code, 20);
+  assert.deepEqual(harness.spawns.map((process) => process.role), ['data']);
+  assert.deepEqual(harness.killed, ['data']);
+  assert.doesNotMatch(
+    [harness.errors.join('\n'), JSON.stringify(harness.json)].join('\n'),
+    /must-not-appear-in-diagnostics/,
+  );
+  const payload = harness.json.at(-1) as { error: { code: string } };
+  assert.equal(payload.error.code, 'SERVICE_START_FAILED');
+});
+
 test('integration builds the frontend first and mounts web/dist into product', async () => {
   const harness = new Harness();
+  harness.environment = {
+    BLOG_TAXONOMY_MODEL_PROVIDER: 'claude-cli',
+    BLOG_TAXONOMY_MODEL_COMMAND: '/private/integration-model-command',
+  };
   const pending = runRuntimeMode(planMode({ mode: 'integration', watch: false, productPort: 8080, dataPort: 8081 }), harness.ports(), options({ json: true }));
   await tick();
   assert.deepEqual(harness.runs.map((run) => run.args.join(' ')), ['-C src/frontend run build']);
+  assert.equal(harness.runs[0]!.env, undefined);
   assert.deepEqual(harness.spawns.map((process) => process.role), ['data', 'product']);
   assert.equal(harness.spawns[1]!.env?.BLOG_WEB_DIR, '/repo/src/frontend/dist');
-  assert.deepEqual(harness.spawns[1]!.args, ['--listen', '127.0.0.1:8080', '--web-dir', '/repo/src/frontend/dist']);
+  assert.equal(harness.spawns[0]!.env?.BLOG_TAXONOMY_MODEL_PROVIDER, undefined);
+  assert.equal(harness.spawns[0]!.env?.BLOG_TAXONOMY_MODEL_COMMAND, undefined);
+  assert.equal(harness.spawns[1]!.env?.BLOG_TAXONOMY_MODEL_PROVIDER, 'claude-cli');
+  assert.equal(
+    harness.spawns[1]!.env?.BLOG_TAXONOMY_MODEL_COMMAND,
+    '/private/integration-model-command',
+  );
+  assert.deepEqual(harness.spawns[1]!.args, ['--listen', '127.0.0.1:8080', '--content-source', 'fixture', '--web-dir', '/repo/src/frontend/dist']);
   const payload = harness.json[0] as { ok: boolean; command: string; services: unknown[]; entry: string | null };
   assert.equal(payload.ok, true);
   assert.equal(payload.command, 'runtime integration');
@@ -382,6 +570,7 @@ test('delivery build runs the frontend and the rust binaries when the workspace 
   assert.equal(code, 0);
   assert.deepEqual(harness.runs.map((run) => run.command), ['pnpm', 'cargo']);
   assert.deepEqual(harness.runs[1]!.args, ['build', '--release']);
+  assert.ok(harness.runs.every((run) => run.env === undefined));
   assert.equal(harness.spawns.length, 0);
   assert.deepEqual((harness.json[0] as { services: unknown[] }).services, []);
 });

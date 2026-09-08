@@ -4,7 +4,7 @@ id: ACCEPTANCE-ARCH-BOUNDARY-001
 plan_id: PLAN-ARCH-BOUNDARY-001
 status: pending
 owner: user
-last_reviewed: 2026-09-07
+last_reviewed: 2026-09-08
 ---
 
 # 架构边界治理验收清单
@@ -15,10 +15,14 @@ last_reviewed: 2026-09-07
 
 - `ops quality check` 全绿，包含 Rust fmt/clippy/test、前端 typecheck/lint/format/core/build、ops 契约和架构扫描；
 - 页面直接访问 client/data 机制的静态扫描为零违规；
-- Product HTTP、Product BFF、protocol、Data store/domain 的边界门禁和正负例已覆盖；
-- 21 条 API golden 同时由 TS client 路由表、protocol 生产注册表和真实 Product binary 分发测试覆盖；
+- Product HTTP、Product BFF、protocol、Data store/domain 与 Data Cargo manifest 的边界
+  门禁和正负例已覆盖；门禁会拒绝 HTTP 直接过滤分类/文章 snapshot、后代计算，以及
+  Data 引入 HTML parser 或外部 HTTP/GitHub client；
+- 38 条 API golden 同时由 TS client 路由表、protocol 生产注册表和真实 Product binary 分发测试覆盖；
 - [API 响应对照](./API-RESPONSE-DIFF.md) 中 12 个既有读取场景与 `94c5de9` 基线一致；
-- [页面浏览器证据](../PLAN-FRONTEND-PAGE-TEMPLATE-001/evidence/README.md) 中的 T/F 交互回归通过。
+- [页面浏览器证据](../PLAN-FRONTEND-PAGE-TEMPLATE-001/evidence/README.md) 中的 T/F
+  交互回归于 2026-09-08 06:56（Asia/Shanghai）基于当前源码重建 integration；增强后的
+  52 项脚本连续通过两次，页面错误 0。
 
 ## 用户确认
 

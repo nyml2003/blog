@@ -7,10 +7,21 @@
 
 mod bff;
 mod cli;
+#[allow(dead_code)]
+mod content_contract;
+mod content_service;
+mod content_sync;
+#[allow(dead_code)]
+mod content_workspace;
 mod data_client;
+#[allow(dead_code)]
+mod github;
 mod http;
 mod logging;
+mod model_review;
 mod static_files;
+#[allow(dead_code)]
+mod taxonomy_changes;
 
 use std::future::IntoFuture;
 use std::process::ExitCode;
@@ -19,9 +30,10 @@ use std::time::{Duration, Instant};
 
 use tokio::net::TcpListener;
 
-use crate::cli::{Cli, CliError, EXIT_RUN_FAILURE, EXIT_USAGE};
+use crate::cli::{Cli, CliError, ContentSource, EXIT_RUN_FAILURE, EXIT_USAGE, ProductAction};
 use crate::data_client::DataClient;
 use crate::http::AppState;
+use product::auth::{ProductionAuthRuntime, ProductionAuthState};
 
 /// 在途请求排空预算（与 Spec 关停限期 5s 对齐，本批无后台线程需要等待）。
 const DRAIN_BUDGET: Duration = Duration::from_secs(5);
@@ -39,6 +51,9 @@ fn main() -> ExitCode {
             return ExitCode::from(EXIT_USAGE);
         }
     };
+    if cli.action == ProductAction::InitializeContentRepository {
+        return initialize_content_repository(&cli);
+    }
     let data = match DataClient::new(&cli.data_addr) {
         Ok(data) => data,
         Err(message) => {
@@ -76,7 +91,63 @@ async fn run(cli: Cli, data: DataClient, started: Instant) -> ExitCode {
     // Data 就绪先于 Product 对外就绪（FAIL-002 的进程内半边；跨进程顺序由 ops 保证）。
     // 本批只做就绪观察并记录，不做启动失败（不接管 ops 的编排职责）。
     readiness_probe(&data).await;
+    let auth = Arc::new(ProductionAuthRuntime::from_environment());
+    match auth.state() {
+        ProductionAuthState::Configured(_) => {
+            crate::product_info!("admin authentication configured");
+        }
+        ProductionAuthState::Unavailable(reasons) => {
+            crate::product_error!("admin authentication unavailable reasons={reasons:?}");
+        }
+    }
 
+    let model: Box<dyn model_review::TaxonomyModel> = match model_review::ClaudeCliModel::from_env()
+    {
+        Ok(model) => Box::new(model),
+        Err(message) => {
+            crate::product_error!("taxonomy model unavailable: {message}");
+            Box::new(model_review::UnavailableModel::new(message))
+        }
+    };
+    let github_source = cli.content_source == ContentSource::Github;
+    let remote = match cli.content_source {
+        ContentSource::Fixture => github::ConfiguredRemote::Fixture(github::MockGithub::default()),
+        ContentSource::Github => {
+            match (cli.content_repo.as_deref(), cli.content_token.as_deref()) {
+                (Some(repo), Some(token)) => match github::GithubRemote::production(repo, token) {
+                    Ok(remote) => github::ConfiguredRemote::Github(remote),
+                    Err(error) => {
+                        crate::product_error!(
+                            "content source unavailable; serving last good cache: {error}"
+                        );
+                        github::ConfiguredRemote::Unavailable(github::UnavailableRemote::new(
+                            "GitHub content source configuration is invalid",
+                        ))
+                    }
+                },
+                _ => {
+                    crate::product_error!(
+                        "content source unavailable; serving last good cache: GitHub credentials are incomplete"
+                    );
+                    github::ConfiguredRemote::Unavailable(github::UnavailableRemote::new(
+                        "GitHub content source credentials are unavailable",
+                    ))
+                }
+            }
+        }
+    };
+    let content = match content_service::ContentService::load(data.clone(), remote, model).await {
+        Ok(service) => service,
+        Err(error) => {
+            crate::product_error!("load startup content workflow: {error}");
+            return ExitCode::from(EXIT_RUN_FAILURE);
+        }
+    };
+    if github_source {
+        if let Err(error) = content.synchronize().await {
+            crate::product_error!("startup content sync failed; serving last good cache: {error}");
+        }
+    }
     let listener = match TcpListener::bind(cli.listen).await {
         Ok(listener) => listener,
         Err(error) => {
@@ -100,10 +171,12 @@ async fn run(cli: Cli, data: DataClient, started: Instant) -> ExitCode {
     });
     let app = http::router(Arc::new(AppState {
         data,
+        content,
         bound_addr: bound_addr.to_string(),
         web_dir: cli.web_dir,
         static_files,
         started,
+        auth,
     }));
     // 排空限时必须在**收到信号之后**才起算：先在 server 与信号之间等待（信号之前进程常驻），
     // 再进入限期排空。若把 deadline 与 server 一起 `select!`，进程会在 DRAIN_BUDGET 后自行
@@ -120,9 +193,12 @@ async fn run(cli: Cli, data: DataClient, started: Instant) -> ExitCode {
             let _ = signal_rx.changed().await;
         }
     };
-    let server = axum::serve(listener, app)
-        .with_graceful_shutdown(graceful)
-        .into_future();
+    let server = axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
+    )
+    .with_graceful_shutdown(graceful)
+    .into_future();
     tokio::pin!(server);
 
     let mut server_finished = false;
@@ -163,6 +239,36 @@ async fn run(cli: Cli, data: DataClient, started: Instant) -> ExitCode {
         started.elapsed().as_millis()
     );
     ExitCode::SUCCESS
+}
+
+fn initialize_content_repository(cli: &Cli) -> ExitCode {
+    let Some(repository) = cli.content_repo.as_deref() else {
+        crate::product_error!("usage: BLOG_CONTENT_REPO is required for repository initialization");
+        return ExitCode::from(EXIT_USAGE);
+    };
+    let Some(token) = cli.content_token.as_deref() else {
+        crate::product_error!(
+            "usage: BLOG_CONTENT_TOKEN is required for repository initialization"
+        );
+        return ExitCode::from(EXIT_USAGE);
+    };
+    let mut remote = match github::GithubRemote::production(repository, token) {
+        Ok(remote) => remote,
+        Err(error) => {
+            crate::product_error!("content repository configuration invalid: {error}");
+            return ExitCode::from(EXIT_USAGE);
+        }
+    };
+    match remote.initialize_empty_main() {
+        Ok(commit) => {
+            crate::product_info!("content repository initialized main_commit={commit}");
+            ExitCode::SUCCESS
+        }
+        Err(error) => {
+            crate::product_error!("content repository initialization failed: {error}");
+            ExitCode::from(EXIT_RUN_FAILURE)
+        }
+    }
 }
 
 /// 观察 Data 健康状态：最多等待 `PROBE_BUDGET`，失败仅记录（不决定进程退出）。

@@ -48,8 +48,9 @@ async fn serve(cli: Cli, started: Instant) -> ExitCode {
     // 没有任何跨进程残留（PLAN：每次 runtime 启动/测试运行重新初始化）。
     let store = Arc::new(Store::new(cli.scenario));
     crate::mock_info!(
-        "starting scenario={} listen={} sessions=isolated pid={}",
+        "starting scenario={} admin_auth={} listen={} sessions=isolated pid={}",
         cli.scenario.name(),
+        cli.admin_auth.name(),
         cli.listen,
         std::process::id()
     );
@@ -69,8 +70,9 @@ async fn serve(cli: Cli, started: Instant) -> ExitCode {
         }
     };
     crate::mock_info!(
-        "listening addr={bound_addr} scenario={} session_header={}",
+        "listening addr={bound_addr} scenario={} admin_auth={} session_header={}",
         cli.scenario.name(),
+        cli.admin_auth.name(),
         crate::store::SESSION_HEADER
     );
 

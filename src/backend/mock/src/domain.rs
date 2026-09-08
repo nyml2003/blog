@@ -28,6 +28,15 @@ use crate::seed;
 use protocol::clock::now_utc_rfc3339;
 use protocol::dates::exclusive_date_end;
 
+pub struct ContentArticleDraft {
+    pub id: Option<i64>,
+    pub title: String,
+    pub summary: String,
+    pub category_ids: Vec<i64>,
+    pub tag_ids: Vec<i64>,
+    pub content_html: String,
+}
+
 /// 一个 session 的全部状态；进程退出即丢弃（每次 runtime 启动重新初始化）。
 pub struct DomainState {
     articles: Vec<ArticleDetail>,
@@ -37,6 +46,10 @@ pub struct DomainState {
     next_article_id: i64,
     next_type_id: i64,
     next_term_id: i64,
+    content_snapshot: protocol::ContentSnapshot,
+    content_version: u64,
+    pending_content: Option<protocol::ContentSnapshot>,
+    content_pull_request: Option<u64>,
     last_used: Instant,
 }
 
@@ -52,6 +65,10 @@ impl DomainState {
                 next_article_id: 1,
                 next_type_id: 1,
                 next_term_id: 1,
+                content_snapshot: protocol::ContentSnapshot::default(),
+                content_version: 0,
+                pending_content: None,
+                content_pull_request: None,
                 last_used: Instant::now(),
             };
         }
@@ -96,6 +113,10 @@ impl DomainState {
             next_article_id: seed::ARTICLES.iter().map(|a| a.id).max().unwrap_or(0) + 1,
             next_type_id: seed::ARTICLE_TYPES.iter().map(|t| t.id).max().unwrap_or(0) + 1,
             next_term_id: seed::TERMS.iter().map(|t| t.id).max().unwrap_or(0) + 1,
+            content_snapshot: seeded_content_snapshot(),
+            content_version: 0,
+            pending_content: None,
+            content_pull_request: None,
             last_used: Instant::now(),
         }
     }
@@ -112,6 +133,246 @@ impl DomainState {
 
     pub fn article_count(&self) -> usize {
         self.articles.len()
+    }
+
+    pub fn content_workspace(&self) -> (u64, &protocol::ContentSnapshot, Option<u64>) {
+        (
+            self.content_version,
+            &self.content_snapshot,
+            self.content_pull_request,
+        )
+    }
+
+    pub fn content_pending(&self) -> Option<&protocol::ContentSnapshot> {
+        self.pending_content.as_ref()
+    }
+
+    pub fn content_save_article(
+        &mut self,
+        expected: u64,
+        draft: ContentArticleDraft,
+    ) -> Result<protocol::ContentSnapshotArticle, OperationFailure> {
+        self.check_content_version(expected)?;
+        let previous = draft.id.and_then(|id| {
+            self.content_snapshot
+                .articles
+                .iter()
+                .find(|article| article.meta.id == id)
+                .cloned()
+        });
+        if draft.id.is_some() && previous.is_none() {
+            return Err(OperationFailure::new(codes::NOT_FOUND, "article not found"));
+        }
+        if draft.title.trim().is_empty()
+            || draft.summary.chars().count() > protocol::MAX_SUMMARY_CHARS
+        {
+            return Err(OperationFailure::new(
+                codes::INVALID_PAYLOAD,
+                "invalid article title or summary",
+            ));
+        }
+        let id = draft.id.unwrap_or_else(|| {
+            let next = self.next_article_id;
+            self.next_article_id += 1;
+            next
+        });
+        let stamp = protocol::clock::now_utc_rfc3339();
+        let article = protocol::ContentSnapshotArticle {
+            meta: protocol::ContentArticleMeta {
+                id,
+                title: draft.title,
+                summary: draft.summary,
+                category_ids: draft.category_ids,
+                tag_ids: draft.tag_ids,
+                created_at: previous
+                    .as_ref()
+                    .map(|value| value.meta.created_at.clone())
+                    .unwrap_or_else(|| stamp.clone()),
+                updated_at: stamp,
+                published_at: previous.and_then(|value| value.meta.published_at),
+            },
+            content_html: draft.content_html,
+        };
+        self.content_snapshot
+            .articles
+            .retain(|value| value.meta.id != id);
+        self.content_snapshot.articles.push(article.clone());
+        self.content_snapshot
+            .articles
+            .sort_by_key(|value| value.meta.id);
+        self.pending_content = None;
+        self.content_version += 1;
+        Ok(article)
+    }
+
+    pub fn content_remove_article(
+        &mut self,
+        expected: u64,
+        id: i64,
+    ) -> Result<(), OperationFailure> {
+        self.check_content_version(expected)?;
+        let before = self.content_snapshot.articles.len();
+        self.content_snapshot
+            .articles
+            .retain(|value| value.meta.id != id);
+        if before == self.content_snapshot.articles.len() {
+            return Err(OperationFailure::new(codes::NOT_FOUND, "article not found"));
+        }
+        self.pending_content = None;
+        self.content_version += 1;
+        Ok(())
+    }
+
+    fn check_content_version(&self, expected: u64) -> Result<(), OperationFailure> {
+        if self.content_version == expected {
+            Ok(())
+        } else {
+            Err(OperationFailure::new(
+                codes::INVALID_PAYLOAD,
+                format!(
+                    "workspace version conflict: expected {expected}, actual {}",
+                    self.content_version
+                ),
+            ))
+        }
+    }
+
+    pub fn content_save_taxonomy(
+        &mut self,
+        expected: u64,
+        taxonomy: protocol::Taxonomy,
+    ) -> Result<(), OperationFailure> {
+        if self.content_version != expected {
+            return Err(OperationFailure::new(
+                codes::INVALID_PAYLOAD,
+                format!(
+                    "workspace version conflict: expected {expected}, actual {}",
+                    self.content_version
+                ),
+            ));
+        }
+        self.content_snapshot.taxonomy = taxonomy;
+        self.pending_content = None;
+        self.content_version += 1;
+        Ok(())
+    }
+
+    pub fn content_analyze(&mut self, expected: u64) -> Result<(), OperationFailure> {
+        if self.content_version != expected {
+            return Err(OperationFailure::new(
+                codes::INVALID_PAYLOAD,
+                "workspace version conflict",
+            ));
+        }
+        self.pending_content = Some(self.content_snapshot.clone());
+        Ok(())
+    }
+
+    pub fn content_review(&mut self, expected: u64) -> Result<(), OperationFailure> {
+        if self.content_version != expected {
+            return Err(OperationFailure::new(
+                codes::INVALID_PAYLOAD,
+                "workspace version conflict",
+            ));
+        }
+        let Some(snapshot) = self.pending_content.take() else {
+            return Err(OperationFailure::new(
+                codes::INVALID_PAYLOAD,
+                "no analyzed taxonomy changes are pending",
+            ));
+        };
+        self.content_snapshot = snapshot;
+        self.content_version += 1;
+        Ok(())
+    }
+
+    pub fn content_submit(&mut self, expected: u64) -> Result<(), OperationFailure> {
+        if self.content_version != expected {
+            return Err(OperationFailure::new(
+                codes::INVALID_PAYLOAD,
+                "workspace version conflict",
+            ));
+        }
+        if self.pending_content.is_some() {
+            return Err(OperationFailure::new(
+                codes::INVALID_STATE_TRANSITION,
+                "taxonomy analysis must be reviewed before submit",
+            ));
+        }
+        if self.content_pull_request.is_none() {
+            self.content_pull_request = Some(1);
+        }
+        Ok(())
+    }
+
+    pub fn content_abandon(&mut self, expected: u64) -> Result<(), OperationFailure> {
+        if self.content_version != expected {
+            return Err(OperationFailure::new(
+                codes::INVALID_PAYLOAD,
+                "workspace version conflict",
+            ));
+        }
+        self.pending_content = None;
+        self.content_pull_request = None;
+        self.content_version += 1;
+        Ok(())
+    }
+
+    pub fn content_category_shelf(
+        &self,
+        selected: Option<i64>,
+    ) -> Result<Vec<&protocol::ContentSnapshotArticle>, OperationFailure> {
+        use std::collections::{BTreeSet, HashMap};
+        let ids: BTreeSet<_> = self
+            .content_snapshot
+            .taxonomy
+            .categories
+            .iter()
+            .map(|value| value.id)
+            .collect();
+        if selected.is_some_and(|id| !ids.contains(&id)) {
+            return Err(OperationFailure::new(
+                codes::INVALID_PAYLOAD,
+                "category_id does not exist",
+            ));
+        }
+        let parents: HashMap<_, _> = self
+            .content_snapshot
+            .taxonomy
+            .categories
+            .iter()
+            .map(|value| (value.id, value.parent_id))
+            .collect();
+        let parent_ids: BTreeSet<_> = parents.values().flatten().copied().collect();
+        let leaves: BTreeSet<_> = ids
+            .into_iter()
+            .filter(|id| !parent_ids.contains(id))
+            .filter(|leaf| {
+                selected.is_none_or(|ancestor| {
+                    let mut current = Some(*leaf);
+                    while let Some(id) = current {
+                        if id == ancestor {
+                            return true;
+                        }
+                        current = parents.get(&id).copied().flatten();
+                    }
+                    false
+                })
+            })
+            .collect();
+        Ok(self
+            .content_snapshot
+            .articles
+            .iter()
+            .filter(|article| {
+                article.meta.published_at.is_some()
+                    && article
+                        .meta
+                        .category_ids
+                        .iter()
+                        .any(|id| leaves.contains(id))
+            })
+            .collect())
     }
 
     // ---------- 读取 ----------
@@ -657,6 +918,81 @@ fn require_valid_html(source: &str) -> Result<(), OperationFailure> {
 
 fn duplicate(message: String) -> OperationFailure {
     OperationFailure::new(codes::DUPLICATE_NAME, message)
+}
+
+fn seeded_content_snapshot() -> protocol::ContentSnapshot {
+    let mut categories = Vec::new();
+    for (index, kind) in seed::ARTICLE_TYPES.iter().enumerate() {
+        categories.push(protocol::Category {
+            id: kind.id,
+            name: kind.name.to_owned(),
+            parent_id: None,
+            position: ((index + 1) * 10) as i32,
+        });
+        categories.push(protocol::Category {
+            id: 1000 + kind.id,
+            name: format!("{} articles", kind.name),
+            parent_id: Some(kind.id),
+            position: 10,
+        });
+        categories.push(protocol::Category {
+            id: 2000 + kind.id,
+            name: format!("{} notes", kind.name),
+            parent_id: Some(kind.id),
+            position: 20,
+        });
+    }
+    let tags: Vec<_> = seed::TERMS
+        .iter()
+        .filter(|term| term.kind == protocol::TERM_KIND_TAG)
+        .map(|term| protocol::Tag {
+            id: term.id,
+            name: term.name.to_owned(),
+        })
+        .collect();
+    let articles = seed::ARTICLES
+        .iter()
+        .map(|article| protocol::ContentSnapshotArticle {
+            meta: protocol::ContentArticleMeta {
+                id: article.id,
+                title: article.title.to_owned(),
+                summary: article.summary.to_owned(),
+                category_ids: if article.id == 11 {
+                    vec![
+                        1000 + article.article_type_id,
+                        2000 + article.article_type_id,
+                    ]
+                } else {
+                    vec![1000 + article.article_type_id]
+                },
+                tag_ids: article
+                    .term_ids
+                    .iter()
+                    .copied()
+                    .filter(|id| tags.iter().any(|tag| tag.id == *id))
+                    .collect(),
+                created_at: article.created_at.to_owned(),
+                updated_at: article.updated_at.to_owned(),
+                published_at: article.published_at.map(str::to_owned),
+            },
+            content_html: article.content_html.to_owned(),
+        })
+        .collect();
+    protocol::ContentSnapshot {
+        taxonomy: protocol::Taxonomy {
+            version: 1,
+            next_category_id: categories
+                .iter()
+                .map(|category| category.id)
+                .max()
+                .unwrap_or(0)
+                + 1,
+            next_tag_id: tags.iter().map(|tag| tag.id).max().unwrap_or(0) + 1,
+            categories,
+            tags,
+        },
+        articles,
+    }
 }
 
 #[cfg(test)]

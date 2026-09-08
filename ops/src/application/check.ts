@@ -34,8 +34,8 @@ export async function runCheck(workspace: Workspace, process: ProcessPort, fs: F
   const isProjectSource = (file: string) => !/[\\/](?:node_modules|dist|target|\.generated)[\\/]/.test(file);
   const frontendFiles = (await fs.files(workspace.web)).filter((file) => isProjectSource(file) && /\.(?:ts|tsx)$/.test(file));
   const rustRoot = join(workspace.root, 'src');
-  const rustFiles = (await fs.files(rustRoot)).filter((file) => isProjectSource(file) && file.endsWith('.rs'));
-  const files = [...frontendFiles, ...rustFiles];
+  const backendFiles = (await fs.files(rustRoot)).filter((file) => isProjectSource(file) && (file.endsWith('.rs') || file.endsWith('Cargo.toml')));
+  const files = [...frontendFiles, ...backendFiles];
   // Read source through the injected port while keeping the domain rule pure.
   const sources = new Map<string, string>();
   for (const file of files) sources.set(file, await fs.read(file));

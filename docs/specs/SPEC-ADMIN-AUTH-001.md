@@ -4,7 +4,7 @@ id: SPEC-ADMIN-AUTH-001
 status: draft
 owner: backend
 plan_id: PLAN-ADMIN-AUTH-001
-last_reviewed: 2026-09-06
+last_reviewed: 2026-09-08
 ---
 
 # 管理端鉴权（Session + TOTP）与管理台导航修复
@@ -23,9 +23,9 @@ last_reviewed: 2026-09-06
 
 ## 契约
 
-- **凭证来源（单人，无用户表）**：argon2id 密码哈希与 TOTP secret 经环境变量注入（`BLOG_ADMIN_PASSWORD_HASH`、`BLOG_ADMIN_TOTP_SECRET`，由 systemd / ops 运行环境提供）；恢复码首次生成时输出一次（10 张，单张一次性，哈希留存于运行时数据目录）。凭证缺失时管理端整体拒绝服务（fail closed），公开端不受影响。
-- **登录流程**：`POST /api/admin/session`（密码 + TOTP 6 位码或恢复码）→ 签发 session；`DELETE` 登出并撤销。密码与 TOTP 校验均常数时间比较；TOTP 允许 ±1 时间窗，重放窗口内的已用码作废。
-- **Session cookie**：opaque token + 服务端会话表（内存即可，重启即登出——可接受并写入文档）；`HttpOnly` + `SameSite=Strict`，`Secure` 在检测到 HTTPS 时置位；默认 12 小时滑动过期。CSRF 由 `SameSite=Strict` + 同源 API 覆盖，不另发 token。
+- **凭证来源（单人，无用户表）**：argon2id 密码哈希与 TOTP secret 经环境变量注入（`BLOG_ADMIN_PASSWORD_HASH`、`BLOG_ADMIN_TOTP_SECRET`，由 systemd / ops 运行环境提供）；恢复码首次生成时输出一次（10 张，单张一次性，哈希留存于运行时数据目录）。生成与恢复 helper 只允许在 stdin、stdout、stderr 都连接 TTY 时运行，在读取秘密或创建状态前拒绝管道与重定向。凭证缺失时管理端整体拒绝服务（fail closed），公开端不受影响。
+- **登录流程**：`POST /api/admin/session`（密码 + TOTP 6 位码或恢复码）→ 签发 session；`DELETE` 登出并撤销。密码与 TOTP 校验均常数时间比较；TOTP 允许 ±1 时间窗，重放高水位与完整回拨候选范围持久保存，Product 重启后已用码仍作废。超过输入上限的客户端密码按无效凭证计入限速；存储 PHC 或校验 adapter 错误仍 fail closed。
+- **Session cookie**：opaque token + 服务端会话表（内存即可，重启即登出——可接受并写入文档）；`HttpOnly` + `SameSite=Strict`，`Secure` 仅在 socket peer 命中精确可信代理集合且单值转发头确认 HTTPS 时置位；伪造、重复或无效转发头回退到直连来源。默认 12 小时滑动过期。CSRF 由 `SameSite=Strict` + 同源 API 覆盖，不另发 token。
 - **中间件行为**：`/admin/*` 页面未登录 → `302 /admin/login.html?next=<原路径>`；`/api/admin/*` 未登录 → `401`；`/api/admin/session` 登录 / 登出端点与登录页开放。管理端静态资源（JS/CSS）不设防（页面壳无敏感数据，数据全在 API）。
 - **限速**：登录失败按 IP 计数，5 次 / 15 分钟冷却，冷却期内拒绝尝试；成功登录清零。
 - **导航**：admin Header 增加"返回站点"链接（`/`）；用户端不出现任何管理入口（现状保持）。
@@ -104,5 +104,11 @@ Then 直通无鉴权（显式开关），生产 / integration 场景鉴权全量
 
 ## 测试/验收证据
 
-- 自动化测试：待补充（中间件 302/401、登录成功 / 失败 / 限速 / 冷却、TOTP 窗口与重放、恢复码一次性、登出撤销、fail closed、cookie 标志位、日志脱敏的 Rust 测试）；
-- 人工验收：待补充（真实浏览器登录 → 管理台全流程、返回站点链接、401 跳转、Mobile 与公开端回归）。
+- 实现与自动化测试已完成：覆盖中间件 302/401、登录成功与失败、限速与冷却、
+  TOTP 完整窗口和跨重启重放、恢复码原子一次性、session 重启失效、登出撤销、
+  fail closed、可信代理与 cookie 标志、TTY 边界和日志脱敏；
+- 真实浏览器证据已完成：恢复码登录、安全 `next`、认证后工作区、公开端隔离、页面错误
+  和横向溢出检查均通过；
+- 命令结果、进程测试、安全复核和浏览器证据路径见
+  [PLAN-ADMIN-AUTH-001/EVIDENCE.md](../plans/active/PLAN-ADMIN-AUTH-001/EVIDENCE.md)；
+- Spec 保持 draft，等待用户完成秘密保管与产品验收后再推进为 accepted。

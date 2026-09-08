@@ -4,7 +4,7 @@ id: SPEC-ARCH-BOUNDARY-001
 status: draft
 owner: backend
 plan_id: PLAN-ARCH-BOUNDARY-001
-last_reviewed: 2026-09-07
+last_reviewed: 2026-09-08
 ---
 
 # 架构分层边界规则（前端查询层归一 / 后端四层各归其位）
@@ -137,8 +137,13 @@ Then 对应测试失败（Rust 或 TS 侧红灯）
 ## 测试/验收证据
 
 - R0 审查：`AUDIT-REPORT.md` 按当前代码重核前后端违规、目标层与写集；查询层定稿为 `src/frontend/solid/queries/`。
-- 前端：两端全部页面零 `common/client` / `common/data` / `solid/data` import；查询层测试覆盖参数归一、无效 ID、URL 筛选、乱序响应丢弃、分页和管理命令编排。前端 typecheck、lint、format、76 项核心测试与 build 通过。
+- 前端：两端全部页面零 `common/client` / `common/data` / `solid/data` import；查询层测试覆盖参数归一、无效 ID、URL 筛选、乱序响应丢弃、分页、分类 history 和管理命令编排。前端 typecheck、lint、format、107 项核心测试与 build 通过。
 - 后端：Mobile/T 型货架编排位于 Product/Mock `bff/`，HTTP 保留协议适配，protocol 只保留契约与纯映射；workspace fmt、clippy 和 tests 通过，Product/Mock 契约及真实 Product→Data 链路通过。
-- 门禁：架构规则 6 项正负样例通过，仓库扫描零违规、零豁免；21 条 API golden 同时由 Rust 生产路由/scene 契约和 TS client 实际调用测试对照。
-- 总门禁：2026-09-07 `ops quality check` 全部通过；Desktop/Mobile 代表页面浏览器走查无脚本错误或页面级横向溢出。
+- 门禁：架构规则 9 项正负样例通过，仓库扫描零违规、零豁免；规则覆盖 Product HTTP
+  snapshot 聚合与分类后代计算、Data Cargo manifest 的 HTML parser 和外部
+  HTTP/GitHub client 依赖；38 条 API golden 同时由 Rust 生产路由/scene 契约和 TS
+  client 实际调用测试对照。
+- 总门禁：2026-09-08 `ops quality check` 全部通过；06:56（Asia/Shanghai）基于当前源码
+  重建 integration 后 Desktop/Mobile T/F 代表路径的 52 项浏览器脚本连续两次通过，
+  页面错误 0。
 - 人工验收：代码与自动化证据已齐，最终产品验收由用户执行。

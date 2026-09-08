@@ -7,6 +7,171 @@ mod common;
 use common::*;
 
 #[test]
+fn taxonomy_routes_expose_seeded_tree_and_complete_admin_flow() {
+    let mut server = Server::start(&["--listen", "127.0.0.1:0", "--scenario", "default"]);
+    let port = server.port;
+    let session = Some("taxonomy-flow");
+
+    let tree = get_with(
+        port,
+        "/api/public/taxonomy?sceneCode=public.taxonomy_tree",
+        session,
+    )
+    .data();
+    assert_eq!(tree["categories"].as_array().unwrap().len(), 9);
+    assert_eq!(
+        tree["categories"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|category| category["parentId"] == 1)
+            .count(),
+        2
+    );
+
+    let shelf = get_with(
+        port,
+        "/api/public/mobile/category-shelf?sceneCode=public.mobile_category_shelf&category_id=1",
+        session,
+    )
+    .data();
+    let article_ids: Vec<_> = shelf["articles"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|article| article["id"].as_i64().unwrap())
+        .collect();
+    assert_eq!(
+        article_ids
+            .iter()
+            .filter(|article_id| **article_id == 11)
+            .count(),
+        1,
+        "a parent shelf deduplicates articles assigned to two descendant leaves"
+    );
+
+    let workspace = get_with(
+        port,
+        "/api/admin/content/workspace?sceneCode=admin.content_workspace",
+        session,
+    )
+    .data();
+    assert_eq!(workspace["version"], 0);
+    let save_body = serde_json::json!({
+        "sceneCode": "admin.content_taxonomy_save",
+        "expectedVersion": 0,
+        "taxonomy": tree,
+    });
+    let saved = post(
+        port,
+        "/api/admin/content/taxonomy",
+        &save_body.to_string(),
+        session,
+    );
+    assert_eq!(saved.status, 200, "{}", saved.body);
+    assert_eq!(saved.data()["version"], 1);
+
+    let analyzed = post(
+        port,
+        "/api/admin/content/taxonomy/analyze",
+        r#"{"sceneCode":"admin.content_taxonomy_analyze","expectedVersion":1,"articleIds":[11]}"#,
+        session,
+    );
+    assert_eq!(analyzed.status, 200, "{}", analyzed.body);
+    let preview = get_with(
+        port,
+        "/api/admin/content/preview?sceneCode=admin.content_preview",
+        session,
+    );
+    assert_eq!(preview.status, 200, "{}", preview.body);
+    assert_eq!(preview.data()["version"], 1);
+
+    let blocked_submit = post(
+        port,
+        "/api/admin/content/submit",
+        r#"{"sceneCode":"admin.content_submit","expectedVersion":1}"#,
+        session,
+    );
+    assert_eq!(blocked_submit.status, 409, "{}", blocked_submit.body);
+
+    let reviewed = post(
+        port,
+        "/api/admin/content/taxonomy/review",
+        r#"{"sceneCode":"admin.content_taxonomy_review","expectedVersion":1}"#,
+        session,
+    );
+    assert_eq!(reviewed.status, 200, "{}", reviewed.body);
+    assert_eq!(reviewed.data()["version"], 2);
+    let submitted = post(
+        port,
+        "/api/admin/content/submit",
+        r#"{"sceneCode":"admin.content_submit","expectedVersion":2}"#,
+        session,
+    );
+    assert_eq!(submitted.status, 200, "{}", submitted.body);
+    assert_eq!(submitted.data()["status"], "submitted");
+
+    assert!(server.signal("-TERM").success());
+}
+
+#[test]
+fn workspace_article_routes_return_authoritative_ids_and_remove_by_version() {
+    let mut server = Server::start(&["--listen", "127.0.0.1:0", "--scenario", "default"]);
+    let port = server.port;
+    let session = Some("workspace-article");
+    let save = serde_json::json!({
+        "sceneCode": "admin.content_article_save",
+        "expectedVersion": 0,
+        "article": {
+            "title": "workspace article",
+            "summary": "workspace",
+            "categoryIds": [],
+            "tagIds": [],
+            "contentHtml": "<p>workspace</p>"
+        }
+    });
+    let response = post(
+        port,
+        "/api/admin/content/articles",
+        &save.to_string(),
+        session,
+    );
+    assert_eq!(response.status, 200, "{}", response.body);
+    let saved = response.data();
+    assert_eq!(saved["workspace"]["version"], 1);
+    assert_eq!(saved["article"]["id"], 49);
+    assert_eq!(saved["article"]["contentHtml"], "<p>workspace</p>");
+
+    let detail = get_with(
+        port,
+        "/api/admin/content/articles?sceneCode=admin.content_article_detail&id=49",
+        session,
+    );
+    assert_eq!(detail.status, 200, "{}", detail.body);
+    assert_eq!(detail.data()["version"], 1);
+    assert_eq!(detail.data()["article"]["id"], 49);
+
+    let remove = post(
+        port,
+        "/api/admin/content/articles/remove",
+        r#"{"sceneCode":"admin.content_article_remove","expectedVersion":1,"articleId":49}"#,
+        session,
+    );
+    assert_eq!(remove.status, 200, "{}", remove.body);
+    assert_eq!(remove.data()["version"], 2);
+    assert_eq!(
+        get_with(
+            port,
+            "/api/admin/content/articles?sceneCode=admin.content_article_detail&id=49",
+            session,
+        )
+        .status,
+        404
+    );
+    assert!(server.signal("-TERM").success());
+}
+
+#[test]
 fn t_shelf_returns_filters_and_refetches_inside_each_surface() {
     let mut server = Server::start(&["--listen", "127.0.0.1:0", "--scenario", "default"]);
     let port = server.port;
@@ -112,30 +277,6 @@ fn shelf_sections_are_bounded_and_browse_filters_are_and() {
     let port = server.port;
     let session = Some("browse");
 
-    // 素材：Engineering(1) 从 4 篇补到 7 篇（> N=6）；a[topic] b[tag] c[topic+tag]。
-    for (title, terms) in [
-        ("browse article a", "[1]"),
-        ("browse article b", "[3]"),
-        ("browse article c", "[1,3]"),
-    ] {
-        let body = article_body(
-            "admin.article_create",
-            &format!(
-                r#""title":"{title}","summary":"browse fixture","articleTypeId":1,"termIds":{terms},"contentHtml":"<p>{title}</p>""#
-            ),
-        );
-        let response = post(port, "/api/admin/articles", &body, session);
-        assert_eq!(response.status, 200, "{}", response.body);
-        let id = response.data()["id"].as_i64().unwrap();
-        let response = post(
-            port,
-            "/api/admin/articles",
-            &article_body("admin.article_publish", &format!(r#""id":{id}"#)),
-            session,
-        );
-        assert_eq!(response.status, 200, "{}", response.body);
-    }
-
     // ---------- 货架：分区截断 + 每分区 total ----------
     let shelf = get_with(
         port,
@@ -151,7 +292,7 @@ fn shelf_sections_are_bounded_and_browse_filters_are_and() {
         "推荐区固定 3 张"
     );
     assert_eq!(sections[0]["total"], 6, "推荐 total 为截断前条数");
-    assert_eq!(shelf["total"], 48, "全量文章数，不随分区截断变化");
+    assert_eq!(shelf["total"], 45, "全量文章数，不随分区截断变化");
     let section_of = |id: &str| {
         sections
             .iter()
@@ -166,7 +307,7 @@ fn shelf_sections_are_bounded_and_browse_filters_are_and() {
         "类型分区只下发前 N=6 张"
     );
     assert_eq!(
-        engineering["total"], 31,
+        engineering["total"], 28,
         "分区 total = 该类型全量计数（> N）"
     );
     assert!(engineering["total"].as_u64().unwrap() > 6);
@@ -199,19 +340,19 @@ fn shelf_sections_are_bounded_and_browse_filters_are_and() {
     let empty = browse("").data();
     assert_eq!(empty["page"], 1);
     assert_eq!(empty["pageSize"], 20);
-    assert_eq!(empty["total"], 48, "全部已发布文章（45 夹具 + 3 篇新建）");
+    assert_eq!(empty["total"], 45, "全部已发布文章");
     assert_eq!(
         empty["items"].as_array().unwrap().len(),
         20,
         "默认一页 20 条"
     );
-    assert_eq!(empty["hasMore"], true, "48 > 20 → 「加载更多」");
+    assert_eq!(empty["hasMore"], true, "45 > 20 → 「加载更多」");
 
     // 单维 / 多维 AND。
-    assert_eq!(total_of("&type_id=1"), 31);
-    assert_eq!(total_of("&type_id=1&topic_id=1"), 9);
-    assert_eq!(total_of("&topic_id=1&tag_id=3"), 1, "topic AND tag");
-    assert_eq!(total_of("&type_id=1&topic_id=1&tag_id=3"), 1, "三级 AND");
+    assert_eq!(total_of("&type_id=1"), 28);
+    assert_eq!(total_of("&type_id=1&topic_id=1"), 7);
+    assert_eq!(total_of("&topic_id=1&tag_id=3"), 0, "topic AND tag");
+    assert_eq!(total_of("&type_id=1&topic_id=1&tag_id=3"), 0, "三级 AND");
     assert_eq!(total_of("&type_id=3&topic_id=1"), 0, "维度组合错开 → 空");
 
     // kind 不匹配 / term 不存在 → 参数错误（与 Product 相同的对外码）。
@@ -233,27 +374,31 @@ fn shelf_sections_are_bounded_and_browse_filters_are_and() {
     let page = browse("&page=1&pageSize=2").data();
     assert_eq!(page["items"].as_array().unwrap().len(), 2);
     assert_eq!(page["hasMore"], true);
-    let page = browse("&page=24&pageSize=2").data();
-    assert_eq!(page["items"].as_array().unwrap().len(), 2, "48 = 24 页 × 2");
+    let page = browse("&page=23&pageSize=2").data();
+    assert_eq!(
+        page["items"].as_array().unwrap().len(),
+        1,
+        "45 = 22 页 × 2 + 1"
+    );
     assert_eq!(page["hasMore"], false, "最后一页");
-    let page = browse("&page=25&pageSize=2").data();
+    let page = browse("&page=24&pageSize=2").data();
     assert_eq!(page["items"].as_array().unwrap().len(), 0);
     assert_eq!(page["hasMore"], false);
     let page = browse("&page=99").data();
     assert_eq!(page["items"].as_array().unwrap().len(), 0);
     assert_eq!(page["hasMore"], false);
-    assert_eq!(page["total"], 48);
+    assert_eq!(page["total"], 45);
 
     // ---------- 共享的 `public.article_list` 契约零改动 ----------
     let list = get_with(port, &public_list(100), session).data();
-    assert_eq!(list["total"], 48);
+    assert_eq!(list["total"], 45);
     let or_list = get_with(
         port,
         "/api/public/articles?sceneCode=public.article_list&term_ids=1,3",
         session,
     )
     .data();
-    assert_eq!(or_list["total"], 21, "topic 1 OR tag 3（18 + 3 篇新建）");
+    assert_eq!(or_list["total"], 18, "topic 1 OR tag 3");
     let ignored = get_with(
         port,
         "/api/public/articles?sceneCode=public.article_list&topic_id=1",
@@ -261,7 +406,7 @@ fn shelf_sections_are_bounded_and_browse_filters_are_and() {
     )
     .data();
     assert_eq!(
-        ignored["total"], 48,
+        ignored["total"], 45,
         "列表端点忽略 topic_id（同维度 OR 语义不变）"
     );
 
@@ -270,76 +415,31 @@ fn shelf_sections_are_bounded_and_browse_filters_are_and() {
 }
 
 #[test]
-fn html_validation_matches_product_and_preserves_failed_edits() {
+fn direct_article_writes_are_retired_without_mutating_content() {
     let mut server = Server::start(&["--listen", "127.0.0.1:0", "--scenario", "default"]);
     let port = server.port;
     let session = Some("html-validation");
-    let invalid = "<p class=\"author\">unsafe</p>";
-    let mut body = serde_json::json!({
-        "sceneCode": "admin.article_create", "title": "source title", "summary": "source summary",
-        "articleTypeId": 1, "termIds": [1], "contentHtml": invalid,
-        "status": "published", "htmlInspection": { "valid": true },
-    });
-    let rejected = post(port, "/api/admin/articles", &body.to_string(), session);
-    assert_eq!(rejected.status, 422);
-    assert_eq!(
-        assert_envelope(&rejected, "INVALID_ARTICLE_HTML")["data"]["htmlInspection"]["valid"],
-        false
-    );
-
-    let valid = "<p><a href=\"https://example.com\" target=\"_blank\" rel=\"noopener noreferrer\">reference</a></p>";
-    body["contentHtml"] = valid.into();
-    let saved = post(port, "/api/admin/articles", &body.to_string(), session);
-    assert_eq!(saved.status, 200);
-    let saved_data = saved.data();
-    let id = saved_data["id"].as_i64().unwrap();
-    assert_eq!(saved_data["status"], "draft");
-    assert_eq!(saved_data["contentHtml"], valid);
-    let detail_path = format!("/api/admin/articles?sceneCode=admin.article_detail&id={id}");
-    let mut invalid_update = body.clone();
-    body["sceneCode"] = "admin.article_update".into();
-    body["id"] = id.into();
-    invalid_update["sceneCode"] = "admin.article_update".into();
-    invalid_update["id"] = id.into();
-    invalid_update["contentHtml"] = invalid.into();
-    invalid_update["title"] = "must not persist".into();
-    let rejected = post(
-        port,
-        "/api/admin/articles",
-        &invalid_update.to_string(),
-        session,
-    );
-    assert_eq!(rejected.status, 422);
-    assert_eq!(
-        assert_envelope(&rejected, "INVALID_ARTICLE_HTML")["data"]["htmlInspection"]["valid"],
-        false
-    );
-    let stored = get_with(port, &detail_path, session).data();
-    assert_eq!(
-        stored, saved_data,
-        "failed update preserves the entire saved version"
-    );
-    assert_eq!(
-        post(port, "/api/admin/articles", &body.to_string(), session).status,
-        200
-    );
-    let publish = serde_json::json!({"sceneCode": "admin.article_publish", "id": id});
-    assert_eq!(
-        post(port, "/api/admin/articles", &publish.to_string(), session).status,
-        200
-    );
-    let rejected = post(
-        port,
-        "/api/admin/articles",
-        &invalid_update.to_string(),
-        session,
-    );
-    assert_eq!(rejected.status, 422);
-    let public_path = format!("/api/public/articles?sceneCode=public.article_detail&id={id}");
-    let public = get_with(port, &public_path, session).data();
-    assert_eq!(public["contentHtml"], valid);
-    assert_eq!(public["title"], "source title");
-    assert_eq!(public["status"], "published");
+    let before = get_with(port, &admin_list(), session).data();
+    for scene_code in [
+        "admin.article_create",
+        "admin.article_update",
+        "admin.article_publish",
+        "admin.article_unpublish",
+    ] {
+        let body = serde_json::json!({
+            "sceneCode": scene_code,
+            "id": 1,
+            "title": "must not persist",
+            "summary": "retired",
+            "articleTypeId": 1,
+            "termIds": [1],
+            "contentHtml": "<p>retired</p>"
+        });
+        let response = post(port, "/api/admin/articles", &body.to_string(), session);
+        assert_eq!(response.status, 410, "{scene_code}: {}", response.body);
+        assert_envelope(&response, "CONTENT_WRITE_RETIRED");
+    }
+    assert_eq!(get_with(port, &admin_list(), session).data(), before);
     let _ = server.signal("-TERM");
 }
 
@@ -576,7 +676,7 @@ fn scene_method_and_payload_errors_match_the_product_surface() {
     assert_eq!(response.status, 400);
     assert_envelope(&response, "INVALID_JSON");
 
-    // 领域错误码：摘要超限 422、名称冲突 409、非法状态迁移 409。
+    // 有效 JSON 进入旧写路径后统一退役，不再执行领域写入校验。
     let long = "字".repeat(161);
     let response = post(
         port,
@@ -587,8 +687,8 @@ fn scene_method_and_payload_errors_match_the_product_surface() {
         ),
         None,
     );
-    assert_eq!(response.status, 422);
-    assert_envelope(&response, "INVALID_SUMMARY");
+    assert_eq!(response.status, 410);
+    assert_envelope(&response, "CONTENT_WRITE_RETIRED");
 
     let response = post(
         port,
@@ -596,8 +696,8 @@ fn scene_method_and_payload_errors_match_the_product_surface() {
         &article_body("admin.article_type_create", r#""name":"Engineering""#),
         None,
     );
-    assert_eq!(response.status, 409);
-    assert_envelope(&response, "DUPLICATE_NAME");
+    assert_eq!(response.status, 410);
+    assert_envelope(&response, "CONTENT_WRITE_RETIRED");
 
     let response = post(
         port,
@@ -605,18 +705,18 @@ fn scene_method_and_payload_errors_match_the_product_surface() {
         &article_body("admin.article_publish", r#""id":12"#),
         None,
     );
-    assert_eq!(response.status, 409);
-    assert_envelope(&response, "INVALID_STATE_TRANSITION");
+    assert_eq!(response.status, 410);
+    assert_envelope(&response, "CONTENT_WRITE_RETIRED");
 
-    // 不存在的 term 重命名 → 404 ARTICLE_NOT_FOUND（Product 的对外码）。
+    // taxonomy 旧写路径使用同一个稳定退役码。
     let response = post(
         port,
         "/api/admin/terms",
         &article_body("admin.term_update", r#""id":999,"name":"nope""#),
         None,
     );
-    assert_eq!(response.status, 404);
-    assert_envelope(&response, "ARTICLE_NOT_FOUND");
+    assert_eq!(response.status, 410);
+    assert_envelope(&response, "CONTENT_WRITE_RETIRED");
 
     // 诊断端点：非业务路径，不受场景影响，描述 session 与请求计数。
     let response = get(port, "/mock/diagnostics");
@@ -628,9 +728,9 @@ fn scene_method_and_payload_errors_match_the_product_surface() {
     assert_eq!(diagnostics["session"]["namedCapacity"], 32);
     assert_eq!(diagnostics["unknownSessionPolicy"], "accept-and-seed");
     assert!(diagnostics["requests"]["apiTotal"].as_u64().unwrap() > 0);
-    assert!(
-        diagnostics["requests"]["writesAttempted"].as_u64().unwrap() > 0,
-        "writes that reached the session store are counted"
+    assert_eq!(
+        diagnostics["requests"]["writesAttempted"], 0,
+        "retired writes are rejected before the session store"
     );
 
     let status = server.signal("-INT");
@@ -638,7 +738,7 @@ fn scene_method_and_payload_errors_match_the_product_surface() {
 }
 
 #[test]
-fn sessions_isolate_state_and_keep_writes_visible_within_a_session() {
+fn retired_writes_leave_each_session_at_its_seed_state() {
     let mut server = Server::start(&["--listen", "127.0.0.1:0", "--scenario", "default"]);
     let port = server.port;
 
@@ -652,76 +752,38 @@ fn sessions_isolate_state_and_keep_writes_visible_within_a_session() {
         );
     }
 
-    // t1 创建并发布。
-    let response = post(
-        port,
-        "/api/admin/articles",
-        &article_body(
-            "admin.article_create",
-            r#""title":"session t1 article","summary":"only for t1","articleTypeId":1,"termIds":[3]"#,
+    for (session, path, body) in [
+        (
+            Some("t1"),
+            "/api/admin/articles",
+            article_body(
+                "admin.article_create",
+                r#""title":"retired","summary":"retired","articleTypeId":1,"termIds":[3]"#,
+            ),
         ),
-        Some("t1"),
-    );
-    assert_eq!(response.status, 200);
-    let created = response.data()["id"].as_i64().unwrap();
-    assert_eq!(created, 49, "ids continue the seed inside the session");
-
-    let response = post(
-        port,
-        "/api/admin/articles",
-        &article_body("admin.article_publish", &format!(r#""id":{created}"#)),
-        Some("t1"),
-    );
-    assert_eq!(response.status, 200);
-    assert_eq!(response.data()["status"], "published");
-
-    // t1：公开列表 +1 且新文章在最前；admin 列表可见。
-    let response = get_with(port, &public_list(100), Some("t1"));
-    assert_eq!(response.data()["total"], 46);
-    assert_eq!(response.data()["items"][0]["id"], created);
-
-    // t2 与匿名空间：完全不可见（跨 session 隔离）。
-    for session in [None, Some("t2")] {
-        let response = get_with(port, &public_list(100), session);
-        assert_eq!(
-            response.data()["total"],
-            45,
-            "session {session:?} must not see t1"
-        );
-        let response = get_with(port, &admin_list(), session);
-        assert_eq!(response.data()["total"], 48);
-        let response = get_with(
-            port,
-            "/api/public/articles?sceneCode=public.article_detail&id=49",
-            session,
-        );
-        assert_eq!(response.status, 404, "t1 的草稿对其他 session 不可见");
+        (
+            Some("t2"),
+            "/api/admin/article-types",
+            article_body("admin.article_type_create", r#""name":"retired""#),
+        ),
+        (
+            Some("t1"),
+            "/api/admin/recommendations",
+            article_body("admin.recommendation_generate", ""),
+        ),
+    ] {
+        let response = post(port, path, &body, session);
+        assert_eq!(response.status, 410, "{}", response.body);
+        assert_envelope(&response, "CONTENT_WRITE_RETIRED");
     }
 
-    // 刷新推荐：只在 t1 生效（跨请求状态 + session 隔离）。
-    let response = post(
-        port,
-        "/api/admin/recommendations",
-        &article_body("admin.recommendation_generate", ""),
-        Some("t1"),
-    );
-    assert_eq!(response.status, 200);
-    assert_eq!(response.data().as_array().unwrap().len(), 6);
-    let response = get_with(
-        port,
-        "/api/public/recommendations?sceneCode=public.recommendation_current",
-        Some("t1"),
-    );
-    assert_eq!(
-        response.data()[0]["id"],
-        49,
-        "newest published first after refresh"
-    );
-    let response = get(
-        port,
-        "/api/public/recommendations?sceneCode=public.recommendation_current",
-    );
-    assert_eq!(response.data()[0]["id"], 48, "anonymous keeps its own set");
+    for session in [None, Some("t1"), Some("t2")] {
+        assert_eq!(
+            get_with(port, &public_list(100), session).data()["total"],
+            45
+        );
+        assert_eq!(get_with(port, &admin_list(), session).data()["total"], 48);
+    }
 
     // 空白 session 值 = 匿名空间；未知 session id 被接受并从 seed 初始化。
     let response = get_with(port, &admin_list(), Some("   "));
@@ -737,13 +799,9 @@ fn sessions_isolate_state_and_keep_writes_visible_within_a_session() {
     let response = get(port, "/mock/diagnostics");
     let diagnostics = response.data();
     let named = diagnostics["session"]["named"].as_array().unwrap().clone();
-    assert_eq!(
-        named.len(),
-        3,
-        "t1, t2 and brand-new; anonymous is separate: {named:?}"
-    );
+    assert_eq!(named.len(), 3, "t1, t2 and brand-new: {named:?}");
     assert!(named.contains(&serde_json::json!("t1")));
-    assert_eq!(diagnostics["requests"]["writesAttempted"], 3);
+    assert_eq!(diagnostics["requests"]["writesAttempted"], 0);
 
     let status = server.signal("-TERM");
     assert!(status.success(), "clean exit expected, got {status:?}");

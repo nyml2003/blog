@@ -1,27 +1,51 @@
 import { createSignal, Show } from "solid-js";
 import { definePage } from "../../../../solid/page";
 import {
-  generateRecommendations,
-  useAdminArticles,
+  adminQueryErrorMessage,
+  stageContentArticleRemoval,
+  useContentArticles,
+  type ContentArticle,
 } from "../../../../solid/queries";
-import { AdminArticleTable, Header, Status } from "../../app";
+import { Header, Status, WorkspaceArticleTable } from "../../app";
 
 const App = () => {
-  const d = useAdminArticles();
-  const [busy, setBusy] = createSignal(false),
-    [msg, setMsg] = createSignal("");
-  const generate = async () => {
-    setBusy(true);
-    try {
-      const result = await generateRecommendations();
-      if (!result.ok) throw new Error(result.error.kind);
-      setMsg("推荐已更新");
-    } catch (e) {
-      setMsg((e as Error).message);
-    } finally {
-      setBusy(false);
+  const articles = useContentArticles();
+  const [busyArticleId, setBusyArticleId] = createSignal<number>();
+  const [message, setMessage] = createSignal("");
+  const [error, setError] = createSignal("");
+
+  const removeArticle = async (article: ContentArticle) => {
+    const current = articles.snapshot();
+    if (current === undefined || busyArticleId() !== undefined) return;
+    const confirmed = window.confirm(
+      `将《${article.title || "未命名文章"}》暂存下架到当前待提交批次？`,
+    );
+    if (!confirmed) return;
+    setBusyArticleId(article.id);
+    setMessage("");
+    setError("");
+    const result = await stageContentArticleRemoval(
+      current.version,
+      article.id,
+      () => true,
+    );
+    if (result === undefined) {
+      setBusyArticleId(undefined);
+      return;
     }
+    if (!result.ok) {
+      setError(adminQueryErrorMessage(result.error));
+      setBusyArticleId(undefined);
+      return;
+    }
+    setMessage("已暂存下架到待提交批次，公共内容尚未改变。");
+    const refreshed = await articles.refetch();
+    if (!refreshed.ok) {
+      setError("暂存下架已完成，但文章列表刷新失败，请刷新页面。");
+    }
+    setBusyArticleId(undefined);
   };
+
   return (
     <div class="shell">
       <Header admin />
@@ -30,20 +54,46 @@ const App = () => {
           <div>
             <p class="eyebrow">CONTENT WORKSPACE</p>
             <h1>文章管理</h1>
-            <p>维护草稿、发布状态和前台推荐内容。</p>
+            <p>编辑工作区文章，并在发布工作台统一预览和提交。</p>
           </div>
           <div class="actions">
-            <button onClick={generate} disabled={busy()}>
-              生成推荐
-            </button>
+            <a class="button" href="/admin/content/workspace.html">
+              发布工作台
+            </a>
             <a class="button primary" href="/admin/articles/new.html">
               新建文章
             </a>
           </div>
         </div>
-        <Status busy={busy()} ok={msg()} />
-        <Show when={d.snapshot()} fallback={<div class="state">加载中...</div>}>
-          <AdminArticleTable items={d.snapshot()?.items || []} />
+        <Status
+          busy={busyArticleId() !== undefined}
+          error={error()}
+          ok={message()}
+        />
+        <Show
+          when={articles.error() === undefined}
+          fallback={<div class="error">文章工作区加载失败</div>}
+        >
+          <Show
+            when={articles.snapshot()}
+            fallback={<div class="state">加载中...</div>}
+          >
+            {(value) => (
+              <>
+                <p class="muted">工作区版本 {value().version}</p>
+                <Show
+                  when={value().articles.length > 0}
+                  fallback={<div class="state">当前工作区没有文章</div>}
+                >
+                  <WorkspaceArticleTable
+                    items={value().articles}
+                    busyArticleId={busyArticleId()}
+                    onRemove={(article) => void removeArticle(article)}
+                  />
+                </Show>
+              </>
+            )}
+          </Show>
         </Show>
       </main>
     </div>

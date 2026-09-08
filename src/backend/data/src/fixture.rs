@@ -331,6 +331,96 @@ pub const ARTICLES: &[FixtureArticle] = &[
 /// 追加块的时间戳晚于头部，因此「最近更新」落在 id 43..=48。
 pub const RECOMMENDATION_ARTICLE_IDS: &[i64] = &[48, 47, 46, 45, 44, 43];
 
+/// Stable category-tree snapshot for Data test and in-memory semantics.
+pub fn content_snapshot() -> protocol::ContentSnapshot {
+    let categories = vec![
+        protocol::Category {
+            id: 1,
+            name: "Engineering".into(),
+            parent_id: None,
+            position: 10,
+        },
+        protocol::Category {
+            id: 2,
+            name: "Field Notes".into(),
+            parent_id: None,
+            position: 20,
+        },
+        protocol::Category {
+            id: 3,
+            name: "Rust".into(),
+            parent_id: Some(1),
+            position: 10,
+        },
+        protocol::Category {
+            id: 4,
+            name: "SQLite".into(),
+            parent_id: Some(1),
+            position: 20,
+        },
+        protocol::Category {
+            id: 5,
+            name: "Operations".into(),
+            parent_id: Some(2),
+            position: 10,
+        },
+        protocol::Category {
+            id: 6,
+            name: "Debugging".into(),
+            parent_id: Some(2),
+            position: 20,
+        },
+    ];
+    let tags = vec![
+        protocol::Tag {
+            id: 1,
+            name: "runtime".into(),
+        },
+        protocol::Tag {
+            id: 2,
+            name: "performance".into(),
+        },
+    ];
+    let articles = ARTICLES
+        .iter()
+        .map(|article| {
+            let category_ids = match article.article_type_id {
+                1 if article.id == 11 => vec![3, 4],
+                1 => vec![3],
+                2 => vec![5],
+                _ => vec![6],
+            };
+            protocol::ContentSnapshotArticle {
+                meta: protocol::ContentArticleMeta {
+                    id: article.id,
+                    title: article.title.into(),
+                    summary: article.summary.into(),
+                    category_ids,
+                    tag_ids: if article.term_ids.contains(&4) {
+                        vec![1]
+                    } else {
+                        Vec::new()
+                    },
+                    created_at: article.created_at.into(),
+                    updated_at: article.updated_at.into(),
+                    published_at: article.published_at.map(str::to_owned),
+                },
+                content_html: article.content_html.into(),
+            }
+        })
+        .collect();
+    protocol::ContentSnapshot {
+        taxonomy: protocol::Taxonomy {
+            version: 1,
+            next_category_id: 7,
+            next_tag_id: 3,
+            categories,
+            tags,
+        },
+        articles,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

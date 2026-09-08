@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://blog.local/schemas/taxonomy-v1.json",
+  "title": "Blog taxonomy v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "next_category_id", "next_tag_id", "categories", "tags"],
+  "properties": {
+    "version": { "const": 1 },
+    "next_category_id": { "type": "integer", "minimum": 1 },
+    "next_tag_id": { "type": "integer", "minimum": 1 },
+    "categories": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "parent_id", "position"],
+        "properties": {
+          "id": { "type": "integer", "minimum": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "parent_id": { "type": ["integer", "null"], "minimum": 1 },
+          "position": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name"],
+        "properties": {
+          "id": { "type": "integer", "minimum": 1 },
+          "name": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

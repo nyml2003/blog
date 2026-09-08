@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { spawn, execFile, type ChildProcess } from 'node:child_process';
 import { createServer, type Server } from 'node:net';
 import { request } from 'node:http';
-import { cp, mkdtemp, mkdir, readdir, readFile, rm, stat } from 'node:fs/promises';
+import { chmod, cp, mkdtemp, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -47,7 +47,7 @@ interface OpsErrorPayload {
   exitCode: number;
   error: { code: string; message: string; details: ReadonlyArray<Record<string, unknown>> };
 }
-interface HttpResponse { status: number; type: string; body: string }
+interface HttpResponse { status: number; type: string; location: string; body: string }
 interface DataDiagnostics {
   data: { semantics: string; query_count_total: number; database: { path: string; applied_migrations: number[]; seeded: boolean } | null };
 }
@@ -91,7 +91,12 @@ function http(
       (response) => {
         let body = '';
         response.on('data', (chunk) => { body += chunk; });
-        response.on('end', () => resolve({ status: response.statusCode ?? 0, type: String(response.headers['content-type'] ?? ''), body }));
+        response.on('end', () => resolve({
+          status: response.statusCode ?? 0,
+          type: String(response.headers['content-type'] ?? ''),
+          location: String(response.headers.location ?? ''),
+          body,
+        }));
       },
     );
     call.on('error', reject);
@@ -165,6 +170,27 @@ async function assertNoProcessLeftover(ports: number[], names: readonly ServiceN
 async function assertNoTempDb(dbFilesBefore: string[]): Promise<void> {
   const leftover = (await testDbFiles()).filter((file) => !dbFilesBefore.includes(file));
   assert.deepEqual(leftover, [], 'no temp sqlite file may survive a clean exit');
+}
+
+async function writeConfiguredAuthState(stateRoot: string): Promise<void> {
+  const directory = join(stateRoot, 'blog', 'admin-auth');
+  await mkdir(directory, { recursive: true, mode: 0o700 });
+  await chmod(directory, 0o700);
+  const files = new Map([
+    ['credentials.env', [
+      'BLOG_ADMIN_PASSWORD_HASH=$argon2id$v=19$m=65536,t=3,p=1$c2FsdHNhbHRzYWx0c2FsdA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+      'BLOG_ADMIN_TOTP_SECRET=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+      `BLOG_ADMIN_RUNTIME_DIR=${directory}`,
+      '',
+    ].join('\n')],
+    ['recovery-codes.json', '{"version":1,"algorithm":"sha256","digests":[]}\n'],
+    ['totp-replay.json', '{"version":1,"high_water_counter":null,"used_counters":[]}\n'],
+  ]);
+  for (const [name, content] of files) {
+    const path = join(directory, name);
+    await writeFile(path, content, { mode: 0o600 });
+    await chmod(path, 0o600);
+  }
 }
 
 /** LOG-001：真实运行里每一行都必须带唯一的稳定来源前缀。 */
@@ -265,7 +291,7 @@ test('MODE-002: backend --data mock serves from memory and never creates a sqlit
   const productPort = base;
   const dataPort = base + 1;
   const before = await testDbFiles();
-  const run = OpsRun.start(['runtime', 'backend', '--data', 'mock', '--product-port', String(productPort), '--data-port', String(dataPort), '--json']);
+  const run = OpsRun.start(['runtime', 'backend', '--content-source', 'fixture', '--data', 'mock', '--product-port', String(productPort), '--data-port', String(dataPort), '--json']);
   t.after(() => run.dispose());
 
   const payload = await run.ready();
@@ -281,13 +307,28 @@ test('MODE-002: backend --data mock serves from memory and never creates a sqlit
   assert.equal(diagnostics.data.database, null, 'mock semantics exposes no database object');
   assert.ok(run.errLines().some((line) => line.includes('sqlite disabled')), run.err());
 
-  const list = await jsonOf<{ code: string; data: { total: number } }>(productPort, '/api/public/articles?sceneCode=public.article_list&pageSize=3');
+  const list = await jsonOf<{ code: string; data: { total: number; items: unknown[] } }>(productPort, '/api/public/articles?sceneCode=public.article_list&pageSize=100');
   assert.equal(list.code, 'OK');
-  assert.equal(list.data.total, 9, 'mock semantics serves the same seed as the test database');
+  assert.ok(list.data.total > 0, 'the shared fixture seed must be non-empty');
+  assert.equal(list.data.items.length, list.data.total, 'the fixture fits inside the pageSize=100 probe');
 
   run.signal('SIGINT');
   assert.equal(await run.exit(), 130, 'SIGINT ends the mode with 130 (FAIL-006)');
   assertSingleSourcePrefix(run);
+  await assertNoProcessLeftover([dataPort, productPort], ['data', 'product']);
+  await assertNoTempDb(before);
+
+  const testRun = OpsRun.start(['runtime', 'backend', '--content-source', 'fixture', '--data', 'test', '--product-port', String(productPort), '--data-port', String(dataPort), '--json']);
+  t.after(() => testRun.dispose());
+  const testPayload = await testRun.ready();
+  const testList = await jsonOf<{ code: string; data: { total: number } }>(
+    serviceOf(testPayload, 'product').port,
+    '/api/public/articles?sceneCode=public.article_list&pageSize=100',
+  );
+  assert.equal(testList.code, 'OK');
+  assert.equal(testList.data.total, list.data.total, 'mock and test semantics use the same fixture seed');
+  testRun.signal('SIGINT');
+  assert.equal(await testRun.exit(), 130);
   await assertNoProcessLeftover([dataPort, productPort], ['data', 'product']);
   await assertNoTempDb(before);
 });
@@ -297,7 +338,7 @@ test('PLAN 验收 6: product→data calls and data→sqlite queries stay fixed w
   const productPort = base;
   const dataPort = base + 1;
   const before = await testDbFiles();
-  const run = OpsRun.start(['runtime', 'backend', '--data', 'test', '--product-port', String(productPort), '--data-port', String(dataPort), '--json']);
+  const run = OpsRun.start(['runtime', 'backend', '--content-source', 'fixture', '--data', 'test', '--product-port', String(productPort), '--data-port', String(dataPort), '--json']);
   t.after(() => run.dispose());
   const payload = await run.ready();
   const product = serviceOf(payload, 'product').port;
@@ -315,6 +356,7 @@ test('PLAN 验收 6: product→data calls and data→sqlite queries stay fixed w
 
   /** 记录格式（PLAN 验收 6）：request correlation × item_count × call count × query count。 */
   const records: string[] = ['| request | request_id (product→data) | item_count | product→data calls | data→sqlite queries |', '| --- | --- | --- | --- | --- |'];
+  const observedItemCounts = new Map<number, number>();
   for (const pageSize of [1, 3, 9]) {
     const queriesBefore = (await jsonOf<DataDiagnostics>(dataPort, '/data/v1/diagnostics')).data.query_count_total;
     const callsBefore = (await jsonOf<ProductDiagnostics>(product, '/product/diagnostics')).data.dataCallsTotal;
@@ -325,6 +367,7 @@ test('PLAN 验收 6: product→data calls and data→sqlite queries stay fixed w
       `/api/public/articles?sceneCode=public.article_list&page=1&pageSize=${pageSize}`,
     );
     const itemCount = response.data.items.length;
+    observedItemCounts.set(pageSize, itemCount);
 
     const queryDelta = (await jsonOf<DataDiagnostics>(dataPort, '/data/v1/diagnostics')).data.query_count_total - queriesBefore;
     const callDelta = (await jsonOf<ProductDiagnostics>(product, '/product/diagnostics')).data.dataCallsTotal - callsBefore;
@@ -350,7 +393,9 @@ test('PLAN 验收 6: product→data calls and data→sqlite queries stay fixed w
     records.push(`| GET /api/public/articles?pageSize=${pageSize} | ${correlation[0]} | ${itemCount} | ${callDelta} | ${queryDelta} |`);
   }
   const table = records.join('\n');
-  for (const [pageSize, itemCount] of [[1, 1], [3, 3], [9, 9]] as const) {
+  for (const pageSize of [1, 3, 9]) {
+    const itemCount = observedItemCounts.get(pageSize);
+    assert.notEqual(itemCount, undefined, `missing observation for pageSize=${pageSize}`);
     assert.match(
       table,
       new RegExp(`\\| GET /api/public/articles\\?pageSize=${pageSize} \\| product-list-\\d+ \\| ${itemCount} \\| 1 \\| 3 \\|`),
@@ -369,7 +414,7 @@ test('MODE-003: every run gets a fresh temp sqlite with the same seed and delete
   const runs: Array<{ pid: number; titles: string }> = [];
   for (let round = 0; round < 2; round += 1) {
     const base = await freeWindow(2);
-    const run = OpsRun.start(['runtime', 'backend', '--data', 'test', '--product-port', String(base), '--data-port', String(base + 1), '--json']);
+    const run = OpsRun.start(['runtime', 'backend', '--content-source', 'fixture', '--data', 'test', '--product-port', String(base), '--data-port', String(base + 1), '--json']);
     t.after(() => run.dispose());
     const payload = await run.ready();
 
@@ -381,7 +426,7 @@ test('MODE-003: every run gets a fresh temp sqlite with the same seed and delete
       serviceOf(payload, 'product').port,
       '/api/public/articles?sceneCode=public.article_list&pageSize=100',
     );
-    assert.equal(page.data.items.length, 9, 'stable seed: 9 published articles on every run');
+    assert.ok(page.data.items.length > 0, 'the stable fixture seed must be non-empty');
     runs.push({ pid: run.pid(), titles: JSON.stringify(page.data.items.map((item) => [item.id, item.title])) });
 
     run.signal('SIGINT');
@@ -401,7 +446,7 @@ test('PORT-002/PORT-005: a busy candidate increments once and printed, injected 
   const productPort = base + 2;
   const blocker = await hold(dataPort);
   const before = await testDbFiles();
-  const run = OpsRun.start(['runtime', 'backend', '--data', 'test', '--data-port', String(dataPort), '--product-port', String(productPort), '--json']);
+  const run = OpsRun.start(['runtime', 'backend', '--content-source', 'fixture', '--data', 'test', '--data-port', String(dataPort), '--product-port', String(productPort), '--json']);
   t.after(async () => { blocker.close(); await run.dispose(); });
 
   try {
@@ -466,40 +511,65 @@ test('PORT-002/PORT-005 + ENV-001 + MODE-001: dev injects the incremented mock a
     assert.equal(page.status, 200);
     const envelope = JSON.parse(page.body) as { code: string; data: { total: number; items: Array<{ id: number }> } };
     assert.equal(envelope.code, 'OK');
-    assert.equal(envelope.data.total, 9);
+    assert.ok(envelope.data.total > 0, 'the default Mock fixture must be non-empty');
+    const fixtureTotal = envelope.data.total;
 
-    // MODE-001：显式 session 在 dev 链路上跨请求保持状态（创建 → 发布 → 公开可见）。
+    // MODE-001：显式 session 在 dev 链路上跨请求保持 workspace 状态，并与匿名调用隔离。
     const session = { 'content-type': 'application/json', 'x-blog-mock-session': 'testing-e2e' };
-    const admin = '/api/admin/articles';
-    const created = await http(webPort, admin, 'POST', {
+    const articlePath = '/api/admin/content/articles';
+    const created = await http(webPort, articlePath, 'POST', {
       headers: session,
       body: JSON.stringify({
-        sceneCode: 'admin.article_create',
-        title: 'dev 链路验收',
-        summary: 'dev 链路验收摘要',
-        articleTypeId: 2,
-        termIds: [3],
-        contentHtml: '<p>dev</p>',
+        sceneCode: 'admin.content_article_save',
+        expectedVersion: 0,
+        article: {
+          title: 'dev 链路验收',
+          summary: 'dev 链路验收摘要',
+          categoryIds: [],
+          tagIds: [],
+          contentHtml: '<p>dev</p>',
+        },
       }),
     });
     assert.equal(created.status, 200, created.body);
-    const draft = JSON.parse(created.body) as { data: { id: number; status: string } };
-    assert.equal(draft.data.status, 'draft');
-    const published = await http(webPort, admin, 'POST', {
-      headers: session,
-      body: JSON.stringify({ sceneCode: 'admin.article_publish', id: draft.data.id }),
-    });
-    assert.equal(published.status, 200, published.body);
-    assert.equal((JSON.parse(published.body) as { data: { status: string } }).data.status, 'published');
+    const draft = JSON.parse(created.body) as {
+      data: { workspace: { version: number }; article: { id: number; title: string } };
+    };
+    assert.equal(draft.data.workspace.version, 1);
+    assert.equal(draft.data.article.title, 'dev 链路验收');
 
-    const withSession = JSON.parse(
-      (await http(webPort, '/api/public/articles?sceneCode=public.article_list&pageSize=100', 'GET', { headers: session })).body,
-    ) as { data: { total: number; items: Array<{ id: number }> } };
-    assert.equal(withSession.data.total, 10, 'the session sees its own published article');
+    const withSession = await http(
+      webPort,
+      `${articlePath}?sceneCode=admin.content_article_detail&id=${draft.data.article.id}`,
+      'GET',
+      { headers: session },
+    );
+    assert.equal(withSession.status, 200, withSession.body);
+    const detail = JSON.parse(withSession.body) as {
+      data: { version: number; article: { id: number; title: string } };
+    };
+    assert.equal(detail.data.version, 1);
+    assert.equal(detail.data.article.id, draft.data.article.id);
+    assert.equal(detail.data.article.title, 'dev 链路验收');
+
+    const anonymousWorkspace = await http(
+      webPort,
+      '/api/admin/content/workspace?sceneCode=admin.content_workspace',
+    );
+    assert.equal(anonymousWorkspace.status, 200, anonymousWorkspace.body);
+    assert.equal(
+      (JSON.parse(anonymousWorkspace.body) as { data: { version: number } }).data.version,
+      0,
+      'another caller without the session header keeps the untouched workspace',
+    );
     const anonymous = JSON.parse(
       (await http(webPort, '/api/public/articles?sceneCode=public.article_list&pageSize=100')).body,
     ) as { data: { total: number } };
-    assert.equal(anonymous.data.total, 9, 'another caller without the session header does not see it');
+    assert.equal(
+      anonymous.data.total,
+      fixtureTotal,
+      'another caller without the session header sees the unchanged fixture total',
+    );
 
     assert.ok(!run.err().includes('9999'), 'the caller-provided origin is overridden, never leaked (ENV-001)');
 
@@ -518,7 +588,7 @@ test('PORT-003: a full candidate window ends in 20/PORT_EXHAUSTED and stops the 
   const squatted = Array.from({ length: 10 }, (_, index) => base + 1 + index);
   const blockers = await Promise.all(squatted.map((port) => hold(port)));
   const before = await testDbFiles();
-  const run = OpsRun.start(['runtime', 'backend', '--data', 'test', '--data-port', String(dataPort), '--product-port', String(squatted[0]), '--json']);
+  const run = OpsRun.start(['runtime', 'backend', '--content-source', 'fixture', '--data', 'test', '--data-port', String(dataPort), '--product-port', String(squatted[0]), '--json']);
   t.after(async () => { for (const blocker of blockers) blocker.close(); await run.dispose(); });
 
   try {
@@ -549,7 +619,7 @@ test('FAIL-005: a service killed while running stops the mode with 20/CHILD_EXIT
   const productPort = base;
   const dataPort = base + 1;
   const before = await testDbFiles();
-  const run = OpsRun.start(['runtime', 'backend', '--data', 'test', '--product-port', String(productPort), '--data-port', String(dataPort), '--json']);
+  const run = OpsRun.start(['runtime', 'backend', '--content-source', 'fixture', '--data', 'test', '--product-port', String(productPort), '--data-port', String(dataPort), '--json']);
   t.after(() => run.dispose());
   const payload = await run.ready();
   const product = serviceOf(payload, 'product').port;
@@ -587,7 +657,7 @@ test('FAIL-003 + CMD-008: a missing service binary is a real 20/SERVICE_START_FA
   await mkdir(join(home, 'ops'), { recursive: true });
   await cp(join(root, 'ops', 'src'), join(home, 'ops', 'src'), { recursive: true });
 
-  const child = spawn(process.execPath, ['--experimental-strip-types', join(home, 'ops', 'src', 'interface', 'cli.ts'), 'runtime', 'backend', '--data', 'mock', '--product-port', '8080', '--data-port', '8081', '--json'], {
+  const child = spawn(process.execPath, ['--experimental-strip-types', join(home, 'ops', 'src', 'interface', 'cli.ts'), 'runtime', 'backend', '--content-source', 'fixture', '--data', 'mock', '--product-port', '8080', '--data-port', '8081', '--json'], {
     cwd: home, stdio: ['ignore', 'pipe', 'pipe'],
   });
   let out = '';
@@ -613,7 +683,7 @@ test('FAIL-003 + CMD-008: a missing service binary is a real 20/SERVICE_START_FA
 test('MODE-003/FAIL-009: SIGTERM ends the mode with 143 and data drains in the contractual order', gate(PROCESS_TIER), async (t) => {
   const base = await freeWindow(2);
   const before = await testDbFiles();
-  const run = OpsRun.start(['runtime', 'backend', '--data', 'test', '--product-port', String(base), '--data-port', String(base + 1), '--json']);
+  const run = OpsRun.start(['runtime', 'backend', '--content-source', 'fixture', '--data', 'test', '--product-port', String(base), '--data-port', String(base + 1), '--json']);
   t.after(() => run.dispose());
   const payload = await run.ready();
   const dbPath = join(testDbDir, `${run.pid()}.db`);
@@ -645,7 +715,7 @@ test('MODE-001/PLAN 验收 1: dev --scenario empty switches the named scenario o
   const payload = await run.ready();
   assert.deepEqual(payload.services.map((entry) => entry.service), ['mock', 'web']);
   assert.ok(
-    run.errLines().some((line) => line.startsWith(`[mock] starting scenario=empty listen=127.0.0.1:${mockPort}`)),
+    run.errLines().some((line) => line.startsWith(`[mock] starting scenario=empty admin_auth=bypass listen=127.0.0.1:${mockPort}`)),
     run.err(),
   );
   const page = await http(webPort, '/api/public/articles?sceneCode=public.article_list');
@@ -667,7 +737,13 @@ test('MODE-004 + SPIKE-001: integration mounts web/dist and serves pages, assets
   const productPort = base;
   const dataPort = base + 1;
   const before = await testDbFiles();
-  const run = OpsRun.start(['runtime', 'integration', '--product-port', String(productPort), '--data-port', String(dataPort), '--json']);
+  const authStateRoot = await mkdtemp(join(tmpdir(), 'ops-auth-configured-'));
+  t.after(() => rm(authStateRoot, { recursive: true, force: true }));
+  await writeConfiguredAuthState(authStateRoot);
+  const run = OpsRun.start(
+    ['runtime', 'integration', '--content-source', 'fixture', '--product-port', String(productPort), '--data-port', String(dataPort), '--json'],
+    { XDG_STATE_HOME: authStateRoot },
+  );
   t.after(() => run.dispose());
 
   const payload = await run.ready(180_000);
@@ -690,13 +766,31 @@ test('MODE-004 + SPIKE-001: integration mounts web/dist and serves pages, assets
   assert.equal(diagnostics.data.webDirMounted, true, 'product mounts web/dist in integration mode');
 
   // 静态挂载路由契约 ①：精确映射（含无尾斜杠目录变体）→ 200 text/html。
-  for (const path of ['/', '/m', '/m/', '/admin', '/admin/']) {
+  for (const path of ['/', '/m', '/m/']) {
     const page = await http(productPort, path);
     assert.equal(page.status, 200, `path=${path}`);
     assert.match(page.type, /text\/html/, `path=${path}`);
   }
+  for (const [path, location] of [
+    ['/admin', '/admin/login.html?next=%2Fadmin'],
+    ['/admin/', '/admin/login.html?next=%2Fadmin%2F'],
+    ['/admin/articles/edit', '/admin/login.html?next=%2Fadmin%2Farticles%2Fedit'],
+  ]) {
+    const page = await http(productPort, path);
+    assert.equal(page.status, 302, `path=${path}`);
+    assert.equal(page.location, location, `path=${path}`);
+  }
+  const loginPage = await http(productPort, '/admin/login.html');
+  assert.equal(loginPage.status, 200);
+  assert.match(loginPage.type, /text\/html/);
+  const anonymousAdmin = await http(
+    productPort,
+    '/api/admin/content/workspace?sceneCode=admin.content_workspace',
+  );
+  assert.equal(anonymousAdmin.status, 401);
+  assert.equal((JSON.parse(anonymousAdmin.body) as { code: string }).code, 'ADMIN_AUTH_REQUIRED');
   // ②：不做 SPA 回退 —— 未知路径、深层刷新、未映射目录、缺失资源一律 404 text/plain。
-  for (const path of ['/nope', '/admin/articles/edit', '/articles', '/assets/missing.js', '/assets/']) {
+  for (const path of ['/nope', '/articles', '/assets/missing.js', '/assets/']) {
     const page = await http(productPort, path);
     assert.equal(page.status, 404, `path=${path}`);
     assert.match(page.type, /text\/plain/, `path=${path}`);
@@ -714,12 +808,32 @@ test('MODE-004 + SPIKE-001: integration mounts web/dist and serves pages, assets
   assert.equal((await http(productPort, asset)).status, 200, `asset ${asset}`);
   const api = await jsonOf<{ code: string; data: { total: number } }>(productPort, '/api/public/articles?sceneCode=public.article_list&pageSize=3');
   assert.equal(api.code, 'OK');
-  assert.equal(api.data.total, 9, 'same-origin /api reaches Data(test)');
+  assert.ok(api.data.total > 0, 'same-origin /api reaches the non-empty Data(test) fixture');
 
   run.signal('SIGINT');
   assert.equal(await run.exit(30_000), 130);
   await assertNoProcessLeftover([dataPort, productPort], ['data', 'product']);
   await assertNoTempDb(before);
+
+  const missingBase = await freeWindow(2);
+  const missingStateRoot = await mkdtemp(join(tmpdir(), 'ops-auth-missing-'));
+  t.after(() => rm(missingStateRoot, { recursive: true, force: true }));
+  const missingRun = OpsRun.start(
+    ['runtime', 'backend', '--content-source', 'fixture', '--data', 'mock', '--product-port', String(missingBase), '--data-port', String(missingBase + 1), '--json'],
+    { XDG_STATE_HOME: missingStateRoot },
+  );
+  t.after(() => missingRun.dispose());
+  await missingRun.ready();
+  assert.equal((await http(missingBase, '/healthz')).status, 200, 'public health remains available');
+  const unavailableAdmin = await http(
+    missingBase,
+    '/api/admin/content/workspace?sceneCode=admin.content_workspace',
+  );
+  assert.equal(unavailableAdmin.status, 503);
+  assert.equal((JSON.parse(unavailableAdmin.body) as { code: string }).code, 'ADMIN_AUTH_UNAVAILABLE');
+  missingRun.signal('SIGINT');
+  assert.equal(await missingRun.exit(), 130);
+  await assertNoProcessLeftover([missingBase, missingBase + 1], ['data', 'product']);
 });
 
 test('PLAN 验收 7: delivery build produces web/dist and the rust binaries and never a go artifact', gate(BUILD_TIER), async () => {

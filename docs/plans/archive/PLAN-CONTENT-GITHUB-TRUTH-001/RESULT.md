@@ -4,7 +4,7 @@ plan_id: PLAN-CONTENT-GITHUB-TRUTH-001
 status: archived
 outcome: partial
 archived: 2026-09-07
-last_reviewed: 2026-09-07
+last_reviewed: 2026-09-08
 ---
 
 # 归档结果
@@ -35,3 +35,14 @@ last_reviewed: 2026-09-07
 五条工作流均结束在途状态，三条后端工作流部分交付，编辑器与运行交付工作流未实施。后续若继续，应依据本结果和各工作流写集重新安排；本次不自动建立新计划，也不把剩余需求视为取消。
 
 计划索引中的内容生产闭环发布门槛保持未完成。归档不改变“有错误不允许发布”的要求，也不代表生产发布、GitHub 推送或部署批准。
+
+## 后续计划补充（2026-09-08）
+
+`PLAN-CONTENT-TAXONOMY-001` 后续补齐了本结果“未完成”中列出的生产 GitHub transport、
+Data 快照事务、工作区恢复、管理 HTTP/鉴权接入、真实 PR/sync 和浏览器证据。该后续计划
+当前处于 acceptance，真实结果与尚待用户确认的项目见其
+[EVIDENCE.md](../../active/PLAN-CONTENT-TAXONOMY-001/EVIDENCE.md) 和
+[ACCEPTANCE.md](../../active/PLAN-CONTENT-TAXONOMY-001/ACCEPTANCE.md)。
+
+本补充只记录后续交付，不追溯改变本计划在 2026-09-07 的 `outcome: partial`，也不代替
+用户对后续计划当前 PR 和最终产品行为的验收。

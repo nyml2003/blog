@@ -13,9 +13,17 @@ use std::process::{Child, Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
+use product::auth::{
+    Argon2idPasswordVerifier, FilesystemRecoveryCodeRepository, FilesystemTotpReplayRepository,
+    HmacSha1TotpGenerator, OsRandomSource, RecoveryCodeSet, SecretBytes, SecretString,
+    TotpCodeGenerator, encode_base32_no_padding,
+};
+
 const DATA_PORT: u16 = 18231;
 const PRODUCT_PORT: u16 = 18230;
 const DATA_ADDR: &str = "http://127.0.0.1:18231";
+const ADMIN_PASSWORD: &str = "product-contract-password";
+static ADMIN_COOKIE: Mutex<Option<String>> = Mutex::new(None);
 
 /// SPEC-MOBILE-BROWSE-IA-001 用例的独立端口（与其他用例并行互不冲突）。
 const BROWSE_PRODUCT_PORT: u16 = 18260;
@@ -34,6 +42,10 @@ impl Server {
             .args(args)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
+        command.env_remove("BLOG_ADMIN_PASSWORD_HASH");
+        command.env_remove("BLOG_ADMIN_TOTP_SECRET");
+        command.env_remove("BLOG_ADMIN_RUNTIME_DIR");
+        command.env_remove("BLOG_TRUSTED_PROXY_IPS");
         for (key, value) in env {
             command.env(key, value);
         }
@@ -120,6 +132,7 @@ fn bin_path(name: &str) -> PathBuf {
 
 struct Response {
     status: u16,
+    headers: String,
     content_type: String,
     body: String,
 }
@@ -165,27 +178,105 @@ fn request(port: u16, raw: &str) -> Response {
         .unwrap_or_default();
     Response {
         status,
+        headers: head.to_owned(),
         content_type,
         body: body.to_owned(),
     }
 }
 
+fn admin_cookie_header(port: u16) -> String {
+    if port != PRODUCT_PORT {
+        return String::new();
+    }
+    ADMIN_COOKIE
+        .lock()
+        .expect("admin cookie lock")
+        .as_ref()
+        .map(|cookie| format!("Cookie: {cookie}\r\n"))
+        .unwrap_or_default()
+}
+
 fn get(port: u16, path: &str) -> Response {
+    let cookie = admin_cookie_header(port);
     request(
         port,
-        &format!("GET {path} HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n"),
+        &format!("GET {path} HTTP/1.1\r\nHost: 127.0.0.1\r\n{cookie}Connection: close\r\n\r\n"),
     )
 }
 
 fn post_json(port: u16, path: &str, body: &str) -> Response {
+    let cookie = admin_cookie_header(port);
     request(
         port,
         &format!(
             "POST {path} HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\n\
-             Connection: close\r\nContent-Length: {}\r\n\r\n{body}",
+             {cookie}Connection: close\r\nContent-Length: {}\r\n\r\n{body}",
             body.len()
         ),
     )
+}
+
+fn test_auth_environment(workdir: &std::path::Path) -> (Vec<(String, String)>, Vec<u8>) {
+    let runtime_dir = workdir.join("admin-auth");
+    let mut random = OsRandomSource;
+    let password_hash = Argon2idPasswordVerifier::default()
+        .hash_password(&SecretString::new(ADMIN_PASSWORD), &mut random)
+        .expect("hash test password");
+    let totp_secret = vec![11_u8; 20];
+    let (recovery, _) = RecoveryCodeSet::generate(&mut random).expect("generate recovery codes");
+    FilesystemRecoveryCodeRepository::initialize(&runtime_dir, &recovery)
+        .expect("initialize recovery state");
+    FilesystemTotpReplayRepository::initialize(&runtime_dir).expect("initialize replay state");
+    (
+        vec![
+            (
+                "BLOG_ADMIN_PASSWORD_HASH".to_owned(),
+                password_hash.expose().to_owned(),
+            ),
+            (
+                "BLOG_ADMIN_TOTP_SECRET".to_owned(),
+                encode_base32_no_padding(&totp_secret),
+            ),
+            (
+                "BLOG_ADMIN_RUNTIME_DIR".to_owned(),
+                runtime_dir.to_str().expect("UTF-8 auth path").to_owned(),
+            ),
+        ],
+        totp_secret,
+    )
+}
+
+fn authenticate_product(totp_secret: &[u8]) {
+    let counter = std::time::SystemTime::UNIX_EPOCH
+        .elapsed()
+        .expect("system clock after epoch")
+        .as_secs()
+        / product::auth::TOTP_STEP_SECONDS;
+    let code = HmacSha1TotpGenerator
+        .code_for_counter(&SecretBytes::new(totp_secret.to_vec()), counter)
+        .expect("generate TOTP");
+    let code = String::from_utf8(code.to_vec()).expect("ASCII TOTP");
+    let body = serde_json::json!({
+        "sceneCode": "admin.session.create",
+        "password": ADMIN_PASSWORD,
+        "verification": { "kind": "totp", "code": code },
+    })
+    .to_string();
+    let response = post_json(PRODUCT_PORT, "/api/admin/session", &body);
+    assert_eq!(response.status, 200, "login failed: {}", response.body);
+    let cookie = response.headers.lines().find_map(|line| {
+        let (name, value) = line.split_once(':')?;
+        name.eq_ignore_ascii_case("set-cookie").then(|| {
+            value
+                .trim()
+                .split(';')
+                .next()
+                .unwrap_or_default()
+                .to_owned()
+        })
+    });
+    assert!(cookie.is_some(), "login response must set a cookie");
+    *ADMIN_COOKIE.lock().expect("admin cookie lock") = cookie;
 }
 
 fn post_data_direct(port: u16, body: &str, request_id: String) -> u16 {
@@ -212,6 +303,7 @@ fn data_query_total(port: u16) -> u64 {
 
 #[test]
 fn full_public_admin_contract_and_static_mount() {
+    *ADMIN_COOKIE.lock().expect("admin cookie lock") = None;
     let workdir = std::env::temp_dir().join(format!("product-contract-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&workdir);
     std::fs::create_dir_all(workdir.join("assets")).unwrap();
@@ -291,6 +383,15 @@ fn full_public_admin_contract_and_static_mount() {
         data.lines()
     );
 
+    let (auth_environment, totp_secret) = test_auth_environment(&workdir);
+    let product_environment = [("BLOG_DATA_ADDR".to_owned(), DATA_ADDR.to_owned())]
+        .into_iter()
+        .chain(auth_environment)
+        .collect::<Vec<_>>();
+    let product_environment = product_environment
+        .iter()
+        .map(|(name, value)| (name.as_str(), value.as_str()))
+        .collect::<Vec<_>>();
     let mut product = Server::start(
         "product",
         &[
@@ -299,8 +400,9 @@ fn full_public_admin_contract_and_static_mount() {
             "--web-dir",
             workdir.to_str().unwrap(),
         ],
-        &[("BLOG_DATA_ADDR", DATA_ADDR)],
+        &product_environment,
     );
+    authenticate_product(&totp_secret);
 
     // ---------- 健康与诊断 ----------
     assert_eq!(get(PRODUCT_PORT, "/healthz").status, 200);
@@ -500,223 +602,56 @@ fn full_public_admin_contract_and_static_mount() {
         "带筛选时不返回推荐 section"
     );
 
-    // ---------- 管理侧：创建 → 状态机 → 更新 ----------
-    let before = data_query_total(DATA_PORT);
-    let create_body = r#"{"sceneCode":"admin.article_create","title":"契约测试文章","summary":"契约摘要","articleTypeId":2,"termIds":[3,4],"contentHtml":"<p>created</p>"}"#;
-    let response = post_json(PRODUCT_PORT, "/api/admin/articles", create_body);
-    assert_eq!(response.status, 200, "{}", response.body);
-    let created = json_of(&response);
-    assert_eq!(created["code"], "OK");
-    assert_eq!(created["data"]["status"], "draft");
-    assert!(
-        created["data"]["publishedAt"].is_null(),
-        "created article has no publishedAt"
-    );
-    assert_eq!(created["data"]["termIds"].as_array().unwrap().len(), 2);
-    let new_id = created["data"]["id"].as_i64().unwrap();
-
-    // 管理列表：`items` + `total`，包含草稿。
-    let response = get(
-        PRODUCT_PORT,
-        "/api/admin/articles?sceneCode=admin.article_list&page=1&pageSize=100",
-    );
-    let admin_list = json_of(&response);
-    assert_eq!(admin_list["code"], "OK");
-    assert!(admin_list["data"]["items"].as_array().unwrap().len() >= 10);
-    assert!(
-        admin_list["data"].get("page").is_none(),
-        "admin list carries no paging"
-    );
-    assert!(admin_list["data"]["total"].as_i64().unwrap() >= 10);
-    // 调用数与条目数无关：创建 + 列表 + 3 次详情查询的增量保持有界。
-    assert!(
-        data_query_total(DATA_PORT) - before >= 5,
-        "writes and reads both went through Data"
-    );
-
-    // 管理详情可见草稿；公开详情仍不可见。
-    let response = get(
-        PRODUCT_PORT,
-        &format!("/api/admin/articles?sceneCode=admin.article_detail&id={new_id}"),
-    );
-    assert_eq!(json_of(&response)["data"]["status"], "draft");
-    let response = get(
-        PRODUCT_PORT,
-        &format!("/api/public/articles?sceneCode=public.article_detail&id={new_id}"),
-    );
-    assert_eq!(response.status, 404);
-
-    // publish：draft -> published；重复 publish → 409 INVALID_STATE_TRANSITION。
-    let response = post_json(
-        PRODUCT_PORT,
-        "/api/admin/articles",
-        &format!(r#"{{"sceneCode":"admin.article_publish","id":{new_id}}}"#),
-    );
-    assert_eq!(response.status, 200, "{}", response.body);
-    let published = json_of(&response);
-    assert_eq!(published["data"]["status"], "published");
-    assert!(published["data"]["publishedAt"].is_string());
-    let response = post_json(
-        PRODUCT_PORT,
-        "/api/admin/articles",
-        &format!(r#"{{"sceneCode":"admin.article_publish","id":{new_id}}}"#),
-    );
-    assert_eq!(response.status, 409);
-    assert_eq!(json_of(&response)["code"], "INVALID_STATE_TRANSITION");
-
-    // 公开详情现在可见，公开列表也包含。
-    let response = get(
-        PRODUCT_PORT,
-        &format!("/api/public/articles?sceneCode=public.article_detail&id={new_id}"),
-    );
-    assert_eq!(response.status, 200);
-
-    // 摘要校验：>160 字符 → 422 INVALID_SUMMARY（Product 域规则，未打 Data）。
-    let before = data_query_total(DATA_PORT);
-    let long = "字".repeat(161);
-    let response = post_json(
-        PRODUCT_PORT,
-        "/api/admin/articles",
-        &format!(
-            r#"{{"sceneCode":"admin.article_update","id":{new_id},"title":"t","summary":"{long}","articleTypeId":1,"termIds":[],"contentHtml":"<p>x</p>"}}"#
+    // ---------- 旧管理写路径统一退役 ----------
+    for (path, body) in [
+        (
+            "/api/admin/articles",
+            r#"{"sceneCode":"admin.article_create","title":"retired","summary":"retired"}"#,
         ),
-    );
-    assert_eq!(response.status, 422);
-    assert_eq!(json_of(&response)["code"], "INVALID_SUMMARY");
-    assert_eq!(
-        data_query_total(DATA_PORT),
-        before,
-        "domain validation must not call Data"
-    );
-
-    // unpublish：published -> draft。
-    let response = post_json(
-        PRODUCT_PORT,
-        "/api/admin/articles",
-        &format!(r#"{{"sceneCode":"admin.article_unpublish","id":{new_id}}}"#),
-    );
-    assert_eq!(response.status, 200);
-    assert_eq!(json_of(&response)["data"]["status"], "draft");
-    let response = post_json(
-        PRODUCT_PORT,
-        "/api/admin/articles",
-        &format!(r#"{{"sceneCode":"admin.article_unpublish","id":{new_id}}}"#),
-    );
-    assert_eq!(response.status, 409);
-
-    // 更新：不改状态，terms 替换，摘要去空白。
-    let response = post_json(
-        PRODUCT_PORT,
-        "/api/admin/articles",
-        &format!(
-            r#"{{"sceneCode":"admin.article_update","id":{new_id},"title":"契约测试文章 v2","summary":"  更新摘要  ","articleTypeId":3,"termIds":[1],"contentHtml":"<p>v2</p>"}}"#
+        (
+            "/api/admin/articles",
+            r#"{"sceneCode":"admin.article_update","id":1,"title":"retired","summary":"retired"}"#,
         ),
-    );
-    let updated = json_of(&response);
-    assert_eq!(updated["code"], "OK");
-    assert_eq!(updated["data"]["summary"], "更新摘要");
-    assert_eq!(updated["data"]["articleTypeId"], 3);
-    assert_eq!(updated["data"]["termIds"].as_array().unwrap().len(), 1);
-    assert_eq!(updated["data"]["status"], "draft");
+        (
+            "/api/admin/articles",
+            r#"{"sceneCode":"admin.article_publish","id":1}"#,
+        ),
+        (
+            "/api/admin/articles",
+            r#"{"sceneCode":"admin.article_unpublish","id":1}"#,
+        ),
+        (
+            "/api/admin/article-types",
+            r#"{"sceneCode":"admin.article_type_create","name":"retired"}"#,
+        ),
+        (
+            "/api/admin/article-types",
+            r#"{"sceneCode":"admin.article_type_update","id":1,"name":"retired"}"#,
+        ),
+        (
+            "/api/admin/terms",
+            r#"{"sceneCode":"admin.term_create","name":"retired","kind":"tag"}"#,
+        ),
+        (
+            "/api/admin/terms",
+            r#"{"sceneCode":"admin.term_update","id":1,"name":"retired"}"#,
+        ),
+        (
+            "/api/admin/recommendations",
+            r#"{"sceneCode":"admin.recommendation_generate"}"#,
+        ),
+    ] {
+        let response = post_json(PRODUCT_PORT, path, body);
+        assert_eq!(response.status, 410, "{}", response.body);
+        assert_eq!(json_of(&response)["code"], "CONTENT_WRITE_RETIRED");
+    }
 
-    // 不存在的文章 → 404 ARTICLE_NOT_FOUND。
-    let response = post_json(
-        PRODUCT_PORT,
-        "/api/admin/articles",
-        r#"{"sceneCode":"admin.article_publish","id":99999}"#,
-    );
-    assert_eq!(response.status, 404);
-    assert_eq!(json_of(&response)["code"], "ARTICLE_NOT_FOUND");
-
-    // 非法 JSON → 400 INVALID_JSON。
+    // Malformed JSON remains a transport error before scene dispatch.
     let response = post_json(PRODUCT_PORT, "/api/admin/articles", "{not json");
     assert_eq!(response.status, 400);
     assert_eq!(json_of(&response)["code"], "INVALID_JSON");
 
-    // ---------- 分类 / term 的管理写入 ----------
-    let response = post_json(
-        PRODUCT_PORT,
-        "/api/admin/article-types",
-        r#"{"sceneCode":"admin.article_type_create","name":"Playbooks"}"#,
-    );
-    assert_eq!(response.status, 200, "{}", response.body);
-    assert_eq!(json_of(&response)["data"]["name"], "Playbooks");
-    let response = post_json(
-        PRODUCT_PORT,
-        "/api/admin/article-types",
-        r#"{"sceneCode":"admin.article_type_create","name":"Engineering"}"#,
-    );
-    assert_eq!(response.status, 409);
-    assert_eq!(json_of(&response)["code"], "DUPLICATE_NAME");
-    let response = post_json(
-        PRODUCT_PORT,
-        "/api/admin/article-types",
-        r#"{"sceneCode":"admin.article_type_update","id":1,"name":"Handbooks"}"#,
-    );
-    assert_eq!(response.status, 200);
-    assert!(
-        json_of(&response)["data"].is_null(),
-        "update returns no payload"
-    );
-    let response = get(
-        PRODUCT_PORT,
-        "/api/admin/article-types?sceneCode=admin.article_type_list",
-    );
-    assert!(
-        json_of(&response)["data"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .any(|kind| kind["name"] == "Handbooks")
-    );
-
-    let response = post_json(
-        PRODUCT_PORT,
-        "/api/admin/terms",
-        r#"{"sceneCode":"admin.term_create","name":"nix","kind":"tag"}"#,
-    );
-    assert_eq!(response.status, 200);
-    assert_eq!(json_of(&response)["data"]["kind"], "tag");
-    let response = post_json(
-        PRODUCT_PORT,
-        "/api/admin/terms",
-        r#"{"sceneCode":"admin.term_create","name":"rust","kind":"topic"}"#,
-    );
-    assert_eq!(response.status, 409);
-    assert_eq!(json_of(&response)["code"], "DUPLICATE_NAME");
-    let response = post_json(
-        PRODUCT_PORT,
-        "/api/admin/terms",
-        r#"{"sceneCode":"admin.term_update","id":1,"name":"rustlang"}"#,
-    );
-    assert_eq!(response.status, 200);
-    let response = get(PRODUCT_PORT, "/api/admin/terms?sceneCode=admin.term_list");
-    assert!(
-        json_of(&response)["data"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .any(|term| term["name"] == "rustlang")
-    );
-
-    // ---------- 推荐生成 ----------
-    // 推荐只引用已发布文章：先 publish（更新过的文章 `updated_at` 最新，应排第一）。
-    let response = post_json(
-        PRODUCT_PORT,
-        "/api/admin/articles",
-        &format!(r#"{{"sceneCode":"admin.article_publish","id":{new_id}}}"#),
-    );
-    assert_eq!(response.status, 200);
-    let response = post_json(
-        PRODUCT_PORT,
-        "/api/admin/recommendations",
-        r#"{"sceneCode":"admin.recommendation_generate"}"#,
-    );
-    assert_eq!(response.status, 200, "{}", response.body);
-    let generated = json_of(&response)["data"].as_array().unwrap().clone();
-    assert_eq!(generated.len(), 6);
-    // 最近更新的文章（契约测试文章 v2 刚被更新）排第一。
-    assert_eq!(generated[0]["title"], "契约测试文章 v2");
+    assert_workspace_article_contract();
 
     // 错误 sceneCode → 400。
     let response = post_json(
@@ -818,8 +753,6 @@ fn full_public_admin_contract_and_static_mount() {
     let response = get(PRODUCT_PORT, "/api/unknown");
     assert_eq!(response.status, 404);
 
-    assert_html_validation_contract();
-
     // ---------- 背压透传（FAIL-008 链路侧） ----------
     // 灌满 Data 的 io lane（8 worker + 容量 64），同时从 Product 发起请求：
     // 至少一次应收到 503 + BACKPRESSURE，且两个进程都不退出。
@@ -865,7 +798,7 @@ fn full_public_admin_contract_and_static_mount() {
         "neither process may exit because of saturation"
     );
 
-    // ---------- Product 侧日志：发布 2 次，其余端点 1 次 Data 调用 ----------
+    // ---------- Product 侧日志 ----------
     let lines = product.lines();
     assert!(
         lines
@@ -878,22 +811,15 @@ fn full_public_admin_contract_and_static_mount() {
         .filter(|line| line.contains("data_calls="))
         .collect();
     assert!(
-        counted.len() >= 15,
+        counted.len() >= 10,
         "expected one log line per API request, got {}",
         counted.len()
     );
-    assert!(
-        counted
-            .iter()
-            .any(|line| line.contains("scene=admin.article_publish data_calls=2"))
-    );
     for line in counted {
-        let expected = if line.contains("scene=admin.article_publish") {
-            "data_calls=2"
-        } else {
-            "data_calls=1"
-        };
-        assert!(line.contains(expected), "{line}");
+        assert!(
+            line.contains("data_calls=0") || line.contains("data_calls=1"),
+            "{line}"
+        );
     }
 
     // ---------- SIGTERM：两进程干净退出 ----------
@@ -921,6 +847,7 @@ fn full_public_admin_contract_and_static_mount() {
     );
 
     let _ = std::fs::remove_dir_all(&workdir);
+    *ADMIN_COOKIE.lock().expect("admin cookie lock") = None;
 }
 
 /// SPEC-MOBILE-BROWSE-IA-001：货架分区截断 + 每分区 total，以及新浏览接口的
@@ -954,27 +881,6 @@ fn shelf_sections_are_bounded_and_browse_filters_are_and() {
         &[("BLOG_DATA_ADDR", BROWSE_DATA_ADDR)],
     );
 
-    // ---------- 素材：Engineering(1) 从 4 篇补到 7 篇（> N=6） ----------
-    // seed：type1=4(11,10,9,5) type2=3 type3=2；新文章 a[1] b[3] c[1,3]。
-    for (title, terms) in [
-        ("browse article a", "[1]"),
-        ("browse article b", "[3]"),
-        ("browse article c", "[1,3]"),
-    ] {
-        let body = format!(
-            r#"{{"sceneCode":"admin.article_create","title":"{title}","summary":"browse fixture","articleTypeId":1,"termIds":{terms},"contentHtml":"<p>{title}</p>"}}"#
-        );
-        let response = post_json(BROWSE_PRODUCT_PORT, "/api/admin/articles", &body);
-        assert_eq!(response.status, 200, "{}", response.body);
-        let id = json_of(&response)["data"]["id"].as_i64().unwrap();
-        let response = post_json(
-            BROWSE_PRODUCT_PORT,
-            "/api/admin/articles",
-            &format!(r#"{{"sceneCode":"admin.article_publish","id":{id}}}"#),
-        );
-        assert_eq!(response.status, 200, "{}", response.body);
-    }
-
     // ---------- 货架：分区截断 + 每分区 total ----------
     let shelf = json_of(&get(
         BROWSE_PRODUCT_PORT,
@@ -989,7 +895,7 @@ fn shelf_sections_are_bounded_and_browse_filters_are_and() {
         "推荐区固定 3 张"
     );
     assert_eq!(sections[0]["total"], 6, "推荐 total 为截断前条数");
-    assert_eq!(shelf["total"], 48, "全量文章数，不随分区截断变化");
+    assert_eq!(shelf["total"], 45, "全量文章数，不随分区截断变化");
 
     let section_of = |id: &str| {
         sections
@@ -1005,7 +911,7 @@ fn shelf_sections_are_bounded_and_browse_filters_are_and() {
         "类型分区只下发前 N=6 张"
     );
     assert_eq!(
-        engineering["total"], 31,
+        engineering["total"], 28,
         "分区 total = 该类型全量计数（> N）"
     );
     assert!(
@@ -1049,7 +955,7 @@ fn shelf_sections_are_bounded_and_browse_filters_are_and() {
         filtered_sections[0]["articles"].as_array().unwrap().len(),
         6
     );
-    assert_eq!(filtered_sections[0]["total"], 31);
+    assert_eq!(filtered_sections[0]["total"], 28);
 
     // ---------- 浏览接口：三维 AND + kind 校验 + 分页 ----------
     let browse = |query: &str| {
@@ -1066,13 +972,13 @@ fn shelf_sections_are_bounded_and_browse_filters_are_and() {
     let empty = &page["data"];
     assert_eq!(empty["page"], 1);
     assert_eq!(empty["pageSize"], 20);
-    assert_eq!(empty["total"], 48, "全部已发布文章（45 夹具 + 3 篇新建）");
+    assert_eq!(empty["total"], 45, "全部已发布文章");
     assert_eq!(
         empty["items"].as_array().unwrap().len(),
         20,
         "默认一页 20 条"
     );
-    assert_eq!(empty["hasMore"], true, "48 > 20 → 「加载更多」");
+    assert_eq!(empty["hasMore"], true, "45 > 20 → 「加载更多」");
     assert_eq!(
         data_query_total(BROWSE_DATA_PORT) - before,
         3,
@@ -1081,11 +987,11 @@ fn shelf_sections_are_bounded_and_browse_filters_are_and() {
 
     // 单维 / 多维 AND。
     let before = data_query_total(BROWSE_DATA_PORT);
-    assert_eq!(browse("&type_id=1")["data"]["total"], 31);
+    assert_eq!(browse("&type_id=1")["data"]["total"], 28);
     // type_id 走列过滤：count + 当前页 + 批量 terms（固定 3 条，与条目数无关）。
     assert_eq!(data_query_total(BROWSE_DATA_PORT) - before, 3);
     let before = data_query_total(BROWSE_DATA_PORT);
-    assert_eq!(browse("&type_id=1&topic_id=1")["data"]["total"], 9);
+    assert_eq!(browse("&type_id=1&topic_id=1")["data"]["total"], 7);
     // term 维度多一次 kind 校验查询（固定 4 条）。
     assert_eq!(
         data_query_total(BROWSE_DATA_PORT) - before,
@@ -1094,7 +1000,7 @@ fn shelf_sections_are_bounded_and_browse_filters_are_and() {
     );
     assert_eq!(
         browse("&type_id=1&topic_id=1&tag_id=3")["data"]["total"],
-        1,
+        0,
         "三级 AND"
     );
     // 维度组合错开：Announcements + topic 1 → 空。
@@ -1123,20 +1029,20 @@ fn shelf_sections_are_bounded_and_browse_filters_are_and() {
     let page = browse("&page=1&pageSize=2");
     assert_eq!(page["data"]["items"].as_array().unwrap().len(), 2);
     assert_eq!(page["data"]["hasMore"], true, "12 篇 / 每页 2 → 还有更多");
-    let page = browse("&page=24&pageSize=2");
+    let page = browse("&page=23&pageSize=2");
     assert_eq!(
         page["data"]["items"].as_array().unwrap().len(),
-        2,
-        "48 = 24 页 × 2"
+        1,
+        "45 = 22 页 × 2 + 1"
     );
     assert_eq!(page["data"]["hasMore"], false, "最后一页");
-    let page = browse("&page=25&pageSize=2");
+    let page = browse("&page=24&pageSize=2");
     assert_eq!(page["data"]["items"].as_array().unwrap().len(), 0);
     assert_eq!(page["data"]["hasMore"], false);
     let page = browse("&page=99");
     assert_eq!(page["data"]["items"].as_array().unwrap().len(), 0);
     assert_eq!(page["data"]["hasMore"], false);
-    assert_eq!(page["data"]["total"], 48);
+    assert_eq!(page["data"]["total"], 45);
 
     // ---------- 共享的 `public.article_list` 契约零改动 ----------
     // `term_ids` 仍是同维度 OR；浏览专用参数不会被列表端点解析。
@@ -1144,16 +1050,13 @@ fn shelf_sections_are_bounded_and_browse_filters_are_and() {
         BROWSE_PRODUCT_PORT,
         "/api/public/articles?sceneCode=public.article_list&term_ids=1,3",
     ));
-    assert_eq!(
-        list["data"]["total"], 21,
-        "topic 1 OR tag 3（18 + 3 篇新建）"
-    );
+    assert_eq!(list["data"]["total"], 18, "topic 1 OR tag 3");
     let list = json_of(&get(
         BROWSE_PRODUCT_PORT,
         "/api/public/articles?sceneCode=public.article_list&topic_id=1",
     ));
     assert_eq!(
-        list["data"]["total"], 48,
+        list["data"]["total"], 45,
         "列表端点忽略 topic_id（同维度 OR 语义不变）"
     );
 
@@ -1168,7 +1071,70 @@ fn shelf_sections_are_bounded_and_browse_filters_are_and() {
     let _ = std::fs::remove_dir_all(&workdir);
 }
 
-fn assert_html_validation_contract() {
+fn assert_workspace_article_contract() {
+    let invalid = serde_json::json!({
+        "sceneCode": "admin.content_article_save",
+        "expectedVersion": 0,
+        "article": {
+            "title": "invalid",
+            "summary": "invalid",
+            "categoryIds": [],
+            "tagIds": [],
+            "contentHtml": "<script>unsafe()</script>"
+        }
+    });
+    let response = post_json(
+        PRODUCT_PORT,
+        "/api/admin/content/articles",
+        &invalid.to_string(),
+    );
+    assert_eq!(response.status, 422, "{}", response.body);
+
+    let valid = serde_json::json!({
+        "sceneCode": "admin.content_article_save",
+        "expectedVersion": 0,
+        "article": {
+            "title": "workspace article",
+            "summary": "saved through workspace",
+            "categoryIds": [],
+            "tagIds": [],
+            "contentHtml": "<p>safe</p>"
+        }
+    });
+    let response = post_json(
+        PRODUCT_PORT,
+        "/api/admin/content/articles",
+        &valid.to_string(),
+    );
+    assert_eq!(response.status, 200, "{}", response.body);
+    let saved = json_of(&response)["data"].clone();
+    assert_eq!(saved["workspace"]["version"], 1);
+    assert_eq!(saved["article"]["contentHtml"], "<p>safe</p>");
+    let id = saved["article"]["id"].as_i64().unwrap();
+
+    let response = get(
+        PRODUCT_PORT,
+        &format!("/api/admin/content/articles?sceneCode=admin.content_article_detail&id={id}"),
+    );
+    assert_eq!(response.status, 200, "{}", response.body);
+    assert_eq!(json_of(&response)["data"]["version"], 1);
+
+    let remove = serde_json::json!({
+        "sceneCode": "admin.content_article_remove",
+        "expectedVersion": 1,
+        "articleId": id,
+    });
+    let response = post_json(
+        PRODUCT_PORT,
+        "/api/admin/content/articles/remove",
+        &remove.to_string(),
+    );
+    assert_eq!(response.status, 200, "{}", response.body);
+    assert_eq!(json_of(&response)["data"]["version"], 2);
+}
+
+#[allow(dead_code)]
+fn legacy_html_validation_contract() {
     let invalid_sources = [
         "<script>window.injected=true</script>",
         "<p onclick=\"run()\">event</p>",

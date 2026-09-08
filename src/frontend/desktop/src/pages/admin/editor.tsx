@@ -1,206 +1,324 @@
-import { createEffect, createSignal, For, Show } from "solid-js";
 import {
+  createEffect,
+  createSignal,
+  For,
+  onCleanup,
+  onMount,
+  Show,
+} from "solid-js";
+import {
+  ADMIN_SESSION_EXPIRED_EVENT,
   adminQueryErrorMessage,
-  type AdminEditorArticle,
-  type QueryError as DataError,
-  type QueryReadonly as DeepReadonly,
-  saveAdminEditorArticle,
-  unpublishArticle,
-  useAdminArticleTypes,
-  useAdminEditorArticle,
-  useAdminTerms,
+  limitUnicodeScalars,
+  saveContentArticle,
+  unicodeScalarLength,
+  useContentArticle,
+  useContentWorkspace,
   useHtmlInspection,
+  type ContentArticle,
+  type QueryReadonly,
 } from "../../../../solid/queries";
 import type { HtmlInspection } from "../../../../common/validation/article-html";
-import { type Article, Header, qs, Status } from "../../app";
+import { Header, qs, Status } from "../../app";
 import { ArticleSourceEditor } from "./article-source-editor";
 import {
+  editorPageTitle,
   editorSnapshot,
   editorSnapshotsEqual,
+  valueForCurrentSource,
   type EditorSnapshot,
 } from "./editor-state";
+import {
+  clearEditorSessionDraft,
+  takeEditorSessionDraft,
+  writeEditorSessionDraft,
+} from "./editor-session-draft";
+
+const workspacePath = "/admin/content/workspace.html";
+
 export function Editor() {
   const initialId = qs().get("id");
-  const [currentId, setCurrentId] = createSignal(
-    initialId ? Number(initialId) : 0,
-  );
-  const loaded = useAdminEditorArticle(() => initialId);
-  const types = useAdminArticleTypes();
-  const terms = useAdminTerms();
+  const initialCreation = initialId === null || initialId === "";
+  const parsedInitialId =
+    initialId !== null && /^\d+$/.test(initialId) ? Number(initialId) : 0;
+  const [currentId, setCurrentId] = createSignal(parsedInitialId);
+  const articleResource = useContentArticle(() => initialId);
+  const workspace = useContentWorkspace();
+  const [version, setVersion] = createSignal(0);
   const [title, setTitle] = createSignal("");
   const [summary, setSummary] = createSignal("");
-  const [typeId, setTypeId] = createSignal("");
-  const [termIds, setTermIds] = createSignal<number[]>([]);
+  const [categoryIds, setCategoryIds] = createSignal<number[]>([]);
+  const [tagIds, setTagIds] = createSignal<number[]>([]);
   const [html, setHtml] = createSignal("");
-  const [status, setStatus] = createSignal<Article["status"]>("draft");
   const [busy, setBusy] = createSignal(false);
   const [message, setMessage] = createSignal("");
   const [error, setError] = createSignal("");
-  const [previewOpen, setPreviewOpen] = createSignal(false);
+  const [initialized, setInitialized] = createSignal(false);
   const [savedSnapshot, setSavedSnapshot] = createSignal<EditorSnapshot>();
   const [serverInspection, setServerInspection] = createSignal<{
-    source: string;
-    inspection: DeepReadonly<HtmlInspection>;
+    readonly source: string;
+    readonly inspection: QueryReadonly<HtmlInspection>;
   }>();
   const validation = useHtmlInspection(html);
   const inspection = () => {
     const server = serverInspection();
-    return server?.source === html() ? server.inspection : validation.current();
+    return valueForCurrentSource(
+      html(),
+      server === undefined
+        ? undefined
+        : { source: server.source, value: server.inspection },
+      validation.current(),
+    );
   };
   const validationError = () => {
     const failure = validation.resource.error();
     return failure !== undefined && "message" in failure ? failure.message : "";
   };
+  const taxonomy = () => workspace.snapshot()?.taxonomy;
+  const categories = () => taxonomy()?.categories ?? [];
+  const leafCategories = () => {
+    const values = categories();
+    const parentIds = new Set(
+      values.flatMap((category) =>
+        category.parentId === undefined ? [] : [category.parentId],
+      ),
+    );
+    return values.filter((category) => !parentIds.has(category.id));
+  };
+  const tags = () => taxonomy()?.tags ?? [];
+  const summaryLength = () => unicodeScalarLength(summary());
   const snapshot = () =>
     editorSnapshot({
       title: title(),
       summary: summary(),
-      typeId: Number(typeId()) || 0,
-      termIds: termIds(),
+      categoryIds: categoryIds(),
+      tagIds: tagIds(),
       contentHtml: html(),
     });
   const dirty = () => !editorSnapshotsEqual(savedSnapshot(), snapshot());
-  const savedInspection = () => {
-    const server = serverInspection();
-    return server?.source === html() ? server.inspection : undefined;
+  const loading = () =>
+    !initialized() &&
+    (workspace.loading() || (!initialCreation && articleResource.loading()));
+  const loadFailed = () =>
+    !initialized() &&
+    (workspace.error() !== undefined ||
+      (!initialCreation && articleResource.error() !== undefined));
+  const ready = () => {
+    if (!initialized() || loadFailed()) return false;
+    return true;
   };
-  const previewDisabled = () =>
-    busy() || !currentId() || dirty() || savedInspection()?.valid !== true;
-  const showFailure = (failure: DataError, source: string) => {
-    setError(adminQueryErrorMessage(failure));
-    if (failure.kind === "html-validation")
-      setServerInspection({ source, inspection: failure.htmlInspection });
+
+  const draftStorage = () => {
+    try {
+      return window.sessionStorage;
+    } catch {
+      return undefined;
+    }
   };
-  const rememberSavedArticle = (
-    article: AdminEditorArticle,
-    source: string,
-  ) => {
+  const returnPath = () => `${location.pathname}${location.search}`;
+
+  const rememberSavedArticle = (article: ContentArticle) => {
     setCurrentId(article.id);
-    setPreviewOpen(false);
-    setServerInspection({ source, inspection: article.htmlInspection });
+    setTitle(article.title);
+    setSummary(article.summary);
+    setCategoryIds([...article.categoryIds]);
+    setTagIds([...article.tagIds]);
+    setHtml(article.contentHtml);
+    setServerInspection(undefined);
     setSavedSnapshot(
       editorSnapshot({
         title: article.title,
-        summary: article.summary ?? "",
-        typeId: article.articleTypeId,
-        termIds: article.termIds,
+        summary: article.summary,
+        categoryIds: article.categoryIds,
+        tagIds: article.tagIds,
         contentHtml: article.contentHtml,
       }),
     );
-    if (!initialId)
-      history.replaceState(
-        null,
-        "",
-        `/admin/articles/edit.html?id=${article.id}`,
-      );
   };
-  let initialized = false;
+
+  const restoreSessionDraft = () => {
+    const draft = takeEditorSessionDraft(draftStorage(), returnPath());
+    if (draft === undefined) return;
+    setCurrentId(draft.values.id);
+    setVersion(draft.expectedVersion);
+    setTitle(draft.values.title);
+    setSummary(draft.values.summary);
+    setCategoryIds([...draft.values.categoryIds]);
+    setTagIds([...draft.values.tagIds]);
+    setHtml(draft.values.contentHtml);
+    setServerInspection(undefined);
+    setMessage("已恢复登录前未保存的文章内容。");
+  };
+
   createEffect(() => {
-    const value = loaded.snapshot();
-    if (!value || initialized) return;
-    setTitle(value.title);
-    setSummary(value.summary ?? "");
-    setTypeId(String(value.articleTypeId || ""));
-    setTermIds([...(value.termIds ?? [])]);
-    setHtml(value.contentHtml);
-    setStatus(value.status);
-    setServerInspection({
-      source: value.contentHtml,
-      inspection: value.htmlInspection,
-    });
-    setSavedSnapshot(
-      editorSnapshot({
-        title: value.title,
-        summary: value.summary ?? "",
-        typeId: value.articleTypeId,
-        termIds: value.termIds ?? [],
-        contentHtml: value.contentHtml,
-      }),
-    );
-    initialized = true;
+    if (initialized()) return;
+    const workspaceValue = workspace.snapshot();
+    if (workspaceValue === undefined) return;
+    if (initialCreation) {
+      setVersion(workspaceValue.version);
+      setSavedSnapshot(snapshot());
+      restoreSessionDraft();
+      setInitialized(true);
+      return;
+    }
+    const detail = articleResource.snapshot();
+    if (detail === undefined) return;
+    rememberSavedArticle(detail.article);
+    setVersion(detail.version);
+    restoreSessionDraft();
+    setInitialized(true);
   });
-  const save = async (publish = false) => {
-    if (busy() || (publish && inspection()?.valid !== true)) return;
+
+  onMount(() => {
+    let sessionRedirecting = false;
+    let navigationAccepted = false;
+    const persistForLogin = () => {
+      sessionRedirecting = true;
+      if (!initialized() || !dirty()) return;
+      writeEditorSessionDraft(draftStorage(), {
+        schemaVersion: 1,
+        returnPath: returnPath(),
+        expectedVersion: version(),
+        values: {
+          id: currentId(),
+          title: title(),
+          summary: summary(),
+          categoryIds: categoryIds(),
+          tagIds: tagIds(),
+          contentHtml: html(),
+        },
+      });
+    };
+    const protectUnload = (event: BeforeUnloadEvent) => {
+      if (
+        !initialized() ||
+        !dirty() ||
+        sessionRedirecting ||
+        navigationAccepted
+      ) {
+        return;
+      }
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    const protectNavigation = (event: MouseEvent) => {
+      if (!initialized() || !dirty()) return;
+      if (!(event.target instanceof Element)) return;
+      const navigation = event.target.closest("a, button.nav-logout");
+      if (navigation === null) return;
+      const confirmed = window.confirm(
+        "当前文章有未保存修改，确定离开编辑器？",
+      );
+      if (confirmed) {
+        navigationAccepted = true;
+        return;
+      }
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    };
+    window.addEventListener(ADMIN_SESSION_EXPIRED_EVENT, persistForLogin);
+    window.addEventListener("beforeunload", protectUnload);
+    document.addEventListener("click", protectNavigation, true);
+    onCleanup(() => {
+      window.removeEventListener(ADMIN_SESSION_EXPIRED_EVENT, persistForLogin);
+      window.removeEventListener("beforeunload", protectUnload);
+      document.removeEventListener("click", protectNavigation, true);
+    });
+  });
+
+  const toggleCategory = (id: number, checked: boolean) => {
+    if (checked) {
+      setCategoryIds((current) =>
+        current.includes(id) ? current : [...current, id],
+      );
+      return;
+    }
+    setCategoryIds((current) => current.filter((value) => value !== id));
+  };
+
+  const toggleTag = (id: number, checked: boolean) => {
+    if (checked) {
+      setTagIds((current) =>
+        current.includes(id) ? current : [...current, id],
+      );
+      return;
+    }
+    setTagIds((current) => current.filter((value) => value !== id));
+  };
+
+  const save = async () => {
+    if (busy() || !ready()) return;
     setBusy(true);
     setError("");
     setMessage("");
-    const source = html();
-    const outcome = await saveAdminEditorArticle(
+    const wasNew = currentId() === 0;
+    const result = await saveContentArticle(
+      version(),
       {
         id: currentId(),
         title: title(),
         summary: summary(),
-        articleTypeId: Number(typeId()),
-        termIds: termIds(),
-        contentHtml: source,
+        categoryIds: categoryIds(),
+        tagIds: tagIds(),
+        contentHtml: html(),
       },
-      publish,
+      validation.current(),
     );
-    if (outcome.kind === "save-failed") {
-      showFailure(outcome.error, source);
-      setBusy(false);
-      return;
-    }
-    rememberSavedArticle(outcome.savedArticle, source);
-    if (outcome.kind === "publish-failed") {
-      showFailure(outcome.error, source);
-      setBusy(false);
-      return;
-    }
-    setStatus(outcome.article.status);
-    setMessage(publish ? "文章已保存并发布" : "文章已保存");
-    setBusy(false);
-  };
-  const unpublish = async () => {
-    if (busy() || !currentId()) return;
-    setBusy(true);
-    setError("");
-    setMessage("");
-    const result = await unpublishArticle(currentId());
     if (!result.ok) {
-      showFailure(result.error, html());
+      if (result.error.kind === "html-validation") {
+        setServerInspection({
+          source: html(),
+          inspection: result.error.htmlInspection,
+        });
+      }
+      setError(adminQueryErrorMessage(result.error));
       setBusy(false);
       return;
     }
-    setStatus(result.value.status);
-    setPreviewOpen(false);
-    setServerInspection({
-      source: result.value.contentHtml,
-      inspection: result.value.htmlInspection,
-    });
-    setMessage("文章已取消发布并恢复为草稿");
+    rememberSavedArticle(result.value.article);
+    setVersion(result.value.workspace.version);
+    clearEditorSessionDraft(draftStorage());
+    if (wasNew) {
+      history.replaceState(
+        null,
+        "",
+        `/admin/articles/edit.html?id=${result.value.article.id}`,
+      );
+    }
+    setMessage("已保存到待提交批次。请前往发布工作台预览并提交。");
     setBusy(false);
   };
+
   return (
     <div class="shell">
       <Header admin />
       <main id="main" class="admin-page editor-page">
         <header class="admin-page-head">
           <div>
-            <p class="eyebrow">ARTICLE SOURCE</p>
-            <h1>{currentId() ? "编辑文章" : "新建文章"}</h1>
+            <p class="eyebrow">WORKSPACE ARTICLE</p>
+            <h1>{editorPageTitle(initialCreation, currentId())}</h1>
+            <p>保存会进入当前待提交批次，发布前请在工作台统一预览。</p>
           </div>
           <div class="actions">
-            <a
-              class="button"
-              href="/admin/editor-guide/index.html"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
+            <a class="button" href="/admin/editor-guide/index.html">
               使用指南
+            </a>
+            <a class="button" href={workspacePath}>
+              发布工作台
             </a>
           </div>
         </header>
-        <Show
-          when={loaded.status() !== "loading"}
-          fallback={<div class="state">加载中...</div>}
-        >
+        <Show when={!loading()} fallback={<div class="state">加载中...</div>}>
           <Show
-            when={loaded.status() !== "error"}
-            fallback={<div class="error">文章加载失败或不存在</div>}
+            when={!loadFailed()}
+            fallback={<div class="error">文章或工作区加载失败</div>}
           >
             <Status busy={busy()} error={error()} ok={message()} />
-            <fieldset class="editor-fields" aria-label="文章内容">
+            <fieldset
+              class="editor-fields"
+              aria-label="文章内容"
+              disabled={!ready()}
+            >
               <div class="editor-form">
                 <div class="editor-form-row">
                   <div class="field">
@@ -213,65 +331,62 @@ export function Editor() {
                     />
                   </div>
                   <div class="field">
-                    <label for="article-type">文章类型</label>
-                    <select
-                      id="article-type"
-                      disabled={busy()}
-                      value={typeId()}
-                      onChange={(event) => setTypeId(event.currentTarget.value)}
-                    >
-                      <option value="">请选择类型</option>
-                      <For each={types.snapshot() ?? []}>
-                        {(type) => <option value={type.id}>{type.name}</option>}
-                      </For>
-                    </select>
-                  </div>
-                </div>
-                <div class="editor-form-row editor-form-row-wide">
-                  <div class="field">
                     <label for="summary">摘要</label>
                     <textarea
                       id="summary"
                       disabled={busy()}
                       value={summary()}
-                      maxLength={160}
-                      rows={4}
-                      onInput={(event) => setSummary(event.currentTarget.value)}
+                      rows={3}
+                      onInput={(event) =>
+                        setSummary(
+                          limitUnicodeScalars(event.currentTarget.value, 160),
+                        )
+                      }
                       aria-describedby="summary-help"
                     />
                     <small id="summary-help">
-                      可选，{summary().length}/160 字
+                      可选，{summaryLength()}/160 字
                     </small>
                   </div>
+                </div>
+                <div class="editor-form-row editor-taxonomy-row">
                   <fieldset class="term-picker" disabled={busy()}>
-                    <legend>主题/标签</legend>
-                    <For each={terms.snapshot() ?? []}>
-                      {(term) => (
+                    <legend>分类</legend>
+                    <For each={leafCategories()}>
+                      {(category) => (
                         <label>
                           <input
                             type="checkbox"
-                            checked={termIds().includes(term.id)}
+                            checked={categoryIds().includes(category.id)}
                             onChange={(event) =>
-                              setTermIds(
-                                event.currentTarget.checked
-                                  ? [...termIds(), term.id]
-                                  : termIds().filter(
-                                      (value) => value !== term.id,
-                                    ),
+                              toggleCategory(
+                                category.id,
+                                event.currentTarget.checked,
                               )
                             }
                           />
-                          <span>{term.name}</span>
-                          <small>
-                            {term.kind === "topic" ? "主题" : "标签"}
-                          </small>
+                          <span>{category.name}</span>
                         </label>
                       )}
                     </For>
                   </fieldset>
-                  <p class={`status-${status()}`}>
-                    当前状态：{status() === "published" ? "已发布" : "草稿"}
-                  </p>
+                  <fieldset class="term-picker" disabled={busy()}>
+                    <legend>标签</legend>
+                    <For each={tags()}>
+                      {(tag) => (
+                        <label>
+                          <input
+                            type="checkbox"
+                            checked={tagIds().includes(tag.id)}
+                            onChange={(event) =>
+                              toggleTag(tag.id, event.currentTarget.checked)
+                            }
+                          />
+                          <span>{tag.name}</span>
+                        </label>
+                      )}
+                    </For>
+                  </fieldset>
                 </div>
               </div>
               <ArticleSourceEditor
@@ -291,66 +406,20 @@ export function Editor() {
               />
             </fieldset>
             <div class="actions editor-actions">
+              <span class="muted" role="status">
+                {dirty() ? "有未保存修改" : `工作区版本 ${version()}`}
+              </span>
+              <a class="button" href={workspacePath}>
+                预览待提交批次
+              </a>
               <button
                 type="button"
-                onClick={() => save(false)}
-                disabled={busy()}
+                class="primary"
+                onClick={() => void save()}
+                disabled={busy() || !ready()}
               >
-                保存
+                保存到待提交批次
               </button>
-              <Show
-                when={status() === "published"}
-                fallback={
-                  <button
-                    type="button"
-                    class="primary"
-                    onClick={() => save(true)}
-                    disabled={busy() || inspection()?.valid !== true}
-                  >
-                    保存并发布
-                  </button>
-                }
-              >
-                <button
-                  type="button"
-                  class="danger"
-                  onClick={unpublish}
-                  disabled={busy() || !currentId()}
-                >
-                  取消发布
-                </button>
-              </Show>
-              <div class="preview-menu">
-                <button
-                  type="button"
-                  aria-haspopup="menu"
-                  aria-expanded={previewOpen()}
-                  disabled={previewDisabled()}
-                  onClick={() => setPreviewOpen(!previewOpen())}
-                >
-                  端到端预览
-                </button>
-                <div
-                  class="preview-menu-items"
-                  role="menu"
-                  hidden={!previewOpen()}
-                >
-                  <a
-                    href={`/admin/articles/preview/desktop.html?id=${currentId()}`}
-                    role="menuitem"
-                    onClick={() => setPreviewOpen(false)}
-                  >
-                    桌面端预览
-                  </a>
-                  <a
-                    href={`/admin/articles/preview/mobile.html?id=${currentId()}`}
-                    role="menuitem"
-                    onClick={() => setPreviewOpen(false)}
-                  >
-                    移动端预览
-                  </a>
-                </div>
-              </div>
             </div>
           </Show>
         </Show>

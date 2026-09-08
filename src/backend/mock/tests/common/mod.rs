@@ -28,6 +28,7 @@ impl Server {
         let mut command = Command::new(env!("CARGO_BIN_EXE_mock"));
         command
             .args(args)
+            .args(["--admin-auth", "bypass"])
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
         for (name, value) in env {

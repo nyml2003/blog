@@ -3,7 +3,7 @@
 //! 进程参数（服务 binary 契约，供 `ops runtime dev` 调用）：
 //!
 //! ```text
-//! mock [--listen <IP:PORT>] [--scenario <NAME>]
+//! mock [--listen <IP:PORT>] [--scenario <NAME>] --admin-auth bypass
 //! ```
 //!
 //! **Mock 不读取任何环境变量**：场景选择没有 env / 配置文件回退（ENV-002），
@@ -22,10 +22,24 @@ pub const EXIT_RUN_FAILURE: u8 = 20;
 
 pub const DEFAULT_LISTEN: &str = "127.0.0.1:9090";
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AdminAuthMode {
+    Bypass,
+}
+
+impl AdminAuthMode {
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Bypass => "bypass",
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Cli {
     pub listen: SocketAddr,
     pub scenario: Scenario,
+    pub admin_auth: AdminAuthMode,
 }
 
 #[derive(Debug)]
@@ -43,6 +57,7 @@ impl Cli {
     {
         let mut listen: Option<SocketAddr> = None;
         let mut scenario: Option<Scenario> = None;
+        let mut admin_auth = None;
         let mut args = args.into_iter().peekable();
 
         while let Some(arg) = args.next() {
@@ -71,6 +86,15 @@ impl Cli {
                         ))
                     })?);
                 }
+                "--admin-auth" => {
+                    let value = args.next().ok_or_else(|| missing("--admin-auth"))?;
+                    if value != "bypass" {
+                        return Err(CliError::Usage(format!(
+                            "--admin-auth expects the explicit dev-only value 'bypass', got '{value}'"
+                        )));
+                    }
+                    admin_auth = Some(AdminAuthMode::Bypass);
+                }
                 other => {
                     return Err(CliError::Usage(format!(
                         "unknown option '{other}'; run `mock --help` for usage"
@@ -79,6 +103,9 @@ impl Cli {
             }
         }
 
+        let admin_auth = admin_auth.ok_or_else(|| {
+            CliError::Usage("--admin-auth bypass is required for the Mock Product API".to_owned())
+        })?;
         Ok(Self {
             listen: listen.unwrap_or_else(|| {
                 DEFAULT_LISTEN
@@ -86,6 +113,7 @@ impl Cli {
                     .expect("default listen address is valid")
             }),
             scenario: scenario.unwrap_or_default(),
+            admin_auth,
         })
     }
 }
@@ -106,6 +134,7 @@ pub fn usage() -> String {
          OPTIONS:\n    \
          --listen <IP:PORT>    Listen address (loopback only, default {DEFAULT_LISTEN})\n    \
          --scenario <NAME>     Named scenario (default {})\n    \
+         --admin-auth bypass   Explicitly disable auth in the dev-only Mock (required)\n    \
          -h, --help            Print this help\n\
          \n\
          SCENARIOS:\n    \
@@ -138,7 +167,7 @@ mod tests {
 
     #[test]
     fn defaults_are_scenario_default_and_loopback_9090() {
-        let cli = Cli::parse(args(&[])).expect("no args parse");
+        let cli = Cli::parse(args(&["--admin-auth", "bypass"])).expect("explicit bypass parse");
         assert_eq!(cli.scenario, Scenario::Default);
         assert_eq!(cli.listen.to_string(), DEFAULT_LISTEN);
     }
@@ -146,7 +175,8 @@ mod tests {
     #[test]
     fn accepts_every_named_scenario() {
         for name in scenario::names() {
-            let cli = Cli::parse(args(&["--scenario", name])).expect("known scenario");
+            let cli = Cli::parse(args(&["--scenario", name, "--admin-auth", "bypass"]))
+                .expect("known scenario");
             assert_eq!(cli.scenario.name(), *name);
         }
     }
@@ -168,7 +198,7 @@ mod tests {
         // ENV-002 的进程内一半：解析器没有任何环境回退，缺省恒为 default。
         // （环境变量存在时的完整观察见 tests/lifecycle.rs：以 SCENARIO=empty 启动，
         //   启动日志仍然是 scenario=default。）
-        let cli = Cli::parse(args(&[])).expect("no args parse");
+        let cli = Cli::parse(args(&["--admin-auth", "bypass"])).expect("explicit bypass parse");
         assert_eq!(cli.scenario, Scenario::Default);
     }
 
@@ -188,6 +218,11 @@ mod tests {
         ));
         assert!(matches!(
             Cli::parse(args(&["--scenario"])),
+            Err(CliError::Usage(_))
+        ));
+        assert!(matches!(Cli::parse(args(&[])), Err(CliError::Usage(_))));
+        assert!(matches!(
+            Cli::parse(args(&["--admin-auth", "enabled"])),
             Err(CliError::Usage(_))
         ));
         assert!(matches!(

@@ -1,4 +1,7 @@
 {
-  "article_types": [],
-  "terms": []
+  "version": 1,
+  "next_category_id": 1,
+  "next_tag_id": 1,
+  "categories": [],
+  "tags": []
 }

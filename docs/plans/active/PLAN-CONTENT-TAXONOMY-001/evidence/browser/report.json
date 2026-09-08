@@ -1,0 +1,121 @@
+{
+  "origin": "http://127.0.0.1:18080",
+  "startedAt": "2026-09-07T22:40:00.431Z",
+  "checks": [
+    {
+      "message": "login: page is visible",
+      "passed": true,
+      "detail": "管理台登录"
+    },
+    {
+      "message": "login: protected destination is preserved",
+      "passed": true,
+      "detail": "?next=%2Fadmin%2Fcontent%2Fworkspace.html"
+    },
+    {
+      "message": "login desktop: no horizontal overflow",
+      "passed": true,
+      "detail": {
+        "contentWidth": 1440,
+        "viewportWidth": 1440
+      }
+    },
+    {
+      "message": "login desktop: no page errors",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "message": "workspace: real active pull request is visible",
+      "passed": true
+    },
+    {
+      "message": "workspace: submitted state is visible",
+      "passed": true
+    },
+    {
+      "message": "workspace: authenticated navigation is visible",
+      "passed": true
+    },
+    {
+      "message": "workspace desktop: no horizontal overflow",
+      "passed": true,
+      "detail": {
+        "contentWidth": 1425,
+        "viewportWidth": 1425
+      }
+    },
+    {
+      "message": "workspace desktop: no page errors",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "message": "desktop public: no admin navigation is exposed",
+      "passed": true
+    },
+    {
+      "message": "desktop public: pending article is not exposed",
+      "passed": true
+    },
+    {
+      "message": "public desktop: no horizontal overflow",
+      "passed": true,
+      "detail": {
+        "contentWidth": 1440,
+        "viewportWidth": 1440
+      }
+    },
+    {
+      "message": "public desktop: no page errors",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "message": "mobile public: no admin navigation is exposed",
+      "passed": true
+    },
+    {
+      "message": "mobile public: pending article is not exposed",
+      "passed": true
+    },
+    {
+      "message": "public mobile: no horizontal overflow",
+      "passed": true,
+      "detail": {
+        "contentWidth": 390,
+        "viewportWidth": 390
+      }
+    },
+    {
+      "message": "public mobile: no page errors",
+      "passed": true,
+      "detail": []
+    }
+  ],
+  "pages": {
+    "login": {
+      "path": "/admin/login.html",
+      "search": "?next=%2Fadmin%2Fcontent%2Fworkspace.html",
+      "heading": "管理台登录"
+    },
+    "workspace": {
+      "path": "/admin/content/workspace.html",
+      "heading": "分类树与发布批次",
+      "activePullRequest": 2
+    },
+    "desktopPublic": {
+      "path": "/articles/index.html",
+      "heading": "全部文章",
+      "publishedArticle": "GitHub workflow acceptance"
+    },
+    "mobilePublic": {
+      "path": "/m/articles/detail.html",
+      "heading": "GitHub workflow acceptance",
+      "publishedArticle": "GitHub workflow acceptance"
+    }
+  },
+  "errors": [],
+  "completedAt": "2026-09-07T22:40:01.151Z",
+  "passed": true
+}

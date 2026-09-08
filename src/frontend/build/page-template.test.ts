@@ -37,6 +37,7 @@ const expectedRoutes = [
   ["/", "desktop/pages/public-home/index.html"],
   ["/articles/index.html", "desktop/pages/public-articles/index.html"],
   ["/articles/detail.html", "desktop/pages/public-detail/index.html"],
+  ["/admin/login.html", "desktop/pages/admin-login/index.html"],
   ["/admin", "desktop/pages/admin-home/index.html"],
   ["/admin/", "desktop/pages/admin-home/index.html"],
   ["/admin/index.html", "desktop/pages/admin-home/index.html"],
@@ -45,6 +46,10 @@ const expectedRoutes = [
   [
     "/admin/editor-guide/index.html",
     "desktop/pages/admin-editor-guide/index.html",
+  ],
+  [
+    "/admin/content/workspace.html",
+    "desktop/pages/admin-article-types/index.html",
   ],
   [
     "/admin/article-types/index.html",
@@ -71,15 +76,15 @@ const expectedRoutes = [
   ],
 ] as const;
 
-test("the registry covers 16 pages and the frozen 20 aliases", () => {
-  assert.equal(pageRegistry.length, 16);
+test("the registry covers 17 pages and the frozen 22 aliases", () => {
+  assert.equal(pageRegistry.length, 17);
   assert.deepEqual(
     pageRoutes().map((route) => [route.alias, route.outputPath]),
     expectedRoutes,
   );
-  assert.equal(new Set(pageRegistry.map((page) => page.id)).size, 16);
-  assert.equal(new Set(pageRegistry.map((page) => page.outputPath)).size, 16);
-  assert.equal(new Set(pageRoutes().map((route) => route.alias)).size, 20);
+  assert.equal(new Set(pageRegistry.map((page) => page.id)).size, 17);
+  assert.equal(new Set(pageRegistry.map((page) => page.outputPath)).size, 17);
+  assert.equal(new Set(pageRoutes().map((route) => route.alias)).size, 22);
   assert.doesNotThrow(() => JSON.parse(serializePageRoutes(pageRoutes())));
 });
 
@@ -107,7 +112,7 @@ test("the generator writes one input per page without source HTML", () => {
   const tempRoot = mkdtempSync(resolve(tmpdir(), "blog-page-template-"));
   try {
     const inputs = generatePageInputs(tempRoot);
-    assert.equal(Object.keys(inputs).length, 16);
+    assert.equal(Object.keys(inputs).length, 17);
     for (const page of pageRegistry) {
       const filename = generatedPagePath(tempRoot, page);
       assert.equal(inputs[page.id], filename);

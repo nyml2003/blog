@@ -15,6 +15,10 @@ pub const RECOMMENDATION_CURRENT: &str = "public.recommendation_current";
 pub const MOBILE_ARTICLE_SHELF: &str = "public.mobile_article_shelf";
 /// 公开端 T 型货架：顶部类型筛选 + 当前类型的有界文章集合。
 pub const T_SHELF: &str = "public.t_shelf";
+pub const TAXONOMY_TREE: &str = "public.taxonomy_tree";
+pub const MOBILE_CATEGORY_SHELF: &str = "public.mobile_category_shelf";
+pub const ADMIN_SESSION_CREATE: &str = "admin.session.create";
+pub const ADMIN_SESSION_DELETE: &str = "admin.session.delete";
 pub const ADMIN_ARTICLE_LIST: &str = "admin.article_list";
 pub const ADMIN_ARTICLE_DETAIL: &str = "admin.article_detail";
 pub const ADMIN_ARTICLE_CREATE: &str = "admin.article_create";
@@ -28,6 +32,19 @@ pub const ADMIN_TERM_LIST: &str = "admin.term_list";
 pub const ADMIN_TERM_CREATE: &str = "admin.term_create";
 pub const ADMIN_TERM_UPDATE: &str = "admin.term_update";
 pub const ADMIN_RECOMMENDATION_GENERATE: &str = "admin.recommendation_generate";
+pub const ADMIN_CONTENT_WORKSPACE: &str = "admin.content_workspace";
+pub const ADMIN_CONTENT_ARTICLE_LIST: &str = "admin.content_article_list";
+pub const ADMIN_CONTENT_ARTICLE_DETAIL: &str = "admin.content_article_detail";
+pub const ADMIN_CONTENT_ARTICLE_SAVE: &str = "admin.content_article_save";
+pub const ADMIN_CONTENT_ARTICLE_REMOVE: &str = "admin.content_article_remove";
+pub const ADMIN_CONTENT_TAXONOMY_SAVE: &str = "admin.content_taxonomy_save";
+pub const ADMIN_CONTENT_TAXONOMY_ANALYZE: &str = "admin.content_taxonomy_analyze";
+pub const ADMIN_CONTENT_TAXONOMY_REVIEW: &str = "admin.content_taxonomy_review";
+pub const ADMIN_CONTENT_PREVIEW: &str = "admin.content_preview";
+pub const ADMIN_CONTENT_SUBMIT: &str = "admin.content_submit";
+pub const ADMIN_CONTENT_ABANDON: &str = "admin.content_abandon";
+pub const ADMIN_CONTENT_SYNC: &str = "admin.content_sync";
+pub const ADMIN_CONTENT_SYNC_STATUS: &str = "admin.content_sync_status";
 
 pub const PUBLIC_ARTICLES_ENDPOINT: &str = "/api/public/articles";
 pub const PUBLIC_ARTICLE_TYPES_ENDPOINT: &str = "/api/public/article-types";
@@ -35,10 +52,23 @@ pub const PUBLIC_TERMS_ENDPOINT: &str = "/api/public/terms";
 pub const PUBLIC_RECOMMENDATIONS_ENDPOINT: &str = "/api/public/recommendations";
 pub const MOBILE_ARTICLE_SHELF_ENDPOINT: &str = "/api/public/mobile/article-shelf";
 pub const T_SHELF_ENDPOINT: &str = "/api/public/t-shelf";
+pub const PUBLIC_TAXONOMY_ENDPOINT: &str = "/api/public/taxonomy";
+pub const MOBILE_CATEGORY_SHELF_ENDPOINT: &str = "/api/public/mobile/category-shelf";
+pub const ADMIN_SESSION_ENDPOINT: &str = "/api/admin/session";
 pub const ADMIN_ARTICLES_ENDPOINT: &str = "/api/admin/articles";
 pub const ADMIN_ARTICLE_TYPES_ENDPOINT: &str = "/api/admin/article-types";
 pub const ADMIN_TERMS_ENDPOINT: &str = "/api/admin/terms";
 pub const ADMIN_RECOMMENDATIONS_ENDPOINT: &str = "/api/admin/recommendations";
+pub const ADMIN_CONTENT_WORKSPACE_ENDPOINT: &str = "/api/admin/content/workspace";
+pub const ADMIN_CONTENT_ARTICLES_ENDPOINT: &str = "/api/admin/content/articles";
+pub const ADMIN_CONTENT_ARTICLE_REMOVE_ENDPOINT: &str = "/api/admin/content/articles/remove";
+pub const ADMIN_CONTENT_TAXONOMY_ENDPOINT: &str = "/api/admin/content/taxonomy";
+pub const ADMIN_CONTENT_TAXONOMY_ANALYZE_ENDPOINT: &str = "/api/admin/content/taxonomy/analyze";
+pub const ADMIN_CONTENT_TAXONOMY_REVIEW_ENDPOINT: &str = "/api/admin/content/taxonomy/review";
+pub const ADMIN_CONTENT_PREVIEW_ENDPOINT: &str = "/api/admin/content/preview";
+pub const ADMIN_CONTENT_SUBMIT_ENDPOINT: &str = "/api/admin/content/submit";
+pub const ADMIN_CONTENT_ABANDON_ENDPOINT: &str = "/api/admin/content/abandon";
+pub const ADMIN_CONTENT_SYNC_ENDPOINT: &str = "/api/admin/content/sync";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ApiRoute {
@@ -88,6 +118,26 @@ pub const ROUTES: &[ApiRoute] = &[
         method: "GET",
         endpoint: T_SHELF_ENDPOINT,
         scene_code: T_SHELF,
+    },
+    ApiRoute {
+        method: "GET",
+        endpoint: PUBLIC_TAXONOMY_ENDPOINT,
+        scene_code: TAXONOMY_TREE,
+    },
+    ApiRoute {
+        method: "GET",
+        endpoint: MOBILE_CATEGORY_SHELF_ENDPOINT,
+        scene_code: MOBILE_CATEGORY_SHELF,
+    },
+    ApiRoute {
+        method: "POST",
+        endpoint: ADMIN_SESSION_ENDPOINT,
+        scene_code: ADMIN_SESSION_CREATE,
+    },
+    ApiRoute {
+        method: "DELETE",
+        endpoint: ADMIN_SESSION_ENDPOINT,
+        scene_code: ADMIN_SESSION_DELETE,
     },
     ApiRoute {
         method: "GET",
@@ -154,6 +204,71 @@ pub const ROUTES: &[ApiRoute] = &[
         endpoint: ADMIN_RECOMMENDATIONS_ENDPOINT,
         scene_code: ADMIN_RECOMMENDATION_GENERATE,
     },
+    ApiRoute {
+        method: "GET",
+        endpoint: ADMIN_CONTENT_WORKSPACE_ENDPOINT,
+        scene_code: ADMIN_CONTENT_WORKSPACE,
+    },
+    ApiRoute {
+        method: "GET",
+        endpoint: ADMIN_CONTENT_ARTICLES_ENDPOINT,
+        scene_code: ADMIN_CONTENT_ARTICLE_LIST,
+    },
+    ApiRoute {
+        method: "GET",
+        endpoint: ADMIN_CONTENT_ARTICLES_ENDPOINT,
+        scene_code: ADMIN_CONTENT_ARTICLE_DETAIL,
+    },
+    ApiRoute {
+        method: "POST",
+        endpoint: ADMIN_CONTENT_ARTICLES_ENDPOINT,
+        scene_code: ADMIN_CONTENT_ARTICLE_SAVE,
+    },
+    ApiRoute {
+        method: "POST",
+        endpoint: ADMIN_CONTENT_ARTICLE_REMOVE_ENDPOINT,
+        scene_code: ADMIN_CONTENT_ARTICLE_REMOVE,
+    },
+    ApiRoute {
+        method: "POST",
+        endpoint: ADMIN_CONTENT_TAXONOMY_ENDPOINT,
+        scene_code: ADMIN_CONTENT_TAXONOMY_SAVE,
+    },
+    ApiRoute {
+        method: "POST",
+        endpoint: ADMIN_CONTENT_TAXONOMY_ANALYZE_ENDPOINT,
+        scene_code: ADMIN_CONTENT_TAXONOMY_ANALYZE,
+    },
+    ApiRoute {
+        method: "POST",
+        endpoint: ADMIN_CONTENT_TAXONOMY_REVIEW_ENDPOINT,
+        scene_code: ADMIN_CONTENT_TAXONOMY_REVIEW,
+    },
+    ApiRoute {
+        method: "GET",
+        endpoint: ADMIN_CONTENT_PREVIEW_ENDPOINT,
+        scene_code: ADMIN_CONTENT_PREVIEW,
+    },
+    ApiRoute {
+        method: "POST",
+        endpoint: ADMIN_CONTENT_SUBMIT_ENDPOINT,
+        scene_code: ADMIN_CONTENT_SUBMIT,
+    },
+    ApiRoute {
+        method: "POST",
+        endpoint: ADMIN_CONTENT_ABANDON_ENDPOINT,
+        scene_code: ADMIN_CONTENT_ABANDON,
+    },
+    ApiRoute {
+        method: "POST",
+        endpoint: ADMIN_CONTENT_SYNC_ENDPOINT,
+        scene_code: ADMIN_CONTENT_SYNC,
+    },
+    ApiRoute {
+        method: "GET",
+        endpoint: ADMIN_CONTENT_SYNC_ENDPOINT,
+        scene_code: ADMIN_CONTENT_SYNC_STATUS,
+    },
 ];
 
 pub fn supports(method: &str, endpoint: &str, scene_code: &str) -> bool {
@@ -172,10 +287,14 @@ pub const PUBLIC: &[&str] = &[
     RECOMMENDATION_CURRENT,
     MOBILE_ARTICLE_SHELF,
     T_SHELF,
+    TAXONOMY_TREE,
+    MOBILE_CATEGORY_SHELF,
 ];
 
 /// 管理端点使用的 `admin.*` 场景集合。
 pub const ADMIN: &[&str] = &[
+    ADMIN_SESSION_CREATE,
+    ADMIN_SESSION_DELETE,
     ADMIN_ARTICLE_LIST,
     ADMIN_ARTICLE_DETAIL,
     ADMIN_ARTICLE_CREATE,
@@ -189,6 +308,19 @@ pub const ADMIN: &[&str] = &[
     ADMIN_TERM_CREATE,
     ADMIN_TERM_UPDATE,
     ADMIN_RECOMMENDATION_GENERATE,
+    ADMIN_CONTENT_WORKSPACE,
+    ADMIN_CONTENT_ARTICLE_LIST,
+    ADMIN_CONTENT_ARTICLE_DETAIL,
+    ADMIN_CONTENT_ARTICLE_SAVE,
+    ADMIN_CONTENT_ARTICLE_REMOVE,
+    ADMIN_CONTENT_TAXONOMY_SAVE,
+    ADMIN_CONTENT_TAXONOMY_ANALYZE,
+    ADMIN_CONTENT_TAXONOMY_REVIEW,
+    ADMIN_CONTENT_PREVIEW,
+    ADMIN_CONTENT_SUBMIT,
+    ADMIN_CONTENT_ABANDON,
+    ADMIN_CONTENT_SYNC,
+    ADMIN_CONTENT_SYNC_STATUS,
 ];
 
 #[cfg(test)]
@@ -203,7 +335,7 @@ mod tests {
         sorted.sort_unstable();
         sorted.dedup();
         assert_eq!(all.len(), sorted.len(), "scene codes must be unique");
-        assert_eq!(all.len(), 21);
+        assert_eq!(all.len(), 38);
         for scene in all {
             assert!(
                 scene.starts_with("public.") || scene.starts_with("admin."),

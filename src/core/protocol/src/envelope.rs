@@ -30,6 +30,10 @@ pub mod codes {
     pub const INVALID_SUMMARY: &str = "INVALID_SUMMARY";
     pub const INVALID_ARTICLE_HTML: &str = "INVALID_ARTICLE_HTML";
     pub const ARTICLE_CHANGED: &str = "ARTICLE_CHANGED";
+    /// Product attempted to replace a stale persisted content workflow revision.
+    pub const CONTENT_WORKFLOW_CHANGED: &str = "CONTENT_WORKFLOW_CHANGED";
+    /// Product attempted to replace a content snapshot based on a stale source commit.
+    pub const CONTENT_SNAPSHOT_CHANGED: &str = "CONTENT_SNAPSHOT_CHANGED";
     /// 文章状态机不合法迁移 `draft -> published -> draft`（HTTP 409）。
     pub const INVALID_STATE_TRANSITION: &str = "INVALID_STATE_TRANSITION";
     /// 名称唯一约束冲突（HTTP 409）。
@@ -83,7 +87,11 @@ pub fn http_status(code: &str) -> u16 {
         codes::UNKNOWN_OPERATION | codes::INVALID_PAYLOAD => 400,
         codes::NOT_FOUND => 404,
         codes::INVALID_SUMMARY | codes::INVALID_ARTICLE_HTML => 422,
-        codes::INVALID_STATE_TRANSITION | codes::DUPLICATE_NAME | codes::ARTICLE_CHANGED => 409,
+        codes::INVALID_STATE_TRANSITION
+        | codes::DUPLICATE_NAME
+        | codes::ARTICLE_CHANGED
+        | codes::CONTENT_SNAPSHOT_CHANGED
+        | codes::CONTENT_WORKFLOW_CHANGED => 409,
         _ => 500,
     }
 }
@@ -104,5 +112,16 @@ impl OperationFailure {
             message: message.into(),
             data: None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn content_compare_and_swap_conflicts_are_http_conflicts() {
+        assert_eq!(http_status(codes::CONTENT_SNAPSHOT_CHANGED), 409);
+        assert_eq!(http_status(codes::CONTENT_WORKFLOW_CHANGED), 409);
     }
 }

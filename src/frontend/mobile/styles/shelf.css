@@ -68,3 +68,63 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
 }
+
+.category-shelf-layout {
+  display: grid;
+  grid-template-columns: minmax(72px, 21%) minmax(0, 1fr);
+  column-gap: 14px;
+  align-items: start;
+}
+
+.category-shelf-roots {
+  position: sticky;
+  top: var(--shell-header-sticky-top);
+  max-height: calc(100vh - 178px);
+  padding-right: 9px;
+  overflow-y: auto;
+  border-right: 1px solid var(--border);
+}
+
+.category-shelf-roots .m-tab-group {
+  display: grid;
+  gap: 4px;
+}
+
+.category-shelf-content,
+.category-shelf-results {
+  display: grid;
+  min-width: 0;
+  gap: 12px;
+}
+
+.category-shelf-children {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--ink);
+}
+
+.category-shelf-children > .m-atom-text--meta,
+.category-shelf-results > .m-atom-text--meta {
+  margin: 0;
+}
+
+.category-shelf-children .m-tab-group {
+  width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+
+.category-shelf-cards {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 360px) {
+  .category-shelf-layout {
+    grid-template-columns: minmax(64px, 18%) minmax(0, 1fr);
+    column-gap: 10px;
+  }
+}

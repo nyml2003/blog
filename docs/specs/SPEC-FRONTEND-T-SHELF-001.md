@@ -4,14 +4,16 @@ id: SPEC-FRONTEND-T-SHELF-001
 status: draft
 owner: frontend
 plan_id: PLAN-FRONTEND-PAGE-TEMPLATE-001
-last_reviewed: 2026-09-07
+last_reviewed: 2026-09-08
 ---
 
 # 公开端 T 型货架与 Mobile F 型边界
 
 ## 目标
 
-统一公开端展示货架的视觉与数据交互：Mobile 文章 list 页及其二级页使用既有 F 型信息架构，其余公开展示货架使用 T 型结构。T 型结构顶部为可切换筛选项，下方为当前筛选项对应的文章区。
+统一公开端展示货架的视觉与数据交互：Mobile 两个文章入口使用 F 型信息架构，其余
+公开展示货架使用 T 型结构。T 型结构顶部为可切换筛选项，下方为当前筛选项对应的
+文章区；F 型内部分类树行为以 `SPEC-CONTENT-TAXONOMY-001` 为准。
 
 ## 决策记录（用户已定）
 
@@ -25,7 +27,10 @@ last_reviewed: 2026-09-07
 ## 契约
 
 - T 型适用面：Desktop 首页的推荐/文章货架、Desktop 文章列表页、Mobile 首页推荐货架，以及后续新增的公开展示货架；
-- F 型适用面：Mobile `/m/articles/index.html` 货架快照页与 `/m/articles/list.html` 三级平铺检索页，继续遵守 `SPEC-MOBILE-BROWSE-IA-001`；
+- F 型适用面：Mobile `/m/articles/index.html` 与 `/m/articles/list.html`；两者均采用
+  左侧一级分类、右侧二级 tabs、下方文章卡片，父级汇总按文章去重，遵守
+  `SPEC-CONTENT-TAXONOMY-001`；旧 `SPEC-MOBILE-BROWSE-IA-001` 中冲突的快照、三级
+  平铺和加载更多语义不再适用；
 - 初始响应包含有序筛选项、明确的首个/当前筛选标识、该筛选项对应的文章数据和总量；页面不得另发一次请求才能得到首屏文章；
 - 切换筛选项时页面携带稳定筛选标识重新请求文章数据；新选择立即成为当前意图，旧请求晚到时不得覆盖新选择的数据；
 - 初始加载、切换加载、空态、失败和重试必须各自可辨，失败不得清除可继续使用的筛选项；
@@ -68,12 +73,20 @@ Then 页面分别展示稳定的加载、空态或错误/重试界面，且不�
 
 Given 用户进入 Mobile 两个文章浏览入口
 
-Then `/m/articles/index.html` 仍是 F 型货架快照，`/m/articles/list.html` 仍是 F 型三级平铺检索，既有层级与交互不回归
+Then 两个入口均保持 F 型边界并展示相同的一级/二级分类货架；分类切换重新请求，
+父级汇总不重复文章，loading 不卸载 tabs 或丢失焦点，分类 Back 和详情返回恢复 URL、
+选择与滚动位置
 
 ## 测试/验收证据
 
 - API（2026-09-07）：Product→Data 真实链路与 Mock HTTP 契约覆盖 `recommendation` / `archive` 初始 `all`、类型切换、推荐范围、非法参数及既有 Mobile F 型回归；Rust workspace tests 通过。
-- 查询与 client（2026-09-07）：测试覆盖初始请求、`filter_id` 序列化、响应解码、URL 筛选、快速切换时旧响应丢弃、分页累积与错误终止；前端核心测试 76/76 通过。
-- 浏览器（2026-09-07）：Desktop 首页、Desktop 全部文章和 Mobile 首页完成代表视口走查；筛选切换触发新请求并重渲染，拦截响应覆盖 error → retry → loading → empty；Mobile 两个 F 型入口结构保持，所测视图无页面级横向溢出或脚本错误。
-- 总门禁（2026-09-07）：前端 typecheck、lint、format、build，以及项目 `ops quality check` 全部通过。
+- 查询与 client（2026-09-08）：测试覆盖初始请求、筛选序列化、响应解码、快速切换时
+  旧响应丢弃，以及分类 history 保存、最终响应 ready gate 和恢复调度；前端核心测试
+  107/107、Native/WASM parity 287 通过。
+- 浏览器（2026-09-08 06:56，Asia/Shanghai）：Desktop/Mobile T 型筛选和两个 Mobile
+  分类 F 型入口由 `18084/18085` 的 fixture 同源 integration 验证。最终 52 项脚本连续
+  两次通过：一级/二级切换和 refetch、父级汇总去重、loading rails/focus、两个入口
+  分类 Back、index 详情返回均通过，页面错误 0。
+- 总门禁（2026-09-08）：前端 typecheck、lint、format、build，以及项目
+  `ops quality check` 全部通过。
 - 人工：代码与自动化验收完成；最终视觉和产品验收由用户执行。

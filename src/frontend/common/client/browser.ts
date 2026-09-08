@@ -1,4 +1,8 @@
 import { createJsonTransport } from "../data/transport";
+import {
+  ADMIN_SESSION_EXPIRED_EVENT,
+  createAdminAuthFetch,
+} from "./admin-session-browser";
 import { createClient } from "./client";
 import {
   createMockSessionInterceptor,
@@ -18,7 +22,17 @@ import {
  */
 export const browserClient = createClient(
   createJsonTransport({
-    fetcher: fetch,
+    fetcher: createAdminAuthFetch({
+      fetcher: fetch,
+      readLocation: () => ({
+        origin: location.origin,
+        pathname: location.pathname,
+        search: location.search,
+      }),
+      beforeRedirect: () =>
+        window.dispatchEvent(new Event(ADMIN_SESSION_EXPIRED_EVENT)),
+      replaceLocation: (path) => location.replace(path),
+    }),
     interceptors: [
       createMockSessionInterceptor({
         readSessionId: () => readMockSessionFromLocation(location.search),

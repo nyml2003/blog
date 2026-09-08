@@ -136,6 +136,14 @@ function checkFrontendFile(file: string, source: string): Violation[] {
 
 function checkRustFile(file: string, source: string): Violation[] {
   const violations: Violation[] = [];
+  const httpFiltersContentSnapshot =
+    /(?<![.\w])snapshot\s*\.\s*(?:articles|taxonomy\s*\.\s*categories)\s*\.\s*iter\s*\(\s*\)\s*\.(?:filter|filter_map)\s*\(/.test(
+      source,
+    );
+  const httpComputesTaxonomyDescendants =
+    /\b(?:is_descendant|descendant_category_ids|collect_descendant_ids)\s*\(/.test(
+      source,
+    );
   const productHttpOwnsBffDecision =
     /\binclude_recommendation\b/.test(source) ||
     /\b(?:group|partition|sort|truncate)_(?:articles|sections|recommendations)\b/i.test(
@@ -143,7 +151,9 @@ function checkRustFile(file: string, source: string): Violation[] {
     ) ||
     /\.(?:group_by|partition|sort_by|sort_by_key|truncate)\s*\(/.test(source) ||
     /\.take\s*\(\s*\d+\s*\)/.test(source) ||
-    /["'](?:未分类|uncategorized)["']/i.test(source);
+    /["'](?:未分类|uncategorized)["']/i.test(source) ||
+    httpFiltersContentSnapshot ||
+    httpComputesTaxonomyDescendants;
   if (
     file.endsWith("/src/backend/product/src/http.rs") &&
     productHttpOwnsBffDecision
@@ -214,7 +224,9 @@ function checkRustFile(file: string, source: string): Violation[] {
     /(?:^|\n)\s*(?:use|extern\s+crate)\s+(?:axum|http|http_body_util|hyper|reqwest|tower_http|ureq)\b/m.test(
       source,
     ) ||
-    /\b(?:axum|http|http_body_util|hyper|reqwest|tower_http|ureq)::/.test(source);
+    /\b(?:axum|http|http_body_util|hyper|reqwest|tower_http|ureq)::/.test(
+      source,
+    );
   if (
     file.includes("/src/backend/data/src/") &&
     !isDataHttpAdapter &&
@@ -223,6 +235,27 @@ function checkRustFile(file: string, source: string): Violation[] {
     violations.push({
       file,
       message: "data domain and storage must not depend on HTTP",
+    });
+  }
+  return violations;
+}
+
+function checkCargoManifest(file: string, source: string): Violation[] {
+  if (!file.endsWith("/src/backend/data/Cargo.toml")) return [];
+  const violations: Violation[] = [];
+  const hasHtmlParser =
+    /^(?:article-html-core|ammonia|html5ever|kuchiki|lol_html|scraper)\s*=/im.test(
+      source,
+    );
+  if (hasHtmlParser) {
+    violations.push({ file, message: "data must not depend on HTML parsers" });
+  }
+  const hasExternalClient =
+    /^(?:reqwest|ureq|octocrab|github(?:-api|-rs)?)\s*=/im.test(source);
+  if (hasExternalClient) {
+    violations.push({
+      file,
+      message: "data must not depend on external HTTP or GitHub clients",
     });
   }
   return violations;
@@ -237,6 +270,7 @@ export function checkArchitectureBoundaries(
     const text = source(rawFile);
     if (/\.(?:ts|tsx)$/.test(file)) return checkFrontendFile(file, text);
     if (file.endsWith(".rs")) return checkRustFile(file, text);
+    if (file.endsWith("Cargo.toml")) return checkCargoManifest(file, text);
     return [];
   });
 }

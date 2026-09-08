@@ -1,8 +1,8 @@
 export type EditorSnapshot = {
   title: string;
   summary: string;
-  typeId: number;
-  termIds: readonly number[];
+  categoryIds: readonly number[];
+  tagIds: readonly number[];
   contentHtml: string;
 };
 
@@ -10,8 +10,8 @@ export function editorSnapshot(input: EditorSnapshot): EditorSnapshot {
   return {
     title: input.title.trim(),
     summary: input.summary.trim(),
-    typeId: input.typeId,
-    termIds: [...input.termIds].sort((a, b) => a - b),
+    categoryIds: [...input.categoryIds].sort((a, b) => a - b),
+    tagIds: [...input.tagIds].sort((a, b) => a - b),
     contentHtml: input.contentHtml,
   };
 }
@@ -26,9 +26,32 @@ export function editorSnapshotsEqual(
   return (
     a.title === b.title &&
     a.summary === b.summary &&
-    a.typeId === b.typeId &&
     a.contentHtml === b.contentHtml &&
-    a.termIds.length === b.termIds.length &&
-    a.termIds.every((value, index) => value === b.termIds[index])
+    a.categoryIds.length === b.categoryIds.length &&
+    a.categoryIds.every((value, index) => value === b.categoryIds[index]) &&
+    a.tagIds.length === b.tagIds.length &&
+    a.tagIds.every((value, index) => value === b.tagIds[index])
   );
+}
+
+export function editorPageTitle(
+  initialCreation: boolean,
+  currentId: number,
+): "新建文章" | "编辑文章" {
+  if (initialCreation && currentId === 0) return "新建文章";
+  return "编辑文章";
+}
+
+export type SourceAssociatedValue<T> = {
+  readonly source: string;
+  readonly value: T;
+};
+
+export function valueForCurrentSource<T>(
+  currentSource: string,
+  serverValue: SourceAssociatedValue<T> | undefined,
+  localValue: T | undefined,
+): T | undefined {
+  if (serverValue?.source === currentSource) return serverValue.value;
+  return localValue;
 }

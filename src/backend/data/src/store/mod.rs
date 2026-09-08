@@ -14,9 +14,8 @@ use std::sync::Arc;
 use protocol::{
     ArticleBrowseQuery, ArticleDetail, ArticleGetQuery, ArticleId, ArticleListPage,
     ArticleListQuery, ArticleShelfData, ArticleShelfQuery, ArticleType, ArticleTypeListQuery,
-    ArticleTypeName, ArticleTypeRef, ArticleTypeRename, ArticleWrite, DataOperation, DataOutcome,
-    DatabaseDiagnostics, OperationFailure, Term, TermListQuery, TermRef, TermRename, TermWrite,
-    Unit,
+    ArticleTypeName, ArticleTypeRename, ArticleWrite, DataOperation, DataOutcome,
+    DatabaseDiagnostics, OperationFailure, Term, TermListQuery, TermRename, TermWrite, Unit,
 };
 
 use crate::data_info;
@@ -66,6 +65,44 @@ impl Meter {
 
 /// 数据后端 trait：只暴露 typed operations，不暴露表 CRUD 或通用查询语言。
 pub trait DataStore: Send + Sync + 'static {
+    fn content_snapshot_replace(
+        &self,
+        _request: &protocol::ContentSnapshotReplace,
+        _ctx: &OpCtx<'_>,
+    ) -> Result<(), OperationFailure> {
+        Err(OperationFailure::new(
+            protocol::envelope::codes::INTERNAL_ERROR,
+            "content snapshot persistence is unavailable",
+        ))
+    }
+    fn content_snapshot_get(
+        &self,
+        _ctx: &OpCtx<'_>,
+    ) -> Result<Option<protocol::StoredContentSnapshot>, OperationFailure> {
+        Err(OperationFailure::new(
+            protocol::envelope::codes::INTERNAL_ERROR,
+            "content snapshot persistence is unavailable",
+        ))
+    }
+    fn content_workflow_write(
+        &self,
+        _request: &protocol::ContentWorkflowWrite,
+        _ctx: &OpCtx<'_>,
+    ) -> Result<protocol::StoredContentWorkflow, OperationFailure> {
+        Err(OperationFailure::new(
+            protocol::envelope::codes::INTERNAL_ERROR,
+            "content workflow persistence is unavailable",
+        ))
+    }
+    fn content_workflow_get(
+        &self,
+        _ctx: &OpCtx<'_>,
+    ) -> Result<Option<protocol::StoredContentWorkflow>, OperationFailure> {
+        Err(OperationFailure::new(
+            protocol::envelope::codes::INTERNAL_ERROR,
+            "content workflow persistence is unavailable",
+        ))
+    }
     fn article_list(
         &self,
         query: &ArticleListQuery,
@@ -224,6 +261,18 @@ pub fn dispatch(store: &dyn DataStore, operation: &DataOperation, ctx: &OpCtx<'_
         DataOperation::ArticleBrowse(query) => store
             .article_browse(query, ctx)
             .map(DataOutcome::ArticleList),
+        DataOperation::ContentSnapshotReplace(request) => store
+            .content_snapshot_replace(request, ctx)
+            .map(|_| DataOutcome::Unit(Unit)),
+        DataOperation::ContentSnapshotGet => store
+            .content_snapshot_get(ctx)
+            .map(DataOutcome::ContentSnapshot),
+        DataOperation::ContentWorkflowWrite(request) => store
+            .content_workflow_write(request, ctx)
+            .map(|workflow| DataOutcome::ContentWorkflow(Some(workflow))),
+        DataOperation::ContentWorkflowGet => store
+            .content_workflow_get(ctx)
+            .map(DataOutcome::ContentWorkflow),
     }
 }
 
@@ -313,29 +362,6 @@ impl FilterableArticle for fixture::FixtureArticle {
     fn updated_at(&self) -> &str {
         self.updated_at
     }
-}
-
-/// 类型/term 的只读映射，避免两个后端各写一份。
-pub(crate) fn type_ref(type_id: i64) -> Option<ArticleTypeRef> {
-    fixture::ARTICLE_TYPES
-        .iter()
-        .find(|candidate| candidate.id == type_id)
-        .map(|candidate| ArticleTypeRef {
-            id: candidate.id,
-            name: candidate.name.to_owned(),
-        })
-}
-
-pub(crate) fn term_refs(term_ids: &[i64]) -> Vec<TermRef> {
-    fixture::TERMS
-        .iter()
-        .filter(|term| term_ids.contains(&term.id))
-        .map(|term| TermRef {
-            id: term.id,
-            name: term.name.to_owned(),
-            kind: term.kind.to_owned(),
-        })
-        .collect()
 }
 
 /// 启动期构建的数据后端；语义决定后端实现与存储布局。

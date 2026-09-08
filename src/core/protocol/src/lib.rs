@@ -24,6 +24,7 @@ pub mod envelope;
 pub mod operation;
 pub mod paging;
 pub mod scene;
+pub mod taxonomy;
 pub mod wire;
 
 pub use diagnostics::{
@@ -40,3 +41,10 @@ pub use operation::{
     TermListQuery, TermRef, TermRename, TermWrite, Unit,
 };
 pub use paging::{has_more, normalize_page, normalize_page_size};
+pub use taxonomy::{
+    Category, ContentArticle as ContentSnapshotArticle, ContentArticleMeta, ContentRemoteBatch,
+    ContentRemoteOperation, ContentRemoteOperationKind, ContentSnapshot, ContentSnapshotReplace,
+    ContentSyncState, ContentWorkflowState, ContentWorkflowWrite, ContentWorkspaceStatus,
+    PendingTaxonomyReview, StoredContentSnapshot, StoredContentWorkflow, TAXONOMY_SCHEMA_VERSION,
+    Tag, Taxonomy,
+};

@@ -1,5 +1,9 @@
 import { join } from 'node:path';
 import {
+  TRUSTED_PROXY_IPS_ENV,
+  loadAdminCredentialEnvironment,
+} from './admin-auth.ts';
+import {
   LISTEN_HOST,
   OpsError,
   errorPayload,
@@ -37,6 +41,7 @@ export interface RuntimePorts {
   root: string;
   fs?: FsPort;
   signals?: SignalPort;
+  environment?: NodeJS.ProcessEnv;
 }
 
 export interface RunOptions { dryRun: boolean; json: boolean; graceMs?: number; readinessTimeoutMs?: number }
@@ -88,7 +93,7 @@ export async function runRuntimeMode(plan: ModePlan, ports: RuntimePorts, option
 export async function runDeliveryBuild(ports: RuntimePorts, options: RunOptions): Promise<number> {
   const command = 'delivery build';
   const steps = await deliverySteps(ports);
-  const plan: ModePlan = { mode: 'dev', services: [], candidates: {}, builds: steps, entry: null, dataMode: null, scenario: null, watch: false };
+  const plan: ModePlan = { mode: 'dev', services: [], candidates: {}, builds: steps, entry: null, dataMode: null, scenario: null, watch: false, contentSource: 'fixture' };
   if (options.dryRun) { printPlan(ports, options, command, plan); return 0; }
   try {
     for (const step of steps) await executeStep(step, ports);
@@ -242,6 +247,7 @@ async function spawnRequest(plan: ModePlan, ports: RuntimePorts, role: ServiceRo
     // WORKSTREAM-OPS-RUNTIME-MOCK owns the mock binary contract; the scenario stays CLI-only.
     if (plan.scenario === null) throw new Error('runtime plan missing scenario');
     args.push('--scenario', plan.scenario);
+    args.push('--admin-auth', 'bypass');
   }
   if (role === 'data') {
     if (plan.dataMode === null) throw new Error('runtime plan missing data mode');
@@ -251,6 +257,25 @@ async function spawnRequest(plan: ModePlan, ports: RuntimePorts, role: ServiceRo
   if (role === 'product') {
     const data = requiredPort(allocated.get('data'), 'data');
     env[INJECTION_ENV.dataAddr] = origin(data);
+    const modelProvider = ports.environment?.[INJECTION_ENV.taxonomyModelProvider];
+    const modelCommand = ports.environment?.[INJECTION_ENV.taxonomyModelCommand];
+    if (modelProvider?.trim()) env[INJECTION_ENV.taxonomyModelProvider] = modelProvider;
+    if (modelCommand?.trim()) env[INJECTION_ENV.taxonomyModelCommand] = modelCommand;
+    if (ports.fs) {
+      Object.assign(
+        env,
+        await loadAdminCredentialEnvironment(ports.fs, ports.environment ?? {}),
+      );
+    }
+    const trustedProxyIps = ports.environment?.[TRUSTED_PROXY_IPS_ENV]?.trim();
+    if (trustedProxyIps) env[TRUSTED_PROXY_IPS_ENV] = trustedProxyIps;
+    args.push('--content-source', plan.contentSource);
+    if (plan.contentSource === 'github') {
+      const repository = ports.environment?.[INJECTION_ENV.contentRepo]?.trim();
+      const token = ports.environment?.[INJECTION_ENV.contentToken];
+      if (repository) env[INJECTION_ENV.contentRepo] = repository;
+      if (token?.trim()) env[INJECTION_ENV.contentToken] = token;
+    }
     if (plan.mode === 'integration') {
       env[INJECTION_ENV.webDir] = join(ports.root, 'src', 'frontend', 'dist');
       args.push('--web-dir', env[INJECTION_ENV.webDir]);
