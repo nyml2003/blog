@@ -13,6 +13,7 @@
   },
   "include": [
     "desktop",
+    "desktop-ui",
     "mobile",
     "mobile-ui",
     "common",

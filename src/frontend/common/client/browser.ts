@@ -3,7 +3,7 @@ import {
   ADMIN_SESSION_EXPIRED_EVENT,
   createAdminAuthFetch,
 } from "./admin-session-browser";
-import { createClient } from "./client";
+import { createClient } from "./api-client";
 import {
   createMockSessionInterceptor,
   readMockSessionFromLocation,

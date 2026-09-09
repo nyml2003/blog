@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { CLIENT_API_ROUTES, createClient } from "./client";
+import { createClient } from "./api-client";
+import { CLIENT_API_ROUTES } from "./routes-contract";
 import {
   createAdminAuthFetch,
   adminLoginPath,
@@ -63,15 +64,24 @@ test("the enumerable client route registry matches the API golden list", () => {
 });
 
 test("client request code keeps API literals inside the route registry", () => {
-  const source = readFileSync(new URL("./client.ts", import.meta.url), "utf8");
-  const implementation = source
-    .replace(
-      /export const CLIENT_API_ROUTES = \{[\s\S]*?\} as const satisfies Record<string, ClientApiRoute>;/,
-      "",
-    )
-    .replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "");
-  assert.doesNotMatch(implementation, /["'`]\/api\//);
-  assert.doesNotMatch(implementation, /["'`](?:public|admin)\.[a-z_]+["'`]/);
+  // PLAN-CODE-LAYOUT-001：客户端拆分后，路由字面量只允许出现在 routes-contract.ts。
+  const sources = [
+    "./api-client.ts",
+    "./request-kit.ts",
+    "domains/session.ts",
+    "domains/site-routes.ts",
+    "domains/articles.ts",
+    "domains/content.ts",
+    "domains/taxonomy.ts",
+    "domains/admin-articles.ts",
+    "domains/editor.ts",
+  ]
+    .map((path) => readFileSync(new URL(path, import.meta.url), "utf8"))
+    .map((source) => source.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, ""));
+  for (const implementation of sources) {
+    assert.doesNotMatch(implementation, /["'`]\/api\//);
+    assert.doesNotMatch(implementation, /["'`](?:public|admin)\.[a-z_]+["'`]/);
+  }
 });
 
 // ShelfCard wire fields from src/core/protocol/src/wire.rs (no article body, no type).
