@@ -53,6 +53,7 @@ blog/
 │       ├── mobile/src/components/ ← Mobile 共享组件（壳、卡片、货架页）
 │       ├── mobile-ui/       ← Mobile 原子组件库（atoms/molecules/containers）
 │       ├── desktop/src/shell/ ← Desktop 共享壳（header/t-shelf/article-table 等，单导出组件 + index 出口）
+│       ├── desktop-ui/      ← Desktop 基础组件库（内部开发完成，页面尚未接入）
 │       ├── solid/queries/   ← 数据获取层：页面要数据只能走这里
 │       ├── solid/page.tsx   ← definePage：每页引导（先拉路由清单再渲染）
 │       ├── common/client/   ← 框架无关的 API 客户端与浏览器适配
@@ -153,4 +154,6 @@ pages.registry.ts（页面登记表）
 - ops 歧义名治理：`check.ts`→`quality-check.ts`、`domain/runtime.ts`→`runtime-plan.ts`；
 - 前端文件遵循两种形态：**A 多导出**（工具库/hook 集，成员彼此独立）与 **B 单导出**（一个组件/一个类），见 `docs/guides/typescript-style.md`。
 
-仍在进行：`desktop-ui/` 组件库（[PLAN-DESKTOP-UI-001](./plans/active/PLAN-DESKTOP-UI-001/PLAN.md)，用户主导）；`common/client/domain.ts` 类型表逐领域迁移为 follow-up。
+`desktop-ui/` 第一批组件已完成内部开发与测试，尚未接入页面（见
+[PLAN-DESKTOP-UI-001](./plans/archive/PLAN-DESKTOP-UI-001/PLAN.md)）；`common/client/domain.ts`
+类型表逐领域迁移为 follow-up。

@@ -40,6 +40,20 @@ test("rejects cross-platform UI imports", () => {
     ),
     ["mobile must not import desktop UI"],
   );
+  assert.deepEqual(
+    check(
+      "/repo/src/frontend/desktop-ui/atoms/button.tsx",
+      'import { Button } from "../../mobile-ui/atoms";',
+    ),
+    ["desktop must not import mobile UI"],
+  );
+  assert.deepEqual(
+    check(
+      "/repo/src/frontend/mobile-ui/atoms/button.tsx",
+      'import { Button } from "../../desktop-ui/atoms";',
+    ),
+    ["mobile must not import desktop UI"],
+  );
 });
 
 test("keeps common and query modules free of UI dependencies", () => {
@@ -77,6 +91,13 @@ test("rejects client framework imports and UI-component data access", () => {
   assert.deepEqual(
     check(
       "/repo/src/frontend/desktop/src/app.tsx",
+      'import { browserClient } from "../../common/client";',
+    ),
+    ["UI components must not import client/data modules"],
+  );
+  assert.deepEqual(
+    check(
+      "/repo/src/frontend/desktop-ui/molecules/state-message.tsx",
       'import { browserClient } from "../../common/client";',
     ),
     ["UI components must not import client/data modules"],

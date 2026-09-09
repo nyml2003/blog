@@ -1,0 +1,66 @@
+.d-ui-button,
+.d-ui-action-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 9px 15px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  line-height: 1.55;
+  text-align: center;
+  text-decoration: none;
+  touch-action: manipulation;
+}
+
+.d-ui-button {
+  cursor: pointer;
+}
+
+.d-ui-button--primary,
+.d-ui-action-link--primary {
+  border-color: var(--blue);
+  background: var(--blue);
+  color: #fff;
+}
+
+.d-ui-button--danger {
+  border-color: #e5b8ae;
+  color: var(--danger-text, #bd3f3f);
+}
+
+.d-ui-button.is-block,
+.d-ui-action-link.is-block {
+  width: 100%;
+}
+
+.d-ui-button:focus-visible,
+.d-ui-action-link:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
+}
+
+.d-ui-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.d-ui-button:active:not(:disabled),
+.d-ui-action-link:active {
+  filter: brightness(0.96);
+}
+
+@media (hover: hover) {
+  .d-ui-button--secondary:hover,
+  .d-ui-action-link--secondary:hover {
+    border-color: var(--blue);
+    color: var(--blue);
+  }
+
+  .d-ui-button--danger:hover {
+    border-color: var(--danger-text, #bd3f3f);
+  }
+}

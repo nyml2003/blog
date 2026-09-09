@@ -37,6 +37,7 @@ function isPage(file: string): boolean {
 function isUiComponent(file: string): boolean {
   return (
     /\/src\/frontend\/(?:desktop|mobile)\/src\/components\//.test(file) ||
+    file.includes("/src/frontend/desktop-ui/") ||
     file.includes("/src/frontend/mobile-ui/") ||
     (!isPage(file) &&
       /\/src\/frontend\/(?:desktop|mobile)\/src\/.*\.tsx$/.test(file))
@@ -46,18 +47,27 @@ function isUiComponent(file: string): boolean {
 function checkFrontendFile(file: string, source: string): Violation[] {
   const violations: Violation[] = [];
   const modules = importedModules(file, source);
-  const importsDesktopUi = modules.some((module) =>
-    containsPath(module, "desktop/"),
+  const importsDesktopUi = modules.some(
+    (module) =>
+      containsPath(module, "desktop/") || containsPath(module, "desktop-ui/"),
   );
   const importsMobileUi = modules.some(
     (module) =>
       containsPath(module, "mobile/") || containsPath(module, "mobile-ui/"),
   );
 
-  if (file.includes("/src/frontend/desktop/") && importsMobileUi) {
+  if (
+    (file.includes("/src/frontend/desktop/") ||
+      file.includes("/src/frontend/desktop-ui/")) &&
+    importsMobileUi
+  ) {
     violations.push({ file, message: "desktop must not import mobile UI" });
   }
-  if (file.includes("/src/frontend/mobile/") && importsDesktopUi) {
+  if (
+    (file.includes("/src/frontend/mobile/") ||
+      file.includes("/src/frontend/mobile-ui/")) &&
+    importsDesktopUi
+  ) {
     violations.push({ file, message: "mobile must not import desktop UI" });
   }
 
@@ -108,6 +118,7 @@ function checkFrontendFile(file: string, source: string): Violation[] {
     const importsUi = modules.some(
       (module) =>
         containsPath(module, "desktop/") ||
+        containsPath(module, "desktop-ui/") ||
         containsPath(module, "mobile/") ||
         containsPath(module, "mobile-ui/"),
     );

@@ -3,7 +3,7 @@ kind: architecture
 id: ARCH-FRONTEND
 status: current
 owner: frontend
-last_reviewed: 2026-09-07
+last_reviewed: 2026-09-09
 ---
 
 # Frontend 架构
@@ -22,12 +22,18 @@ last_reviewed: 2026-09-07
 src/frontend/
 ├── common/       # 无 UI 的契约和逻辑
 ├── desktop/      # C Desktop + B Desktop
+├── desktop-ui/   # Desktop 独立基础组件库（尚未接入页面）
 ├── mobile/       # C Mobile 页面与适配
 ├── mobile-ui/    # Mobile 独立原子、组合组件与页面容器
 └── solid/        # Solid 资源适配与页面查询层
 ```
 
 `src/frontend/common` 不得依赖 JSX、CSS、Desktop 或 Mobile。Desktop 与 Mobile 不互相导入 UI。
+
+`desktop-ui` 与 `mobile-ui` 是平台隔离的同级组件库，不互相导入。`desktop-ui` 当前只包含
+根据既有 Desktop 高频范式准入的 Button、ActionLink、Field 和 StateMessage；它不访问
+Client、Data、query、路由、业务组件或页面。第一批组件仅完成内部类型、SSR、边界与独立
+showcase 构建测试，现有 Desktop 页面与 shell 尚未消费该库；后续接入必须单独迁移和验收。
 
 `src/frontend/solid/queries` 是页面的数据入口：它组合 `browserClient` 与
 `useDataResource`，负责请求参数、DTO 到页面模型的映射、错误归一和异步竞态控制。页面

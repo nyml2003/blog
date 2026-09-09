@@ -35,6 +35,8 @@ Plan 面向一个跨职能、可验收的产品结果，不面向单个文件或
 
 最近归档：
 
+- [PLAN-DESKTOP-UI-001](./archive/PLAN-DESKTOP-UI-001/PLAN.md)：依据 Desktop 高频范式建立隔离的基础组件库；首批四个组件完成内部契约、边界和构建测试，页面接入另立计划，见 [RESULT](./archive/PLAN-DESKTOP-UI-001/RESULT.md)；
+
 - [PLAN-MOBILE-BROWSE-IA-001](./archive/PLAN-MOBILE-BROWSE-IA-001/PLAN.md)：C Mobile 浏览信息架构（货架快照 + F 型平铺页 + `public.article_browse` 新接口）；用户验收通过，见 [RESULT](./archive/PLAN-MOBILE-BROWSE-IA-001/RESULT.md)；
 
 - [PLAN-CONTENT-GITHUB-TRUTH-001](./archive/PLAN-CONTENT-GITHUB-TRUTH-001/PLAN.md)：内容真源 GitHub 化；按用户要求以部分交付状态归档，完整流程未验收，见 [RESULT](./archive/PLAN-CONTENT-GITHUB-TRUTH-001/RESULT.md)；
