@@ -52,7 +52,7 @@ blog/
 │       ├── mobile/src/logic/   ← Mobile 无 UI 逻辑（导航、筛选、设置）
 │       ├── mobile/src/components/ ← Mobile 共享组件（壳、卡片、货架页）
 │       ├── mobile-ui/       ← Mobile 原子组件库（atoms/molecules/containers）
-│       ├── desktop/src/app.tsx ← Desktop 共享壳（页头导航、文章表格、货架）
+│       ├── desktop/src/shell/ ← Desktop 共享壳（header/t-shelf/article-table 等，单导出组件 + index 出口）
 │       ├── solid/queries/   ← 数据获取层：页面要数据只能走这里
 │       ├── solid/page.tsx   ← definePage：每页引导（先拉路由清单再渲染）
 │       ├── common/client/   ← 框架无关的 API 客户端与浏览器适配
@@ -81,8 +81,8 @@ blog/
 ```
 浏览器 → /articles/detail.html?id=7（HTML 由构建期从 pages.registry 生成）
   → desktop/src/pages/public/detail.tsx 挂载（definePage 先拉路由清单）
-  → usePublishedArticle()（solid/queries/public.ts）
-  → common/client/client.ts 按 CLIENT_API_ROUTES 发 GET /api/public/articles
+  → usePublishedArticle()（solid/queries/articles.ts）
+  → common/client 的 api-client（按 routes-contract.ts 的契约表）发 GET /api/public/articles
   → Product http.rs 路由 → 校验 sceneCode → BFF/data 读取
   → Data（sqlite.rs）查 SQLite 公开快照 → 原路返回 → 页面渲染
 ```
@@ -143,11 +143,14 @@ pages.registry.ts（页面登记表）
 
 四层结构：`interface/`（CLI 与命令登记表）→ `application/`（编排）→ `domain/`（纯规则：架构边界检查、运行矩阵、端口分配）→ `infrastructure/`（进程/文件系统/网络适配）。质量门禁的全部规则在 `domain/architecture.ts`。
 
-## 已知的布局痛点（治理中）
+## 布局治理记录
 
-- 同名文件歧义：`http.rs` ×3（三个进程各一，语义其实清晰）、`runtime.ts` ×2（ops 的 domain/application 各一）；
-- 通用名文件：`app.tsx`、`ui.tsx`、`core.ts`、`client.ts` 名字不携带领域；
-- `solid/queries/public.ts`（436 行）与 `common/client/client.ts`（819 行）是跨领域大杂烩；
-- 前端按技术层堆放，追踪一个领域要跨 6 个目录。
+[PLAN-CODE-LAYOUT-001](./plans/active/PLAN-CODE-LAYOUT-001/PLAN.md)（2026-09-09）已交付：
 
-→ 以上由 [PLAN-CODE-LAYOUT-001](./plans/active/PLAN-CODE-LAYOUT-001/PLAN.md) 治理。
+- `app.tsx`/`ui.tsx` 混合形态拆解为单导出组件 + 独立工具文件（`desktop/src/shell/`、`mobile/src/components/`）；
+- `queries/public.ts` 按领域拆为 `articles.ts` / `shelves.ts` / `taxonomy-public.ts`（出口 `index.ts` 不变）；
+- `client.ts` 拆为 `api-client.ts`（组合根）+ `routes-contract.ts`（契约表）+ `request-kit.ts`（共享请求工具）+ `domains/`（按领域实现组）；
+- ops 歧义名治理：`check.ts`→`quality-check.ts`、`domain/runtime.ts`→`runtime-plan.ts`；
+- 前端文件遵循两种形态：**A 多导出**（工具库/hook 集，成员彼此独立）与 **B 单导出**（一个组件/一个类），见 `docs/guides/typescript-style.md`。
+
+仍在进行：`desktop-ui/` 组件库（[PLAN-DESKTOP-UI-001](./plans/active/PLAN-DESKTOP-UI-001/PLAN.md)，用户主导）；`common/client/domain.ts` 类型表逐领域迁移为 follow-up。

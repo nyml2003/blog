@@ -50,7 +50,7 @@ last_reviewed: 2026-09-09
 | **页面注册表** | 17 个页面的登记表：路径别名、入口文件、标题。加页面只改这里 | `src/frontend/pages.registry.ts` |
 | **查询层（queries）** | 页面与 API 之间的数据获取层。页面禁止绕过它直接发请求 | `src/frontend/solid/queries/` |
 | **definePage** | 每个页面的统一入口：先拉路由清单，再渲染页面组件 | `src/frontend/solid/page.tsx` |
-| **T 型货架** | 公开页的文章陈列：顶部一排类型筛选 + 下面一列文章 | `desktop/src/app.tsx` 的 `TShelf` |
+| **T 型货架** | 公开页的文章陈列：顶部一排类型筛选 + 下面一列文章 | `desktop/src/shell/t-shelf.tsx` 的 `TShelf` |
 | **F 型货架** | Mobile 分类浏览布局：左一级分类、右二级标签、下文章卡片 | `mobile/src/components/category-shelf*.tsx` |
 | **原子/分子（atoms/molecules）** | 最小 UI 积木 / 由积木拼的小组件。Mobile 的组件库分层 | `src/frontend/mobile-ui/` |
 | **WASM 校验器** | 正文 HTML 规则检查器编译成的浏览器版本。编辑器实时报错和后端保存校验是同一套规则 | `src/core/article-html-wasm/` |

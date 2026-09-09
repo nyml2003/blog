@@ -3,7 +3,7 @@ kind: guide
 id: GUIDE-TYPESCRIPT-STYLE
 status: current
 owner: project-manager
-last_reviewed: 2026-09-05
+last_reviewed: 2026-09-09
 ---
 
 # TypeScript 可读性规范
@@ -228,6 +228,15 @@ if (!canPublish) {
 ```
 
 认知复杂度、函数长度和分支数量是 Review 判断项，不以单一数字机械否决所有实现。重复出现的复杂度应在后续治理计划中按模块拆分，不在本规范中要求一次性重写。
+
+## 文件形态约定
+
+前端文件只分两种形态（PLAN-CODE-LAYOUT-001，用户 2026-09-09 指定；宽松约定，非硬性限制）：
+
+- **A 多导出文件**：导出多个**彼此独立**的方法/函数——工具库、hook 集、类型表、常量表。成员必须可独立理解与使用；共享内部状态的一组函数算"类文件"，允许但需在文件头说明（如 `common/client/site-routes.ts` 的 configure/read 缓存对）。
+- **B 单导出文件**：只导出一个东西——一个 UI 组件、一个类、一个组合根（如 `shell/header.tsx`、`api-client.ts` 的 `createClient`）。
+
+混合形态（组件+工具混放、彼此不独立的多导出）是治理对象，新文件不得再产生；出口桶（`index.ts` 纯 re-export）不算混合形态。文件名携带领域信息，避免 `app`、`ui` 这类无领域通用名。
 
 ## 测试、脚本和工具代码
 
