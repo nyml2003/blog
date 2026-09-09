@@ -5,7 +5,7 @@
 //! 取值集合与已移除的 Go 参考实现行为对齐（2026-09-06 退场）。
 
 pub const ARTICLE_LIST: &str = "public.article_list";
-/// Mobile 平铺页的分页检索（SPEC-MOBILE-BROWSE-IA-001 决策记录 #7）：type/topic/tag
+/// Mobile 平铺页的分页检索：type/topic/tag
 /// 三个独立维度各单选、维度间 AND；与 `article_list` 的 `term_ids`（同维度 OR）并存。
 pub const ARTICLE_BROWSE: &str = "public.article_browse";
 pub const ARTICLE_DETAIL: &str = "public.article_detail";
@@ -17,7 +17,7 @@ pub const MOBILE_ARTICLE_SHELF: &str = "public.mobile_article_shelf";
 pub const T_SHELF: &str = "public.t_shelf";
 pub const TAXONOMY_TREE: &str = "public.taxonomy_tree";
 pub const MOBILE_CATEGORY_SHELF: &str = "public.mobile_category_shelf";
-/// 页面路由清单（SPEC-SITE-ROUTES-001）：前端导航不持有 URL 字面量，统一由本场景下发。
+/// 页面路由清单：前端导航不持有 URL 字面量，统一由本场景下发。
 pub const SITE_ROUTES: &str = "public.site_routes";
 pub const ADMIN_SESSION_CREATE: &str = "admin.session.create";
 pub const ADMIN_SESSION_DELETE: &str = "admin.session.delete";

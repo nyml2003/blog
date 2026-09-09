@@ -1,7 +1,7 @@
 //! 命名场景：有限集合，每个场景对所有路由的行为都是确定性的。
 //!
 //! 场景只由 CLI 选中（`--scenario`，缺省 [`DEFAULT_NAME`]）；不读环境变量、不读配置
-//! 文件（SPEC-OPS-RUNTIME-001-ENV-002）。集合与 ops 侧
+//! 文件。集合与 ops 侧
 //! `ops/src/domain/runtime.ts` 的 `MOCK_SCENARIOS` 一一对应，顺序也一致。
 //!
 //! 行为定义（交付记录里有完整场景 × 端点表）：

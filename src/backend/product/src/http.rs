@@ -903,7 +903,7 @@ fn article_list_handler(
     }
 }
 
-/// Mobile 平铺页浏览（SPEC-MOBILE-BROWSE-IA-001，决策记录 #7）：type/topic/tag 三个
+/// Mobile 平铺页浏览：type/topic/tag 三个
 /// 维度各单选、维度间 AND；`topic_id` / `tag_id` 需与 term kind 一致，kind 不匹配由
 /// Data 按 `INVALID_PAYLOAD` 返回并映射为 400。分页默认与上限沿用
 /// `public.article_list`（默认 20 / 上限 100，`protocol::paging` 归一化）。
@@ -1287,7 +1287,7 @@ async fn public_taxonomy(
     }
 }
 
-/// 页面路由清单（SPEC-SITE-ROUTES-001）：导航值由后端统一下发，前端不持有 URL 字面量。
+/// 页面路由清单：导航值由后端统一下发，前端不持有 URL 字面量。
 async fn public_site_routes(
     method: Method,
     Query(params): Query<HashMap<String, String>>,

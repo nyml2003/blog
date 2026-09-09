@@ -1,5 +1,5 @@
 /**
- * 页面路由清单的进程内缓存与同步访问（SPEC-SITE-ROUTES-001）。
+ * 页面路由清单的进程内缓存与同步访问。
  *
  * 路径值只有一个来源：后端 `/api/public/site-routes` 下发的清单（引导期由
  * `solid/queries/site-routes.ts` 写入）。本模块与调用方都不持有页面路径字面量；

@@ -3,7 +3,7 @@ const ADMIN_SESSION_PATH = "/api/admin/session";
 export const ADMIN_SESSION_EXPIRED_EVENT = "blog:admin-session-expired";
 
 /**
- * 管理端会话跳转使用的页面路径（SPEC-SITE-ROUTES-001）。
+ * 管理端会话跳转使用的页面路径。
  * 值来自后端下发的路由清单，不在本模块持有字面量。
  */
 export type AdminSessionRoutePaths = {

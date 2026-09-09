@@ -25,7 +25,7 @@ const DATA_ADDR: &str = "http://127.0.0.1:18231";
 const ADMIN_PASSWORD: &str = "product-contract-password";
 static ADMIN_COOKIE: Mutex<Option<String>> = Mutex::new(None);
 
-/// SPEC-MOBILE-BROWSE-IA-001 用例的独立端口（与其他用例并行互不冲突）。
+/// Mobile 浏览用例的独立端口（与其他用例并行互不冲突）。
 const BROWSE_PRODUCT_PORT: u16 = 18260;
 const BROWSE_DATA_PORT: u16 = 18261;
 const BROWSE_DATA_ADDR: &str = "http://127.0.0.1:18261";
@@ -675,7 +675,7 @@ fn full_public_admin_contract_and_static_mount() {
         ("/", "desktop/pages/public-home/index.html"),
         ("/m", "mobile/pages/home/index.html"),
         ("/m/", "mobile/pages/home/index.html"),
-        // Mobile 平铺页入口（SPEC-MOBILE-BROWSE-IA-001）。
+        // Mobile 平铺页入口。
         (
             "/m/articles/list.html",
             "mobile/pages/article-list/index.html",
@@ -850,7 +850,7 @@ fn full_public_admin_contract_and_static_mount() {
     *ADMIN_COOKIE.lock().expect("admin cookie lock") = None;
 }
 
-/// SPEC-MOBILE-BROWSE-IA-001：货架分区截断 + 每分区 total，以及新浏览接口的
+/// 货架分区截断 + 每分区 total，以及新浏览接口的
 /// 三维 AND / kind 校验 / 分页边界。
 ///
 /// 与 `full_public_admin_contract_and_static_mount` 隔离：独立端口 + 独立临时库，

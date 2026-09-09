@@ -13,8 +13,7 @@ import { promisify } from 'node:util';
 /**
  * 真实进程集成测试：ops CLI ↔ Rust binary ↔ 真实端口 / 真实信号 / 真实前端产物。
  *
- * 这些用例覆盖 Spec 中"只有真实子进程才能断言"的场景（SPEC-OPS-RUNTIME-001 的
- * MODE-001/002/003/004、PORT-002/003/005、FAIL-005/006、SPIKE-001，以及 PLAN 验收 6/7），
+ * 这些用例覆盖"只有真实子进程才能断言"的场景（真实端口/信号/产物对得上编排层），
  * 是 `runtime.test.ts`（端口/进程 double）之外唯一能证明编排层与真实服务对得上的证据。
  *
  * 默认跳过，不拖慢 `node --test` 与 `ops quality check`；按层用环境变量打开：

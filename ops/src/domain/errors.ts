@@ -1,4 +1,4 @@
-/** Stable machine-readable error codes observable through `--json` (SPEC-OPS-RUNTIME-001). */
+/** Stable machine-readable error codes observable through `--json` . */
 export type OpsErrorCode = 'USAGE' | 'PORT_EXHAUSTED' | 'SERVICE_START_FAILED' | 'BUILD_FAILED' | 'CHILD_EXITED';
 
 export const EXIT_OK = 0;

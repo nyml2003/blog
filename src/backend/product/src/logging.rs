@@ -1,4 +1,4 @@
-//! `[product]` 前缀日志（SPEC-OPS-RUNTIME-001-LOG-001）。
+//! `[product]` 前缀日志。
 //!
 //! 与 `[data]` 同一实现约定：每行一个前缀、单次写入、无 logging facade。
 //! 宏体自带 `use ::std::io::Write as _;`，调用方无需引入 trait。

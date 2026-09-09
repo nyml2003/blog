@@ -3,7 +3,7 @@
 //! 同一个 envelope 形态同时用于：
 //! - Product 的外部响应（`sceneCode` 契约，失败码如 `ARTICLE_NOT_FOUND`）；
 //! - Data 的内部响应（失败码见 [`codes`]）；
-//! - 背压场景：Data 任务通道满 → `503` + `BACKPRESSURE`（SPEC-OPS-RUNTIME-001-FAIL-008）。
+//! - 背压场景：Data 任务通道满 → `503` + `BACKPRESSURE`。
 
 use serde::{Deserialize, Serialize};
 

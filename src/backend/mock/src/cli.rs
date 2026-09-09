@@ -1,4 +1,4 @@
-//! Mock 进程参数（SPEC-OPS-RUNTIME-001：`--scenario` 只走 CLI）。
+//! Mock 进程参数。
 //!
 //! 进程参数（服务 binary 契约，供 `ops runtime dev` 调用）：
 //!

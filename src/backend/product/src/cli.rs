@@ -1,4 +1,4 @@
-//! Product 进程参数与注入配置（SPEC-OPS-RUNTIME-001 附录 A）。
+//! Product 进程参数与注入配置。
 //!
 //! 进程参数（服务 binary 契约）：
 //!

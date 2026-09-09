@@ -7,7 +7,7 @@ import {
 import type { AdminSessionRoutePaths } from "../../common/client/admin-session-browser";
 
 /**
- * 页面路由清单引导（SPEC-SITE-ROUTES-001）。
+ * 页面路由清单引导。
  *
  * `definePage` 在渲染前调用 `bootstrapSiteRoutes`；清单值只来自
  * `/api/public/site-routes`，页面与组件经由下方语义化取用函数获得路径，

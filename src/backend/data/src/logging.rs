@@ -1,4 +1,4 @@
-//! `[data]` 前缀日志（SPEC-OPS-RUNTIME-001-LOG-001 / LOG-002）。
+//! `[data]` 前缀日志。
 //!
 //! 不引入 logging facade：ops 会逐行转发子进程输出并按前缀归组，
 //! 因此这里只需要「每行一个前缀 + 单次写入」，不需要 level 过滤。

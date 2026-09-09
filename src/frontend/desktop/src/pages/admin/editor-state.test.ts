@@ -59,7 +59,7 @@ test("a newly allocated article id switches the editor into edit mode", () => {
 });
 
 test("admin navigation uses the content workspace canonical path", () => {
-  // SPEC-SITE-ROUTES-001：canonical 路径的选择收敛到后端下发的路由清单，
+  // canonical 路径的选择收敛到后端下发的路由清单，
   // 页面源码本身不出现任何页面路径字面量。
   const manifest = JSON.parse(
     readFileSync(

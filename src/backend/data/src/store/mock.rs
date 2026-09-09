@@ -948,7 +948,7 @@ impl DataStore for MockStore {
         })
     }
 
-    /// Mobile 平铺页浏览（SPEC-MOBILE-BROWSE-IA-001）。
+    /// Mobile 平铺页浏览。
     ///
     /// 逻辑读取数与 SQLite 路径同口径：term kind 校验(0/1) + count(1) + 当前页(1)
     /// + 批量 terms(1)，与条目数无关。
@@ -1127,7 +1127,7 @@ mod tests {
         );
     }
 
-    /// 浏览筛选语义（SPEC-MOBILE-BROWSE-IA-001）：每个 term 维度独立成立，维度间 AND。
+    /// 浏览筛选语义：每个 term 维度独立成立，维度间 AND。
     #[test]
     fn browse_filters_are_and_across_dimensions() {
         let state = MockState::from_fixture();

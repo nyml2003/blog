@@ -1,6 +1,6 @@
 //! Data 的 HTTP 面：`/healthz`、`/data/v1/operations`、`/data/v1/diagnostics`。
 //!
-//! 背压即契约：`try_send` 失败 → `503` + ARCH-DATA-API envelope（SPEC-OPS-RUNTIME-001-FAIL-008）。
+//! 背压即契约：`try_send` 失败 → `503` + ARCH-DATA-API envelope。
 //! 请求预算经 `X-Blog-Budget-Ms` 头沿链路传播；超时后丢弃回程通道即触发协作式取消。
 
 use std::sync::Arc;

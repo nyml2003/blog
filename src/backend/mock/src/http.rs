@@ -538,7 +538,7 @@ fn article_list(
     }
 }
 
-/// Mobile 平铺页浏览（SPEC-MOBILE-BROWSE-IA-001）：type/topic/tag 三个维度各单选、
+/// Mobile 平铺页浏览：type/topic/tag 三个维度各单选、
 /// 维度间 AND；`topic_id` / `tag_id` 需与 term kind 一致，否则参数错误。
 fn article_browse(
     state: &Arc<AppState>,
@@ -895,7 +895,7 @@ async fn public_taxonomy(
     finish(&state, label, StatusCode::OK, &Envelope::ok(value))
 }
 
-/// 页面路由清单（SPEC-SITE-ROUTES-001）：与 Product 共用 protocol 内嵌清单，Mock 侧等价实现。
+/// 页面路由清单：与 Product 共用 protocol 内嵌清单，Mock 侧等价实现。
 async fn public_site_routes(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,

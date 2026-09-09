@@ -1,4 +1,4 @@
-//! `web/dist` 静态挂载（SPEC-OPS-RUNTIME-001-MODE-004）。
+//! `web/dist` 静态挂载。
 //!
 //! 路由契约与已移除的 Go 参考实现行为对齐（2026-09-06 退场，原 `frontendHandler`）：
 //!

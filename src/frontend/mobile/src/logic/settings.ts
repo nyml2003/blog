@@ -66,7 +66,7 @@ export function useMobileSettings() {
   );
 }
 
-/** 页面内容在渲染期求值：路径值来自后端路由清单（SPEC-SITE-ROUTES-001）。 */
+/** 页面内容在渲染期求值：路径值来自后端路由清单。 */
 export const mobileSettingsPageContent = () =>
   ({
     title: "设置",

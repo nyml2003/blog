@@ -1553,7 +1553,7 @@ impl DataStore for SqliteStore {
         })
     }
 
-    /// Mobile 平铺页浏览（SPEC-MOBILE-BROWSE-IA-001）。
+    /// Mobile 平铺页浏览。
     ///
     /// 固定查询数 3~4：term kind 校验(0/1) + count(1) + 当前页(1) + 批量 terms(1)，
     /// 与条目数无关。筛选条件与列表排序语义一致（`updated_at DESC, id DESC`）。
@@ -1673,7 +1673,7 @@ fn build_article_where(published_only: bool, filter: &ArticleFilter) -> (String,
     (sql, args)
 }
 
-/// 浏览的 WHERE 子构造（SPEC-MOBILE-BROWSE-IA-001）：**每个维度一个独立子句**，
+/// 浏览的 WHERE 子构造：**每个维度一个独立子句**，
 /// 维度之间 AND。
 ///
 /// 刻意不走 [`build_article_where`] 的 `term_ids IN (...)`：那是同一维度 OR 语义，

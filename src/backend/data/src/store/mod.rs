@@ -187,7 +187,7 @@ pub trait DataStore: Send + Sync + 'static {
         query: &ArticleShelfQuery,
         ctx: &OpCtx<'_>,
     ) -> Result<ArticleShelfData, OperationFailure>;
-    /// Mobile 平铺页浏览（SPEC-MOBILE-BROWSE-IA-001）：type/topic/tag 三维单选 AND
+    /// Mobile 平铺页浏览：type/topic/tag 三维单选 AND
     /// + 分页，响应形态同 [`ArticleListPage`]。topic/tag 必须引用对应 `kind` 的 term。
     fn article_browse(
         &self,

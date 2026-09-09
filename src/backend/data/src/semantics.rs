@@ -1,6 +1,6 @@
 //! 数据语义（`mock` / `test` / `prod`）与 test 语义的临时库生命周期。
 //!
-//! - `mock`：内存夹具，**不创建、不打开任何 SQLite 文件**（SPEC-OPS-RUNTIME-001-MODE-002）；
+//! - `mock`：内存夹具，**不创建、不打开任何 SQLite 文件**；
 //! - `test`：每次运行全新临时 SQLite，自动迁移 + 稳定 seed；位于 `target/test-dbs/`、
 //!   以进程 PID 命名；**正常退出即删除，异常退出保留供诊断**（MODE-003）；
 //! - `prod`：显式指定的仓库外 SQLite 文件，自动迁移、不加载 seed、正常退出不删除。

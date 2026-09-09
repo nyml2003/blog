@@ -116,7 +116,7 @@ export type AdminSessionLoginInput = {
   readonly verification: AdminSessionVerification;
 };
 
-/** `/api/public/site-routes` 的载荷（SPEC-SITE-ROUTES-001）：页面 id → 路径。 */
+/** `/api/public/site-routes` 的载荷：页面 id → 路径。 */
 export type SiteRoutes = { routes: Record<string, string> };
 
 export interface Client {

@@ -77,7 +77,7 @@ pub const TERMS: &[SeedTerm] = &[
         name: "runtime",
         kind: "tag",
     },
-    // 追加块引入的两个维度（SPEC-MOBILE-BROWSE-IA-001：AND 组合需要非平凡收窄）。
+    // 追加块引入的两个维度。
     SeedTerm {
         id: 5,
         name: "tooling",

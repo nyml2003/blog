@@ -1,4 +1,4 @@
-//! 页面路由清单（SPEC-SITE-ROUTES-001）。
+//! 页面路由清单。
 //!
 //! 前端导航不持有 URL 字面量：`GET /api/public/site-routes` 把页面 id → 路径的
 //! 清单下发给前端，Product 与 Mock 引用同一份编译期内嵌清单，两侧保证一致。

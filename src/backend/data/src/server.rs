@@ -1,6 +1,6 @@
 //! Data Server 进程生命周期：启动（迁移 + seed → bind → accept）与关停顺序。
 //!
-//! 关停（SPEC-OPS-RUNTIME-001-FAIL-009 / PLAN「Rust 运行时与 I/O 架构」）：
+//! 关停：
 //!
 //! ```text
 //! 常驻（等信号）→ SIGTERM/SIGINT → 停止 accept → 限期排空在途请求

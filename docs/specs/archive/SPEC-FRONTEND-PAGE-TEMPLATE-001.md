@@ -1,7 +1,7 @@
 ---
 kind: spec
 id: SPEC-FRONTEND-PAGE-TEMPLATE-001
-status: accepted
+status: archived
 owner: frontend
 plan_id: PLAN-FRONTEND-PAGE-TEMPLATE-001
 last_reviewed: 2026-09-10

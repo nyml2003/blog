@@ -1,10 +1,10 @@
 ---
 kind: spec
 id: SPEC-OPS-USABILITY-001
-status: accepted
+status: archived
 version: 2
 owner: project-manager
-last_reviewed: 2026-09-06
+last_reviewed: 2026-09-10
 ---
 
 # Ops 命令发现与项目入口一致性

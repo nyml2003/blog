@@ -269,7 +269,7 @@ fn t_shelf_returns_filters_and_refetches_inside_each_surface() {
     assert!(server.signal("-TERM").success());
 }
 
-/// SPEC-MOBILE-BROWSE-IA-001：货架分区截断 + 每分区 total，以及浏览接口的三维
+/// 货架分区截断 + 每分区 total，以及浏览接口的三维
 /// AND / kind 校验 / 分页边界。Mock 与 Product 各自编排，这组断言锁定共同 wire。
 #[test]
 fn shelf_sections_are_bounded_and_browse_filters_are_and() {

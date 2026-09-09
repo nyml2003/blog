@@ -79,7 +79,7 @@ function requirePort(port: number): number {
 const frontendBuild: BuildStep = { label: 'pnpm -C src/frontend run build', command: 'pnpm', args: ['-C', 'src/frontend', 'run', 'build'], role: 'web' };
 const frontendWatchBuild: BuildStep = { label: 'pnpm -C src/frontend run build --watch', command: 'pnpm', args: ['-C', 'src/frontend', 'run', 'build', '--watch'], role: 'web' };
 
-/** Pure mode → {services, candidate ports, builds} mapping; the matrix in SPEC-OPS-RUNTIME-001. */
+/** Pure mode → {services, candidate ports, builds} mapping; the matrix . */
 export function planMode(options: ModeOptions): ModePlan {
   if (options.mode === 'dev') {
     if (!isModelValue({ kind: 'enum', values: MOCK_SCENARIOS }, options.scenario)) {

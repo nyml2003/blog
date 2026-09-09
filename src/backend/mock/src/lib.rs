@@ -5,7 +5,7 @@
 //! 管理路由与 `sceneCode`，并遵循 ARCH-DATA-API 的 `{ code, message, data }` envelope
 //! 与 camelCase 字段。
 //!
-//! 三个可观察维度（全部只由 CLI 决定，不读环境变量，SPEC-OPS-RUNTIME-001-ENV-002）：
+//! 三个可观察维度（全部只由 CLI 决定，不读环境变量）：
 //!
 //! - **场景**：有限命名集合 `default`/`empty`/`slow`/`server-error`/`malformed-response`
 //!   （[`scenario`]），每个场景对所有路由的行为都是确定性的；

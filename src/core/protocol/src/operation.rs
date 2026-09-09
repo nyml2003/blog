@@ -81,7 +81,7 @@ pub struct ArticleGetQuery {
     pub published_only: bool,
 }
 
-/// Mobile 平铺页的浏览查询（SPEC-MOBILE-BROWSE-IA-001，决策记录 #7）。
+/// Mobile 平铺页的浏览查询。
 ///
 /// 与 [`ArticleListQuery`] 的关键差异：topic / tag 是**独立维度**，各单选、维度间
 /// AND，每维度使用独立的 EXISTS 子句。刻意**不**复用 `term_ids`（同一维度 OR 语义，
@@ -252,7 +252,7 @@ pub struct ArticleShelfQuery {
 pub enum DataOperation {
     /// 文章列表分页（含 count + 当前页 + 批量关联加载，固定查询数）。
     ArticleList(ArticleListQuery),
-    /// Mobile 平铺页浏览（SPEC-MOBILE-BROWSE-IA-001）：三维单选 AND + 分页，
+    /// Mobile 平铺页浏览：三维单选 AND + 分页，
     /// 响应形态与 [`DataOperation::ArticleList`] 相同（[`ArticleListPage`]）。
     ArticleBrowse(ArticleBrowseQuery),
     /// 单篇文章（含类型与 terms）。

@@ -89,7 +89,7 @@ test("the registry covers 17 pages and the frozen 22 aliases", () => {
 });
 
 test("site-routes.json manifest stays in sync with the page registry", () => {
-  // SPEC-SITE-ROUTES-001：清单是后端下发路由的唯一来源（protocol include_str! 内嵌），
+  // 清单是后端下发路由的唯一来源（protocol include_str! 内嵌），
   // 键必须是注册表页面 id，值必须是该页面的已注册 alias。
   const manifest = JSON.parse(
     readFileSync(resolve(frontendRoot, "site-routes.json"), "utf8"),

@@ -19,7 +19,7 @@ export function definePage(Page: Component): void {
     throw new Error('Page mount element "#app" is missing');
   }
 
-  // SPEC-SITE-ROUTES-001：先完成后端路由清单引导再渲染页面；
+  // 先完成后端路由清单引导再渲染页面；
   // 失败不回退到任何前端字面量路径，交给错误态重试。
   bootstrapSiteRoutes().then(
     () => render(() => createComponent(Page, {}), mount),

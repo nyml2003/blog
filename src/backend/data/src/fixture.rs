@@ -6,7 +6,7 @@
 //! 数据集刻意覆盖边界：空摘要合法（ARCH-DATA-API）、draft 不出现在公开查询、
 //! 无 terms 的文章、单篇文章挂多个 terms、`updated_at DESC, id DESC` 排序。
 //!
-//! **体量（SPEC-MOBILE-BROWSE-IA-001 走查用）**：48 篇 = 显式头部 12 篇（id 1..=12，
+//! **体量**：48 篇 = 显式头部 12 篇（id 1..=12，
 //! 原样保留）+ 确定性追加 36 篇（id 13..=48，全部 published）。追加块没有随机源：
 //! 类型/terms/时间戳是固定的字面量表（见 [`ARTICLES`] 上方注释），标题/摘要/正文由
 //! `id` 与类型名在编译期拼接（`concat!`），跨运行、跨进程完全一致。
@@ -78,7 +78,7 @@ pub const TERMS: &[FixtureTerm] = &[
         name: "runtime",
         kind: "tag",
     },
-    // 追加块引入的两个维度（SPEC-MOBILE-BROWSE-IA-001：AND 组合需要非平凡收窄）。
+    // 追加块引入的两个维度。
     FixtureTerm {
         id: 5,
         name: "tooling",

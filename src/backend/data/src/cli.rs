@@ -1,4 +1,4 @@
-//! Data 进程参数与环境变量注入（SPEC-OPS-RUNTIME-001 附录 A）。
+//! Data 进程参数与环境变量注入。
 //!
 //! 进程参数（服务 binary 契约，供 ops runtime 调用）：
 //!

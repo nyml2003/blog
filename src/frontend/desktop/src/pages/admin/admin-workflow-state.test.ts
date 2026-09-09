@@ -82,7 +82,7 @@ test("editor keeps its form mounted after save and public navigation has no admi
   );
 
   assert.doesNotMatch(editorSource, /workspace\.refetch\(\)/);
-  // SPEC-SITE-ROUTES-001：导航经路由清单取用，源码不出现页面路径字面量；
+  // 导航经路由清单取用，源码不出现页面路径字面量；
   // 管理台入口只存在于 admin 分支（public 分支无管理入口文案）。
   assert.doesNotMatch(headerSource, /href="\/(admin|m|articles)\//);
   assert.match(headerSource, /adminHomeHref\(\)/);
