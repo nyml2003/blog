@@ -1,10 +1,10 @@
 ---
 kind: spec
 id: SPEC-MOBILE-SHELF-BFF-001
-status: proposed
+status: accepted
 owner: backend
 plan_id: PLAN-MOBILE-DENSITY-001
-last_reviewed: 2026-09-05
+last_reviewed: 2026-09-10
 ---
 
 # Mobile Shelf BFF 读取模型

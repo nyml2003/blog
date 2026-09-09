@@ -19,6 +19,7 @@
 - `architecture/` 只描述当前真实生效的系统；
 - 计划完成后只保留结果、证据和关键决策；
 - 被替代的内容标记为 `superseded`，不悄悄覆盖历史；
+- 对应计划已归档且无活跃引用的 spec 移入 `specs/archive/`，作为历史依据保留；
 - `plans/active/` 只持有用户确认的进行中计划，完成后归档到 `plans/archive/`。
 
 ## 变更规则
