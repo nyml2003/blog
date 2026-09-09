@@ -1,13 +1,15 @@
 ---
 kind: spec
 id: SPEC-CONTENT-GITHUB-TRUTH-001
-status: draft
+status: superseded
 owner: backend
 plan_id: PLAN-CONTENT-GITHUB-TRUTH-001
-last_reviewed: 2026-09-06
+last_reviewed: 2026-09-10
 ---
 
-# 内容真源 GitHub 化
+# 内容真源 GitHub 化（已取代）
+
+> **已取代（2026-09-10）**：本 Spec 的未完成范围由 [SPEC-CONTENT-TAXONOMY-001](./SPEC-CONTENT-TAXONOMY-001.md) 承接并交付；本文件仅作历史依据。
 
 ## 状态与目标
 

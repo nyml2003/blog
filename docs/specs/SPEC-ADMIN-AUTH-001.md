@@ -1,10 +1,10 @@
 ---
 kind: spec
 id: SPEC-ADMIN-AUTH-001
-status: draft
+status: accepted
 owner: backend
 plan_id: PLAN-ADMIN-AUTH-001
-last_reviewed: 2026-09-08
+last_reviewed: 2026-09-10
 ---
 
 # 管理端鉴权（Session + TOTP）与管理台导航修复
@@ -110,5 +110,5 @@ Then 直通无鉴权（显式开关），生产 / integration 场景鉴权全量
 - 真实浏览器证据已完成：恢复码登录、安全 `next`、认证后工作区、公开端隔离、页面错误
   和横向溢出检查均通过；
 - 命令结果、进程测试、安全复核和浏览器证据路径见
-  [PLAN-ADMIN-AUTH-001/EVIDENCE.md](../plans/active/PLAN-ADMIN-AUTH-001/EVIDENCE.md)；
+  [PLAN-ADMIN-AUTH-001/EVIDENCE.md](../plans/archive/PLAN-ADMIN-AUTH-001/EVIDENCE.md)；
 - Spec 保持 draft，等待用户完成秘密保管与产品验收后再推进为 accepted。

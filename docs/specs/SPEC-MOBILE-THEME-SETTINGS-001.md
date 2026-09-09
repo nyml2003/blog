@@ -1,10 +1,10 @@
 ---
 kind: spec
 id: SPEC-MOBILE-THEME-SETTINGS-001
-status: draft
+status: accepted
 owner: frontend-mobile
 plan_id: PLAN-MOBILE-THEME-SETTINGS-001
-last_reviewed: 2026-09-06
+last_reviewed: 2026-09-10
 ---
 
 # C Mobile 设置页与容器主题

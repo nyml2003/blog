@@ -1,10 +1,10 @@
 ---
 kind: spec
 id: SPEC-CONTENT-TAXONOMY-001
-status: draft
+status: accepted
 owner: project-manager
 plan_id: PLAN-CONTENT-TAXONOMY-001
-last_reviewed: 2026-09-08
+last_reviewed: 2026-09-10
 ---
 
 # 内容分类树与大模型 PR 工作流
@@ -151,6 +151,6 @@ Then 页面保持 F 型布局，按分类树筛选并去重展示文章卡片
 
 - 自动化测试已完成：覆盖 taxonomy schema、ID 水位、叶子引用、树环、合并迁移、模型变更 JSON、单 PR 批次一致性、同步恢复和公开快照隔离；
 - 真实 GitHub 集成已完成：PR #1 合入后同步到公开快照，合入后新增的本地 article 2 保留为下一批并进入仍 open 的 PR #2；公开端只出现 article 1；
-- 浏览器自动化已完成：[报告](../plans/active/PLAN-CONTENT-TAXONOMY-001/evidence/browser/report.json) 通过，覆盖登录、工作区 active PR、公开端隔离、Desktop 和 Mobile 无溢出及页面错误；
-- 完整证据与环境边界见计划的 [EVIDENCE.md](../plans/active/PLAN-CONTENT-TAXONOMY-001/EVIDENCE.md)；
+- 浏览器自动化已完成：[报告](../plans/archive/PLAN-CONTENT-TAXONOMY-001/evidence/browser/report.json) 通过，覆盖登录、工作区 active PR、公开端隔离、Desktop 和 Mobile 无溢出及页面错误；
+- 完整证据与环境边界见计划的 [EVIDENCE.md](../plans/archive/PLAN-CONTENT-TAXONOMY-001/EVIDENCE.md)；
 - 人工验收仍由用户完成：审查当前 PR diff、确认最终行为并决定是否合入；完成前 Spec 保持 draft，计划不归档。

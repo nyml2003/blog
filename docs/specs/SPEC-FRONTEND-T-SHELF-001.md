@@ -1,10 +1,10 @@
 ---
 kind: spec
 id: SPEC-FRONTEND-T-SHELF-001
-status: draft
+status: accepted
 owner: frontend
 plan_id: PLAN-FRONTEND-PAGE-TEMPLATE-001
-last_reviewed: 2026-09-08
+last_reviewed: 2026-09-10
 ---
 
 # 公开端 T 型货架与 Mobile F 型边界

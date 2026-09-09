@@ -1,10 +1,10 @@
 ---
 kind: plan
 id: PLAN-ARCH-BOUNDARY-001
-status: acceptance
+status: archived
 owner: project-manager
 created: 2026-09-06
-last_reviewed: 2026-09-08
+last_reviewed: 2026-09-10
 ---
 
 # 架构边界治理（页面去数据化 / 后端四层归位）

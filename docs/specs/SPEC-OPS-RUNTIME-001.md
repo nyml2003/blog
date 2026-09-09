@@ -29,8 +29,8 @@ last_reviewed: 2026-09-06
 | --- | --- |
 | `docs/architecture/data-and-api.md`（ARCH-DATA-API） | `sceneCode` 采用 `端点.场景` 命名；公开 `/api/public/*`、管理 `/api/admin/*`；响应 `{ code, message, data }` envelope；业务接口只用 `GET`/`POST` |
 | `docs/specs/SPEC-OPS-USABILITY-001` 系列 | 帮助等价入口、未知命令/选项/非法值的可观察行为（SPEC-OPS-USABILITY-004）、工作区未激活快速失败（SPEC-OPS-USABILITY-006） |
-| `docs/plans/active/PLAN-OPS-RUNTIME-DEV-001/WORKSTREAM-MOCK.md` | 命名场景集合 `default`/`empty`/`slow`/`server-error`/`malformed-response`；显式 session 请求头（如 `X-Blog-Mock-Session`） |
-| `docs/plans/active/PLAN-OPS-RUNTIME-DEV-001/WORKSTREAM-OPS-RUNTIME-FRONTEND.md` | `web/common` Client/Data 注入点与 `BLOG_API_ORIGIN` 接缝 |
+| `docs/plans/archive/PLAN-OPS-RUNTIME-DEV-001/WORKSTREAM-MOCK.md` | 命名场景集合 `default`/`empty`/`slow`/`server-error`/`malformed-response`；显式 session 请求头（如 `X-Blog-Mock-Session`） |
+| `docs/plans/archive/PLAN-OPS-RUNTIME-DEV-001/WORKSTREAM-OPS-RUNTIME-FRONTEND.md` | `web/common` Client/Data 注入点与 `BLOG_API_ORIGIN` 接缝 |
 | `web/vite.config.ts:6` | `BLOG_API_ORIGIN` 既有接缝，缺省 `http://127.0.0.1:8080`，仅代理 `/api` |
 | `docs/FACTS.md` FACT-RUNTIME-001 | 2 核 / 2 GB / 40 GB 目标资源约束 |
 

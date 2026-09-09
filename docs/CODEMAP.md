@@ -146,7 +146,7 @@ pages.registry.ts（页面登记表）
 
 ## 布局治理记录
 
-[PLAN-CODE-LAYOUT-001](./plans/active/PLAN-CODE-LAYOUT-001/PLAN.md)（2026-09-09）已交付：
+[PLAN-CODE-LAYOUT-001](./plans/archive/PLAN-CODE-LAYOUT-001/PLAN.md)（2026-09-09）已交付：
 
 - `app.tsx`/`ui.tsx` 混合形态拆解为单导出组件 + 独立工具文件（`desktop/src/shell/`、`mobile/src/components/`）；
 - `queries/public.ts` 按领域拆为 `articles.ts` / `shelves.ts` / `taxonomy-public.ts`（出口 `index.ts` 不变）；

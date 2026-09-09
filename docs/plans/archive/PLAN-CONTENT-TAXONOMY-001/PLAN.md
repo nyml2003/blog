@@ -1,10 +1,10 @@
 ---
 kind: plan
 id: PLAN-CONTENT-TAXONOMY-001
-status: acceptance
+status: archived
 owner: project-manager
 created: 2026-09-07
-last_reviewed: 2026-09-08
+last_reviewed: 2026-09-10
 ---
 
 # 内容分类树与大模型 PR 工作流

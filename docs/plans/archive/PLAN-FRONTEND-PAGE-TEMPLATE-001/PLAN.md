@@ -1,10 +1,10 @@
 ---
 kind: plan
 id: PLAN-FRONTEND-PAGE-TEMPLATE-001
-status: acceptance
+status: archived
 owner: project-manager
 created: 2026-09-07
-last_reviewed: 2026-09-08
+last_reviewed: 2026-09-10
 ---
 
 # 前端页面模板与接入统一（注册表驱动）

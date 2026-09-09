@@ -1,10 +1,10 @@
 ---
 kind: plan
 id: PLAN-CODE-LAYOUT-001
-status: ready
+status: archived
 owner: project-manager
 created: 2026-09-09
-last_reviewed: 2026-09-09
+last_reviewed: 2026-09-10
 ---
 
 # 代码布局与命名治理（人读优先）

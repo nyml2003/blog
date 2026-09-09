@@ -1,10 +1,10 @@
 ---
 kind: plan
 id: PLAN-ADMIN-AUTH-001
-status: acceptance
+status: archived
 owner: project-manager
 created: 2026-09-08
-last_reviewed: 2026-09-08
+last_reviewed: 2026-09-10
 ---
 
 # 管理端鉴权与登录闭环

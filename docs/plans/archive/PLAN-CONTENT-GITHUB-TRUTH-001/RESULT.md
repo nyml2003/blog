@@ -41,8 +41,8 @@ last_reviewed: 2026-09-08
 `PLAN-CONTENT-TAXONOMY-001` 后续补齐了本结果“未完成”中列出的生产 GitHub transport、
 Data 快照事务、工作区恢复、管理 HTTP/鉴权接入、真实 PR/sync 和浏览器证据。该后续计划
 当前处于 acceptance，真实结果与尚待用户确认的项目见其
-[EVIDENCE.md](../../active/PLAN-CONTENT-TAXONOMY-001/EVIDENCE.md) 和
-[ACCEPTANCE.md](../../active/PLAN-CONTENT-TAXONOMY-001/ACCEPTANCE.md)。
+[EVIDENCE.md](../../archive/PLAN-CONTENT-TAXONOMY-001/EVIDENCE.md) 和
+[ACCEPTANCE.md](../../archive/PLAN-CONTENT-TAXONOMY-001/ACCEPTANCE.md)。
 
 本补充只记录后续交付，不追溯改变本计划在 2026-09-07 的 `outcome: partial`，也不代替
 用户对后续计划当前 PR 和最终产品行为的验收。

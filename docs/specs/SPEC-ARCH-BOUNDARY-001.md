@@ -1,10 +1,10 @@
 ---
 kind: spec
 id: SPEC-ARCH-BOUNDARY-001
-status: draft
+status: accepted
 owner: backend
 plan_id: PLAN-ARCH-BOUNDARY-001
-last_reviewed: 2026-09-08
+last_reviewed: 2026-09-10
 ---
 
 # 架构分层边界规则（前端查询层归一 / 后端四层各归其位）

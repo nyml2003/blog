@@ -1,7 +1,7 @@
 ---
 kind: spec
 id: SPEC-SITE-ROUTES-001
-status: draft
+status: accepted
 owner: frontend
 created: 2026-09-09
 ---

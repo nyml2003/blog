@@ -1,10 +1,10 @@
 ---
 kind: spec
 id: SPEC-FRONTEND-PAGE-TEMPLATE-001
-status: draft
+status: accepted
 owner: frontend
 plan_id: PLAN-FRONTEND-PAGE-TEMPLATE-001
-last_reviewed: 2026-09-08
+last_reviewed: 2026-09-10
 ---
 
 # 前端页面模板与接入统一（注册表驱动）
