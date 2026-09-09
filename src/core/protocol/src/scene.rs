@@ -17,6 +17,8 @@ pub const MOBILE_ARTICLE_SHELF: &str = "public.mobile_article_shelf";
 pub const T_SHELF: &str = "public.t_shelf";
 pub const TAXONOMY_TREE: &str = "public.taxonomy_tree";
 pub const MOBILE_CATEGORY_SHELF: &str = "public.mobile_category_shelf";
+/// 页面路由清单（SPEC-SITE-ROUTES-001）：前端导航不持有 URL 字面量，统一由本场景下发。
+pub const SITE_ROUTES: &str = "public.site_routes";
 pub const ADMIN_SESSION_CREATE: &str = "admin.session.create";
 pub const ADMIN_SESSION_DELETE: &str = "admin.session.delete";
 pub const ADMIN_ARTICLE_LIST: &str = "admin.article_list";
@@ -54,6 +56,7 @@ pub const MOBILE_ARTICLE_SHELF_ENDPOINT: &str = "/api/public/mobile/article-shel
 pub const T_SHELF_ENDPOINT: &str = "/api/public/t-shelf";
 pub const PUBLIC_TAXONOMY_ENDPOINT: &str = "/api/public/taxonomy";
 pub const MOBILE_CATEGORY_SHELF_ENDPOINT: &str = "/api/public/mobile/category-shelf";
+pub const PUBLIC_SITE_ROUTES_ENDPOINT: &str = "/api/public/site-routes";
 pub const ADMIN_SESSION_ENDPOINT: &str = "/api/admin/session";
 pub const ADMIN_ARTICLES_ENDPOINT: &str = "/api/admin/articles";
 pub const ADMIN_ARTICLE_TYPES_ENDPOINT: &str = "/api/admin/article-types";
@@ -128,6 +131,11 @@ pub const ROUTES: &[ApiRoute] = &[
         method: "GET",
         endpoint: MOBILE_CATEGORY_SHELF_ENDPOINT,
         scene_code: MOBILE_CATEGORY_SHELF,
+    },
+    ApiRoute {
+        method: "GET",
+        endpoint: PUBLIC_SITE_ROUTES_ENDPOINT,
+        scene_code: SITE_ROUTES,
     },
     ApiRoute {
         method: "POST",
@@ -289,6 +297,7 @@ pub const PUBLIC: &[&str] = &[
     T_SHELF,
     TAXONOMY_TREE,
     MOBILE_CATEGORY_SHELF,
+    SITE_ROUTES,
 ];
 
 /// 管理端点使用的 `admin.*` 场景集合。
@@ -335,7 +344,7 @@ mod tests {
         sorted.sort_unstable();
         sorted.dedup();
         assert_eq!(all.len(), sorted.len(), "scene codes must be unique");
-        assert_eq!(all.len(), 38);
+        assert_eq!(all.len(), 39);
         for scene in all {
             assert!(
                 scene.starts_with("public.") || scene.starts_with("admin."),

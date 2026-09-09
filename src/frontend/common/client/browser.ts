@@ -8,6 +8,7 @@ import {
   createMockSessionInterceptor,
   readMockSessionFromLocation,
 } from "./mock-session";
+import { siteRouteRequired } from "./site-routes";
 
 /**
  * Browser composition root. Pages depend on domain capabilities, not transport.
@@ -32,6 +33,10 @@ export const browserClient = createClient(
       beforeRedirect: () =>
         window.dispatchEvent(new Event(ADMIN_SESSION_EXPIRED_EVENT)),
       replaceLocation: (path) => location.replace(path),
+      routes: () => ({
+        loginPath: siteRouteRequired("desktop-admin-login"),
+        homePath: siteRouteRequired("desktop-admin-home"),
+      }),
     }),
     interceptors: [
       createMockSessionInterceptor({

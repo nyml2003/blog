@@ -189,7 +189,7 @@ export function CategoryShelfPage(p: { title: string }) {
         </Show>
       </main>
       <BottomNav
-        items={mobileNavigationItems}
+        items={mobileNavigationItems()}
         activeId="articles"
         ariaLabel="页面导航"
       />

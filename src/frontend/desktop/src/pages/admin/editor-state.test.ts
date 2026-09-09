@@ -59,11 +59,30 @@ test("a newly allocated article id switches the editor into edit mode", () => {
 });
 
 test("admin navigation uses the content workspace canonical path", () => {
+  // SPEC-SITE-ROUTES-001：canonical 路径的选择收敛到后端下发的路由清单，
+  // 页面源码本身不出现任何页面路径字面量。
+  const manifest = JSON.parse(
+    readFileSync(
+      new URL("../../../../site-routes.json", import.meta.url),
+      "utf8",
+    ),
+  ) as { routes: Record<string, string> };
+  assert.equal(
+    manifest.routes["desktop-admin-article-types"],
+    "/admin/content/workspace.html",
+  );
+  // workspace 页的旧别名（article-types/terms 的 index.html 形态）不得作为导航值下发。
+  assert.notEqual(
+    manifest.routes["desktop-admin-article-types"],
+    "/admin/article-types/index.html",
+  );
+
   const sources = ["./editor.tsx", "./home.tsx", "../../app.tsx"].map((path) =>
     readFileSync(new URL(path, import.meta.url), "utf8"),
   );
   for (const source of sources) {
-    assert.match(source, /\/admin\/content\/workspace\.html/);
+    assert.match(source, /adminWorkspaceHref/);
+    assert.doesNotMatch(source, /\/admin\/content\/workspace\.html/);
     assert.doesNotMatch(
       source,
       /\/admin\/(?:article-types|terms)\/index\.html/,

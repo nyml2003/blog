@@ -1,8 +1,15 @@
-const ADMIN_LOGIN_PATH = "/admin/login.html";
-const ADMIN_HOME_PATH = "/admin/index.html";
 const ADMIN_API_PREFIX = "/api/admin/";
 const ADMIN_SESSION_PATH = "/api/admin/session";
 export const ADMIN_SESSION_EXPIRED_EVENT = "blog:admin-session-expired";
+
+/**
+ * 管理端会话跳转使用的页面路径（SPEC-SITE-ROUTES-001）。
+ * 值来自后端下发的路由清单，不在本模块持有字面量。
+ */
+export type AdminSessionRoutePaths = {
+  readonly loginPath: string;
+  readonly homePath: string;
+};
 
 export type AdminLocationSnapshot = {
   readonly origin: string;
@@ -15,44 +22,58 @@ export type AdminAuthFetchOptions = {
   readonly readLocation: () => AdminLocationSnapshot;
   readonly beforeRedirect: () => void;
   readonly replaceLocation: (path: string) => void;
+  readonly routes: () => AdminSessionRoutePaths;
 };
 
 export const safeAdminNext = (
   candidate: string | null,
   origin: string,
+  paths: AdminSessionRoutePaths,
 ): string => {
   if (candidate === null || !candidate.startsWith("/admin/")) {
-    return ADMIN_HOME_PATH;
+    return paths.homePath;
   }
-  if (/\\|%5c/i.test(candidate)) return ADMIN_HOME_PATH;
+  if (/\\|%5c/i.test(candidate)) return paths.homePath;
 
   let parsed: URL;
   try {
     parsed = new URL(candidate, origin);
   } catch {
-    return ADMIN_HOME_PATH;
+    return paths.homePath;
   }
 
   const isSafeOrigin = parsed.origin === origin;
   const isAdminPath = parsed.pathname.startsWith("/admin/");
-  const isLoginPath = parsed.pathname === ADMIN_LOGIN_PATH;
-  if (!isSafeOrigin || !isAdminPath || isLoginPath) return ADMIN_HOME_PATH;
+  const isLoginPath = parsed.pathname === paths.loginPath;
+  if (!isSafeOrigin || !isAdminPath || isLoginPath) return paths.homePath;
   return `${parsed.pathname}${parsed.search}`;
 };
 
 export const adminNextFromLocation = (
   location: AdminLocationSnapshot,
+  paths: AdminSessionRoutePaths,
 ): string =>
-  safeAdminNext(`${location.pathname}${location.search}`, location.origin);
+  safeAdminNext(
+    `${location.pathname}${location.search}`,
+    location.origin,
+    paths,
+  );
 
-export const adminNextFromSearch = (search: string, origin: string): string => {
+export const adminNextFromSearch = (
+  search: string,
+  origin: string,
+  paths: AdminSessionRoutePaths,
+): string => {
   const candidate = new URLSearchParams(search).get("next");
-  return safeAdminNext(candidate, origin);
+  return safeAdminNext(candidate, origin, paths);
 };
 
-export const adminLoginPath = (location: AdminLocationSnapshot): string => {
-  const next = adminNextFromLocation(location);
-  return `${ADMIN_LOGIN_PATH}?${new URLSearchParams({ next })}`;
+export const adminLoginPath = (
+  location: AdminLocationSnapshot,
+  paths: AdminSessionRoutePaths,
+): string => {
+  const next = adminNextFromLocation(location, paths);
+  return `${paths.loginPath}?${new URLSearchParams({ next })}`;
 };
 
 const requestUrl = (
@@ -88,6 +109,6 @@ export const createAdminAuthFetch =
     const location = options.readLocation();
     if (!isProtectedAdminApiRequest(input, location.origin)) return response;
     options.beforeRedirect();
-    options.replaceLocation(adminLoginPath(location));
+    options.replaceLocation(adminLoginPath(location, options.routes()));
     return response;
   };

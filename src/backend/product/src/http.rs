@@ -1,6 +1,6 @@
 //! Product 的 HTTP 面：公开 API、管理 API、BFF 与静态挂载（`web/dist`）。
 //!
-//! 外部契约（ARCH-DATA-API / Go 参考实现）：
+//! 外部契约（ARCH-DATA-API，见 `docs/architecture/data-and-api.md`）：
 //! - 业务接口只用 `GET`/`POST`；`sceneCode` 采用 `端点.场景` 命名；
 //! - 响应 `{ code, message, data }`，字段 camelCase；
 //! - 公开查询隐含 `status = 'published'`，草稿/下线文章不泄露管理状态；
@@ -84,6 +84,7 @@ pub fn router(state: Arc<AppState>) -> Router {
             scene::MOBILE_CATEGORY_SHELF_ENDPOINT,
             any(mobile_category_shelf),
         )
+        .route(scene::PUBLIC_SITE_ROUTES_ENDPOINT, any(public_site_routes))
         // 管理
         .route(
             scene::ADMIN_SESSION_ENDPOINT,
@@ -1283,6 +1284,36 @@ async fn public_taxonomy(
             StatusCode::OK,
         ),
         Err(response) => *response,
+    }
+}
+
+/// 页面路由清单（SPEC-SITE-ROUTES-001）：导航值由后端统一下发，前端不持有 URL 字面量。
+async fn public_site_routes(
+    method: Method,
+    Query(params): Query<HashMap<String, String>>,
+) -> Response {
+    if method != Method::GET {
+        return method_not_allowed();
+    }
+    if !scene::supports(
+        "GET",
+        scene::PUBLIC_SITE_ROUTES_ENDPOINT,
+        params.get("sceneCode").map_or("", String::as_str),
+    ) {
+        return unknown_scene_code();
+    }
+    match protocol::site_routes::site_routes_payload() {
+        Ok(payload) => envelope(&Envelope::ok(payload), StatusCode::OK),
+        Err(error) => {
+            crate::product_error!("site routes manifest error={error}");
+            envelope(
+                &Envelope::<serde_json::Value>::failure(
+                    code::INTERNAL_ERROR,
+                    "site routes unavailable",
+                ),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            )
+        }
     }
 }
 

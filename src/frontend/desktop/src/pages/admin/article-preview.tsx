@@ -1,6 +1,10 @@
 import { For, Show } from "solid-js";
 import { definePage } from "../../../../solid/page";
-import { useAdminArticle } from "../../../../solid/queries";
+import {
+  adminArticleEditHref,
+  adminArticlePreviewMobileHref,
+  useAdminArticle,
+} from "../../../../solid/queries";
 import { ArticleBody, date, Header, qs } from "../../app";
 
 export function AdminArticlePreview(props: { mobile?: boolean }) {
@@ -11,14 +15,12 @@ export function AdminArticlePreview(props: { mobile?: boolean }) {
         <div class="preview-toolbar">
           <strong>移动端预览</strong>
           <span>已保存版本 · 375px</span>
-          <a href={`/admin/articles/edit.html?id=${qs().get("id") ?? ""}`}>
-            返回编辑
-          </a>
+          <a href={adminArticleEditHref(qs().get("id") ?? "")}>返回编辑</a>
         </div>
         <iframe
           class="mobile-preview-frame"
           title="移动端文章预览"
-          src={`/admin/articles/preview/mobile/content.html?id=${qs().get("id") ?? ""}`}
+          src={adminArticlePreviewMobileHref(qs().get("id") ?? "")}
         />
       </div>
     );
@@ -42,7 +44,7 @@ export function AdminArticlePreview(props: { mobile?: boolean }) {
       <div class="preview-toolbar">
         <strong>桌面端预览</strong>
         <span>{previewStatus()}</span>
-        <a href={`/admin/articles/edit.html?id=${id ?? ""}`}>返回编辑</a>
+        <a href={adminArticleEditHref(id ?? "")}>返回编辑</a>
       </div>
       <main id="main">
         <Show
@@ -51,10 +53,7 @@ export function AdminArticlePreview(props: { mobile?: boolean }) {
         >
           {(saved) => (
             <article class="article">
-              <a
-                class="back-link"
-                href={`/admin/articles/edit.html?id=${saved().id}`}
-              >
+              <a class="back-link" href={adminArticleEditHref(saved().id)}>
                 ← 返回编辑
               </a>
               <p class="eyebrow">

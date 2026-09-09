@@ -1,7 +1,7 @@
 import { createSignal } from "solid-js";
 import { definePage } from "../../../solid/page";
 import { Heading, Link, Text } from "../../../mobile-ui/atoms";
-import { useTShelf } from "../../../solid/queries";
+import { useTShelf, mobileArticlesHref } from "../../../solid/queries";
 import { MobileNav, MobileTShelf, pageStyles } from "../components/ui";
 import { BottomNav } from "../../../mobile-ui/molecules";
 import { mobileNavigationItems } from "../logic/navigation";
@@ -49,13 +49,13 @@ const App = () => {
                 <span aria-hidden="true">→</span>
               </>
             }
-            href="/m/articles/index.html"
+            href={mobileArticlesHref()}
             options={{ variant: "cta" }}
           />
         </div>
       </main>
       <BottomNav
-        items={mobileNavigationItems}
+        items={mobileNavigationItems()}
         activeId="home"
         ariaLabel="页面导航"
       />

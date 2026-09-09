@@ -5,5 +5,3 @@ export function resolveWorkspace(root: string): Workspace {
   const normalized = resolve(root);
   return { root: normalized, web: join(normalized, 'src', 'frontend'), ops: join(normalized, 'ops') };
 }
-
-export const allowedWebRoots = ['web/desktop', 'web/mobile', 'web/common'] as const;

@@ -25,10 +25,13 @@
   - `ops quality check`
   - `ops quality lint`
   - `ops quality format --check`
+  - `ops admin credentials init`（TTY 生成管理端 Argon2id 哈希、TOTP secret 与一次性恢复码）
+  - `ops admin recovery regenerate`（TTY 验密后原子替换恢复码）
+  - `ops content repository init`（需 `BLOG_CONTENT_REPO`/`BLOG_CONTENT_TOKEN`，初始化合法空 GitHub 内容仓库，幂等）
   - `ops delivery build`
   - `ops runtime dev --scenario default --web-port 5173 --mock-port 9090`（Vite + Mock Product API，页面数据只来自 Mock）
-  - `ops runtime backend --data mock --product-port 8080 --data-port 8081`（Rust Product + Rust Data，无页面）
-  - `ops runtime integration --product-port 8080 --data-port 8081 [--watch]`（先构建 `src/frontend/dist`，再由 Product 挂载，页面与 `/api` 同源）
+  - `ops runtime backend --data mock --content-source fixture --product-port 8080 --data-port 8081`（Rust Product + Rust Data，无页面）
+  - `ops runtime integration --content-source fixture --product-port 8080 --data-port 8081 [--watch]`（先构建 `src/frontend/dist`，再由 Product 挂载，页面与 `/api` 同源）
 - ops 有值参数显式必填，无默认值或环境变量补值；switch 出现为 true、缺省为 false，不接受赋值。具体见 `SPEC-OPS-PARAMETERS-001`。
 - 顶层退出码全局统一：`0` 成功、`10` 用法/配置错误、`20` 执行失败、`130` SIGINT、`143` SIGTERM。既有的 `1`/`2` 语义已废止。
 - `ops runtime serve` 与 `ops database migrate` 已删除，不保留别名：`serve` 的替代是 `ops runtime integration`；迁移由 Data Server 启动时自动执行（不再有独立迁移命令）。

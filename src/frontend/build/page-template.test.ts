@@ -88,6 +88,26 @@ test("the registry covers 17 pages and the frozen 22 aliases", () => {
   assert.doesNotThrow(() => JSON.parse(serializePageRoutes(pageRoutes())));
 });
 
+test("site-routes.json manifest stays in sync with the page registry", () => {
+  // SPEC-SITE-ROUTES-001：清单是后端下发路由的唯一来源（protocol include_str! 内嵌），
+  // 键必须是注册表页面 id，值必须是该页面的已注册 alias。
+  const manifest = JSON.parse(
+    readFileSync(resolve(frontendRoot, "site-routes.json"), "utf8"),
+  ) as { version: number; routes: Record<string, string> };
+  assert.equal(manifest.version, 1);
+  assert.deepEqual(
+    Object.keys(manifest.routes).sort(),
+    pageRegistry.map((page) => page.id).sort(),
+  );
+  for (const [id, path] of Object.entries(manifest.routes)) {
+    const aliases = pageRegistry.find((page) => page.id === id)?.aliases;
+    assert.ok(
+      (aliases ?? []).includes(path),
+      `manifest route ${id} -> ${path} must be a registered alias`,
+    );
+  }
+});
+
 test("generated HTML has the shared head and exact registered entry", () => {
   for (const page of pageRegistry) {
     const html = renderPageHtml(page);

@@ -24,6 +24,7 @@ pub mod envelope;
 pub mod operation;
 pub mod paging;
 pub mod scene;
+pub mod site_routes;
 pub mod taxonomy;
 pub mod wire;
 

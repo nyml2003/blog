@@ -2,7 +2,10 @@ import { createSignal, For, Show } from "solid-js";
 import { definePage } from "../../../../solid/page";
 import { Header } from "../../app";
 import { ArticleSourceEditor } from "./article-source-editor";
-import { useHtmlInspection } from "../../../../solid/queries";
+import {
+  adminArticleNewHref,
+  useHtmlInspection,
+} from "../../../../solid/queries";
 
 type GuidePageId = "start" | "format" | "validation" | "publishing";
 type GuidePage = {
@@ -166,7 +169,7 @@ function EditorGuide() {
             </p>
           </div>
           <div class="actions">
-            <a class="button primary" href="/admin/articles/new.html">
+            <a class="button primary" href={adminArticleNewHref()}>
               开始写作
             </a>
           </div>

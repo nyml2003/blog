@@ -1,12 +1,12 @@
 import { join } from 'node:path';
 import type { FsPort, ProcessPort, Reporter } from '../domain/ports.ts';
 import type { Workspace } from '../domain/workspace.ts';
-import { checkWebBoundaries } from '../domain/architecture.ts';
+import { checkArchitectureBoundaries } from '../domain/architecture.ts';
 export async function runCheck(workspace: Workspace, process: ProcessPort, fs: FsPort, reporter: Reporter): Promise<boolean> {
   reporter.section('ops quality check'); let passed = true;
-  const run = async (label: string, command: string, args: string[], cwd: string, outputFailure = false) => {
+  const run = async (label: string, command: string, args: string[], cwd: string) => {
     const result = await process.run(command, args, cwd);
-    const failed = result.code !== 0 || (outputFailure && result.stdout.trim().length > 0);
+    const failed = result.code !== 0;
     if (!failed) reporter.ok(label); else { passed = false; reporter.fail(label); reporter.info(result.stderr || result.stdout); }
   };
   // Rust gate replaces the retired Go gate; the workspace is expected to exist, and a missing one
@@ -39,7 +39,7 @@ export async function runCheck(workspace: Workspace, process: ProcessPort, fs: F
   // Read source through the injected port while keeping the domain rule pure.
   const sources = new Map<string, string>();
   for (const file of files) sources.set(file, await fs.read(file));
-  const actual = checkWebBoundaries(files, (f) => sources.get(f) ?? '');
+  const actual = checkArchitectureBoundaries(files, (f) => sources.get(f) ?? '');
   for (const violation of actual) { passed = false; reporter.fail(`${violation.file}: ${violation.message}`); }
   if (!actual.length) reporter.ok('architecture boundaries');
   return passed;

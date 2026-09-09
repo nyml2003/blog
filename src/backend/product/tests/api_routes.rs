@@ -41,7 +41,7 @@ fn golden_routes() -> BTreeSet<Route> {
 #[test]
 fn api_route_golden_matches_product_routes_and_protocol_scenes() {
     let golden = golden_routes();
-    assert_eq!(golden.len(), 38, "golden routes must be unique");
+    assert_eq!(golden.len(), 39, "golden routes must be unique");
     assert_eq!(golden, implemented_routes());
 }
 

@@ -1,7 +1,15 @@
 import { createSignal, For, Show } from "solid-js";
 import type { Article, ArticleType } from "../../common/contracts/domain";
 import {
+  adminArticleEditHref,
+  adminEditorGuideHref,
+  adminHomeHref,
+  adminLoginHref,
+  adminWorkspaceHref,
   logoutAdminSession,
+  publicArchiveHref,
+  publicArticleDetailHref,
+  publicHomeHref,
   queryErrorMessage,
   type ContentArticle,
   type TShelfArticle,
@@ -29,21 +37,37 @@ export function Header(props: { admin?: boolean }) {
   const current = location.pathname;
   const [logoutBusy, setLogoutBusy] = createSignal(false);
   const [logoutError, setLogoutError] = createSignal<string | undefined>();
-  const active = (href: string) =>
-    href === "/"
-      ? current === "/"
-      : href === "/admin/index.html"
-        ? current.startsWith("/admin/articles") ||
-          current === "/admin/" ||
-          current === "/admin/index.html"
-        : current.startsWith(href.replace("/index.html", ""));
+  // SPEC-SITE-ROUTES-001：导航值全部来自后端下发的路由清单。
+  const routes = {
+    home: publicHomeHref(),
+    archive: publicArchiveHref(),
+    adminHome: adminHomeHref(),
+    workspace: adminWorkspaceHref(),
+    guide: adminEditorGuideHref(),
+    login: adminLoginHref(),
+  };
+  const active = (href: string) => {
+    if (href === routes.home) return current === routes.home;
+    if (href === routes.adminHome) {
+      const adminDir = routes.adminHome.slice(
+        0,
+        routes.adminHome.lastIndexOf("/") + 1,
+      );
+      return (
+        current === adminDir ||
+        current === routes.adminHome ||
+        current.startsWith(`${adminDir}articles`)
+      );
+    }
+    return current.startsWith(href.replace("/index.html", ""));
+  };
   return (
     <>
       <a class="skip" href="#main">
         跳到主内容
       </a>
       <header class="topbar">
-        <a class="brand" href={props.admin ? "/admin/index.html" : "/"}>
+        <a class="brand" href={props.admin ? routes.adminHome : routes.home}>
           <span class="brand-kicker">
             {props.admin ? "管理台" : "FIELD NOTES"}
           </span>
@@ -52,26 +76,22 @@ export function Header(props: { admin?: boolean }) {
         <nav class="nav" aria-label="主导航">
           {props.admin ? (
             <>
-              <a href="/">返回站点</a>
+              <a href={routes.home}>返回站点</a>
               <a
-                aria-current={active("/admin/index.html") ? "page" : undefined}
-                href="/admin/index.html"
+                aria-current={active(routes.adminHome) ? "page" : undefined}
+                href={routes.adminHome}
               >
                 文章
               </a>
               <a
-                aria-current={
-                  active("/admin/content/workspace.html") ? "page" : undefined
-                }
-                href="/admin/content/workspace.html"
+                aria-current={active(routes.workspace) ? "page" : undefined}
+                href={routes.workspace}
               >
                 分类工作台
               </a>
               <a
-                aria-current={
-                  active("/admin/editor-guide/index.html") ? "page" : undefined
-                }
-                href="/admin/editor-guide/index.html"
+                aria-current={active(routes.guide) ? "page" : undefined}
+                href={routes.guide}
               >
                 指南
               </a>
@@ -84,7 +104,7 @@ export function Header(props: { admin?: boolean }) {
                   setLogoutBusy(true);
                   const result = await logoutAdminSession();
                   if (result.ok) {
-                    location.replace("/admin/login.html");
+                    location.replace(routes.login);
                     return;
                   }
                   setLogoutError(
@@ -105,14 +125,15 @@ export function Header(props: { admin?: boolean }) {
             </>
           ) : (
             <>
-              <a aria-current={active("/") ? "page" : undefined} href="/">
+              <a
+                aria-current={active(routes.home) ? "page" : undefined}
+                href={routes.home}
+              >
                 首页
               </a>
               <a
-                aria-current={
-                  active("/articles/index.html") ? "page" : undefined
-                }
-                href="/articles/index.html"
+                aria-current={active(routes.archive) ? "page" : undefined}
+                href={routes.archive}
               >
                 全部文章
               </a>
@@ -173,7 +194,7 @@ export function WorkspaceArticleTable(props: {
         {(article) => (
           <article class="admin-row">
             <h3>
-              <a href={`/admin/articles/edit.html?id=${article.id}`}>
+              <a href={adminArticleEditHref(article.id)}>
                 {article.title || "未命名文章"}
               </a>
             </h3>
@@ -181,7 +202,7 @@ export function WorkspaceArticleTable(props: {
             <span>{article.tagIds.length} 个标签</span>
             <time>{shortDate(article.updatedAt)}</time>
             <div class="row-actions">
-              <a href={`/admin/articles/edit.html?id=${article.id}`}>编辑</a>
+              <a href={adminArticleEditHref(article.id)}>编辑</a>
               <button
                 type="button"
                 class="link-button danger"
@@ -207,10 +228,7 @@ function PublicShelf(props: {
     <div class={`list list-${props.variant}`}>
       <For each={props.items}>
         {(article, index) => (
-          <a
-            class="archive-row"
-            href={`/articles/detail.html?id=${article.id}`}
-          >
+          <a class="archive-row" href={publicArticleDetailHref(article.id)}>
             <div class="archive-index">
               <strong>{String(index() + 1).padStart(2, "0")}</strong>
               <time>{shortDate(article.updatedAt)}</time>

@@ -1,9 +1,11 @@
 import { createSignal, Show } from "solid-js";
 import {
   adminNextFromSearch,
-  type AdminSessionVerification,
+  adminSessionPaths,
   loginAdminSession,
+  publicHomeHref,
   queryErrorMessage,
+  type AdminSessionVerification,
 } from "../../../../solid/queries";
 import { definePage } from "../../../../solid/page";
 import "../../styles.css";
@@ -47,7 +49,13 @@ const App = () => {
 
     setPassword("");
     setVerificationCode("");
-    location.replace(adminNextFromSearch(location.search, location.origin));
+    location.replace(
+      adminNextFromSearch(
+        location.search,
+        location.origin,
+        adminSessionPaths(),
+      ),
+    );
   };
 
   return (
@@ -56,11 +64,11 @@ const App = () => {
         跳到主内容
       </a>
       <header class="login-header">
-        <a class="brand" href="/">
+        <a class="brand" href={publicHomeHref()}>
           <span class="brand-kicker">FIELD NOTES</span>
           <strong>技术知识库</strong>
         </a>
-        <a class="login-site-link" href="/">
+        <a class="login-site-link" href={publicHomeHref()}>
           返回站点
         </a>
       </header>

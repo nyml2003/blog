@@ -1,6 +1,9 @@
 import { For, Show } from "solid-js";
 import { definePage } from "../../../../solid/page";
-import { usePublishedArticle } from "../../../../solid/queries";
+import {
+  usePublishedArticle,
+  publicArchiveHref,
+} from "../../../../solid/queries";
 import { ArticleBody, date, Header, qs } from "../../app";
 
 const App = () => {
@@ -16,7 +19,7 @@ const App = () => {
         >
           {(x) => (
             <article class="article">
-              <a class="back-link" href="/articles/index.html">
+              <a class="back-link" href={publicArchiveHref()}>
                 ← 返回文章档案
               </a>
               <p class="eyebrow">
@@ -32,7 +35,7 @@ const App = () => {
               <div class="article-accent" aria-hidden="true" />
               <ArticleBody html={x().contentHtml} />
               <footer class="article-footer">
-                <a href="/articles/index.html">← 返回文章档案</a>
+                <a href={publicArchiveHref()}>← 返回文章档案</a>
                 <span>FIELD NOTES</span>
               </footer>
             </article>

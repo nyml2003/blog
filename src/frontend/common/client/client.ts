@@ -180,10 +180,20 @@ export type AdminSessionLoginInput = {
   readonly verification: AdminSessionVerification;
 };
 
+/** `/api/public/site-routes` 的载荷（SPEC-SITE-ROUTES-001）：页面 id → 路径。 */
+export type SiteRoutes = { routes: Record<string, string> };
+
+const siteRoutesSchema = z.object({
+  routes: z.record(z.string(), z.string()),
+});
+
 export interface Client {
   adminSession: {
     login(input: AdminSessionLoginInput): DataTask<undefined>;
     logout(): DataTask<undefined>;
+  };
+  siteRoutes: {
+    get(): DataTask<SiteRoutes>;
   };
   articleCatalog: {
     listPublishedArticles(
@@ -313,6 +323,11 @@ export const CLIENT_API_ROUTES = {
     method: "GET",
     endpoint: "/api/public/mobile/category-shelf",
     sceneCode: "public.mobile_category_shelf",
+  },
+  publicSiteRoutes: {
+    method: "GET",
+    endpoint: "/api/public/site-routes",
+    sceneCode: "public.site_routes",
   },
   adminArticleList: {
     method: "GET",
@@ -501,6 +516,14 @@ export function createClient(transport: Transport): Client {
           getPath(CLIENT_API_ROUTES.adminSessionDelete, {}),
           z.unknown().transform(() => undefined),
           CLIENT_API_ROUTES.adminSessionDelete.method,
+        ),
+    },
+    siteRoutes: {
+      get: () =>
+        request<SiteRoutes>(
+          getPath(CLIENT_API_ROUTES.publicSiteRoutes, {}),
+          siteRoutesSchema,
+          CLIENT_API_ROUTES.publicSiteRoutes.method,
         ),
     },
     articleCatalog: {

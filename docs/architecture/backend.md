@@ -3,7 +3,7 @@ kind: architecture
 id: ARCH-BACKEND
 status: current
 owner: backend
-last_reviewed: 2026-09-07
+last_reviewed: 2026-09-09
 ---
 
 # Backend 架构
@@ -30,11 +30,12 @@ HTTP handler 不直接拼接 SQL。文章公开可见性、状态迁移和推荐
 
 - `src/core/protocol`：typed operations 请求/响应、DTO、纯字段映射、sceneCode 常量与诊断 schema；protocol 不决定分组、排序、截断、推荐范围或兜底；
 - `src/backend/product/src/http.rs`：路由、参数适配、BFF/Data 调用、envelope 与结构化日志；
+- `src/backend/product/src/auth/`：单管理员认证（Argon2id 密码、TOTP、一次性恢复码、IP 限速、内存会话 12h 滑动过期与安全 cookie）；`admin_auth_gate` 中间件同时保护管理 API 与管理页面，未认证 fail-closed；凭证由 `ops admin credentials init` 生成（见 SPEC-ADMIN-AUTH-001）；
 - `src/backend/product/src/bff/`：跨 Data 操作编排和公开读模型决策。Mobile F 型货架与公开 T 型货架的分组、筛选、截断、推荐范围和兜底均在此层；
 - `src/backend/data`：SQLite 存储、迁移、mock 内存夹具、业务校验、线程池与通道；Data API 为按领域定义的 typed operations，不做表 CRUD；依赖当前 term 集合的筛选维度校验由 Data 执行；
 - `src/backend/mock`：Mock Product API（`ops runtime dev` 专用：有限命名场景 + `X-Blog-Mock-Session` 显式会话隔离，固定 seed，启动即重置）。Mock 自己实现与 Product 等价的 BFF 和依赖会话数据的校验，不借 protocol 承载业务规则。
 
-数据语义：`mock`（内存夹具，不建不开 SQLite 文件）与 `test`（每次运行全新临时库 `target/test-dbs/<PID>.db`，自动迁移 + 稳定 seed，正常退出删除、异常退出保留）；`prod` 为后续扩展位，约定如下——路径优先级为显式参数 > `BLOG_DATABASE_PATH` > **无默认值**（prod 缺路径即拒绝启动，生产数据位置不允许静默默认）；不加载 seed，仅自动迁移；开发持久库放仓库外（如 `~/.local/state/blog/`），服务器部署位 `/var/lib/blog/blog.db`（见 ARCH-INFRASTRUCTURE）。仓库保持零状态：任何语义都不在仓库内留下数据文件。
+数据语义：`mock`（内存夹具，不建不开 SQLite 文件）与 `test`（每次运行全新临时库 `target/test-dbs/<PID>.db`，自动迁移 + 稳定 seed，正常退出删除、异常退出保留）；`prod` 语义已在 Data 实现但 `ops runtime` 尚未放行（`--data` 仅接受 mock/test），约定如下——路径优先级为显式参数 > `BLOG_DATABASE_PATH` > **无默认值**（prod 缺路径即拒绝启动，生产数据位置不允许静默默认）；不加载 seed，仅自动迁移；开发持久库放仓库外（如 `~/.local/state/blog/`），服务器部署位 `/var/lib/blog/blog.db`（见 ARCH-INFRASTRUCTURE）。仓库保持零状态：任何语义都不在仓库内留下数据文件。
 
 ## 当前状态规则
 
@@ -50,4 +51,4 @@ Product 对每个公开请求调用 Data 的次数与结果条目数无关；单
 
 ## 当前限制
 
-MVP 暂不实现认证、HTML 自动 sanitization/修复、全文搜索、多用户协作和实时个性化推荐；正文安全通过严格 Profile 拒绝实现，而不是静默改写。公网监听、TLS 与 B 端认证属后续独立计划（见 [FACT-RUNTIME-001](../FACTS.md)）。
+管理端单人认证已实现（Session + TOTP + 恢复码 + 限速，见 SPEC-ADMIN-AUTH-001）。暂不实现 HTML 自动 sanitization/修复、全文搜索、多用户协作和实时个性化推荐；正文安全通过严格 Profile 拒绝实现，而不是静默改写。公网监听与 TLS 属后续独立计划（见 [FACT-RUNTIME-001](../FACTS.md)）。

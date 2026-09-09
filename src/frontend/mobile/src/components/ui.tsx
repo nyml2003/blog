@@ -10,16 +10,18 @@ import type {
   ArticleType,
   Term,
 } from "../../../common/contracts/domain";
-import type {
-  QueryReadonly,
-  TShelfArticle,
-  TShelfFilter,
+import {
+  mobileArticleDetailHref,
+  mobileArticleListHref,
+  mobileHomeHref,
+  type QueryReadonly,
+  type TShelfArticle,
+  type TShelfFilter,
 } from "../../../solid/queries";
 import { browseHref } from "../logic/browse-filter";
 
 /** 货架类型分区的截断上限，对齐 wire 的 `SHELF_SECTION_LIMIT`（N = 6）。 */
 const SHELF_SECTION_LIMIT = 6;
-const articleListHref = "/m/articles/list.html";
 
 /**
  * 卡片渲染所需的展示字段：货架 wire 卡片与公开列表项都满足（渐进归一化视图，
@@ -68,7 +70,7 @@ export function MobileNav(_p: { active: string }) {
                 <strong>技术知识库</strong>
               </>
             }
-            href="/m/"
+            href={mobileHomeHref()}
             options={{}}
           />
         </div>
@@ -88,7 +90,7 @@ export function ArticleRow(p: { article: Article }) {
   const tags = () => p.article.terms?.slice(0, 2) ?? [];
   const extraTags = () => Math.max(0, (p.article.terms?.length ?? 0) - 2);
   return (
-    <a class="article-row" href={`/m/articles/detail.html?id=${p.article.id}`}>
+    <a class="article-row" href={mobileArticleDetailHref(p.article.id)}>
       <div class="row-anchor">
         <Text
           content={p.article.articleType?.name ?? "文章"}
@@ -147,7 +149,7 @@ export function ArticleCard(p: { article: ArticleCardArticle }) {
   const visibleTags = () => terms().slice(0, 2);
   const extraTags = () => Math.max(0, terms().length - 2);
   return (
-    <a class="article-card" href={`/m/articles/detail.html?id=${p.article.id}`}>
+    <a class="article-card" href={mobileArticleDetailHref(p.article.id)}>
       <Show when={p.article.articleType}>
         {(type) => (
           <p class="article-card-type">
@@ -245,7 +247,7 @@ export function ShelfSection(p: { section: ArticleShelfSection }) {
     const typeId = sectionTypeId(p.section.id);
     if (typeId === undefined || p.section.total <= SHELF_SECTION_LIMIT)
       return undefined;
-    return { href: browseHref(articleListHref, { typeId }, "") };
+    return { href: browseHref(mobileArticleListHref(), { typeId }, "") };
   };
   // 类型分区的 total 是截断前的全量计数；推荐区不是类型分区（wire 里它是推荐
   // 池大小，可能大于下发的 3 张），因此只展示实际下发条数。

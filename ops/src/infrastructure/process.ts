@@ -131,8 +131,6 @@ export class ProcessGroup implements ProcessGroupPort {
 
   get members(): readonly ManagedProcess[] { return [...this.processes]; }
 
-  get isStopping(): boolean { return this.#stopping; }
-
   add(process: ManagedProcess): ManagedProcess {
     if (!this.processes.includes(process)) this.processes.push(process);
     return process;

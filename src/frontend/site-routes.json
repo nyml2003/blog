@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "routes": {
+    "desktop-public-home": "/",
+    "desktop-public-articles": "/articles/index.html",
+    "desktop-public-detail": "/articles/detail.html",
+    "desktop-admin-login": "/admin/login.html",
+    "desktop-admin-home": "/admin/index.html",
+    "desktop-admin-article-new": "/admin/articles/new.html",
+    "desktop-admin-article-edit": "/admin/articles/edit.html",
+    "desktop-admin-editor-guide": "/admin/editor-guide/index.html",
+    "desktop-admin-article-types": "/admin/content/workspace.html",
+    "desktop-admin-terms": "/admin/terms/index.html",
+    "desktop-admin-article-preview": "/admin/articles/preview/desktop.html",
+    "mobile-home": "/m/",
+    "mobile-articles": "/m/articles/index.html",
+    "mobile-article-list": "/m/articles/list.html",
+    "mobile-article-detail": "/m/articles/detail.html",
+    "mobile-settings": "/m/settings/index.html",
+    "mobile-admin-article-preview": "/admin/articles/preview/mobile.html"
+  }
+}

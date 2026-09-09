@@ -1,7 +1,9 @@
 import { createSignal, Show } from "solid-js";
 import { definePage } from "../../../../solid/page";
 import {
+  adminArticleNewHref,
   adminQueryErrorMessage,
+  adminWorkspaceHref,
   stageContentArticleRemoval,
   useContentArticles,
   type ContentArticle,
@@ -57,10 +59,10 @@ const App = () => {
             <p>编辑工作区文章，并在发布工作台统一预览和提交。</p>
           </div>
           <div class="actions">
-            <a class="button" href="/admin/content/workspace.html">
+            <a class="button" href={adminWorkspaceHref()}>
               发布工作台
             </a>
-            <a class="button primary" href="/admin/articles/new.html">
+            <a class="button primary" href={adminArticleNewHref()}>
               新建文章
             </a>
           </div>

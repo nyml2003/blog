@@ -1,7 +1,7 @@
 import { For, Show } from "solid-js";
 import { definePage } from "../../../solid/page";
 import { Heading, Link, Tag, Text } from "../../../mobile-ui/atoms";
-import { useAdminArticle } from "../../../solid/queries";
+import { useAdminArticle, adminArticleEditHref } from "../../../solid/queries";
 import { ArticleBody, StateMessage } from "../components/ui";
 import "../../styles/app.css";
 
@@ -32,7 +32,7 @@ const App = () => {
       <header class="reading-bar">
         <Link
           content="← 返回编辑"
-          href={`/admin/articles/edit.html?id=${id ?? ""}`}
+          href={adminArticleEditHref(id ?? "")}
           options={{}}
         />
         <span>已保存版本 · {previewStatus()}</span>
@@ -77,7 +77,7 @@ const App = () => {
               <footer class="detail-footer">
                 <Link
                   content="← 返回编辑"
-                  href={`/admin/articles/edit.html?id=${id ?? ""}`}
+                  href={adminArticleEditHref(id ?? "")}
                   options={{}}
                 />
               </footer>

@@ -274,5 +274,3 @@ export function checkArchitectureBoundaries(
     return [];
   });
 }
-
-export const checkWebBoundaries = checkArchitectureBoundaries;

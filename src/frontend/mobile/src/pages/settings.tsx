@@ -2,7 +2,7 @@ import { definePage } from "../../../solid/page";
 import { Heading, Select } from "../../../mobile-ui/atoms";
 import { BottomNav, Field } from "../../../mobile-ui/molecules";
 import {
-  mobileSettingsPageContent as content,
+  mobileSettingsPageContent,
   useMobileSettings,
 } from "../logic/settings";
 import { MobileNav } from "../components/ui";
@@ -10,6 +10,7 @@ import "../../styles/app.css";
 
 function SettingsPage() {
   const settings = useMobileSettings();
+  const content = mobileSettingsPageContent();
 
   return (
     <div class="mobile-shell">

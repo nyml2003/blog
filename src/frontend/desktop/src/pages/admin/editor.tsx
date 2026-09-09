@@ -8,7 +8,9 @@ import {
 } from "solid-js";
 import {
   ADMIN_SESSION_EXPIRED_EVENT,
+  adminEditorGuideHref,
   adminQueryErrorMessage,
+  adminWorkspaceHref,
   limitUnicodeScalars,
   saveContentArticle,
   unicodeScalarLength,
@@ -34,7 +36,7 @@ import {
   writeEditorSessionDraft,
 } from "./editor-session-draft";
 
-const workspacePath = "/admin/content/workspace.html";
+const workspacePath = adminWorkspaceHref;
 
 export function Editor() {
   const initialId = qs().get("id");
@@ -300,10 +302,10 @@ export function Editor() {
             <p>保存会进入当前待提交批次，发布前请在工作台统一预览。</p>
           </div>
           <div class="actions">
-            <a class="button" href="/admin/editor-guide/index.html">
+            <a class="button" href={adminEditorGuideHref()}>
               使用指南
             </a>
-            <a class="button" href={workspacePath}>
+            <a class="button" href={workspacePath()}>
               发布工作台
             </a>
           </div>
@@ -409,7 +411,7 @@ export function Editor() {
               <span class="muted" role="status">
                 {dirty() ? "有未保存修改" : `工作区版本 ${version()}`}
               </span>
-              <a class="button" href={workspacePath}>
+              <a class="button" href={workspacePath()}>
                 预览待提交批次
               </a>
               <button

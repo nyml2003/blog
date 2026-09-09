@@ -9,6 +9,7 @@ import {
 } from "../../../common/client/mobile-settings";
 import type { Result } from "../../../common/data/result";
 import type { StorageFailure } from "../../../common/data/storage";
+import { siteRouteRequired } from "../../../common/client/site-routes";
 import { mobileNavigationItems } from "./navigation";
 
 type SettingsRoot = Pick<HTMLElement, "getAttribute" | "setAttribute">;
@@ -65,14 +66,16 @@ export function useMobileSettings() {
   );
 }
 
-export const mobileSettingsPageContent = {
-  title: "设置",
-  brand: "技术知识库",
-  brandHref: "/m/",
-  skipLinkLabel: "跳到主要内容",
-  navigationLabel: "页面导航",
-  activeNavigationId: "settings",
-  themeLabel: "主题风格",
-  fontLabel: "正文字体",
-  navigation: mobileNavigationItems,
-} as const;
+/** 页面内容在渲染期求值：路径值来自后端路由清单（SPEC-SITE-ROUTES-001）。 */
+export const mobileSettingsPageContent = () =>
+  ({
+    title: "设置",
+    brand: "技术知识库",
+    brandHref: siteRouteRequired("mobile-home"),
+    skipLinkLabel: "跳到主要内容",
+    navigationLabel: "页面导航",
+    activeNavigationId: "settings",
+    themeLabel: "主题风格",
+    fontLabel: "正文字体",
+    navigation: mobileNavigationItems(),
+  }) as const;

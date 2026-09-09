@@ -1,7 +1,10 @@
 import { For, Show } from "solid-js";
 import { definePage } from "../../../solid/page";
 import { Heading, Link, Tag, Text } from "../../../mobile-ui/atoms";
-import { usePublishedArticle } from "../../../solid/queries";
+import {
+  usePublishedArticle,
+  mobileArticlesHref,
+} from "../../../solid/queries";
 import { StateMessage, ArticleBody, pageStyles } from "../components/ui";
 import "../../styles/app.css";
 
@@ -20,7 +23,7 @@ const cameFromArticleList = () => {
     const referrer = new URL(document.referrer);
     return (
       referrer.origin === location.origin &&
-      referrer.pathname === "/m/articles/index.html"
+      referrer.pathname === mobileArticlesHref()
     );
   } catch {
     return false;
@@ -42,7 +45,7 @@ const App = () => {
       <header class="reading-bar">
         <Link
           content="← 文章库"
-          href="/m/articles/index.html"
+          href={mobileArticlesHref()}
           options={{ onClick: returnToArticleList }}
         />
         <span>阅读</span>
@@ -100,7 +103,7 @@ const App = () => {
               <footer class="detail-footer">
                 <Link
                   content="← 返回文章库"
-                  href="/m/articles/index.html"
+                  href={mobileArticlesHref()}
                   options={{ onClick: returnToArticleList }}
                 />
               </footer>

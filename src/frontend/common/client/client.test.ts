@@ -501,14 +501,19 @@ test("workspace article routes keep versioned writes and authoritative save data
 
 test("admin next paths stay within admin and do not loop through login", () => {
   const origin = "https://notes.example";
+  const paths = {
+    loginPath: "/admin/login.html",
+    homePath: "/admin/index.html",
+  };
   assert.equal(
-    safeAdminNext("/admin/articles/edit.html?id=7", origin),
+    safeAdminNext("/admin/articles/edit.html?id=7", origin, paths),
     "/admin/articles/edit.html?id=7",
   );
   assert.equal(
     adminNextFromSearch(
       `?next=${encodeURIComponent("/admin/terms/index.html?kind=tag")}`,
       origin,
+      paths,
     ),
     "/admin/terms/index.html?kind=tag",
   );
@@ -521,7 +526,7 @@ test("admin next paths stay within admin and do not loop through login", () => {
     "/admin/login.html?next=%2Fadmin%2Findex.html",
     "https://notes.example/admin/index.html",
   ]) {
-    assert.equal(safeAdminNext(unsafe, origin), "/admin/index.html");
+    assert.equal(safeAdminNext(unsafe, origin, paths), "/admin/index.html");
   }
 });
 
@@ -542,6 +547,10 @@ test("admin API 401 redirects to login while session and public failures stay lo
     readLocation: () => location,
     beforeRedirect: () => redirects.push("before-redirect"),
     replaceLocation: (path) => redirects.push(path),
+    routes: () => ({
+      loginPath: "/admin/login.html",
+      homePath: "/admin/index.html",
+    }),
   });
 
   await adminFetch("/api/admin/articles?sceneCode=admin.article_list");
@@ -553,7 +562,13 @@ test("admin API 401 redirects to login while session and public failures stay lo
     redirect.searchParams.get("next"),
     "/admin/articles/edit.html?id=7",
   );
-  assert.equal(adminLoginPath(location), redirects[1]);
+  assert.equal(
+    adminLoginPath(location, {
+      loginPath: "/admin/login.html",
+      homePath: "/admin/index.html",
+    }),
+    redirects[1],
+  );
 
   await adminFetch("/api/admin/session");
   await adminFetch("/api/public/articles");

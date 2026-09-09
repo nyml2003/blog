@@ -60,6 +60,7 @@ pub fn router(state: Arc<AppState>) -> Router {
             scene::MOBILE_CATEGORY_SHELF_ENDPOINT,
             any(mobile_category_shelf),
         )
+        .route(scene::PUBLIC_SITE_ROUTES_ENDPOINT, any(public_site_routes))
         // 管理
         .route(
             scene::ADMIN_SESSION_ENDPOINT,
@@ -892,6 +893,51 @@ async fn public_taxonomy(
         taxonomy_json(&domain.content_workspace().1.taxonomy)
     });
     finish(&state, label, StatusCode::OK, &Envelope::ok(value))
+}
+
+/// 页面路由清单（SPEC-SITE-ROUTES-001）：与 Product 共用 protocol 内嵌清单，Mock 侧等价实现。
+async fn public_site_routes(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    method: Method,
+    Query(params): Query<HashMap<String, String>>,
+) -> Response {
+    let scope = session_scope(&headers);
+    let label = "GET /api/public/site-routes";
+    if let Some(response) = gate(
+        &state,
+        label,
+        params.get("sceneCode").map_or("", String::as_str),
+        &scope,
+    )
+    .await
+    {
+        return response;
+    }
+    if method != Method::GET {
+        return method_not_allowed(&state, label);
+    }
+    if !scene::supports(
+        "GET",
+        scene::PUBLIC_SITE_ROUTES_ENDPOINT,
+        params.get("sceneCode").map_or("", String::as_str),
+    ) {
+        return unknown_scene_code(&state, label);
+    }
+    let outcome = protocol::site_routes::site_routes_payload()
+        .and_then(|payload| serde_json::to_value(&payload).map_err(|error| error.to_string()));
+    match outcome {
+        Ok(value) => finish(&state, label, StatusCode::OK, &Envelope::ok(value)),
+        Err(error) => {
+            crate::mock_error!("{label} site routes manifest error={error}");
+            finish(
+                &state,
+                label,
+                StatusCode::INTERNAL_SERVER_ERROR,
+                &Envelope::<Value>::failure(code::INTERNAL_ERROR, "site routes unavailable"),
+            )
+        }
+    }
 }
 
 async fn mobile_category_shelf(
