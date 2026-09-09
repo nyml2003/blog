@@ -5,10 +5,12 @@
 ## 阅读顺序
 
 1. [FACTS.md](./FACTS.md)：项目稳定基线，内容受控；
-2. [architecture/](./architecture/)：当前生效的系统架构；
-3. [guides/](./guides/)：开发、测试、Spec、协作和运维方法；
-4. [specs/](./specs/)：稳定的行为和契约；
-5. [plans/](./plans/)：未来跨职能计划。
+2. [CODEMAP.md](./CODEMAP.md)：代码地图——"我想看某个东西，打开哪个文件"；
+3. [GLOSSARY.md](./GLOSSARY.md)：术语表（人话版）；
+4. [architecture/](./architecture/)：当前生效的系统架构；
+5. [guides/](./guides/)：开发、测试、Spec、协作和运维方法；
+6. [specs/](./specs/)：稳定的行为和契约；
+7. [plans/](./plans/)：未来跨职能计划。
 
 ## 生命周期
 

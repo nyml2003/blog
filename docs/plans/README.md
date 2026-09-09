@@ -10,6 +10,7 @@ Plan 面向一个跨职能、可验收的产品结果，不面向单个文件或
 
 当前 active business plan：
 
+- `PLAN-CODE-LAYOUT-001`：代码布局与命名治理（人读优先；R0 清单待用户审定后执行，用户 2026-09-09 指定）；
 - `PLAN-ADMIN-AUTH-001`：管理端 Session + TOTP 鉴权与登录闭环（实现、进程测试和浏览器证据完成，待用户完成秘密保管与产品验收）；
 - `PLAN-ARCH-BOUNDARY-001`：架构边界治理（代码与自动化完成，含 [API 响应对照](./active/PLAN-ARCH-BOUNDARY-001/API-RESPONSE-DIFF.md)，待用户产品验收）；
 - `PLAN-FRONTEND-PAGE-TEMPLATE-001`：前端页面模板与接入统一（代码与自动化完成，含 [浏览器证据](./active/PLAN-FRONTEND-PAGE-TEMPLATE-001/evidence/README.md)，待用户产品验收）；
