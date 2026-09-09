@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { runCheck } from './check.ts';
+import { runCheck } from './quality-check.ts';
 import type { FsPort, ProcessPort, Reporter } from '../domain/ports.ts';
 import type { Workspace } from '../domain/workspace.ts';
 

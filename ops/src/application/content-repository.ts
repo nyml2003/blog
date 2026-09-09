@@ -1,5 +1,5 @@
 import type { CommandContext } from '../domain/commands.ts';
-import { INJECTION_ENV } from '../domain/runtime.ts';
+import { INJECTION_ENV } from '../domain/runtime-plan.ts';
 
 export async function initializeContentRepository(context: CommandContext): Promise<number> {
   context.reporter.section(context.dryRun ? 'content repository init dry-run' : 'content repository init');

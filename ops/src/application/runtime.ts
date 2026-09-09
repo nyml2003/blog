@@ -28,7 +28,7 @@ import type {
   SignalPort,
   SpawnRequest,
 } from '../domain/ports.ts';
-import { exitCodeForSignal, INJECTION_ENV, SERVICE_BINARIES, type BuildStep, type ModePlan } from '../domain/runtime.ts';
+import { exitCodeForSignal, INJECTION_ENV, SERVICE_BINARIES, type BuildStep, type ModePlan } from '../domain/runtime-plan.ts';
 
 /** Ports handed to the runtime modes; `process.run()` keeps serving builds and checks unchanged. */
 export interface RuntimePorts {

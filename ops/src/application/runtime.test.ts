@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { runDeliveryBuild, runRuntimeMode, type RuntimePorts } from './runtime.ts';
-import { planMode } from '../domain/runtime.ts';
+import { planMode } from '../domain/runtime-plan.ts';
 import { join } from 'node:path';
 import type { FsPort, LogLine, ManagedProcess, ProcessExit, ProcessGroupPort, ProcessPort, SpawnRequest } from '../domain/ports.ts';
 

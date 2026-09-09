@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { allocatePort, candidatesFor, PORT_ATTEMPTS, PORT_MAX, PORT_MIN } from './port-allocation.ts';
 import { OpsError } from './errors.ts';
-import { planMode, exitCodeForSignal, withLogPrefix } from './runtime.ts';
+import { planMode, exitCodeForSignal, withLogPrefix } from './runtime-plan.ts';
 
 function probeWith(occupied: ReadonlySet<number>) {
   const seen: number[] = [];

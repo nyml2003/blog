@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { SERVICE_BINARIES } from '../domain/runtime.ts';
+import { SERVICE_BINARIES } from '../domain/runtime-plan.ts';
 import type { BinaryResolver, FsPort } from '../domain/ports.ts';
 
 /**

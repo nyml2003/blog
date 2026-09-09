@@ -14,7 +14,7 @@ import type {
   SignalPort,
   SpawnRequest,
 } from '../domain/ports.ts';
-import { withLogPrefix } from '../domain/runtime.ts';
+import { withLogPrefix } from '../domain/runtime-plan.ts';
 
 const RECENT_LOG_LIMIT = 50;
 

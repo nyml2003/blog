@@ -1,10 +1,10 @@
 import { defineCommand, defineGroup, type CommandContext, type CommandDefinition } from '../domain/commands.ts';
 import { runWebQuality } from '../application/commands.ts';
-import { runCheck } from '../application/check.ts';
+import { runCheck } from '../application/quality-check.ts';
 import { runAdminCredentialCommand } from '../application/admin-auth.ts';
 import { initializeContentRepository } from '../application/content-repository.ts';
 import { runDeliveryBuild, runRuntimeMode, type RuntimePorts } from '../application/runtime.ts';
-import { planMode, MOCK_SCENARIOS, DATA_MODES, CONTENT_SOURCES } from '../domain/runtime.ts';
+import { planMode, MOCK_SCENARIOS, DATA_MODES, CONTENT_SOURCES } from '../domain/runtime-plan.ts';
 import { PORT_MIN, PORT_MAX } from '../domain/port-allocation.ts';
 
 const FAILURE = { code: 20, meaning: '执行失败（构建失败、端口耗尽、服务启动失败或运行中的服务退出）' };
