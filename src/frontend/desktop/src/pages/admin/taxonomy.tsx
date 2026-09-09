@@ -19,7 +19,7 @@ import {
   type ContentSyncStatus,
   type QueryResult,
 } from "../../../../solid/queries";
-import { Header, Status } from "../../app";
+import { Header, Status } from "../../shell";
 import {
   canAbandonWorkspace,
   canSubmitWorkspace,

@@ -1,7 +1,7 @@
 import { createSignal } from "solid-js";
 import { definePage } from "../../../../solid/page";
 import { useTShelf } from "../../../../solid/queries";
-import { Header, TShelf } from "../../app";
+import { Header, TShelf } from "../../shell";
 
 const App = () => {
   const [recommendationSelection, setRecommendationSelection] = createSignal({

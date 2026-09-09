@@ -2,7 +2,7 @@ import { For, Show } from "solid-js";
 import { definePage } from "../../../solid/page";
 import { Heading, Link, Tag, Text } from "../../../mobile-ui/atoms";
 import { useAdminArticle, adminArticleEditHref } from "../../../solid/queries";
-import { ArticleBody, StateMessage } from "../components/ui";
+import { ArticleBody, StateMessage } from "../components";
 import "../../styles/app.css";
 
 const displayDate = (value?: string) =>

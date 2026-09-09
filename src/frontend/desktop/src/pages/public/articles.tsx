@@ -5,7 +5,7 @@ import {
   tShelfSearch,
   useTShelf,
 } from "../../../../solid/queries";
-import { Header, TShelf } from "../../app";
+import { Header, TShelf } from "../../shell";
 
 const App = () => {
   const [selection, setSelection] = createSignal({

@@ -11,7 +11,7 @@ import type {
   ArticleType,
   Term,
 } from "../../../common/contracts/domain";
-import { ArticleCard } from "./ui";
+import { ArticleCard } from "./index";
 import {
   browseAllLevelId,
   browseSelectedLevelId,

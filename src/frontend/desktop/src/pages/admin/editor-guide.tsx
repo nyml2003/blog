@@ -1,6 +1,6 @@
 import { createSignal, For, Show } from "solid-js";
 import { definePage } from "../../../../solid/page";
-import { Header } from "../../app";
+import { Header } from "../../shell";
 import { ArticleSourceEditor } from "./article-source-editor";
 import {
   adminArticleNewHref,

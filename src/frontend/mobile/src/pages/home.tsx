@@ -2,7 +2,7 @@ import { createSignal } from "solid-js";
 import { definePage } from "../../../solid/page";
 import { Heading, Link, Text } from "../../../mobile-ui/atoms";
 import { useTShelf, mobileArticlesHref } from "../../../solid/queries";
-import { MobileNav, MobileTShelf, pageStyles } from "../components/ui";
+import { MobileNav, MobileTShelf, pageStyles } from "../components";
 import { BottomNav } from "../../../mobile-ui/molecules";
 import { mobileNavigationItems } from "../logic/navigation";
 import "../../styles/app.css";

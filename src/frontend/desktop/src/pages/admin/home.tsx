@@ -8,7 +8,7 @@ import {
   useContentArticles,
   type ContentArticle,
 } from "../../../../solid/queries";
-import { Header, Status, WorkspaceArticleTable } from "../../app";
+import { Header, Status, WorkspaceArticleTable } from "../../shell";
 
 const App = () => {
   const articles = useContentArticles();

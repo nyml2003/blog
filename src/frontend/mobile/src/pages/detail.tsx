@@ -5,7 +5,7 @@ import {
   usePublishedArticle,
   mobileArticlesHref,
 } from "../../../solid/queries";
-import { StateMessage, ArticleBody, pageStyles } from "../components/ui";
+import { StateMessage, ArticleBody, pageStyles } from "../components";
 import "../../styles/app.css";
 
 const displayDate = (value?: string) =>

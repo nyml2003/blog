@@ -76,17 +76,17 @@ test("editor keeps its form mounted after save and public navigation has no admi
     new URL("./editor.tsx", import.meta.url),
     "utf8",
   );
-  const appSource = readFileSync(
-    new URL("../../app.tsx", import.meta.url),
+  const headerSource = readFileSync(
+    new URL("../../shell/header.tsx", import.meta.url),
     "utf8",
   );
 
   assert.doesNotMatch(editorSource, /workspace\.refetch\(\)/);
   // SPEC-SITE-ROUTES-001：导航经路由清单取用，源码不出现页面路径字面量；
   // 管理台入口只存在于 admin 分支（public 分支无管理入口文案）。
-  assert.doesNotMatch(appSource, /href="\/(admin|m|articles)\//);
-  assert.match(appSource, /adminHomeHref\(\)/);
-  assert.doesNotMatch(appSource, />管理</);
+  assert.doesNotMatch(headerSource, /href="\/(admin|m|articles)\//);
+  assert.match(headerSource, /adminHomeHref\(\)/);
+  assert.doesNotMatch(headerSource, />管理</);
   assert.equal(
     editorSnapshot({
       title: "文章",

@@ -10,7 +10,7 @@ import {
   type CategoryShelfCard,
   type CategoryTree,
 } from "../logic/category-browser";
-import { ArticleCard, StateMessage } from "./ui";
+import { ArticleCard, StateMessage } from "./index";
 
 const tabs = (categories: readonly CategoryNode[]): readonly TabItem[] =>
   categories.map((category) => ({

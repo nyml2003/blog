@@ -77,8 +77,8 @@ test("admin navigation uses the content workspace canonical path", () => {
     "/admin/article-types/index.html",
   );
 
-  const sources = ["./editor.tsx", "./home.tsx", "../../app.tsx"].map((path) =>
-    readFileSync(new URL(path, import.meta.url), "utf8"),
+  const sources = ["./editor.tsx", "./home.tsx", "../../shell/header.tsx"].map(
+    (path) => readFileSync(new URL(path, import.meta.url), "utf8"),
   );
   for (const source of sources) {
     assert.match(source, /adminWorkspaceHref/);

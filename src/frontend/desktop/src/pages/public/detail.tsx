@@ -4,7 +4,7 @@ import {
   usePublishedArticle,
   publicArchiveHref,
 } from "../../../../solid/queries";
-import { ArticleBody, date, Header, qs } from "../../app";
+import { ArticleBody, date, Header, qs } from "../../shell";
 
 const App = () => {
   const id = qs().get("id");

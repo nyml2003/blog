@@ -5,7 +5,7 @@ import {
   mobileSettingsPageContent,
   useMobileSettings,
 } from "../logic/settings";
-import { MobileNav } from "../components/ui";
+import { MobileNav } from "../components";
 import "../../styles/app.css";
 
 function SettingsPage() {

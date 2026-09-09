@@ -23,7 +23,7 @@ import {
 } from "../logic/category-browser";
 import { mobileNavigationItems } from "../logic/navigation";
 import { CategoryShelfView } from "./category-shelf";
-import { MobileNav, pageStyles } from "./ui";
+import { MobileNav, pageStyles } from "./index";
 
 export function CategoryShelfPage(p: { title: string }) {
   const savedHistory = mobileArticleShelfHistory(history.state);

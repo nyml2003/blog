@@ -5,7 +5,7 @@ import {
   adminArticlePreviewMobileHref,
   useAdminArticle,
 } from "../../../../solid/queries";
-import { ArticleBody, date, Header, qs } from "../../app";
+import { ArticleBody, date, Header, qs } from "../../shell";
 
 export function AdminArticlePreview(props: { mobile?: boolean }) {
   if (props.mobile) {

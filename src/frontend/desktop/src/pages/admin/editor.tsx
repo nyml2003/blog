@@ -21,7 +21,7 @@ import {
   type QueryReadonly,
 } from "../../../../solid/queries";
 import type { HtmlInspection } from "../../../../common/validation/article-html";
-import { Header, qs, Status } from "../../app";
+import { Header, qs, Status } from "../../shell";
 import { ArticleSourceEditor } from "./article-source-editor";
 import {
   editorPageTitle,
