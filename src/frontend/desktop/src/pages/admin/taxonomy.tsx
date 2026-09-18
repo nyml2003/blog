@@ -1,4 +1,5 @@
 import { For, Show, createEffect, createSignal } from "solid-js";
+import { Button, Field, StateMessage } from "../../../../desktop-ui";
 import { definePage } from "../../../../solid/page";
 import {
   abandonContentTaxonomy,
@@ -55,6 +56,10 @@ const App = () => {
   const syncStatus = () => latestSyncStatus() ?? syncStatusResource.snapshot();
   const syncPending = () =>
     syncStatusResource.loading() || syncStatus()?.status === "running";
+  const actionState = (disabled: boolean) => {
+    if (busy()) return "loading" as const;
+    return disabled ? ("disabled" as const) : ("enabled" as const);
+  };
 
   createEffect(() => {
     const value = workspace.snapshot();
@@ -247,9 +252,10 @@ const App = () => {
         />
         <Show when={workspace.snapshot()?.lastError}>
           {(lastError) => (
-            <div class="error" role="alert">
-              上次工作区操作失败：{lastError()}
-            </div>
+            <StateMessage
+              content={`上次工作区操作失败：${lastError()}`}
+              kind="error"
+            />
           )}
         </Show>
         <div class="taxonomy-workbench-grid">
@@ -263,28 +269,32 @@ const App = () => {
                 {dirty() ? "有未保存修改" : `工作区版本 ${version()}`}
               </span>
             </header>
-            <label class="field" for="taxonomy-source">
-              <span>分类树与标签 JSON</span>
-              <textarea
-                id="taxonomy-source"
-                rows="24"
-                spellcheck={false}
-                disabled={!workspaceReady() || busy() || workspacePending()}
-                value={source()}
-                onInput={(event) => {
-                  setSource(event.currentTarget.value);
-                  setDirty(true);
-                }}
-              />
-            </label>
-            <button
-              class="primary"
-              type="button"
-              disabled={!workspaceReady() || busy() || workspacePending()}
-              onClick={save}
-            >
-              保存到工作区
-            </button>
+            <Field
+              control={
+                <textarea
+                  id="taxonomy-source"
+                  rows="24"
+                  spellcheck={false}
+                  disabled={!workspaceReady() || busy() || workspacePending()}
+                  value={source()}
+                  onInput={(event) => {
+                    setSource(event.currentTarget.value);
+                    setDirty(true);
+                  }}
+                />
+              }
+              controlId="taxonomy-source"
+              label="分类树与标签 JSON"
+            />
+            <Button
+              content="保存到工作区"
+              options={{
+                onClick: save,
+                state: actionState(!workspaceReady() || workspacePending()),
+                type: "button",
+                variant: "primary",
+              }}
+            />
           </section>
           <aside class="taxonomy-batch" aria-labelledby="taxonomy-batch-title">
             <h2 id="taxonomy-batch-title">文章分类分析</h2>
@@ -311,71 +321,72 @@ const App = () => {
               </div>
             </fieldset>
             <div class="taxonomy-batch-actions">
-              <button
-                type="button"
-                disabled={
-                  !workspaceReady() || busy() || workspacePending() || dirty()
-                }
-                onClick={analyze}
-              >
-                分析并应用
-              </button>
-              <button
-                type="button"
-                disabled={
-                  !workspaceReady() || busy() || workspacePending() || dirty()
-                }
-                onClick={review}
-              >
-                复核一次
-              </button>
-              <button
-                type="button"
-                disabled={
-                  !workspaceReady() || busy() || workspacePending() || dirty()
-                }
-                onClick={() => void loadPreview()}
-              >
-                刷新预览
-              </button>
-              <button
-                class="primary"
-                type="button"
-                disabled={
-                  !workspaceReady() ||
-                  busy() ||
-                  workspacePending() ||
-                  dirty() ||
-                  !canSubmitWorkspace(workspace.snapshot()?.status ?? "clean")
-                }
-                onClick={submit}
-              >
-                提交 PR
-              </button>
-              <button
-                type="button"
-                disabled={
-                  !workspaceReady() ||
-                  busy() ||
-                  !canAbandonWorkspace(workspace.snapshot()?.status ?? "clean")
-                }
-                onClick={abandon}
-              >
-                放弃批次
-              </button>
-              <button
-                type="button"
-                disabled={
-                  !workspaceReady() ||
-                  busy() ||
-                  workspacePending() ||
-                  dirty() ||
-                  syncPending()
-                }
-                onClick={() => void synchronize()}
-              >
-                {syncPending() ? "同步中..." : "同步内容仓库"}
-              </button>
+              <Button
+                content="分析并应用"
+                options={{
+                  onClick: analyze,
+                  state: actionState(
+                    !workspaceReady() || workspacePending() || dirty(),
+                  ),
+                }}
+              />
+              <Button
+                content="复核一次"
+                options={{
+                  onClick: review,
+                  state: actionState(
+                    !workspaceReady() || workspacePending() || dirty(),
+                  ),
+                }}
+              />
+              <Button
+                content="刷新预览"
+                options={{
+                  onClick: () => void loadPreview(),
+                  state: actionState(
+                    !workspaceReady() || workspacePending() || dirty(),
+                  ),
+                }}
+              />
+              <Button
+                content="提交 PR"
+                options={{
+                  onClick: submit,
+                  state: actionState(
+                    !workspaceReady() ||
+                      workspacePending() ||
+                      dirty() ||
+                      !canSubmitWorkspace(
+                        workspace.snapshot()?.status ?? "clean",
+                      ),
+                  ),
+                  variant: "primary",
+                }}
+              />
+              <Button
+                content="放弃批次"
+                options={{
+                  onClick: abandon,
+                  state: actionState(
+                    !workspaceReady() ||
+                      !canAbandonWorkspace(
+                        workspace.snapshot()?.status ?? "clean",
+                      ),
+                  ),
+                }}
+              />
+              <Button
+                content={syncPending() ? "同步中..." : "同步内容仓库"}
+                options={{
+                  onClick: () => void synchronize(),
+                  state: actionState(
+                    !workspaceReady() ||
+                      workspacePending() ||
+                      dirty() ||
+                      syncPending(),
+                  ),
+                }}
+              />
             </div>
             <Show when={syncStatus()}>
               {(status) => (

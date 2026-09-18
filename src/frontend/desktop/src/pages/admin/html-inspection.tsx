@@ -1,4 +1,5 @@
 import { For, Show } from "solid-js";
+import { Button, StateMessage } from "../../../../desktop-ui";
 import type { QueryReadonly as DeepReadonly } from "../../../../solid/queries";
 import type {
   HtmlDiagnostic,
@@ -21,13 +22,21 @@ export function HtmlDiagnostics(props: {
       aria-atomic="true"
     >
       <Show when={props.pending}>
-        <p role="status">正在校验正文...</p>
+        <StateMessage content="正在校验正文..." kind="loading" />
       </Show>
       <Show when={props.error}>
-        <p class="error">{props.error}</p>
-        <button type="button" onClick={props.retry}>
-          重新校验
-        </button>
+        <StateMessage
+          content={
+            <>
+              <p>{props.error}</p>
+              <Button
+                content="重新校验"
+                options={{ onClick: props.retry, variant: "secondary" }}
+              />
+            </>
+          }
+          kind="error"
+        />
       </Show>
       <Show when={props.inspection}>
         {(inspection) => (

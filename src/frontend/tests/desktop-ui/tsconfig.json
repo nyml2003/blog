@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.json",
+  "include": [
+    "../../desktop-ui/**/*.ts",
+    "../../desktop-ui/**/*.tsx",
+    "./**/*.ts",
+    "./**/*.tsx",
+    "../../vite-env.d.ts"
+  ]
+}

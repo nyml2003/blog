@@ -1,4 +1,5 @@
 import { For, Show } from "solid-js";
+import { Button, StateMessage } from "../../../desktop-ui";
 import type { ArticleType } from "../../../common/contracts/domain";
 import {
   publicArticleDetailHref,
@@ -78,22 +79,33 @@ export function TShelf(props: {
       <div class="t-shelf-content" aria-live="polite" aria-busy={props.loading}>
         <Show
           when={!props.loading}
-          fallback={<div class="state">加载中...</div>}
+          fallback={<StateMessage content="加载中..." kind="loading" />}
         >
           <Show
             when={!props.error}
             fallback={
-              <div class="error" role="alert">
-                <span>文章加载失败，请重试。</span>
-                <button type="button" onClick={props.onRetry}>
-                  重试
-                </button>
-              </div>
+              <StateMessage
+                content={
+                  <>
+                    <span>文章加载失败，请重试。</span>
+                    <Button
+                      content="重试"
+                      options={{
+                        onClick: props.onRetry,
+                        variant: "secondary",
+                      }}
+                    />
+                  </>
+                }
+                kind="error"
+              />
             }
           >
             <Show
               when={props.articles.length > 0}
-              fallback={<div class="state">当前分类还没有文章</div>}
+              fallback={
+                <StateMessage content="当前分类还没有文章" kind="empty" />
+              }
             >
               <div class="t-shelf-count">共 {props.total ?? 0} 篇</div>
               <PublicShelf items={props.articles} variant={props.variant} />

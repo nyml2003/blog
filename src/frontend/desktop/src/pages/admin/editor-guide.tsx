@@ -1,4 +1,5 @@
 import { createSignal, For, Show } from "solid-js";
+import { ActionLink } from "../../../../desktop-ui";
 import { definePage } from "../../../../solid/page";
 import { Header } from "../../shell";
 import { ArticleSourceEditor } from "./article-source-editor";
@@ -169,9 +170,11 @@ function EditorGuide() {
             </p>
           </div>
           <div class="actions">
-            <a class="button primary" href={adminArticleNewHref()}>
-              开始写作
-            </a>
+            <ActionLink
+              content="开始写作"
+              href={adminArticleNewHref()}
+              options={{ variant: "primary" }}
+            />
           </div>
         </header>
         <div class="guide-tabs" role="tablist" aria-label="指南章节">

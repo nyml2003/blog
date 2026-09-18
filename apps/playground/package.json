@@ -1,0 +1,23 @@
+{
+  "name": "playground",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "test": "tsx --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@fluvient-loom/command": "workspace:*",
+    "@fluvient-loom/common": "workspace:*",
+    "@fluvient-loom/gesture-web": "workspace:*",
+    "@fluvient-loom/mock": "workspace:*",
+    "@fluvient-loom/port": "workspace:*",
+    "@fluvient-loom/query": "workspace:*",
+    "@fluvient-loom/web": "workspace:*"
+  },
+  "devDependencies": {
+    "@fluvient-loom/node": "workspace:*",
+    "vite": "8.2.2"
+  }
+}

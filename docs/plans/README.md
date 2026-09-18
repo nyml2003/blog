@@ -8,7 +8,17 @@ Plan 面向一个跨职能、可验收的产品结果，不面向单个文件或
 - `archive/`：已完成或按用户要求结束的计划及结果、证据；未完成项以归档结果为准；
 - `_template/`：新计划模板。
 
-当前没有 active business plan（2026-09-10 用户指示批量归档验收中的五个计划，见"最近归档"；新计划按 `_template/` 创建并在此登记）。
+当前 active：
+
+- [PLAN-LOOM-DATA-001](./active/PLAN-LOOM-DATA-001/PLAN.md)：@fluvient-loom 数据内核四包（common / port / query / command，平台中立零 node/web/solid 依赖；workspace 骨架 + 胚胎映射 + 生命周期工厂；私有不发布、不接入业务），2026-09-11 自 PLAN-PAGE-RUNTIME-001 拆出立项、同日验收通过。
+- [PLAN-LOOM-NODE-001](./active/PLAN-LOOM-NODE-001/PLAN.md)：@fluvient-loom/node——Node 宿主适配包（fetch 网络 / 调度 / uuid / 内存持久化，node:* 零依赖、标准全局默认 + 注入覆盖；每宿主一包，不设 infra 通用名目），2026-09-11 立项、同日验收通过。
+- [PLAN-LOOM-WEB-001](./active/PLAN-LOOM-WEB-001/PLAN.md)：@fluvient-loom/web——浏览器宿主适配包（localStorage 持久化 / DocumentPort / NavigationPort 含 pagehide / web 调度，全注入式 node 可测零 jsdom；port 补 document/navigation 契约、asAsyncPersistence 迁入 port；护栏加宿主适配豁免），2026-09-11 立项、同日验收通过。
+- [PLAN-LOOM-LIFECYCLE-001](./active/PLAN-LOOM-LIFECYCLE-001/PLAN.md)：生命周期闭环——适配器无关性证明（同一工厂同一剧本双宿主组装投影序列一致 + web 语义经 DocumentPort 写 data-theme + 冒烟换真 node 适配器），2026-09-11 立项、同日验收通过。
+- [PLAN-LOOM-DEMO-001](./active/PLAN-LOOM-DEMO-001/PLAN.md)：mock 网络适配器（@fluvient-loom/mock）+ 薄请求器（port 组合子）+ 生命周期 demo 页面（apps/playground，vanilla，localStorage 缓存 + mock 服务端权威的状态分层），2026-09-11 立项。
+- [PLAN-PAGE-RUNTIME-001](./active/PLAN-PAGE-RUNTIME-001/PLAN.md)：页面运行时四包 container / web / page / solid（导航栈≡日志折叠、槽/form、ViewAdapter、LRU 保活池；playground demo 与 blog 接入另立项），2026-09-11 立项并同日拆分瘦身，依赖 PLAN-LOOM-DATA-001。
+- [PLAN-MOBILE-GESTURE-001](./active/PLAN-MOBILE-GESTURE-001/PLAN.md)：手势组件接入 blog——workspace 收编 src/frontend + mobile-ui 薄包装层 + 移动端浏览页筛选 BottomSheet（草稿/应用，URL 语义不变；sheet 不进历史）。手感维持 2026-09-12 冻结，只做正确级修正（主题 CSS 变量/Escape/reduced-motion）。D7 修订：gesture-web 与 nested-gesture 允许接入 blog，其余 loom 包维持不接入，2026-09-17 立项。
+
+历史：2026-09-10 用户指示批量归档验收中的五个计划，见"最近归档"；新计划按 `_template/` 创建并在此登记。
 
 ## 发布就绪锚点（v1）
 

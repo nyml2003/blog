@@ -1,4 +1,5 @@
 import { createSignal, Show } from "solid-js";
+import { Button, Field } from "../../../../desktop-ui";
 import {
   adminNextFromSearch,
   adminSessionPaths,
@@ -78,18 +79,21 @@ const App = () => {
           <h1>管理台登录</h1>
         </div>
         <form class="login-form" onSubmit={submit} aria-busy={busy()}>
-          <div class="field">
-            <label for="admin-password">密码</label>
-            <input
-              id="admin-password"
-              name="password"
-              type="password"
-              autocomplete="current-password"
-              required
-              value={password()}
-              onInput={(event) => setPassword(event.currentTarget.value)}
-            />
-          </div>
+          <Field
+            control={
+              <input
+                id="admin-password"
+                name="password"
+                type="password"
+                autocomplete="current-password"
+                required
+                value={password()}
+                onInput={(event) => setPassword(event.currentTarget.value)}
+              />
+            }
+            controlId="admin-password"
+            label="密码"
+          />
 
           <fieldset class="login-verification-kind">
             <legend>验证方式</legend>
@@ -113,29 +117,30 @@ const App = () => {
             </label>
           </fieldset>
 
-          <div class="field">
-            <label for="admin-verification-code">
-              {verificationKind() === "totp" ? "6 位动态验证码" : "恢复码"}
-            </label>
-            <input
-              id="admin-verification-code"
-              name="verification-code"
-              type="text"
-              inputmode={verificationKind() === "totp" ? "numeric" : "text"}
-              autocomplete="one-time-code"
-              pattern={verificationKind() === "totp" ? "[0-9]{6}" : undefined}
-              maxlength={verificationKind() === "totp" ? 6 : undefined}
-              required
-              value={verificationCode()}
-              aria-invalid={error() !== undefined}
-              aria-describedby={
-                error() === undefined ? undefined : "login-error"
-              }
-              onInput={(event) =>
-                setVerificationCode(event.currentTarget.value)
-              }
-            />
-          </div>
+          <Field
+            control={
+              <input
+                id="admin-verification-code"
+                name="verification-code"
+                type="text"
+                inputmode={verificationKind() === "totp" ? "numeric" : "text"}
+                autocomplete="one-time-code"
+                pattern={verificationKind() === "totp" ? "[0-9]{6}" : undefined}
+                maxlength={verificationKind() === "totp" ? 6 : undefined}
+                required
+                value={verificationCode()}
+                aria-invalid={error() !== undefined}
+                aria-describedby={
+                  error() === undefined ? undefined : "login-error"
+                }
+                onInput={(event) =>
+                  setVerificationCode(event.currentTarget.value)
+                }
+              />
+            }
+            controlId="admin-verification-code"
+            label={verificationKind() === "totp" ? "6 位动态验证码" : "恢复码"}
+          />
 
           <Show when={error()}>
             {(message) => (
@@ -144,9 +149,15 @@ const App = () => {
               </div>
             )}
           </Show>
-          <button class="primary login-submit" type="submit" disabled={busy()}>
-            {busy() ? "正在验证..." : "登录"}
-          </button>
+          <Button
+            content={busy() ? "正在验证..." : "登录"}
+            options={{
+              state: busy() ? "loading" : "enabled",
+              type: "submit",
+              variant: "primary",
+              width: "block",
+            }}
+          />
         </form>
       </main>
     </div>

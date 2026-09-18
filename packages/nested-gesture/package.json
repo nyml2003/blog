@@ -1,0 +1,12 @@
+{
+  "name": "@fluvient-loom/nested-gesture",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "tsx --test test/*.test.ts"
+  }
+}

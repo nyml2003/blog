@@ -25,6 +25,109 @@ test("rejects page data access and accepts query-layer imports", () => {
   );
 });
 
+test("enforces the new app foundation boundaries", () => {
+  assert.deepEqual(
+    check(
+      "/repo/src/frontend/app/kernel/task.ts",
+      'const request = fetch("/api/items");',
+    ),
+    ["kernel must remain environment and framework independent"],
+  );
+  assert.deepEqual(
+    check(
+      "/repo/src/frontend/app/infrastructure/browser/network.ts",
+      'import { z } from "zod"; const path = "/api/items";',
+    ),
+    ["infrastructure must not depend on business API or UI modules"],
+  );
+  assert.deepEqual(
+    check(
+      "/repo/src/frontend/app/infrastructure/browser/network.ts",
+      'import { helper } from "some-third-party";',
+    ),
+    ["infrastructure must not depend on business API or UI modules"],
+  );
+  assert.deepEqual(
+    check(
+      "/repo/src/frontend/app/infrastructure/browser/network.ts",
+      'import type { NetworkPort } from "../../kernel/ports";',
+    ),
+    [],
+  );
+  assert.deepEqual(
+    check(
+      "/repo/src/frontend/app/infrastructure/browser/network.ts",
+      'import { browserClient } from "../../../common/client";',
+    ),
+    [
+      "new app foundation must not import the legacy frontend runtime",
+      "infrastructure must not depend on business API or UI modules",
+    ],
+  );
+  assert.deepEqual(
+    check(
+      "/repo/src/frontend/app/kernel/result.ts",
+      'import { Button } from "../../desktop-ui/atoms/button";',
+    ),
+    [
+      "new app foundation must not import the legacy frontend runtime",
+      "kernel must remain environment and framework independent",
+    ],
+  );
+  assert.deepEqual(
+    check("/repo/src/frontend/app/kernel/result.ts", "export type Value = string;"),
+    [],
+  );
+});
+
+test("enforces L2 habitat and L3 bootstrap boundaries", () => {
+  assert.deepEqual(
+    check(
+      "/repo/src/frontend/app/habitat/api/mobile/client.ts",
+      'import { z } from "zod"; const path = "/api/public/articles";',
+    ),
+    [],
+  );
+  assert.deepEqual(
+    check(
+      "/repo/src/frontend/app/habitat/api/mobile/client.ts",
+      'import { createBrowserNetwork } from "../../../infrastructure/browser";',
+    ),
+    ["API habitat must depend on kernel contracts, not adapters or UI"],
+  );
+  assert.deepEqual(
+    check(
+      "/repo/src/frontend/app/habitat/mobile/pages/home.tsx",
+      'import { createSignal } from "solid-js"; import { createMobileApi } from "../../api/mobile";',
+    ),
+    [],
+  );
+  assert.deepEqual(
+    check(
+      "/repo/src/frontend/app/habitat/mobile/pages/home.tsx",
+      'import { createBrowserPersistence } from "../../../infrastructure/browser";',
+    ),
+    ["mobile habitat must not depend on infrastructure or legacy frontend"],
+  );
+  assert.deepEqual(
+    check(
+      "/repo/src/frontend/app/bootstrap/mobile/home.tsx",
+      'import { createBrowserNetwork } from "../../../infrastructure/browser"; import { createMobileHomePage } from "../../habitat/mobile";',
+    ),
+    [],
+  );
+  assert.deepEqual(
+    check(
+      "/repo/src/frontend/app/bootstrap/mobile/home.tsx",
+      'import { LegacyPage } from "../../../mobile/src/pages/home";',
+    ),
+    [
+      "new app foundation must not import the legacy frontend runtime",
+      "bootstrap must not depend on the legacy frontend runtime",
+    ],
+  );
+});
+
 test("rejects cross-platform UI imports", () => {
   assert.deepEqual(
     check(

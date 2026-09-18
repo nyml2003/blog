@@ -1,0 +1,318 @@
+/* Mobile atoms inherit semantic theme values from their container. */
+
+.m-atom-text {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.m-atom-text--body {
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.m-atom-text--meta {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.m-atom-text--default {
+  color: var(--ink);
+}
+
+.m-atom-text--muted {
+  color: var(--muted);
+}
+
+.m-atom-text--accent {
+  color: var(--coral);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.m-atom-tag {
+  background: color-mix(in srgb, var(--coral) 14%, var(--paper));
+  border: 1px solid color-mix(in srgb, var(--coral) 40%, var(--border));
+  border-radius: 999px;
+  color: var(--coral);
+  display: inline-block;
+  font-size: 12px;
+  line-height: 1.35;
+  max-width: 12ch;
+  overflow: hidden;
+  padding: 3px 8px;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.m-atom-heading {
+  color: var(--ink);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.m-atom-heading--page {
+  font-size: 28px;
+  line-height: 1.25;
+}
+
+.m-atom-heading--section {
+  font-size: 21px;
+  line-height: 1.35;
+}
+
+.m-atom-heading--card {
+  font-size: 17px;
+  line-height: 1.45;
+}
+
+.m-atom-button,
+.m-atom-icon-button {
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-family: var(--font-body);
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 9px 15px;
+}
+
+.m-atom-button:focus-visible,
+.m-atom-icon-button:focus-visible,
+.m-atom-link:focus-visible,
+.m-atom-input:focus-visible,
+.m-atom-select:focus-visible,
+.m-atom-checkbox:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
+}
+
+.m-atom-button--primary,
+.m-atom-icon-button--primary {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.m-atom-button--secondary,
+.m-atom-icon-button--secondary {
+  background: var(--paper);
+  border-color: var(--border);
+  color: var(--ink);
+}
+
+.m-atom-button.is-block {
+  display: flex;
+  width: 100%;
+}
+
+.m-atom-button:disabled,
+.m-atom-icon-button:disabled,
+.m-atom-input:disabled,
+.m-atom-select:disabled,
+.m-atom-checkbox:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.m-atom-button.is-loading,
+.m-atom-icon-button.is-loading {
+  cursor: progress;
+}
+
+.m-atom-icon-button {
+  padding: 9px;
+}
+
+.m-atom-icon-button__icon {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+}
+
+.m-atom-link {
+  align-items: center;
+  color: var(--blue);
+  display: inline-flex;
+  min-height: 44px;
+  min-width: 44px;
+  overflow-wrap: anywhere;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+.m-atom-link--action {
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  justify-content: center;
+  padding: 9px 15px;
+  text-decoration: none;
+}
+
+.m-atom-link--cta {
+  background: var(--blue);
+  border: 1px solid var(--blue);
+  border-radius: 3px;
+  color: var(--foreground-on-accent);
+  font-weight: 700;
+  justify-content: space-between;
+  min-height: 50px;
+  padding: 9px 15px;
+  text-decoration: none;
+  width: 100%;
+}
+
+.m-atom-tab,
+.m-atom-chip {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-family: var(--font-body);
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.m-atom-tab {
+  border-bottom: 2px solid transparent;
+  padding: 9px 12px;
+  position: relative;
+  text-align: left;
+  transition:
+    color 180ms ease,
+    border-color 180ms ease,
+    transform 220ms var(--motion-emphasized);
+}
+
+.m-atom-tab--vertical {
+  border-bottom: 0;
+  border-left: 2px solid transparent;
+  font-size: 12px;
+  font-weight: 700;
+  justify-content: flex-start;
+  line-height: 1.25;
+  overflow: hidden;
+  padding: 8px 7px 8px 2px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.m-atom-tab--vertical::before {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 0;
+  width: 3px;
+  background: var(--coral);
+  content: "";
+  opacity: 0;
+  transform: scaleY(0.2);
+  transform-origin: center;
+  transition:
+    opacity 140ms ease,
+    transform 220ms var(--motion-emphasized);
+}
+
+.m-atom-tab.is-selected {
+  border-color: var(--blue);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.m-atom-tab--vertical.is-selected {
+  border-color: transparent;
+  transform: translateX(2px);
+}
+
+.m-atom-tab--vertical.is-selected::before {
+  opacity: 1;
+  transform: scaleY(1);
+}
+
+.m-atom-chip {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 14px;
+  white-space: nowrap;
+}
+
+.m-atom-chip.is-selected {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+
+.m-atom-tab:focus-visible,
+.m-atom-chip:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
+}
+
+.m-atom-label {
+  color: var(--ink);
+  display: inline-block;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.m-atom-input,
+.m-atom-select {
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  box-sizing: border-box;
+  color: var(--ink);
+  font: inherit;
+  font-family: var(--font-body);
+  min-height: 44px;
+  padding: 9px 11px;
+  width: 100%;
+}
+
+.m-atom-input.is-invalid,
+.m-atom-select.is-invalid,
+.m-atom-checkbox.is-invalid {
+  border-color: var(--danger);
+}
+
+.m-atom-checkbox {
+  accent-color: var(--blue);
+  border: 1px solid var(--border);
+  box-sizing: border-box;
+  cursor: pointer;
+  height: 44px;
+  margin: 0;
+  width: 44px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .m-atom-button,
+  .m-atom-icon-button,
+  .m-atom-link,
+  .m-atom-input,
+  .m-atom-select,
+  .m-atom-checkbox {
+    scroll-behavior: auto;
+    transition: none;
+  }
+
+  .m-atom-tab,
+  .m-atom-chip {
+    transition: none;
+  }
+
+  .m-atom-tab--vertical::before {
+    transition: none;
+  }
+}

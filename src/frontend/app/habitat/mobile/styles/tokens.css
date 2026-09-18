@@ -1,0 +1,71 @@
+/* C Mobile token module.
+   Sole owner of the custom properties consumed by the Mobile style modules.
+   No component selector, no page rhythm, no domain colour logic lives here.
+   Palette names are frozen: src/frontend/mobile-ui/styles/atoms.css already
+   consumes them and stays untouched during this migration. */
+:root {
+  /* Palette (frozen names) */
+  --paper: #f4f1ea;
+  --surface: #fffcf7;
+  --ink: #182230;
+  --muted: #68717d;
+  --border: #d8d2c7;
+  --blue: #3157d5;
+  --coral: #e77856;
+  --teal: #2c8c7b;
+  --danger: #c94b4b;
+
+  /* Atom typography; legacy modules retain their existing font declarations. */
+  --font-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* Surfaces */
+  --surface-header: rgba(244, 241, 234, 0.96);
+  --surface-nav: rgba(255, 252, 247, 0.98);
+  --surface-pressed: rgba(255, 252, 247, 0.8);
+  --surface-field: #fff;
+
+  /* Foregrounds */
+  --foreground-on-accent: #fff;
+  --foreground-empty: #89919a;
+
+  /* Overlay */
+  --scrim: rgba(24, 34, 48, 0.46);
+
+  /* Focus */
+  --focus-ring-color: #8fa5f3;
+  --focus-ring-width: 3px;
+  --focus-ring-offset: 3px;
+
+  /* Radius */
+  --radius-control: 3px;
+  --radius-panel: 8px;
+
+  /* Layering */
+  --layer-header: 10;
+  --layer-overlay: 20;
+  --layer-skip-link: 30;
+
+  /* Shell dimensions */
+  --shell-header-min-height: 68px;
+  --shell-content-max-width: 760px;
+  --shell-header-sticky-top: 84px;
+  --shell-nav-reserve: 92px;
+  --touch-target: 44px;
+
+  /* Safe area */
+  --safe-area-top: env(safe-area-inset-top);
+  --safe-area-bottom: env(safe-area-inset-bottom);
+
+  /* Motion. A full duration scale is deferred to the atom audit; only the
+     shared easing curve and the state spinner duration are named today. */
+  --motion-emphasized: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-spin-duration: 1s;
+
+  /* Content theme. Only .article-body rules may consume these; they must not
+     flow back into atoms, components or shell modules. */
+  --article-code-block-bg: #111923;
+  --article-code-block-fg: #e7edf2;
+  --article-code-inline-bg: #e9e5dd;
+  --article-code-inline-fg: #8f3d30;
+  --article-quote-fg: #4f5965;
+}

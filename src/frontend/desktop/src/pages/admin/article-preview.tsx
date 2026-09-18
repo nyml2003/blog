@@ -1,4 +1,5 @@
 import { For, Show } from "solid-js";
+import { StateMessage } from "../../../../desktop-ui";
 import { definePage } from "../../../../solid/page";
 import {
   adminArticleEditHref,
@@ -49,7 +50,9 @@ export function AdminArticlePreview(props: { mobile?: boolean }) {
       <main id="main">
         <Show
           when={savedArticle()}
-          fallback={<div class="state">文章不存在或暂不可见</div>}
+          fallback={
+            <StateMessage content="文章不存在或暂不可见" kind="empty" />
+          }
         >
           {(saved) => (
             <article class="article">

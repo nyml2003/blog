@@ -1,4 +1,5 @@
 import { For, Show } from "solid-js";
+import { StateMessage } from "../../../../desktop-ui";
 import { definePage } from "../../../../solid/page";
 import {
   usePublishedArticle,
@@ -15,7 +16,7 @@ const App = () => {
       <main id="main">
         <Show
           when={article.snapshot()}
-          fallback={<div class="state">加载中或文章不存在</div>}
+          fallback={<StateMessage content="加载中或文章不存在" kind="empty" />}
         >
           {(x) => (
             <article class="article">

@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>@fluvient-loom playground — 移动端三页 demo</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#f4f2ee" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="playground" />
+    <style>
+      :root { color-scheme: light dark; }
+      /* While any sheet is open, the page beneath is inert. */
+      :root.sheet-open body { overflow: hidden; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: #f4f2ee;
+        color: #27231d;
+        font-family: system-ui, -apple-system, "PingFang SC", sans-serif;
+      }
+      @media (prefers-color-scheme: dark) {
+        body { background: #15171c; color: #e8e5dd; }
+        .card { background: #1e2128; }
+        .favorite.on, .arm-fail.on { background: #3a3320; }
+      }
+      #stage {
+        max-width: 430px;
+        margin: 0 auto;
+        /* svh, not dvh: with dvh the stage stands taller than the visible
+           viewport while the address bar is showing, which becomes phantom
+           scrollable blank space below the home page. */
+        min-height: 100svh;
+        position: relative;
+      }
+      .page-head h1 { font-size: 20px; margin: 8px 0 2px; }
+      .page-sub { font-size: 12px; opacity: 0.62; margin: 0 0 14px; }
+      .section-title { font-size: 15px; margin: 18px 0 10px; }
+      .cards { display: grid; gap: 10px; }
+      .card {
+        display: grid;
+        gap: 5px;
+        padding: 14px;
+        border: 1px solid rgba(127, 117, 96, 0.28);
+        border-radius: 14px;
+        background: #fff;
+        text-align: left;
+        font: inherit;
+        color: inherit;
+        cursor: pointer;
+      }
+      .tag {
+        justify-self: start;
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        border: 1px solid rgba(127, 117, 96, 0.4);
+        opacity: 0.8;
+      }
+      .card-title { font-size: 15px; font-weight: 600; }
+      .card-summary { font-size: 12.5px; opacity: 0.72; }
+      .card-reason { font-size: 11.5px; opacity: 0.55; }
+      .more {
+        width: 100%;
+        margin-top: 14px;
+        padding: 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(127, 117, 96, 0.4);
+        background: rgba(127, 117, 96, 0.1);
+        font: inherit;
+        color: inherit;
+        cursor: pointer;
+      }
+      .back {
+        border: none;
+        background: none;
+        font: inherit;
+        color: inherit;
+        padding: 0;
+        font-size: 14px;
+        opacity: 0.8;
+        cursor: pointer;
+      }
+      .detail h2 { font-size: 18px; margin: 4px 0 10px; }
+      .detail-tools { display: flex; gap: 8px; margin: 10px 0 4px; }
+      .favorite, .arm-fail {
+        font: inherit;
+        font-size: 13px;
+        padding: 7px 12px;
+        border-radius: 10px;
+        border: 1px solid rgba(127, 117, 96, 0.4);
+        background: rgba(127, 117, 96, 0.08);
+        color: inherit;
+        cursor: pointer;
+      }
+      .favorite.on { background: #f3e3b3; border-color: #c9a84c; }
+      .arm-fail.on { background: #f3d0c0; border-color: #c97a4c; }
+      .banner {
+        margin: 12px 0;
+        padding: 10px 12px;
+        font-size: 13px;
+        border-radius: 10px;
+        border: 1px solid #b3592f;
+        color: #b3592f;
+      }
+      .banner[hidden] { display: none; }
+      .banner button { font: inherit; margin-left: 8px; cursor: pointer; }
+      .paragraph { font-size: 14px; line-height: 1.75; margin: 12px 0; }
+      .related { margin-top: 22px; }
+      .related-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .related-card {
+        display: grid;
+        gap: 6px;
+        align-content: start;
+        padding: 12px;
+        border: 1px solid rgba(127, 117, 96, 0.28);
+        border-radius: 12px;
+        background: #fff;
+        text-align: left;
+        font: inherit;
+        color: inherit;
+        cursor: pointer;
+        min-height: 84px;
+      }
+      @media (prefers-color-scheme: dark) {
+        .related-card { background: #1e2128; }
+      }
+      .related-title { font-size: 13px; font-weight: 600; line-height: 1.4; }
+      .hint { font-size: 12px; opacity: 0.55; }
+      .stack-hint { margin-top: 18px; }
+      .sheet-head { padding: 0 16px; }
+      .sheet-head h1 { font-size: 18px; margin: 2px 0; }
+      /* h()-built roots sit between the sheet's flex layout and its
+         slots — they must not break the flex chain. */
+      .view-root { display: contents; }
+    </style>
+  </head>
+  <body>
+    <div id="stage">
+      <demo-page id="home"></demo-page>
+      <demo-page id="detail" hidden popover="manual"></demo-page>
+    </div>
+    <bottom-sheet id="list-sheet" data-name="list" hidden></bottom-sheet>
+    <bottom-sheet id="detail-sheet" data-name="detail" hidden></bottom-sheet>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

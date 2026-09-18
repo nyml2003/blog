@@ -1,4 +1,5 @@
 import { type Accessor, createEffect, createSignal, onCleanup } from "solid-js";
+import { Field } from "../../../../desktop-ui";
 import type { QueryReadonly as DeepReadonly } from "../../../../solid/queries";
 import type {
   HtmlDiagnostic,
@@ -58,22 +59,25 @@ export function ArticleSourceEditor(props: {
   return (
     <section class="editor-source">
       <div class="editor-split">
-        <div class="field">
-          <label for={sourceId}>HTML 正文</label>
-          <div
-            ref={(element) => {
-              const editor = createCodeMirrorEditor(
-                element,
-                props.value(),
-                props.onChange,
-                { contentId: sourceId, diagnosticsId },
-              );
-              setController(editor);
-              props.onReady?.(editor);
-            }}
-            class="editor-codemirror"
-          />
-        </div>
+        <Field
+          control={
+            <div
+              ref={(element) => {
+                const editor = createCodeMirrorEditor(
+                  element,
+                  props.value(),
+                  props.onChange,
+                  { contentId: sourceId, diagnosticsId },
+                );
+                setController(editor);
+                props.onReady?.(editor);
+              }}
+              class="editor-codemirror"
+            />
+          }
+          controlId={sourceId}
+          label="HTML 正文"
+        />
         <EditorPreview html={props.value} />
       </div>
       <HtmlDiagnostics

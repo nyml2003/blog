@@ -44,6 +44,41 @@ function isUiComponent(file: string): boolean {
   );
 }
 
+function isAppModule(file: string): boolean {
+  return file.includes("/src/frontend/app/");
+}
+
+function isKernelModule(file: string): boolean {
+  return file.includes("/src/frontend/app/kernel/");
+}
+
+function isInfrastructureModule(file: string): boolean {
+  return file.includes("/src/frontend/app/infrastructure/");
+}
+
+function isHabitatApiModule(file: string): boolean {
+  return file.includes("/src/frontend/app/habitat/api/");
+}
+
+function isHabitatMobileModule(file: string): boolean {
+  return file.includes("/src/frontend/app/habitat/mobile/");
+}
+
+function isBootstrapModule(file: string): boolean {
+  return file.includes("/src/frontend/app/bootstrap/");
+}
+
+function isLegacyFrontendModule(module: string): boolean {
+  return [
+    "common/",
+    "solid/",
+    "desktop/",
+    "mobile/",
+    "desktop-ui/",
+    "mobile-ui/",
+  ].some((path) => containsPath(module, path));
+}
+
 function checkFrontendFile(file: string, source: string): Violation[] {
   const violations: Violation[] = [];
   const modules = importedModules(file, source);
@@ -55,6 +90,86 @@ function checkFrontendFile(file: string, source: string): Violation[] {
     (module) =>
       containsPath(module, "mobile/") || containsPath(module, "mobile-ui/"),
   );
+
+  if (isAppModule(file) && modules.some(isLegacyFrontendModule)) {
+    violations.push({
+      file,
+      message: "new app foundation must not import the legacy frontend runtime",
+    });
+  }
+
+  if (isKernelModule(file)) {
+    const importsEnvironment = modules.some(
+      (module) =>
+        module === "solid-js" ||
+        module === "solid-js/web" ||
+        module.startsWith("node:") ||
+        /(?:^|\/)(?:zod|desktop-ui|mobile-ui|common|solid|desktop|mobile)(?:\/|$)/.test(module),
+    );
+    if (importsEnvironment || /\b(?:fetch|AbortController|window|document|localStorage|sessionStorage|process)\b/.test(source)) {
+      violations.push({
+        file,
+        message: "kernel must remain environment and framework independent",
+      });
+    }
+  }
+
+  if (isInfrastructureModule(file)) {
+    const importsOutsideFoundation = modules.some((module) => {
+      if (module.startsWith("/")) {
+        return !module.includes("/src/frontend/app/kernel/") && !module.includes("/src/frontend/app/infrastructure/");
+      }
+      return true;
+    });
+    const importsForbidden = modules.some(
+      (module) =>
+        module === "zod" ||
+        module === "solid-js" ||
+        module === "solid-js/web" ||
+        isLegacyFrontendModule(module),
+    );
+    if (importsOutsideFoundation || importsForbidden || /\bsceneCode\b|["']\/api\//.test(source)) {
+      violations.push({
+        file,
+        message: "infrastructure must not depend on business API or UI modules",
+      });
+    }
+  }
+
+  if (isHabitatApiModule(file)) {
+    const importsForbidden = modules.some(
+      (module) =>
+        module === "solid-js" ||
+        module === "solid-js/web" ||
+        module.includes("/src/frontend/app/infrastructure/") ||
+        isLegacyFrontendModule(module),
+    );
+    if (importsForbidden) {
+      violations.push({
+        file,
+        message: "API habitat must depend on kernel contracts, not adapters or UI",
+      });
+    }
+  }
+
+  if (isHabitatMobileModule(file)) {
+    const importsInfrastructure = modules.some((module) =>
+      module.includes("/src/frontend/app/infrastructure/"),
+    );
+    if (importsInfrastructure || modules.some(isLegacyFrontendModule)) {
+      violations.push({
+        file,
+        message: "mobile habitat must not depend on infrastructure or legacy frontend",
+      });
+    }
+  }
+
+  if (isBootstrapModule(file) && modules.some(isLegacyFrontendModule)) {
+    violations.push({
+      file,
+      message: "bootstrap must not depend on the legacy frontend runtime",
+    });
+  }
 
   if (
     (file.includes("/src/frontend/desktop/") ||

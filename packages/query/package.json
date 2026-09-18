@@ -1,0 +1,16 @@
+{
+  "name": "@fluvient-loom/query",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "tsx --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@fluvient-loom/common": "workspace:*",
+    "@fluvient-loom/port": "workspace:*"
+  }
+}

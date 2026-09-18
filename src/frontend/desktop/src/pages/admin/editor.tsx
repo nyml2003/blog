@@ -20,6 +20,12 @@ import {
   type ContentArticle,
   type QueryReadonly,
 } from "../../../../solid/queries";
+import {
+  ActionLink,
+  Button,
+  Field,
+  StateMessage,
+} from "../../../../desktop-ui";
 import type { HtmlInspection } from "../../../../common/validation/article-html";
 import { Header, qs, Status } from "../../shell";
 import { ArticleSourceEditor } from "./article-source-editor";
@@ -108,6 +114,11 @@ export function Editor() {
   const ready = () => {
     if (!initialized() || loadFailed()) return false;
     return true;
+  };
+  const saveState = () => {
+    if (busy()) return "loading" as const;
+    if (ready()) return "enabled" as const;
+    return "disabled" as const;
   };
 
   const draftStorage = () => {
@@ -302,18 +313,27 @@ export function Editor() {
             <p>保存会进入当前待提交批次，发布前请在工作台统一预览。</p>
           </div>
           <div class="actions">
-            <a class="button" href={adminEditorGuideHref()}>
-              使用指南
-            </a>
-            <a class="button" href={workspacePath()}>
-              发布工作台
-            </a>
+            <ActionLink
+              content="使用指南"
+              href={adminEditorGuideHref()}
+              options={{ variant: "secondary" }}
+            />
+            <ActionLink
+              content="发布工作台"
+              href={workspacePath()}
+              options={{ variant: "secondary" }}
+            />
           </div>
         </header>
-        <Show when={!loading()} fallback={<div class="state">加载中...</div>}>
+        <Show
+          when={!loading()}
+          fallback={<StateMessage content="加载中..." kind="loading" />}
+        >
           <Show
             when={!loadFailed()}
-            fallback={<div class="error">文章或工作区加载失败</div>}
+            fallback={
+              <StateMessage content="文章或工作区加载失败" kind="error" />
+            }
           >
             <Status busy={busy()} error={error()} ok={message()} />
             <fieldset
@@ -323,33 +343,44 @@ export function Editor() {
             >
               <div class="editor-form">
                 <div class="editor-form-row">
-                  <div class="field">
-                    <label for="title">标题</label>
-                    <input
-                      id="title"
-                      disabled={busy()}
-                      value={title()}
-                      onInput={(event) => setTitle(event.currentTarget.value)}
-                    />
-                  </div>
-                  <div class="field">
-                    <label for="summary">摘要</label>
-                    <textarea
-                      id="summary"
-                      disabled={busy()}
-                      value={summary()}
-                      rows={3}
-                      onInput={(event) =>
-                        setSummary(
-                          limitUnicodeScalars(event.currentTarget.value, 160),
-                        )
-                      }
-                      aria-describedby="summary-help"
-                    />
-                    <small id="summary-help">
-                      可选，{summaryLength()}/160 字
-                    </small>
-                  </div>
+                  <Field
+                    control={
+                      <input
+                        id="title"
+                        disabled={busy()}
+                        value={title()}
+                        onInput={(event) => setTitle(event.currentTarget.value)}
+                      />
+                    }
+                    controlId="title"
+                    label="标题"
+                  />
+                  <Field
+                    control={
+                      <>
+                        <textarea
+                          id="summary"
+                          disabled={busy()}
+                          value={summary()}
+                          rows={3}
+                          onInput={(event) =>
+                            setSummary(
+                              limitUnicodeScalars(
+                                event.currentTarget.value,
+                                160,
+                              ),
+                            )
+                          }
+                          aria-describedby="summary-help"
+                        />
+                        <small id="summary-help">
+                          可选，{summaryLength()}/160 字
+                        </small>
+                      </>
+                    }
+                    controlId="summary"
+                    label="摘要"
+                  />
                 </div>
                 <div class="editor-form-row editor-taxonomy-row">
                   <fieldset class="term-picker" disabled={busy()}>
@@ -411,17 +442,20 @@ export function Editor() {
               <span class="muted" role="status">
                 {dirty() ? "有未保存修改" : `工作区版本 ${version()}`}
               </span>
-              <a class="button" href={workspacePath()}>
-                预览待提交批次
-              </a>
-              <button
-                type="button"
-                class="primary"
-                onClick={() => void save()}
-                disabled={busy() || !ready()}
-              >
-                保存到待提交批次
-              </button>
+              <ActionLink
+                content="预览待提交批次"
+                href={workspacePath()}
+                options={{ variant: "secondary" }}
+              />
+              <Button
+                content="保存到待提交批次"
+                options={{
+                  onClick: () => void save(),
+                  state: saveState(),
+                  type: "button",
+                  variant: "primary",
+                }}
+              />
             </div>
           </Show>
         </Show>

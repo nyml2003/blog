@@ -1,0 +1,21 @@
+{
+  "name": "blog-workspace",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "pnpm -r run test",
+    "smoke": "tsx scripts/package-smoke.ts",
+    "check": "pnpm typecheck && pnpm test && pnpm smoke"
+  },
+  "devDependencies": {
+    "@fluvient-loom/command": "workspace:*",
+    "@fluvient-loom/common": "workspace:*",
+    "@fluvient-loom/node": "workspace:*",
+    "@fluvient-loom/port": "workspace:*",
+    "@fluvient-loom/query": "workspace:*",
+    "@types/node": "26.4.1",
+    "tsx": "^4.23.13",
+    "typescript": "7.0.2"
+  }
+}

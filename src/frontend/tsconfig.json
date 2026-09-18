@@ -18,6 +18,8 @@
     "mobile-ui",
     "common",
     "solid",
+    "app",
+    "tests",
     "vite-env.d.ts",
     "vite.config.ts"
   ]

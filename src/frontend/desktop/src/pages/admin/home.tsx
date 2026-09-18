@@ -1,4 +1,5 @@
 import { createSignal, Show } from "solid-js";
+import { ActionLink, StateMessage } from "../../../../desktop-ui";
 import { definePage } from "../../../../solid/page";
 import {
   adminArticleNewHref,
@@ -59,12 +60,16 @@ const App = () => {
             <p>编辑工作区文章，并在发布工作台统一预览和提交。</p>
           </div>
           <div class="actions">
-            <a class="button" href={adminWorkspaceHref()}>
-              发布工作台
-            </a>
-            <a class="button primary" href={adminArticleNewHref()}>
-              新建文章
-            </a>
+            <ActionLink
+              content="发布工作台"
+              href={adminWorkspaceHref()}
+              options={{ variant: "secondary" }}
+            />
+            <ActionLink
+              content="新建文章"
+              href={adminArticleNewHref()}
+              options={{ variant: "primary" }}
+            />
           </div>
         </div>
         <Status
@@ -74,18 +79,20 @@ const App = () => {
         />
         <Show
           when={articles.error() === undefined}
-          fallback={<div class="error">文章工作区加载失败</div>}
+          fallback={<StateMessage content="文章工作区加载失败" kind="error" />}
         >
           <Show
             when={articles.snapshot()}
-            fallback={<div class="state">加载中...</div>}
+            fallback={<StateMessage content="加载中..." kind="loading" />}
           >
             {(value) => (
               <>
                 <p class="muted">工作区版本 {value().version}</p>
                 <Show
                   when={value().articles.length > 0}
-                  fallback={<div class="state">当前工作区没有文章</div>}
+                  fallback={
+                    <StateMessage content="当前工作区没有文章" kind="empty" />
+                  }
                 >
                   <WorkspaceArticleTable
                     items={value().articles}

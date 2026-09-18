@@ -4,6 +4,8 @@ import { runCheck } from '../application/quality-check.ts';
 import { runAdminCredentialCommand } from '../application/admin-auth.ts';
 import { initializeContentRepository } from '../application/content-repository.ts';
 import { runDeliveryBuild, runRuntimeMode, type RuntimePorts } from '../application/runtime.ts';
+import { runPackageCheck } from '../application/package-check.ts';
+import { runPlaygroundDev } from '../application/playground.ts';
 import { planMode, MOCK_SCENARIOS, DATA_MODES, CONTENT_SOURCES } from '../domain/runtime-plan.ts';
 import { PORT_MIN, PORT_MAX } from '../domain/port-allocation.ts';
 
@@ -35,6 +37,31 @@ export const commandDefinitions: readonly CommandDefinition[] = [
   defineCommand({ path: ['quality', 'check'], summary: '执行项目质量检查', description: '运行 Rust 三件套（cargo fmt --all --check、cargo clippy -D warnings、cargo test --workspace）、ops 契约测试、前端 typecheck/lint/format/test/build 和前后端架构边界检查。', examples: ['ops quality check'], exitCodes: [{ code: 0, meaning: '检查通过' }, { code: 20, meaning: '检查失败' }] }, ({ workspace, process, fs, reporter, dryRun }) => { if (dryRun) { reporter.section('quality check dry-run'); reporter.info('将执行 cargo fmt --all --check、cargo clippy --workspace --all-targets -- -D warnings、cargo test --workspace、ops 契约测试、pnpm typecheck/lint/format:check/test:core/build 和前后端架构边界检查'); return 0; } return runCheck(workspace, process, fs, reporter).then((ok) => ok ? 0 : 20); }),
   defineCommand({ path: ['quality', 'lint'], summary: '运行前端 Oxlint', description: '使用 pnpm 执行 blog-web 的 lint 脚本，并将 warning 视为失败。', examples: ['ops quality lint'], exitCodes: [{ code: 0, meaning: 'lint 通过' }, { code: 20, meaning: 'lint 失败' }] }, ({ workspace, process, reporter, dryRun }) => { if (dryRun) { reporter.section('quality lint dry-run'); reporter.info('pnpm -C src/frontend run lint'); return 0; } return runWebQuality(workspace, process, reporter, 'lint').then((ok) => ok ? 0 : 20); }),
   defineCommand({ path: ['quality', 'format'], summary: '格式化前端源文件', description: '不带 --check 时写入 Biome 格式化结果；带 --check 时只检查、不修改文件。', examples: ['ops quality format --check'], options: [{ name: 'check', model: { kind: 'switch' }, description: '只检查格式，不写入文件' }], exitCodes: [{ code: 0, meaning: '格式化通过' }, { code: 20, meaning: '格式化失败或存在未格式化文件' }] }, ({ workspace, process, reporter, dryRun }, args) => { const check = args.check === true; if (dryRun) { reporter.section('quality format dry-run'); reporter.info(`pnpm -C src/frontend run ${check ? 'format:check' : 'format'}`); return 0; } return runWebQuality(workspace, process, reporter, check ? 'format:check' : 'format').then((ok) => ok ? 0 : 20); }),
+  defineCommand({ path: ['package', 'check'], summary: '执行 @fluvient-loom 包门禁', description: '平台中立护栏（packages/*/src 零 node/web/solid 依赖）+ workspace typecheck/test/smoke；独立于 ops quality check。', examples: ['ops package check'], exitCodes: [{ code: 0, meaning: '检查通过' }, FAILURE] }, ({ workspace, process, fs, reporter, dryRun }) => { if (dryRun) { reporter.section('package check dry-run'); reporter.info('将执行平台中立护栏扫描与 pnpm run check（typecheck + test + smoke）'); return 0; } return runPackageCheck(workspace, process, fs, reporter).then((ok) => ok ? 0 : 20); }),
+  defineCommand({
+    path: ['playground', 'dev'],
+    summary: '启动 @fluvient-loom 演示页（Vite）',
+    description: '前台运行 apps/playground 的移动端三页 demo。--host 监听 0.0.0.0 供手机经局域网访问（访问地址形如 http://<本机IP>:<port>）；--port 必填，--strictPort 占用即失败。Ctrl-C 以 130 退出。',
+    examples: ['ops playground dev --port 5174', 'ops playground dev --host --port 5174'],
+    options: [
+      { name: 'host', model: { kind: 'switch' }, description: '监听 0.0.0.0，手机经局域网 IP 访问' },
+      portOption('port', 'Vite 端口'),
+    ],
+    exitCodes: [
+      { code: 0, meaning: '正常退出' },
+      { code: 130, meaning: 'SIGINT（Ctrl-C）触发的清理退出' },
+      FAILURE,
+    ],
+  }, ({ workspace, process, reporter, dryRun }, args) => {
+    const host = args.host === true;
+    const port = args.port as number;
+    if (dryRun) {
+      reporter.section('playground dev dry-run');
+      reporter.info(`pnpm -C apps/playground exec vite --port ${port} --strictPort${host ? ' --host' : ''}`);
+      return 0;
+    }
+    return runPlaygroundDev(workspace, process, reporter, { host, port });
+  }),
   defineCommand({
     path: ['admin', 'credentials', 'init'],
     summary: '初始化管理端密码、TOTP 与恢复码',
@@ -106,6 +133,8 @@ export const commandDefinitions: readonly CommandDefinition[] = [
 export const groupDefinitions = [
   defineGroup({ path: ['workspace'], summary: '检查', description: '确认本地开发依赖是否齐全。', order: 10, workflow: '首次进入仓库' }),
   defineGroup({ path: ['quality'], summary: '质量', description: '运行格式、静态检查、测试和前端质量任务。', order: 20, workflow: '提交前验证' }),
+  defineGroup({ path: ['package'], summary: '内核包', description: '@fluvient-loom workspace 包门禁：平台中立护栏 + typecheck/test/smoke，独立于 quality 全量检查。', order: 25, workflow: '内核包开发期验证' }),
+  defineGroup({ path: ['playground'], summary: '演示页', description: '启动 apps/playground 移动端三页 demo（Vite dev），--host 供手机经局域网访问。', order: 26, workflow: '内核包演示与验收' }),
   defineGroup({
     path: ['runtime'],
     summary: '运行模式',

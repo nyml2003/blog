@@ -1,4 +1,5 @@
 import { createSignal, Show } from "solid-js";
+import { Button } from "../../../desktop-ui";
 import {
   adminEditorGuideHref,
   adminHomeHref,
@@ -72,26 +73,25 @@ export function Header(props: { admin?: boolean }) {
               >
                 指南
               </a>
-              <button
-                class="nav-logout"
-                type="button"
-                disabled={logoutBusy()}
-                onClick={async () => {
-                  setLogoutError(undefined);
-                  setLogoutBusy(true);
-                  const result = await logoutAdminSession();
-                  if (result.ok) {
-                    location.replace(routes.login);
-                    return;
-                  }
-                  setLogoutError(
-                    queryErrorMessage(result.error, "退出失败，请重试"),
-                  );
-                  setLogoutBusy(false);
+              <Button
+                content={logoutBusy() ? "退出中..." : "退出"}
+                options={{
+                  state: logoutBusy() ? "loading" : "enabled",
+                  onClick: async () => {
+                    setLogoutError(undefined);
+                    setLogoutBusy(true);
+                    const result = await logoutAdminSession();
+                    if (result.ok) {
+                      location.replace(routes.login);
+                      return;
+                    }
+                    setLogoutError(
+                      queryErrorMessage(result.error, "退出失败，请重试"),
+                    );
+                    setLogoutBusy(false);
+                  },
                 }}
-              >
-                {logoutBusy() ? "退出中..." : "退出"}
-              </button>
+              />
               <Show when={logoutError()}>
                 {(message) => (
                   <span class="nav-error" role="alert">
