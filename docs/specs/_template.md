@@ -3,7 +3,6 @@ kind: spec
 id: SPEC-REPLACE-ME
 status: draft
 owner: replace-me
-plan_id: replace-me
 last_reviewed: 2026-09-05
 ---
 

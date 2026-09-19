@@ -3,7 +3,7 @@ kind: guide
 id: GUIDE-TESTING
 status: current
 owner: quality
-last_reviewed: 2026-09-05
+last_reviewed: 2026-09-19
 ---
 
 # 测试指南
@@ -40,8 +40,9 @@ pnpm -C src/frontend run build
 `ops quality check` 还扫描前端 TypeScript/TSX 与 Rust 源码，执行 `SPEC-ARCH-BOUNDARY-001` 的长期边界规则：
 
 - Desktop 与 Mobile 不互相导入 UI；`common` 不依赖平台 UI 或 Solid UI；
-- 页面只从 `solid/queries` 取得业务数据，不直接导入 `common/client`、`common/data` 或 `solid/data`；
-- UI 组件不直接导入 client/data，查询层不导入页面或 UI；
+- 旧 Desktop/Mobile 页面只从 `solid/queries` 取得业务数据，不直接导入 `common/client`、`common/data` 或 `solid/data`；
+- 新 `app/` 运行时遵守 `kernel → infrastructure/habitat → bootstrap` 边界：kernel 不依赖宿主或框架，habitat 通过注入的 API/ports 取数，bootstrap 不反向导入旧页面层；
+- UI 组件不直接导入 client/data 或 infrastructure，旧查询层和新 habitat API/resource 都不反向导入页面；
 - `common/client` 保持框架无关；
 - protocol 不承载货架编排，Product 不直接访问 SQLite，Data 不解析 HTML 或访问 GitHub。
 

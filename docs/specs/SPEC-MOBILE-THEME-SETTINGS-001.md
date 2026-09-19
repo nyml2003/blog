@@ -3,151 +3,134 @@ kind: spec
 id: SPEC-MOBILE-THEME-SETTINGS-001
 status: accepted
 owner: frontend-mobile
-plan_id: PLAN-MOBILE-THEME-SETTINGS-001
-last_reviewed: 2026-09-10
+last_reviewed: 2026-09-19
 ---
 
-# C Mobile 设置页与容器主题
+# C Mobile 设置与主题
 
 ## 目标
 
-为 C Mobile 提供设置页，允许用户选择主题风格（纸张 / 暗色 / sepia）与正文字体族（无衬线 / 衬线 / 等宽，均为系统字体栈）。设置持久化在设备本地，于首绘前应用、不闪屏。主题与字体以 mobile-ui 的 PageContainer 为边界，覆盖设置页背景、新页头、主体和新底部导航；未迁移的旧页面保持现状。
-
-本版本按用户已确认的 [迭代决策](../plans/archive/PLAN-MOBILE-THEME-SETTINGS-001/DECISIONS.md) 修订首轮 atom 根方案。组件与接线边界见 [COMPONENT-CONTRACT.md](../plans/archive/PLAN-MOBILE-THEME-SETTINGS-001/COMPONENT-CONTRACT.md)。2026-09-06 新版源码交付后，用户要求按代码交付归档；验证与 Product 路由待办见 [归档结果](../plans/archive/PLAN-MOBILE-THEME-SETTINGS-001/RESULT.md)。测试与验收继续暂停，Spec 保持 draft，不因计划归档自动 accepted。
+为 C Mobile 提供设备本地的主题与正文字体设置。设置在所有启用 Mobile bootstrap 的页面首绘前应用，避免默认主题先闪现；设置页即时预览，持久化失败时恢复上一次稳定状态。
 
 ## 非目标
 
-- 不做“跟随系统”（`prefers-color-scheme` 联动）自动主题；
-- 不为 legacy 样式模块（shell / layout / pages / components / shelf / filter / detail / article-body）做任何主题适配或视觉验收；
-- 不引入网络字体、字号、行距设置；
-- 不新增 Radio / Switch 等原子或通用表单引擎；本轮增加 Field、PageHeader、BottomNav、PageContainer，修订已确认的 Select 接口及必要关联能力；
-- 不新增后端设置接口，不迁移其他旧页面；
-- 不做 Desktop 端主题；不修改 `tokens.css` 既有 palette 名字与 `:root` 默认值。
+- 不自动跟随 `prefers-color-scheme`；
+- 不引入网络字体、字号或行距设置；
+- 不新增后端设置接口或跨设备同步；
+- 不改变 Desktop 主题，也不修改全局 token 的名字和默认值；
+- 不要求为了本功能一次性删除仍被管理预览使用的旧 Mobile UI。
 
 ## 契约
 
-- **值域冻结**：`data-theme ∈ { paper, dark, sepia }`，`data-font ∈ { sans, serif, mono }`；默认 `paper` + `sans`，保持既有纸张风格与系统无衬线栈。
-- **载体**：设置写入 `<html>` 的 `data-theme` / `data-font` 属性；属性缺失按默认值解释。
-- **存储**：`localStorage`，键名 `blog.mobile.theme` 与 `blog.mobile.font`；只写入合法枚举值。
-- **作用域**：在 html 的主题 / 字体属性前缀下，仅对 PageContainer 根覆盖语义变量及 `--font-body`，由内部组件继承；页面背景与留白也是主题的一部分。不得在 html / body 上覆盖全局 token，不修改 `tokens.css` 的 `:root` 默认值或既有 palette 名字。
-- **首绘**：设置页 HTML 在 head 中同步执行首绘入口（非 defer / async），先读取存储并设置属性。入口必须由同一套 Data / Client 读取和校验源码装配，不在 HTML 手写第二份存储规则；其他页面迁移不在本轮范围。
-- **原生控件**：容器内 `color-scheme` 随主题（dark 为 dark，paper / sepia 为 light），保证 select 等原生控件外观一致。
-- **数据分层**：common/data 负责通用存储与传输，common/client 提供主题 / 字体选项、当前设置与保存能力，Mobile 适配层连接页面状态与主题载体。页面和 mobile-ui 不直接访问存储或定义选项列表；当前固定选项属于 Client，未来可以替换数据来源。
-- **组件组合**：Field 包住独立 Select，统一管理标签关联与间距；Select 接收 `{ value, label }` 列表、当前值和 `onChange(value)`，内部处理 DOM 事件与 option 渲染。页面不重复填写 label/control ID，不以 p 标签补表单间距。
-- **页面壳**：设置页新用 mobile-ui/molecules 下的 PageHeader 和 BottomNav，由 PageContainer 组织并整体主题化。展示内容、导航项及当前选中项从外部传入，组件不内置博客路由或自行取数。
+- **值域**：主题为 `paper | dark | sepia`，字体为 `sans | serif | mono`；默认 `paper` + `sans`。
+- **载体**：当前值写入 `<html data-theme>` 与 `<html data-font>`。属性缺失或值非法时按默认值解释。
+- **持久化**：规范键为 `blog.mobile.settings.v1`，值是同时包含 `theme` 和 `font` 的 JSON 快照。`blog.mobile.theme`、`blog.mobile.font` 只作为旧数据兼容读取；设置页成功读取后可迁移到规范快照，新写入不得继续拆成两个 key。
+- **作用域**：主题变量覆盖当前 `.mobile-shell`，并兼容旧 `.m-page-container`；不得在 `html`/`body` 上重写整套全局 palette。
+- **首绘**：页面注册表中 `bootstrap: true` 的 Mobile HTML 入口在 head 内同步执行同一首绘模块。HTML 模板不另写一份 key、枚举或回落规则。
+- **分层**：kernel 定义 persistence ports 和可逆状态能力，infrastructure 提供 browser/memory 适配器，habitat 持有设置语义与页面组合，bootstrap 负责首绘装配。页面与 UI 组件不直接访问 `localStorage`。
+- **保存**：选择先反映到期望状态并写入完整快照；写入或后续校验失败时恢复上一次稳定设置，保留错误提示和重试动作。快速连续选择以最后一次期望状态为准。
+- **组件**：设置页使用 `Field` + 受控 `Select`；带底栏的公开 Mobile 页面提供推荐、文章、设置三项导航，详情页不显示底栏。
 
 ## 场景
 
 ### SPEC-MOBILE-THEME-SETTINGS-001-001
 
-Given 设备没有存储任何设置值
+Given 设备没有可用设置
 
-When 用户打开设置页或任一未迁移的旧 Mobile 页面
+When 打开任一启用 bootstrap 的 Mobile 页面
 
-Then 设置页使用纸张配色与无衬线系统栈，旧页面保留既有外观，新增容器不改变全局默认值
+Then 首绘使用 `paper` + `sans`，页面可正常操作
 
 ### SPEC-MOBILE-THEME-SETTINGS-001-002
 
-Given 带底部导航的 Mobile 页面
+Given 一个带底栏的公开 Mobile 页面
 
-Then 底部导航呈现第三项“设置”，指向 `/m/settings/index.html`，与既有两项同等可达（触控目标不小于 44px）
+When 页面渲染导航
 
-And 设置页使用新的 PageContainer、PageHeader、BottomNav 与 Field + Select；旧页面保留原导航实现，详情页继续不显示底栏
+Then 推荐、文章、设置三项均可达且触控目标不小于 44px；详情页不显示底栏
 
 ### SPEC-MOBILE-THEME-SETTINGS-001-003
 
-Given 用户在设置页将主题从“纸张”切换为“暗色”
+Given 用户把主题切换为 `dark`
 
-When 选择发生
+When 保存成功
 
-Then `<html data-theme="dark">` 立即更新，PageContainer 的背景、页头、主体、底部导航及内部控件即时切换为暗色
-
-And 未迁移的旧页面保持原有配色，不因设置页切换而获得主题适配
-
-And `localStorage` 写入 `blog.mobile.theme = "dark"`
+Then `<html data-theme="dark">` 立即生效，规范快照保存 `{ "theme": "dark", "font": <当前字体> }`
 
 ### SPEC-MOBILE-THEME-SETTINGS-001-004
 
-Given 用户在设置页将字体从“无衬线”切换为“衬线”
+Given 用户把字体切换为 `serif`
 
-When 选择发生
+When 保存成功
 
-Then PageContainer 及其内部组件的 `font-family` 即时切换为衬线系统栈，未迁移旧页面不变
-
-And `localStorage` 写入 `blog.mobile.font = "serif"`
+Then `<html data-font="serif">` 立即生效，规范快照同时保留当前主题
 
 ### SPEC-MOBILE-THEME-SETTINGS-001-005
 
-Given `blog.mobile.theme = "dark"` 已存储
+Given 规范快照已保存非默认设置
 
-When 用户刷新或重新进入设置页
+When 刷新或进入另一个启用 bootstrap 的 Mobile 页面
 
-Then 容器及内部内容首绘即为暗色，不出现“纸张 → 暗色”的可见闪变，下拉框显示的值与已应用设置一致
-
-And 内联脚本执行失败或被禁用时，页面回落默认纸张外观，内容功能不受影响
+Then head 首绘模块在页面展示前应用同一设置，不出现默认值到已保存值的可见闪变
 
 ### SPEC-MOBILE-THEME-SETTINGS-001-006
 
-Given 存储中存在非法值（如 `theme = "neon"`）
+Given 规范快照缺失、损坏或包含非法值
 
-When 首绘脚本或设置页读取该值
+When 读取设置
 
-Then 按未设置处理，回落默认 `paper` / `sans`，不抛异常，不回写新值
+Then 损坏或非法值安全回落到默认值；仅在规范快照缺失时读取旧 theme/font key，并由设置页迁移合法结果
 
 ### SPEC-MOBILE-THEME-SETTINGS-001-007
 
 Given 任一非默认主题生效
 
-When 检查 PageContainer、新页头、主体与新底部导航
+When 检查 `.mobile-shell` 或兼容 `.m-page-container`
 
-Then 实际文字对比度不低于 4.5:1，focus ring 对其实际背景可见，原生控件 color-scheme 跟随，触控目标不小于 44px，窄屏无横向溢出且底栏不遮挡内容
+Then 文字与焦点可辨认、原生控件 `color-scheme` 匹配、窄屏无横向溢出且底栏不遮挡内容
 
 ### SPEC-MOBILE-THEME-SETTINGS-001-008
 
-Given Client 提供主题和字体选项及当前设置
+Given 设置页渲染并接收选择
 
-When 设置页渲染并接收用户选择
+When 审查依赖和数据流
 
-Then 页面只绑定数据与变更命令，Select 内部生成 option 并回调 value；页面和 mobile-ui 不包含设置存储访问或硬编码的选项列表
-
-And 当前固定选项与未来外部数据均由 Client 归一化为同一列表结构，通用 Data 层不包含设置业务语义
+Then 页面只绑定设置数据与命令，选项和值域位于 habitat 逻辑，UI 不导入 storage 或 infrastructure
 
 ### SPEC-MOBILE-THEME-SETTINGS-001-009
 
 Given 两个 Field 分别包住主题和字体 Select
 
-When 用户点击其中一个标签
+When 用户点击标签或用键盘导航
 
-Then 对应 Select 获得焦点且拥有正确可访问名称，两个字段 ID 不冲突，页面无需重复维护 ID 或包 p 标签设置间距
+Then 正确的 Select 获得焦点并有可访问名称，两个字段互不冲突
 
 ### SPEC-MOBILE-THEME-SETTINGS-001-010
 
-Given 设置页与同步首绘入口读取同一设备设置
+Given 设置页与同步首绘模块读取同一设备设置
 
-When 检查其源码和 dev / build 装配
+When 检查 dev/build 产物
 
-Then 两者复用同一套 Data / Client 读取、校验和回落逻辑，HTML 不独立维护存储键名、枚举或异常处理
+Then 两者复用同一套读取、校验和默认值逻辑，HTML 中没有平行实现
 
 ### SPEC-MOBILE-THEME-SETTINGS-001-011
 
-Given 设备禁止本地存储写入
+Given 设备拒绝持久化写入
 
 When 用户选择合法主题或字体
 
-Then 当前页面状态、Select 显示与容器主题立即一致地更新，写入失败不撤销选择、不阻塞页面；重新打开时按可读取数据或默认值恢复
+Then 页面恢复上一次稳定设置，显示保存失败与重试入口；刷新后不会把未持久化选择误认为已保存
 
 ## 边界与失败
 
-- **localStorage 不可用**（隐私模式 / 禁用）：读写以 try/catch 包裹；设置在当前页面会话内以内存状态生效，不报错、不阻塞页面。
-- **能力缺口处理**：允许已确认的组合、容器、Select 和 Field 关联调整；超出这些决策的能力缺口仍须用户裁决，不得绕过组件契约。
-- **主题边界**：完整设置页主题化，其他旧页面不迁移；不是给所有页面自动套主题。独立使用 atom 不再被视为自动获得整页主题能力。
-- 主题切换不引入新动画；既有 `prefers-reduced-motion` 全局规则不因本机制改变。
-- 新增主题 = 扩展枚举值 + 主题模块新增一个变量块，机制与已上线页面不改。
-- 本 Spec 按用户决策将变量覆盖边界提升到 PageContainer，并允许新的组合组件和受控 Select 数据接口。归档 ATOM-CONTRACT 保留历史说明，实际交付后追加修订记录；全局 token 默认值和名字不变。
+- 同步首绘访问 storage 抛错时使用默认设置，不阻塞页面；
+- 异步读取失败时页面保留当前安全状态并显示低干扰反馈；
+- 写入失败的补偿也可能失败，界面仍以最后已知稳定状态为准并允许重试，不宣称持久化成功；
+- 新增主题或字体需要同时扩展值域、变量和测试，不能只增加下拉选项；
+- 主题切换不引入必要性不足的动画，现有 reduced-motion 规则继续生效。
 
 ## 测试/验收证据
 
-2026-09-06 当前状态：用户在讨论收敛后要求开始实施。新组件、容器主题、Data / Client 分层和共享同步首绘已交付源码；PM 完成源码人工审查，并落实 Link 响应性、底栏自然高度、暗色链接色及 charset 顺序修复。具体见 [FRONTEND-RESULT.md](../plans/archive/PLAN-MOBILE-THEME-SETTINGS-001/FRONTEND-RESULT.md)。本轮未执行类型检查、lint、format、构建、测试或浏览器，以下通过结果仍为首轮历史记录，不覆盖本版 001-001 至 001-011 场景。Spec 保持 draft。
-
-- 自动化测试：2026-09-06，`direnv exec /home/nyml/projects/blog pnpm --dir src/frontend exec tsx --test mobile/src/logic/settings.test.ts mobile-ui/atoms/types.test.ts` 退出 0，7 条设置测试与 2 条原子测试通过；覆盖枚举、九种合法组合、缺省 / 非法值不回写、存储 getter / read / write 失败、DOM 属性应用及 head 脚本 49 组输入与模块校验一致性。`typecheck`、`lint`、`format:check`、`build`、`test:core` 均退出 0。详细命令和证据边界见 [FRONTEND-RESULT.md](../plans/archive/PLAN-MOBILE-THEME-SETTINGS-001/FRONTEND-RESULT.md)。`test:core` 仍使用原显式列表，设置测试由上述独立命令执行；
-- 新版验收：全部待补充。恢复后覆盖 375x812 与 360px 下三主题 × 三字体整页外观、首绘、选中值恢复、Field 关联、数据层边界、存储失败、原生导航与旧页面不变。暂停前的浏览器脚本基于 atom 根断言，需要随新版场景调整后才可复用。
+- 当前实现落点：`app/habitat/mobile/logic/settings.ts`、`app/habitat/mobile/pages/settings.tsx`、`app/bootstrap/mobile/settings.tsx` 与 `build/page-bootstrap.ts`；
+- 自动化应覆盖默认值、规范快照、旧 key 迁移、非法值、写入失败补偿、最后一次选择、首绘注入和架构依赖；
+- 历史交付曾通过前端门禁和浏览器走查，但已删除的计划证据不作为当前复核结果。当前改动仍应运行现有 typecheck、lint、format、核心测试和 build，并在代表性 Mobile 视口检查三主题与三字体。

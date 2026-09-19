@@ -3,7 +3,7 @@ kind: guide
 id: GUIDE-OPERATIONS
 status: current
 owner: operations
-last_reviewed: 2026-09-08
+last_reviewed: 2026-09-19
 ---
 
 # 开发与运维指南
@@ -51,7 +51,7 @@ BLOG_CONTENT_REPO=owner/repository BLOG_CONTENT_TOKEN=... ops content repository
 - GitHub 模式在 Product 启动时尝试一次同步。远端暂时不可用时服务仍使用 Data 中最后一次成功导入的快照；管理写操作保持失败关闭，状态接口记录同步错误。生产 API 地址固定为 GitHub HTTPS，测试用 loopback HTTP 地址没有运行时配置入口。
 - 日志每行带来源前缀 `[web]`/`[product]`/`[data]`/`[mock]`/`[ops]`；`[ops]` 的错误与失败摘要输出到 stderr。
 - 顶层退出码全局统一：`0` 成功、`10` 用法/配置错误、`20` 执行失败（端口耗尽、服务启动失败、构建失败或子进程退出）、`130` SIGINT、`143` SIGTERM。运行中的模式没有 `0` 退出路径：正常停止只能通过信号（130/143）；任一服务子进程在运行态自行退出——含 `exit 0`——都算 `CHILD_EXITED`/`20` 并停止其余服务。Ctrl-C 会传播到所有子进程并等待退出（限期 5s，超限 SIGKILL）。
-- `--dry-run` 只打印将启动的进程、候选端口与构建步骤，无副作用；`--json` 在 stdout 只输出一个 JSON 对象（错误结构或已就绪服务的地址清单），其余日志转移到 stderr。
+- `--dry-run` 只打印将启动的进程、候选端口与构建步骤，无副作用；`--json` 的 stdout 使用 NDJSON（每行一个 JSON 对象）：启动成功先输出地址清单，启动前失败只输出错误对象，运行期失败会在地址清单后追加终止错误对象。机器消费者把最后一个 JSON 对象视为最新生命周期事件；人类进度和子进程日志走 stderr。
 
 ## 管理端凭证
 

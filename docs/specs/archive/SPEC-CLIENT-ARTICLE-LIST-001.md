@@ -75,12 +75,12 @@ Then Mobile 行为零变化（`mobileShelf` / 详情消费路径不改动）
 
 - 列表 schema 不声明 `contentHtml`：zod 默认丢弃未知键，后端将来若回带该字段也不崩；不在列表形状上做“允许可选 contentHtml”的模糊处理。
 - `terms` 在后端列表形状中恒存在（非 Option），前端保持可选不收紧，避免无谓的兼容风险。
-- 本修复与两个在途计划（`PLAN-MOBILE-THEME-SETTINGS-001`、`PLAN-DESKTOP-EDITOR-001`）无写集重叠（不触碰 `vite.config.ts`、`package.json`、mobile 与 editor 文件）。
+- 本修复与当时的 Mobile 设置、Desktop 编辑器工作没有写集重叠（不触碰 `vite.config.ts`、`package.json`、mobile 与 editor 文件）；该历史上下文不约束当前工作分配。
 
 ## 测试/验收证据
 
-- 2026-09-06，003 / 004：`src/frontend/common/client/client.test.ts` 覆盖公开与 Admin 非空无正文列表、草稿缺发布时间、分页 total 保留、列表丢弃意外正文，以及公开详情 / Admin 详情 / 推荐缺正文失败和含正文成功。两项列表回归修复前失败，修复后 client 4 项全部通过。
+- 2026-09-06，003 / 004：client 测试（当前路径 `src/frontend/tests/common/client/client.test.ts`）覆盖公开与 Admin 非空无正文列表、草稿缺发布时间、分页 total 保留、列表丢弃意外正文，以及公开详情 / Admin 详情 / 推荐缺正文失败和含正文成功。两项列表回归修复前失败，修复后 client 4 项全部通过。
 - 2026-09-06，001 / 002：真实 Rust Product + Data（8180/8181）与实际构建产物，Playwright Chromium 1440x1000 验证公开默认 9 条、类型与标签组合筛选 2 条、Admin 12 条（含草稿与已发布），列表标题及数量与真实 wire 一致，公开 total 文案正确；截图人工检查正常。
 - 2026-09-06，005：390x844 Mobile 首页 6 条推荐、文章库 total 9 / 含推荐重复展示 12 张卡片、详情正文正常；Desktop 详情同样通过。浏览器 pageerror 为 0。本次未修改 Mobile 消费路径。
 - 标准 build / lint / test:core 通过（32 tests + 287 Native/WASM parity cases），改动文件格式检查通过。全量 typecheck 和 format:check 仍被 Mobile 在途文件的基线问题阻塞，Spec 保留 draft，待整体质量门禁解除后最终验收。
-- 复现命令、截图路径、人工 Review 和限制见 [RESULT.md](../plans/archive/PLAN-CLIENT-ARTICLE-LIST-001/RESULT.md)。
+- 复现命令、截图路径、人工 Review 和限制曾记录在历史交付结果中；原计划目录已移除，当前回归以源码和测试为准。

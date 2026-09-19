@@ -9,7 +9,7 @@
 - 后端：Rust + SQLite，Cargo workspace 位于 `src/Cargo.toml`；包含共享 core、Product API、Data Server 和 Mock Product API。
 - 前端：Solid.js + TypeScript + Vite，位于 `src/frontend/`；Desktop 与 Mobile UI 独立实现，共享无界面协议和逻辑。
 - 运行与质量入口：项目本地 `ops`，由 `nix/` 中的 Flake 提供开发环境。
-- 配套包：`packages/` 中的 `@fluvient-loom/*` 包及 `apps/playground/` 演示应用，与博客代码在同一 workspace 中开发和验证。
+- 配套包：`packages/` 中的 `@fluvient-loom/*` 包及 `apps/playground/` 演示应用；它们与博客应用同仓库维护，使用根目录 pnpm workspace 独立开发和验证。
 
 ## 五分钟启动
 
@@ -60,7 +60,7 @@ src/
 packages/          @fluvient-loom 平台中立与宿主适配包
 apps/playground/   包能力的独立演示应用
 ops/               项目本地开发、质量与运行命令
-docs/              事实、架构快照、Spec、指南与 Plan
+docs/              事实、架构快照、Spec 与指南
 nix/               可复现开发环境
 ```
 
@@ -75,6 +75,7 @@ nix/               可复现开发环境
 | [architecture/](docs/architecture/README.md) | 最近复核时点的当前架构快照 |
 | [specs/](docs/specs/README.md) | 预期行为和公共契约，是否生效取决于状态与最新决策 |
 | [guides/](docs/guides/README.md) | 当前开发、测试和运维方法 |
-| [plans/](docs/plans/README.md) | 目标、取舍、执行记录与历史证据，不代表必然全部完成 |
+
+当前没有固定的计划目录或模板。后续计划需要时再按工作规模建立，不影响现有 Spec、架构和指南独立生效。
 
 判断当前实现时，以源码、配置、测试和实际运行结果为准；判断目标行为时，以最新明确决策、有效 Spec 和稳定事实为准。发现二者冲突，应明确记录差异，而不是为了文档一致性扩大任务范围。

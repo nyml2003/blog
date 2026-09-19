@@ -3,7 +3,6 @@ kind: spec
 id: SPEC-CONTENT-TAXONOMY-001
 status: accepted
 owner: project-manager
-plan_id: PLAN-CONTENT-TAXONOMY-001
 last_reviewed: 2026-09-10
 ---
 
@@ -81,12 +80,12 @@ last_reviewed: 2026-09-10
 
 ## 非目标
 
-- 本计划不实现图片、RSS、SEO、评论、PWA 或阅读增强；
+- 本 Spec 不定义图片、RSS、SEO、评论、PWA 或阅读增强；
 - 不改变用户最终合入 PR 的权限；
 - 不把大模型调用结果直接写入线上数据库；
 - 不复用已删除分类 ID；
 - 不把 `tag_ids` 推断为分类树父子关系；
-- 不在本计划内自动合并 PR 或建立定时分类任务。
+- 不在本 Spec 内自动合并 PR 或建立定时分类任务。
 
 ## 场景
 
@@ -151,6 +150,5 @@ Then 页面保持 F 型布局，按分类树筛选并去重展示文章卡片
 
 - 自动化测试已完成：覆盖 taxonomy schema、ID 水位、叶子引用、树环、合并迁移、模型变更 JSON、单 PR 批次一致性、同步恢复和公开快照隔离；
 - 真实 GitHub 集成已完成：PR #1 合入后同步到公开快照，合入后新增的本地 article 2 保留为下一批并进入仍 open 的 PR #2；公开端只出现 article 1；
-- 浏览器自动化已完成：[报告](../plans/archive/PLAN-CONTENT-TAXONOMY-001/evidence/browser/report.json) 通过，覆盖登录、工作区 active PR、公开端隔离、Desktop 和 Mobile 无溢出及页面错误；
-- 完整证据与环境边界见计划的 [EVIDENCE.md](../plans/archive/PLAN-CONTENT-TAXONOMY-001/EVIDENCE.md)；
-- 人工验收仍由用户完成：审查当前 PR diff、确认最终行为并决定是否合入；完成前 Spec 保持 draft，计划不归档。
+- 浏览器自动化和完整环境证据曾在交付记录中完成，原计划目录已移除；当前实现状态需要按源码、测试和真实内容仓库重新复核；
+- 用户仍是 PR diff 的最终审查者和合入者；这不改变本 Spec 对分类模型和工作流的行为约束。

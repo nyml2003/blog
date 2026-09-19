@@ -1,13 +1,16 @@
 ---
 kind: spec
 id: SPEC-MOBILE-BROWSE-IA-001
-status: accepted
+status: superseded
 owner: frontend-mobile
-plan_id: PLAN-MOBILE-BROWSE-IA-001
-last_reviewed: 2026-09-07
+last_reviewed: 2026-09-19
+superseded_by: SPEC-CONTENT-TAXONOMY-001
 ---
 
 # C Mobile 文章浏览信息架构：货架快照 + F 型平铺页
+
+> 本 Spec 保留 2026-09-07 的旧“货架快照 + type/topic/tag 平铺”方案。当前两个 Mobile
+> 文章入口均以 `SPEC-CONTENT-TAXONOMY-001` 的分类树货架为准，本文件不再约束现行实现。
 
 ## 目标
 
@@ -15,9 +18,9 @@ last_reviewed: 2026-09-07
 
 ## 非目标
 
-- 不做 Desktop T 型与 Desktop 分页（另立计划）；
+- 不做 Desktop T 型与 Desktop 分页（另行明确范围）；
 - 不给 term 增加父子层级，不做主题/标签多选筛选；
-- 不在本计划实现管理页筛选（日期筛选"留给管理页"是归属声明，管理页改造另行立项）；
+- 不在本 Spec 实现管理页筛选（日期筛选“留给管理页”是归属声明，管理页改造另行明确范围）；
 - 不做无限滚动 / 自动加载（用显式"加载更多"按钮）;
 - 不修改文章详情、首页推荐、设置页。
 
@@ -98,7 +101,7 @@ Then 分区文章数不超过 N + 推荐 3，响应体积随文章总量增长�
 
 ### SPEC-MOBILE-BROWSE-IA-001-008
 
-Given 本计划改动的移动端页面
+Given 本 Spec 改动的移动端页面
 
 Then 首页、详情、设置页行为不变；`pnpm --dir src/frontend typecheck / lint / build / test:core` 全绿
 
@@ -107,8 +110,8 @@ Then 首页、详情、设置页行为不变；`pnpm --dir src/frontend typechec
 - 平铺页数据端点失败：显示既有错误态与重试，不白屏；
 - taxonomy 加载失败：L1 仍显示"全部"，级联条降级为不可用或重试，不阻塞"全部"列表；
 - 分区 total 与实际列表不一致以列表端点 total 为准（货架 total 仅用于入口判断）；
-- 多 term 的跨维度组合（topic AND tag）通过新接口分参表达，不改 `public.article_list` / `admin.article_list` 的 `term_ids`（同维度 OR）语义（2026-09-06 用户裁决，见计划决策记录 #7）；
-- 与在途计划的写集协调：`ui.tsx`、`vite.config.ts`、`client.ts` 存在他计划写集，必须串行并逐项复核。
+- 多 term 的跨维度组合（topic AND tag）通过新接口分参表达，不改 `public.article_list` / `admin.article_list` 的 `term_ids`（同维度 OR）语义（2026-09-06 用户裁决，历史决策记录已不随当前文档集保留）；
+- 与其他当前工作的写集协调：`ui.tsx`、`vite.config.ts`、`client.ts` 等共享文件必须串行并逐项复核。
 
 ## 测试/验收证据
 
