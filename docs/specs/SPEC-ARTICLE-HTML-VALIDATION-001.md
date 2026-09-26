@@ -3,7 +3,6 @@ kind: spec
 id: SPEC-ARTICLE-HTML-VALIDATION-001
 status: confirmed
 version: 1
-plan_id: PLAN-ARTICLE-HTML-VALIDATION-001
 owner: product-content-design
 last_reviewed: 2026-09-06
 ---

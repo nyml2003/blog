@@ -3,7 +3,7 @@ kind: guide
 id: GUIDE-GLOSSARY-001
 status: current
 owner: project-manager
-last_reviewed: 2026-09-09
+last_reviewed: 2026-09-19
 ---
 
 # GLOSSARY：项目术语表（人话版）
@@ -48,22 +48,23 @@ last_reviewed: 2026-09-09
 | 术语 | 人话 | 落点 |
 | --- | --- | --- |
 | **页面注册表** | 17 个页面的登记表：路径别名、入口文件、标题。加页面只改这里 | `src/frontend/pages.registry.ts` |
-| **查询层（queries）** | 页面与 API 之间的数据获取层。页面禁止绕过它直接发请求 | `src/frontend/solid/queries/` |
-| **definePage** | 每个页面的统一入口：先拉路由清单，再渲染页面组件 | `src/frontend/solid/page.tsx` |
+| **查询层（queries）** | 旧页面与 API 之间的数据获取层；新 `app/` 运行时用 habitat API/resource 承担对应职责 | `src/frontend/solid/queries/`、`src/frontend/app/habitat/` |
+| **definePage** | 旧页面的统一入口：先拉路由清单，再渲染页面组件；新 Mobile 由 bootstrap environment 完成引导 | `src/frontend/solid/page.tsx`、`src/frontend/app/bootstrap/mobile/environment.tsx` |
+| **app runtime** | 新前端运行时：kernel 定义端口，infrastructure 接宿主，habitat 组合业务和 UI，bootstrap 负责入口 | `src/frontend/app/` |
 | **T 型货架** | 公开页的文章陈列：顶部一排类型筛选 + 下面一列文章 | `desktop/src/shell/t-shelf.tsx` 的 `TShelf` |
-| **F 型货架** | Mobile 分类浏览布局：左一级分类、右二级标签、下文章卡片 | `mobile/src/components/category-shelf*.tsx` |
-| **原子/分子（atoms/molecules）** | 最小 UI 积木 / 由积木拼的小组件。Desktop 与 Mobile 各自实现，不跨端导入 | `src/frontend/desktop-ui/`、`src/frontend/mobile-ui/` |
+| **F 型货架** | Mobile 分类浏览布局：左一级分类、右二级 tabs、下文章卡片 | `src/frontend/app/habitat/mobile/pages/articles.tsx` |
+| **原子/分子（atoms/molecules）** | 最小 UI 积木 / 由积木拼的小组件。Desktop 与 Mobile 各自实现，不跨端导入；新旧 Mobile UI 暂时并存 | `src/frontend/desktop-ui/`、`src/frontend/mobile-ui/`、`src/frontend/app/habitat/mobile/ui/` |
 | **WASM 校验器** | 正文 HTML 规则检查器编译成的浏览器版本。编辑器实时报错和后端保存校验是同一套规则 | `src/core/article-html-wasm/` |
 
 ## ops 与质量
 
 | 术语 | 人话 | 落点 |
 | --- | --- | --- |
-| **门禁（quality gate）** | `ops quality check`：Rust 三件套 + ops 契约测试 + 前端五件套 + 架构边界扫描，任一红即失败 | `ops/src/application/check.ts` |
+| **门禁（quality gate）** | `ops quality check`：Rust 三件套 + ops 契约测试 + 前端五件套 + 架构边界扫描，任一红即失败 | `ops/src/application/quality-check.ts` |
 | **架构边界扫描** | 用规则检查"谁不许 import 谁"（页面不许碰数据层、Data 不许解析 HTML 等），违规即红 | `ops/src/domain/architecture.ts` |
-| **golden 测试** | 把契约写成"标准答案文件"（如 `docs/api/routes.json`），测试对照文件与代码完全一致，防止两边漂移 | `product/tests/api_routes.rs`、`common/client/client.test.ts` |
+| **golden 测试** | 把契约写成"标准答案文件"（如 `docs/api/routes.json`），测试对照文件与代码完全一致，防止两边漂移 | `src/backend/product/tests/api_routes.rs`、`src/frontend/tests/common/client/client.test.ts` |
 | **数据语义（mock/test/prod）** | Data 进程的三种启动姿势：mock=内存无磁盘；test=临时库用完即删；prod=显式路径（ops 目前只放行前两种） | `src/backend/data/src/semantics.rs` |
-| **fail-closed** | 出问题时宁可拒绝服务也不放行/降级。登录、凭证读取、启动检查都遵循 | `product/src/auth/`、`ops/src/application/admin-auth.ts` |
+| **fail-closed** | 出问题时宁可拒绝服务也不放行/降级。登录、凭证读取、启动检查都遵循 | `src/backend/product/src/auth/`、`ops/src/application/admin-auth.ts` |
 | **端口（port）/适配器（adapter）** | 六角形架构词汇：port=抽象接口，adapter=具体实现（如文件系统、进程、网络的真实现）。好处是规则可脱离环境测试 | `ops/src/domain/ports.ts`、`ops/src/infrastructure/` |
 | **dry-run** | 只打印将要做什么、不实际执行。ops 的全局开关 | `ops/src/domain/parameters.ts` |
 
@@ -72,7 +73,7 @@ last_reviewed: 2026-09-09
 | 术语 | 人话 | 落点 |
 | --- | --- | --- |
 | **Spec** | 行为契约文档：定"系统必须怎样表现"，不带实现细节 | `docs/specs/` |
-| **Plan** | 跨职能工作计划：目标、工作流、验收标准。完成后归档并留 RESULT | `docs/plans/` |
-| **workstream** | 计划里的一条工作线（前端/后端/基建…），声明自己的写集 | 各计划的 `WORKSTREAM-*.md` |
-| **写集（write set）** | 某条工作流允许修改的文件范围。写集重叠的工作流不许并行，防止互相踩 | 同上 |
-| **acceptance（验收）** | 计划状态机里"实现完成，等用户人工确认"的阶段 | `docs/plans/README.md` 状态节 |
+| **Plan** | 可选的跨职能工作记录：目标、取舍、依赖、证据和未完成范围；不等于全部交付 | 后续按项目约定建立 |
+| **workstream** | 计划或任务中的一条独立工作线（前端/后端/基建…），需要时声明 owner、依赖和写集 | 具体任务记录 |
+| **写集（write set）** | 某条工作流允许修改的文件范围。写集重叠的工作流不许并行，防止互相踩 | 具体任务记录 |
+| **acceptance（验收）** | 对行为、证据或产品结果的确认阶段；是否需要人工确认由当前任务约定 | 当前 Spec、任务记录或交付说明 |

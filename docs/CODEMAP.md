@@ -3,7 +3,7 @@ kind: guide
 id: GUIDE-CODEMAP-001
 status: current
 owner: project-manager
-last_reviewed: 2026-09-09
+last_reviewed: 2026-09-19
 ---
 
 # CODEMAP：代码地图（人类阅读版）
@@ -15,14 +15,14 @@ last_reviewed: 2026-09-09
 
 | 你想做的事 | 从这里进 |
 | --- | --- |
-| 看一个页面长什么样、怎么交互 | `src/frontend/<desktop\|mobile>/src/pages/<页面>.tsx` |
-| 看页面数据从哪来 | 页面 import 的 `solid/queries/` 里的函数 |
+| 看一个页面长什么样、怎么交互 | 旧页面看 `src/frontend/<desktop\|mobile>/src/pages/`；新 Mobile 入口看 `src/frontend/app/bootstrap/` 与 `app/habitat/mobile/` |
+| 看页面数据从哪来 | 旧页面看 `solid/queries/`；新运行时看 `app/habitat/` 注入的 API、资源和 ports |
 | 看一个 API 返回什么 | `src/core/protocol/src/wire.rs`（对外形状）+ `docs/api/routes.json`（路由总表） |
 | 看后端怎么处理一个请求 | `src/backend/product/src/http.rs` 找到 handler → 它调用的 `bff/` 或 `content_*` 模块 |
 | 看数据怎么存 | `src/backend/data/src/store/sqlite.rs` + `migrations/` |
 | 看内容怎么变成 GitHub PR | `src/backend/product/src/content_workspace/`（状态机）+ `github/`（传输） |
 | 看登录/权限 | `src/backend/product/src/auth/` |
-| 看开发命令 | `docs/guides/operations.md`（最准）→ 实现 `ops/src/interface/registry.ts` |
+| 看开发命令 | 先运行 `ops help` 看当前命令面，再看 `docs/guides/operations.md` 与实现 `ops/src/interface/registry.ts` |
 
 ## 一页总图
 
@@ -45,21 +45,27 @@ blog/
 │   │   ├── data/           ← Data 进程：SQLite 持久化（8081），不懂业务
 │   │   └── mock/           ← Mock 进程：开发时顶替 Product（9090），5 种故障场景
 │   └── frontend/
+│       ├── app/kernel/     ← 平台中立的 ports、Result、Task、Resource 与状态原语
+│       ├── app/infrastructure/ ← browser/memory 等宿主适配器
+│       ├── app/habitat/    ← 新运行时的 API 组合、Mobile 逻辑、页面和 UI
+│       ├── app/bootstrap/  ← 新运行时页面入口与首绘装配
 │       ├── pages.registry.ts ← 全部 17 个页面的登记表（单一事实源）
 │       ├── site-routes.json  ← 页面路由清单（后端经 /api/public/site-routes 下发）
 │       ├── desktop/src/pages/  ← Desktop 页面（public/ 公开，admin/ 管理）
-│       ├── mobile/src/pages/   ← Mobile 页面
-│       ├── mobile/src/logic/   ← Mobile 无 UI 逻辑（导航、筛选、设置）
-│       ├── mobile/src/components/ ← Mobile 共享组件（壳、卡片、货架页）
-│       ├── mobile-ui/       ← Mobile 原子组件库（atoms/molecules/containers）
-│       ├── desktop/src/shell/ ← Desktop 共享壳（header/t-shelf/article-table 等，单导出组件 + index 出口）
-│       ├── desktop-ui/      ← Desktop 基础组件库（内部开发完成，页面尚未接入）
-│       ├── solid/queries/   ← 数据获取层：页面要数据只能走这里
-│       ├── solid/page.tsx   ← definePage：每页引导（先拉路由清单再渲染）
+│       ├── mobile/src/pages/   ← 尚未迁移的 Mobile 页面（含管理预览）
+│       ├── mobile/src/logic/   ← 旧 Mobile 无 UI 逻辑
+│       ├── mobile/src/components/ ← 旧 Mobile 共享组件
+│       ├── mobile-ui/       ← 旧 Mobile 原子/组合组件库
+│       ├── desktop/src/shell/ ← Desktop 共享壳
+│       ├── desktop-ui/      ← Desktop 独立基础组件库
+│       ├── solid/queries/   ← 旧页面的数据获取层
+│       ├── solid/page.tsx   ← 旧页面 definePage 引导
 │       ├── common/client/   ← 框架无关的 API 客户端与浏览器适配
 │       ├── common/data/     ← 纯工具：Result/Task/Transport/Storage
 │       ├── common/validation/ ← HTML 校验的 WASM 前端接驳
 │       └── build/           ← Vite 插件：按注册表生成各页 HTML 入口
+├── packages/               ← @fluvient-loom 可复用包（ports/query/command/web/gesture 等）
+├── apps/playground/        ← 包能力与移动手势的独立演示、实证入口
 ├── ops/                    ← 开发工具链 CLI（Node 直跑 TS，零依赖）
 │   └── src/{domain,application,infrastructure,interface}/
 │                           ← 四层；interface/registry.ts 是命令登记表
@@ -70,7 +76,7 @@ blog/
 │   ├── guides/             ← 操作指南（operations.md 最常用）
 │   ├── api/routes.json     ← 全部 API 路由总表（有 golden 测试锚定）
 │   ├── content-repo/       ← GitHub 内容仓库的契约与 schema
-│   └── plans/              ← 跨职能计划（active/ 进行中，archive/ 已归档）
+│   └── specs/archive/      ← 已替代契约的历史版本
 ├── nix/flake.nix           ← 开发环境与 ops 命令 wrapper
 └── tempDocForHuman/        ← 给人类读者的图（PlantUML 源码 + PNG）
 ```
@@ -106,7 +112,7 @@ pages.registry.ts（页面登记表）
   → site-routes.json（路由投影，测试守卫同步）
   → protocol/site_routes.rs 编译期内嵌
   → GET /api/public/site-routes 下发（Product 与 Mock 同一份）
-  → definePage 引导期拉取 → configureSiteRoutes 存入内存
+  → 旧页面由 definePage、新页面由 bootstrap environment 拉取并存入运行时上下文
   → 页面调语义函数（如 mobileArticlesHref()）得到路径 → 渲染 <a href>
 ```
 
@@ -133,27 +139,31 @@ pages.registry.ts（页面登记表）
 | 目录 | 内容 | 规则 |
 | --- | --- | --- |
 | `pages.registry.ts` | 17 个页面的登记表 | 加页面只改这里 + 建入口文件 |
-| `desktop/src/pages/` | Desktop 页面 | 页面只管 UI；要数据走 queries |
-| `mobile/src/pages/` | Mobile 页面 | 同上 |
+| `app/kernel/` | 新运行时的无宿主核心 | 不依赖 Solid、DOM、网络或旧页面层 |
+| `app/infrastructure/` | browser/memory 等适配器 | 只实现 kernel ports，不承载页面业务 |
+| `app/habitat/` | 新运行时的 API、资源、Mobile 逻辑与 UI | 通过注入 ports 工作，不导入旧页面层 |
+| `app/bootstrap/` | 新运行时页面入口与首绘装配 | 只做 composition root |
+| `desktop/src/pages/` | 旧 Desktop 页面 | 页面只管 UI；要数据走 queries |
+| `mobile/src/pages/` | 尚未迁移的 Mobile 页面 | 页面只管 UI；要数据走 queries |
 | `solid/queries/` | 数据获取层（public/admin/taxonomy-source/site-routes） | 页面禁直连 client/data |
 | `common/client/` | API 客户端、会话重定向、路由清单缓存 | 框架无关（不许 import solid） |
 | `common/data/` | result/task/transport/storage 纯工具 | 无 UI、无框架 |
 | `mobile-ui/` | Mobile 原子组件库 | Desktop 不得引用 |
 
+### packages/ 与 apps/ —— 可复用能力工作区
+
+根目录 pnpm workspace 只覆盖 `packages/*` 和 `apps/*`。`packages/` 提供
+`@fluvient-loom` 的平台中立能力、宿主适配和 Web/手势模块，`apps/playground/` 用于独立演示与
+真机验证；它们与 `src/frontend/` 同仓库演进，但不等同于博客页面运行时。入口以各包
+`package.json`、根 `package.json` 和 `ops package check` 为准。
+
 ### ops/ —— 开发工具链
 
 四层结构：`interface/`（CLI 与命令登记表）→ `application/`（编排）→ `domain/`（纯规则：架构边界检查、运行矩阵、端口分配）→ `infrastructure/`（进程/文件系统/网络适配）。质量门禁的全部规则在 `domain/architecture.ts`。
 
-## 布局治理记录
+## 当前布局状态
 
-[PLAN-CODE-LAYOUT-001](./plans/archive/PLAN-CODE-LAYOUT-001/PLAN.md)（2026-09-09）已交付：
-
-- `app.tsx`/`ui.tsx` 混合形态拆解为单导出组件 + 独立工具文件（`desktop/src/shell/`、`mobile/src/components/`）；
-- `queries/public.ts` 按领域拆为 `articles.ts` / `shelves.ts` / `taxonomy-public.ts`（出口 `index.ts` 不变）；
-- `client.ts` 拆为 `api-client.ts`（组合根）+ `routes-contract.ts`（契约表）+ `request-kit.ts`（共享请求工具）+ `domains/`（按领域实现组）；
-- ops 歧义名治理：`check.ts`→`quality-check.ts`、`domain/runtime.ts`→`runtime-plan.ts`；
-- 前端文件遵循两种形态：**A 多导出**（工具库/hook 集，成员彼此独立）与 **B 单导出**（一个组件/一个类），见 `docs/guides/typescript-style.md`。
-
-`desktop-ui/` 第一批组件已完成内部开发与测试，尚未接入页面（见
-[PLAN-DESKTOP-UI-001](./plans/archive/PLAN-DESKTOP-UI-001/PLAN.md)）；`common/client/domain.ts`
-类型表逐领域迁移为 follow-up。
+- `app/` 新运行时层已经进入源码：`kernel` 保持平台中立，`infrastructure` 提供宿主适配，`habitat` 负责应用组合，`bootstrap` 负责页面入口。
+- 公开 Mobile 的首页、文章库、平铺页、详情和设置页使用 `app/bootstrap/mobile/`；Mobile 管理预览及部分旧页面仍位于 `mobile/src/`。
+- `desktop-ui/` 与 `mobile-ui/` 继续保持平台隔离；组件是否接入页面以当前源码、测试和构建入口为准。
+- 计划目录当前不作为代码地图的一部分。后续计划重新建立后，应只登记仍然有效的工作范围，不回填旧索引。

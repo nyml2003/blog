@@ -3,7 +3,7 @@ kind: guide
 id: GUIDE-SPEC-DRIVEN
 status: current
 owner: project-manager
-last_reviewed: 2026-09-05
+last_reviewed: 2026-09-19
 ---
 
 # Spec 驱动指南
@@ -24,4 +24,4 @@ Then ...
 - `Build`：记录目标、非目标和最小行为场景；
 - `Acceptance`：补齐边界、测试映射和验收证据。
 
-跨职能行为、公共 API、数据状态和计划验收项必须有稳定 Spec ID。小型局部改动可以使用轻量场景。
+跨职能行为、公共 API、数据状态和对外可观察行为必须有稳定 Spec ID。小型局部改动可以使用轻量场景；是否配套计划由工作规模决定。

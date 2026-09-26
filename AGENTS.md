@@ -1,78 +1,88 @@
-# Blog 项目工作约定
+# Blog 项目协作约定
 
-本文件只适用于 `/home/nyml/projects/blog`。更具体目录中的 `AGENTS.md` 优先于本文件；项目正式文档优先于临时讨论。
+本文件只适用于 `/home/nyml/projects/blog`。更具体目录中的 `AGENTS.md` 优先。这里记录跨迭代仍应成立的协作规则，不承担当前架构清单、命令手册或任务进度表的职责。
 
-## 项目边界
+## 项目阶段
 
-- 这是个人长期沉淀型技术知识库博客，后端使用 Rust + SQLite（`src/` 下的 Cargo workspace：Product API / Data Server / Mock Product API（workspace 根在 `src/Cargo.toml`）），前端使用 Solid.js + TypeScript + Vite。
-- 前端目录边界：`src/frontend/common` 只放无 UI 契约和逻辑；Desktop、Mobile 不互相导入 UI；正文 HTML 由系统主题包裹，不引入自定义文章 CSS。
-- 公共端和管理端的业务行为、API 契约、文章状态和可见性由后端保证；不要在前端改写领域语义。
-- PC 与 Mobile 的页面、DOM、CSS、交互和内部状态可以隔离；共享数据语义和无界面契约即可。
+- 项目处于快速迭代早期。目录、模块、命令和实现方案可以频繁变化，不承诺向后兼容，也不要求每个 Plan 100% 完成。
+- 优先交付小而可验证的结果。不要为了让文档、Plan 或旧设计显得完整，扩大当前任务范围。
+- 代码、配置、测试和实际运行结果用于判断“现在实现了什么”；最新明确决策和已接受的行为契约用于判断“现在应当实现什么”。二者不一致时必须说明差异，不能用其中一方悄悄覆盖另一方。
 
-## 文档和计划
+## 稳定边界
 
-- 开始工作前先阅读 `docs/FACTS.md`、相关 `docs/architecture/`、`docs/guides/` 和目标 plan/spec。
-- 稳定事实写入 `docs/FACTS.md`；当前架构写入 `docs/architecture/`；行为契约使用 `docs/specs/`；跨职能工作使用 `docs/plans/`。
-- 不把临时讨论、局部测试结果或未采用方案写成当前架构或永久事实。
-- Plan 的 workstream 必须声明 owner、依赖和 write set；不要修改其他 workstream 的写集。
-- 项目经理负责目标、范围、依赖、状态和验收；专业 agent 负责自己的实现和证据。未经用户确认，不改变产品目标、公共协议、永久事实或计划范围。
+- 这是个人长期沉淀型技术知识库博客。当前代码地图与技术栈入口见 `README.md` 和 `docs/CODEMAP.md`。
+- 公共端和管理端的业务行为、API 契约、文章状态与可见性由后端保证；前端不得自行改写领域语义。
+- Desktop 与 Mobile 的页面、DOM、CSS、交互和内部状态相互隔离，不互相导入 UI。允许共享数据语义、协议、纯函数和其他无界面逻辑。
+- `src/frontend/common` 只承载无 UI 契约和逻辑。正文 HTML 由系统主题包裹，不引入文章自定义 CSS。
+- 改变上述边界、公共协议、产品目标或永久事实前，必须取得明确决策；不能把局部实现便利当成架构决定。
 
-## 开发环境和命令
+## 如何使用文档
 
-- 优先使用项目 Flake：进入项目后使用 `direnv allow` 或 `nix develop`。
-- 优先使用项目本地的 `ops` 作为质量和运行入口：
-  - `ops workspace doctor`（Node/pnpm/Rust/Cargo）
-  - `ops quality check`
-  - `ops quality lint`
-  - `ops quality format --check`
-  - `ops admin credentials init`（TTY 生成管理端 Argon2id 哈希、TOTP secret 与一次性恢复码）
-  - `ops admin recovery regenerate`（TTY 验密后原子替换恢复码）
-  - `ops content repository init`（需 `BLOG_CONTENT_REPO`/`BLOG_CONTENT_TOKEN`，初始化合法空 GitHub 内容仓库，幂等）
-  - `ops delivery build`
-  - `ops runtime dev --scenario default --web-port 5173 --mock-port 9090`（Vite + Mock Product API，页面数据只来自 Mock）
-  - `ops runtime backend --data mock --content-source fixture --product-port 8080 --data-port 8081`（Rust Product + Rust Data，无页面）
-  - `ops runtime integration --content-source fixture --product-port 8080 --data-port 8081 [--watch]`（先构建 `src/frontend/dist`，再由 Product 挂载，页面与 `/api` 同源）
-- ops 有值参数显式必填，无默认值或环境变量补值；switch 出现为 true、缺省为 false，不接受赋值。具体见 `SPEC-OPS-PARAMETERS-001`。
-- 顶层退出码全局统一：`0` 成功、`10` 用法/配置错误、`20` 执行失败、`130` SIGINT、`143` SIGTERM。既有的 `1`/`2` 语义已废止。
-- `ops runtime serve` 与 `ops database migrate` 已删除，不保留别名：`serve` 的替代是 `ops runtime integration`；迁移由 Data Server 启动时自动执行（不再有独立迁移命令）。
-- 基础质量门禁包括：Rust 三件套（`cargo fmt --all --check`、`cargo clippy --workspace --all-targets -- -D warnings`、`cargo test --workspace`）、前端 `typecheck`、Oxlint、Biome `format:check`、核心测试、ops 契约测试和前端构建。Go 已于 2026-09-06 退场（门禁与代码均已移除）。
-- 不为单个项目修改全局 Shell、Nix、包管理器或系统配置。依赖和工具变更留在本项目的 Flake、package manifest 或 lockfile 中。
-- 如果包管理器因依赖安装脚本或环境问题失败，先记录精确错误；可以使用已经存在的项目本地二进制做等价只读检查，但不得擅自批准构建脚本或更新 lockfile。
+文档按用途判断，不默认把所有 `docs/` 内容视为同等权威或永不过期：
 
-## TypeScript/TSX 规则
+- `docs/FACTS.md`：预期跨计划长期成立的项目基线；只有明确决策才能修订。
+- `docs/specs/`：预期行为和公共契约；必须结合文档状态及最新决策判断是否生效。
+- `docs/architecture/`、`docs/CODEMAP.md`：编写或复核时点的当前实现快照；使用前应与目标源码、配置和测试交叉核对。
+- `docs/guides/`：当前推荐的开发与运维方法；具体命令以项目本地 `ops help` 和实际配置为准。
+- 计划或任务记录（若当前工作建立）：用于保存目标、取舍、执行记录和历史证据；不是永久事实，也不是自动生效的待办清单。当前不规定固定的计划目录或模板。
 
-- TypeScript/TSX 任务必须先阅读：
-  - `docs/guides/typescript-style.md`
-  - `docs/guides/typescript-review-checklist.md`
-  - `src/frontend/tsconfig.json`
-  - `src/frontend/package.json`
-  - `src/frontend/.oxlintrc.json`
-  - `src/frontend/biome.json`
-- 目标是降低认知复杂度，让主路径、错误路径、边界条件和业务意图可以独立阅读。
-- 优先卫语句和早返回；复杂条件拆成命名布尔值、谓词函数或显式分支。
-- 三元表达式、`&&`、`||`、`??` 允许用于简单、纯值表达；不得隐藏请求、写入、状态变更或其他副作用；避免嵌套三元。
-- 可选值优先使用 `undefined`；外部边界的 `null` 在边界处归一化，不向领域层扩散。
-- 业务状态优先使用可辨识 union 或 `Result`；错误边界和异步等待、取消、超时、拒绝处理必须清晰。
-- 类型收窄优先使用类型守卫和运行时验证；不要用 `as` 或非空断言掩盖未知状态。
-- 一个 `type` 或 `interface` 的字段可选性，以及函数入参的可选性，必须有明确整体语义：默认要么全部必填（`Required` 语义），要么全部可选（`Partial` 语义），不要在同一对象类型、函数入参对象或函数参数列表中随意混合必填和可选参数。
-- 只有表达明确协议边界的类型才允许混合可选性，例如固定 discriminant + 分支字段、外部响应的渐进归一化对象或明确的 patch 输入；必须在命名或 Review 中说明原因。
-- 命名应表达业务角色，函数保持单一主要职责；测试、脚本和工具代码遵循同一认知复杂度原则。
-- 不因工具方便就禁止所有三元或逻辑运算符，也不把个人偏好变成机械禁令。
+开始任务时只读取与目标直接相关的源码、配置、测试、Spec、架构说明和已有任务记录。不要把“通读全部文档”设为每个小任务的前置条件。
 
-## Agent 工作流程
+发现文档与实现不一致时：
 
-处理 TypeScript/TSX 任务时按以下顺序执行：
+1. 先确认问题属于实现缺陷、文档过期，还是尚未落地的目标；
+2. 在当前范围内修正会误导后续工作的内容；
+3. 与当前任务无关的漂移只记录，不顺手开展全库同步。
 
-1. 读取本文件、项目正式规范、目标 plan/spec、配置和测试入口。
-2. 先运行现有 typecheck、lint、format check 和相关测试，记录准确命令、结果和环境阻塞。
-3. 再逐文件人工 Review，检查隐式分支、隐藏副作用、错误边界、异步控制流、类型断言、命名、函数职责和测试可读性。
-4. 将发现区分为机械告警、认知问题、业务行为风险和环境问题；工具通过不能代替人工 Review。
-5. 只有用户明确授权整改、重构或治理时才修改源码。仅建立规范、制定计划或做 review 时，不得修改代码。
-6. 交付时说明修改范围、扫描命令、测试结果、人工 Review 发现、例外理由、未解决问题和文档影响。
+## Plan 语义
+
+- 小型、单领域、可直接验证的工作不强制创建 Plan。跨职能、跨阶段、需要协调依赖或需要保留取舍依据的工作再使用 Plan。
+- Plan 可以以 `completed`、`partial`、`parked` 或 `superseded` 收尾。归档只表示当前不再执行，不代表目标全部完成、已发布或已通过所有验收。
+- 未勾选项用于记录未完成范围；除非被当前目标、已接受 Spec 或明确决策重新纳入，否则不自动成为后续任务、发布阻塞项或修改授权。
+- Plan 收尾时至少记录：实际交付、未交付内容、已有证据、停止或替代原因，以及恢复工作所需条件。
+- 只有拆分并行 workstream 时，才要求每个 workstream 声明 owner、依赖和 write set；写集重叠的工作不得并行修改。
+- 项目管理负责目标、范围、依赖、状态和验收协调；实现者负责范围内的实现与证据。未经明确决策，不扩大产品范围或替他人完成未授权写集。
+
+## 工作方式
+
+1. 确认任务目标、允许修改的范围、当前工作树状态和相关入口。
+2. 从目标代码与测试出发，按需读取相关文档；对容易变化的信息进行现场验证。
+3. 修改前运行与问题定位有关的基线检查；纯新增或低风险改动不要求机械执行全部门禁。
+4. 保持改动最小、可回退，不顺手重构无关代码或刷新无关文档。
+5. 按风险验证：先运行最接近改动的检查，再决定是否扩大到模块、工作区或运行时验证。
+6. 交付时区分已验证事实、推断、未验证项和已知遗留，不用“构建通过”代替运行、浏览器或产品验收。
+
+仅做问答、Review、Plan 或规范设计时，默认不修改源码。明确要求实现、整改或更新文件时，授权范围以该请求为准；遇到会改变产品行为或公共契约的歧义，只提出当前最影响实现的一项决策问题。
+
+## 开发环境与命令
+
+- 使用项目 Flake：进入仓库后执行 `direnv allow`，或使用 `nix develop ./nix`。
+- 使用当前项目环境提供的 `ops`，不要静默回退到其他仓库或机器全局的同名命令。先用 `ops help`、`ops <path> --help` 核对当前命令面。
+- 常用入口和可运行示例见 `README.md`；完整运行说明见 `docs/guides/operations.md`。
+- 不为本项目修改全局 Shell、Nix、包管理器或系统配置。依赖与工具变更应留在本项目的 Flake、manifest 或 lockfile 中。
+- 不擅自批准依赖安装脚本、批量升级依赖或更新 lockfile。遇到环境失败时记录准确命令和错误，再选择项目内已有工具完成等价检查。
+
+## TypeScript 与 TSX
+
+修改 TypeScript/TSX 前，按改动范围阅读 `docs/guides/typescript-style.md`、`docs/guides/typescript-review-checklist.md` 及相关 `tsconfig`、package scripts、Oxlint 和 Biome 配置。
+
+- 主路径、错误路径、边界条件和业务意图应能独立阅读；复杂分支优先使用卫语句、命名谓词或显式状态。
+- 三元表达式和逻辑运算符只承载简单纯值表达，不隐藏请求、写入或状态变更；避免嵌套三元。
+- 外部 `null` 在边界归一化；业务状态优先使用可辨识 union 或 `Result`；异步取消、超时和拒绝路径必须明确。
+- 不用 `as` 或非空断言掩盖未知状态。对象与参数的可选性需要整体语义，混合必填与可选字段只用于明确的协议边界。
+- 工具通过不能替代对认知复杂度、业务风险、异步控制流和测试可读性的人工 Review。
+
+## 验证标准
+
+- 文档改动：检查链接、示例命令、事实来源和 `git diff --check`；除非文档声称某项运行结果，否则不要求执行全量代码门禁。
+- 局部代码改动：运行对应格式、静态检查和相关测试。
+- 跨模块、公共契约、运行时或交付链路改动：使用项目本地 `ops quality check`，并补充必要的构建或集成验证。
+- UI 行为或视觉改动：构建和 HTTP 可达性不等于浏览器验收；需要时分别记录交互、响应式、截图或像素证据。
+- 受环境限制无法完成的检查必须明确列出，不得写成已通过。
 
 ## 变更安全
 
-- 修改前确认目标文件、所属 write set 和是否存在其他自动化流程正在更新同一范围。
-- 不回退用户或其他 agent 的已有修改；遇到重叠变更时基于当前内容继续工作。
-- 不执行删除、批量依赖更新、系统级配置变更或大范围格式化，除非用户明确授权且已说明影响范围。
-- 修改文档或配置也要保持最小范围；不要顺手重构无关代码。
+- 修改前检查工作树和目标文件；假定现有未提交改动属于其他正在进行的工作。
+- 不回退用户或其他自动化流程的已有修改。目标文件发生并发变化时，基于最新内容重新核对后继续。
+- 不执行删除、破坏性 Git 操作、大范围格式化、系统级配置变更或无关依赖更新，除非请求明确包含这些操作。
+- 交付说明应包含修改范围、实际执行的验证、未完成或失败项，以及是否影响文档、契约或后续工作。

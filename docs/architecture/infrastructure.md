@@ -3,7 +3,7 @@ kind: architecture
 id: ARCH-INFRASTRUCTURE
 status: current
 owner: infrastructure
-last_reviewed: 2026-09-06
+last_reviewed: 2026-09-19
 ---
 
 # Infrastructure 架构
@@ -23,11 +23,11 @@ last_reviewed: 2026-09-06
 ## 运行与交付
 
 - `ops runtime dev --scenario <NAME> --web-port <PORT> --mock-port <PORT>`：Vite + Mock Product API，页面数据只来自 Mock（Vite 代理目标由 ops 注入 `BLOG_API_ORIGIN`）；
-- `ops runtime backend --data <mock|test> --product-port <PORT> --data-port <PORT>`：Rust Product + Rust Data，无页面入口；
-- `ops runtime integration --product-port <PORT> --data-port <PORT> [--watch]`：先构建 `src/frontend/dist`，由 Product 同源挂载页面与 `/api`；
+- `ops runtime backend --content-source <fixture|github> --data <mock|test> --product-port <PORT> --data-port <PORT>`：Rust Product + Rust Data，无页面入口；
+- `ops runtime integration --content-source <fixture|github> --product-port <PORT> --data-port <PORT> [--watch]`：先构建 `src/frontend/dist`，由 Product 同源挂载页面与 `/api`；
 - `ops delivery build`：构建 `src/frontend/dist` 与 Product/Data/Mock 三个 Rust binary；
 - 数据库迁移由 Data Server 启动时自动执行（`sqlx::migrate!()`），无独立迁移命令；
 - 参数采用声明式 int32 / enum / switch 内置模型；有值参数无默认值，端口候选必须显式提供；冲突时自候选值起有界递增（+0…+9），以实际绑定结果注入依赖；监听固定 `127.0.0.1`；
 - 顶层退出码全局统一：`0` 成功、`10` 用法/配置错误、`20` 执行失败、`130` SIGINT、`143` SIGTERM；
-- 仓库零状态：运行时数据一律在仓库外。prod 数据库位于服务器 `/var/lib/blog/blog.db`（FHS 可变数据位，systemd unit 注入 `BLOG_DATABASE_PATH`，部署物 = 交付 binary + unit + 空数据目录；unit 模板归后续公网部署计划）；备份利用 SQLite 单文件特性（`.backup` / `VACUUM INTO` 定期拷贝，可选 litestream 流式备份），恢复边界与演练记录归运维文档；
+- 仓库零状态：运行时数据一律在仓库外。prod 数据库位于服务器 `/var/lib/blog/blog.db`（FHS 可变数据位，systemd unit 注入 `BLOG_DATABASE_PATH`）；公网部署所需的 unit 模板、密钥和发布流程不属于当前开发交付范围。备份利用 SQLite 单文件特性（`.backup` / `VACUUM INTO` 定期拷贝，可选 litestream 流式备份），恢复边界与演练记录归运维文档；
 - 运维操作应记录资源、备份和失败恢复边界。

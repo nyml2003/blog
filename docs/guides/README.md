@@ -2,7 +2,7 @@
 
 这里记录如何开发和协作，不描述产品当前有哪些页面或后端当前有哪些表。
 
-- [development.md](./development.md)：持续流和计划执行；
+- [development.md](./development.md)：持续流、任务拆分和计划使用边界；
 - [testing.md](./testing.md)：TDD 分层和验收；
 - [typescript-style.md](./typescript-style.md)：TypeScript 可读性规范；
 - [typescript-review-checklist.md](./typescript-review-checklist.md)：TypeScript 人工 Review 清单；

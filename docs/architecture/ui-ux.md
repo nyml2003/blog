@@ -3,7 +3,7 @@ kind: architecture
 id: ARCH-UIUX
 status: current
 owner: product-and-design
-last_reviewed: 2026-09-05
+last_reviewed: 2026-09-19
 ---
 
 # UI/UX 架构
@@ -17,7 +17,7 @@ last_reviewed: 2026-09-05
 - C Desktop：`/`；
 - C Mobile：`/m`；
 - B Desktop：`/admin`；
-- B Mobile：当前不实现。
+- B Mobile：不设独立应用壳；管理端保留 Mobile 内容预览页面。
 
 PC 和 Mobile 的页面数量、信息架构、导航和手势可以不同。
 
@@ -41,61 +41,29 @@ PC/Mobile UI 组件实现隔离，不共享 JSX、CSS、DOM 结构或组件内�
 
 - Desktop 不依赖手势关闭浮层；
 - Mobile 不依赖 hover、tooltip 或右键菜单；
-- C Mobile 推荐与归档页面使用独立底部双项导航（推荐 / 文章库），替代顶部页面切换；详情页不显示底部导航。
-- C Mobile 文章库使用页面级 F 型 Shelf：左侧为 sticky 分区导航，右侧为推荐和文章类型 section；滚动时导航跟随当前 section，点击导航滚动到对应 section 首卡。
-- Shelf 分区导航不修改 URL 或浏览器历史；active 状态只改变非几何样式，避免滚动抖动。
+- C Mobile 带底栏的页面使用三项导航（推荐 / 文章 / 设置）；详情页不显示底部导航。
+- 两个 Mobile 文章入口使用同一分类树 F 型 Shelf：左侧为 sticky 一级分类，右侧为当前一级下的二级分类 tabs 和文章列表。
+- 分类选择同步到 `category_id` 查询参数和浏览器历史；前进、后退恢复选择。active 状态只改变非几何样式，避免布局抖动。
 - 标题最多两行，摘要最多两行，标签最多显示两项并以数量提示溢出，更新时间作为右侧次要元数据；分组和排序由 Mobile BFF 提供。
 - 长内容使用独立页面，不塞进 Modal；
 - 浮层管理焦点、滚动锁定、关闭和未保存状态；
 - 加载、错误、空状态和提交状态不可导致主要内容跳动；
-- Shelf 卡片优先使用固定几何；必要时由 ResizeObserver 批量测量并通过滚动锚点补偿保持阅读位置，不在滚动事件中交替读写布局。
+- Shelf 的栏目和文章聚合由 Mobile BFF 提供，客户端不重新解释分类树或重复聚合文章。
 - 主要控件触摸目标不小于 `44px`，键盘焦点清晰可见。
 
-## C Mobile F-Shelf 视觉契约
+## C Mobile 分类货架
 
-文章库使用页面级双轨 Shelf。左轨是分区目录，右轨是连续内容；类型不再作为每张卡片的左侧重复标签。
-
-### 结构与几何
-
-- Shelf 外层在内容区内建立 `grid-template-columns: 76px minmax(0, 1fr)`；左轨宽度固定，右轨允许收缩，不产生横向滚动。
-- 左轨使用 `position: sticky`，其 `top` 等于 Mobile header 的实际高度加 `8px`，`align-self: start`；底部为底栏安全区预留至少 `72px + env(safe-area-inset-bottom)`。
-- 左轨 Tab 是垂直单列按钮，最小可点击盒为 `44px x 44px`，按钮之间至少 `8px` 间距。标签允许两行，但不得因 active 状态改变宽度、高度或边框占位。
-- 右轨每个 section 依次包含 section heading、首卡到末卡。heading 使用 `20px/1.3`，与首卡保持 `12px` 间距；section 之间使用 `32px` 空间和 `1px` 分隔线。
-- 推荐 section 位于类型 sections 之前，最多展示 3 张卡片；空 section 不渲染。section 顺序和分组名称由 BFF 决定，客户端不得重新排序或合并。
-- 卡片采用固定首选高度 `132px`（允许在内容确实需要时由布局快照调整），内边距 `14px 0 15px`，底部 `1px` 边界。卡片内结构固定为标题两行、摘要两行、元数据一至两行。
-- 卡片整体是单一链接，触控反馈只改变背景色；不增加 transform、margin 或 border 宽度。
-
-### 信息密度与截断
-
-- 标题为主信息，`17px`、行高约 `1.42`，最多两行，使用 `overflow-wrap:anywhere`；完整标题在详情页可读。
-- 摘要为次信息，`13px`、行高约 `1.5`，最多两行。无摘要仍保留相同的两行高度，以避免数据到达后卡片整体上移，文案使用低强调的“暂无摘要”。
-- 元数据使用 `12px`；标签最多显示两项，每项单行省略，剩余数量显示为 `+N`；更新时间靠右并使用等宽数字，避免日期宽度变化造成抖动。
-- 颜色沿用主题令牌：正文 `--ink`，次要文字 `--muted`，链接/焦点 `--blue`，推荐强调 `--coral`，已发布/完成语义 `--teal`。不为 Shelf 引入新的品牌色。
-
-### Tab 与 Scrollspy 状态
-
-- 默认 Tab 使用 `--muted` 文字、透明背景和固定宽度；active Tab 使用 `--blue` 文字、`font-weight: 800`，并显示 `3px` 内侧指示线。指示线通过伪元素或预留槽位绘制，不改变布局几何。
-- 键盘焦点使用现有 `:focus-visible` 轮廓；active 与 focus 可同时出现。点击 Tab 只调用页面滚动定位，不修改 URL 或 history。
-- 用户滚动时以 section heading 的可见性更新 active。Scrollspy 应忽略短暂的 programmatic scroll 锁定窗口，避免点击定位过程中 active 来回跳变。
-- section heading 具有 `scroll-margin-top`，确保定位后不被 sticky header 遮挡；定位不卸载其他 section。
-
-### 加载、空和错误
-
-- 加载态先渲染与最终 Shelf 相同的双轨骨架：固定左轨 Tab 槽位和至少两个 section、每个 section 三张固定高度卡片。骨架只使用中性填充，不显示跳动式占位文字。
-- 空结果保留 Shelf 外层几何，在右轨显示单个 `min-height: 190px` 状态块，说明当前筛选无文章，并提供 `清除筛选` 触控按钮；左轨显示已返回的 section 槽位或隐藏为空的 section，不留孤立空 Tab。
-- 错误态保留页面标题、筛选带和 Shelf 轨道尺寸，在右轨状态块显示失败原因和 `重试` 按钮。推荐降级 warning 不替换类型内容，只在页面顶部显示低强调提示。
-- 筛选提交期间保留旧内容高度并在筛选带显示进行中状态；新响应到达后一次性替换 sections，避免逐 section 插入造成连续回流。
-
-### 无抖动实现边界
-
-- BFF 返回完整 sections 和稳定顺序；客户端首屏先提交结构占位，再填充文本，不在滚动事件中测量并写回样式。
-- 默认使用固定卡片几何。字体加载、窄屏换行或用户字号设置导致高度变化时，允许前端用 `ResizeObserver` 在一帧内批量生成 LayoutSnapshot，并对当前视觉锚点做等量 scroll compensation。
-- active 样式、标签数量变化和 warning 显示不得改变左轨宽度、section heading 高度或卡片边界；需要变化时通过预留空间承载。
-- 非必要动画遵守 `prefers-reduced-motion: reduce`；滚动定位在 reduced-motion 下使用瞬时滚动。
+- 页面采用稳定双栏布局：左栏为 sticky 一级分类，右栏为二级分类 tabs 和文章卡片；右栏允许收缩，页面不得横向溢出。
+- 一级、二级分类的名称、顺序和文章聚合由 BFF 决定。一级选择汇总全部后代叶子，二级选择限定到对应分支，多分类文章去重。
+- 当前选择写入 `category_id`。直接打开分享链接、刷新以及浏览器前进/后退必须得到相同选择和结果。
+- 一级项、二级 tab 和其他主要控件触摸目标不小于 `44px`；active 与 focus 可以同时表达，active 样式不改变控件几何。
+- loading、empty、error 和 retry 保留页面主体的稳定布局；切换分类时旧请求不得覆盖较新的选择。
+- 文章卡片保持简洁可扫描：标题为主，摘要和元数据为次，不返回或预渲染正文 HTML；完整内容进入详情页阅读。
+- 非必要动画遵守 `prefers-reduced-motion: reduce`。
 
 ## C Mobile 详情页密度契约
 
-- 详情页阅读栏提供唯一的顶部返回入口；同源文章库来源可使用浏览器历史返回，否则回退到 `/m/articles/index.html`。详情页不显示底部双项导航。
+- 详情页阅读栏提供唯一的顶部返回入口；同源文章库来源可使用浏览器历史返回，否则回退到 `/m/articles/index.html`。详情页不显示底部导航。
 - 标题区顺序固定为文章类型、完整标题、可选摘要和紧凑元数据；元数据最多显示两项主题/标签及 `+N`，并显示更新时间，不复制创建时间或公开状态。
 - 摘要为空时不渲染占位文案。标题不得截断或覆盖正文，正文入口的首屏垂直位置应通过减少装饰和重复间距改善。
 - Mobile 正文 wrapper 使用至少 `16px` 字号和约 `1.7` 行高；首个块元素不额外留白，标题、段落、列表、代码、引用、表格和图片采用固定的 4/8px 间距节奏。

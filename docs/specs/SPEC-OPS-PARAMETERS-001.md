@@ -3,7 +3,7 @@ kind: spec
 id: SPEC-OPS-PARAMETERS-001
 status: accepted
 owner: infrastructure
-last_reviewed: 2026-09-06
+last_reviewed: 2026-09-19
 ---
 
 # Ops 字段参数模型
@@ -37,12 +37,12 @@ last_reviewed: 2026-09-06
 | 命令 | 字段 |
 | --- | --- |
 | `runtime dev` | 必填 `--scenario` enum: default, empty, slow, server-error, malformed-response；必填 `--web-port`、`--mock-port` int32 |
-| `runtime backend` | 必填 `--data` enum: mock, test；必填 `--product-port`、`--data-port` int32 |
-| `runtime integration` | `--watch` switch；必填 `--product-port`、`--data-port` int32 |
+| `runtime backend` | 必填 `--data` enum: mock, test；必填 `--content-source` enum: fixture, github；必填 `--product-port`、`--data-port` int32 |
+| `runtime integration` | `--watch` switch；必填 `--content-source` enum: fixture, github；必填 `--product-port`、`--data-port` int32 |
 | `quality format` | `--check` switch；缺省写入格式化结果，出现时只检查 |
 | 全局 | `--help`、`--dry-run`、`--json` switch，保留原有职责 |
 
-全部端口范围明确声明为 1024–65535。`default` 是场景名称，不是缺省值。integration 固定 test 数据、回环监听和端口有界重试属于运行契约，不是参数补值。
+全部端口范围明确声明为 1024–65535。`default` 是场景名称，不是缺省值。integration 固定 test 数据，backend/integration 的内容来源必须显式选择；dev 固定使用内置 fixture。回环监听和端口有界重试属于运行契约，不是参数补值。
 
 帮助不要求补齐业务参数；dry-run 必须通过完整参数校验。未知、缺失、重复有值参数、非法取值或 switch 赋值均以 10 退出，stderr 解释，stdout 最近帮助，不启动命令副作用。帮助完整展示类型、必填性、范围及所有枚举值。
 

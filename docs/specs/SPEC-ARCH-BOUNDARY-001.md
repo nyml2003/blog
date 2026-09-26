@@ -3,43 +3,53 @@ kind: spec
 id: SPEC-ARCH-BOUNDARY-001
 status: accepted
 owner: backend
-plan_id: PLAN-ARCH-BOUNDARY-001
-last_reviewed: 2026-09-10
+last_reviewed: 2026-09-19
 ---
 
-# 架构分层边界规则（前端查询层归一 / 后端四层各归其位）
+# 架构分层边界规则
 
 ## 目标
 
-将两条分层原则成文并自动化执行：前端"页面只管 UI 编排，数据获取归数据层（查询层）"；后端"HTTP 只管协议适配，编排归 BFF 层，protocol 是纯契约，Data 是类型化事务域"。边界违规由质量门禁拦截。架构迁移本身保持既有契约与行为不变；同轮另行授权的 T 型货架功能不属于该零变化对照集。
+将两条分层原则成文并自动化执行：前端页面只管 UI 编排，数据获取和宿主能力经明确的查询层或 ports 进入；后端 HTTP 只管协议适配，编排归 BFF/领域层，protocol 是纯契约，Data 是类型化事务域。边界违规由质量门禁拦截。
 
 ## 非目标
 
-- 不重构任何内部实现（SQL 写法、算法、组件内部结构、命名）；
-- 不改任何公开契约与可观察行为（API、wire、页面行为全部不变，以既有测试为护栏）；
-- 不新增功能；不处理性能优化；
-- 不动 `mobile-ui` / `desktop` 既有 UI 边界规则（已有契约继续有效）。
+- 本 Spec 不要求旧前端和新 `app/` 运行时立即合并或全量迁移；
+- 不以架构门禁替代 API、产品行为、性能或视觉验收；
+- 不改变 Desktop/Mobile UI 隔离规则；
+- 具体重构和迁移范围由当前任务单独确定。
 
 ## 前端分层规则
 
+旧页面链路：
+
 ```text
-组合根（页面入口 tsx）   transport 装配（browserClient / mock-session）
-页面（*/pages/**）       只做 UI 编排与页面本地 UI 状态
-查询层（R0 定稿位置）    页面语义用例 hooks：参数映射 / fallback / 错误语义 / 数据整形
-common/client            唯一协议出口（端点 → DataTask）
-common/data + solid/data 机制层：transport / task / resource / adapter
+页面入口 / 页面 → solid/queries → common/client → common/data + solid/data
+```
+
+新 `app/` 运行时：
+
+```text
+bootstrap（组合根）
+├── habitat/api + habitat/mobile（业务、资源、页面和 UI）
+├── infrastructure（browser / memory 等宿主适配器）
+└── kernel（ports、Result、Task、Resource、状态原语）
 ```
 
 **禁令（门禁断言）**：
 
 | 层 | 禁止 |
 | --- | --- |
-| 页面 | import `common/client`、`solid/data`、`common/data`（组合根入口文件白名单例外：仅 transport 装配） |
-| 业务组件 / 分子 / 原子 | import `common/client`、`common/data`（既有规则重申） |
-| 查询层 | import 任何 UI / 页面 / 组件模块 |
-| `common/client` | import Solid / DOM（保持框架无关） |
-
-现状违规实例（2026-09-06 审得，治理对象）：`desktop/src/pages/admin/editor.tsx` 内联组装 `saveDraft` body；两端 `articles` 页各自维护 filter→query 参数映射；`mobile detail.tsx` 现场 `createDataTask` 拼兜底；mock-session 组合逻辑渗入页面入口。
+| 旧页面 | import `common/client`、`solid/data`、`common/data`（明确的组合根例外只做 transport 装配） |
+| 旧业务组件 / 分子 / 原子 | import `common/client`、`common/data` |
+| `solid/queries` | import 任何 UI / 页面 / 组件模块 |
+| `common/client` | import Solid / DOM |
+| 任一 `app/` 模块 | import 旧 `common`、`solid`、`desktop`、`mobile`、`desktop-ui` 或 `mobile-ui` 运行时 |
+| `app/kernel` | import Solid、DOM、Node、schema/UI 库，或直接使用 fetch、window、document、storage、process 等宿主能力 |
+| `app/infrastructure` | import 业务 API、sceneCode、UI 或 kernel/infrastructure 之外的项目模块 |
+| `app/habitat/api` | import Solid、infrastructure、旧运行时或 UI |
+| `app/habitat/mobile` | import infrastructure 或旧运行时；宿主能力必须经 kernel ports 注入 |
+| `app/bootstrap` | import 旧运行时；它只组合 infrastructure 与 habitat |
 
 ## 后端分层规则
 
@@ -59,22 +69,22 @@ backend/data      Data Server HTTP 适配 + 类型化事务操作：store/domain
 | `backend/data` 的 store/domain | 解析 HTML、感知 HTTP / GitHub（Data Server 自身的 HTTP adapter 例外） |
 | `product`（除 data_client） | 直接访问 SQLite |
 
-现状违规实例（治理对象）：`product/src/http.rs` 混合路由 + 参数解析 + scene 分发 + 货架 BFF 决策（`has_filters` / `include_recommendation`）+ 日志文案；`core/protocol/src/wire.rs` 的 `to_shelf` 承载分组、分区排序与"未分类"兜底（编排行为住在契约 crate）。
+以上是当前边界，不是待治理清单。历史违规已从主文档移除；是否存在新违规以当前源码和架构门禁结果为准。
 
 ## 门禁要求
 
-- 分层规则进 `ops quality`：import / 模块依赖检查（mobile-ui 已有依赖边界检查先例，推广为全局机制）；
-- 门禁上线时存量违规以**显式豁免清单**登记（带治理目标轮次），逐轮清零；豁免清零后规则全量生效；
+- 分层规则进入 `ops quality` 的 import / 模块依赖检查；
+- 确需暂存违规时只能使用显式、可追踪的豁免；不得通过改路径、动态 import 或字符串拼接绕过；
 - 检查规则本身有测试（改坏规则文件会红）。
 
 ## API 路由契约单一清单（golden）
 
-现状同一契约存在三份手抄：`http.rs` 路由与 sceneCode 分发、`scene.rs` 常量、`client.ts` 的 path/sceneCode 硬编码。收敛方式：
+当前以 `docs/api/routes.json` 作为中性 golden 清单，双端测试对照实际实现：
 
-- 一份中性 golden 清单声明 `endpoint × sceneCode × method` 全集（位置与格式由 R0 定，倾向 `docs/api/` 下可被双端测试读取的文件）；
+- `docs/api/routes.json` 声明 `endpoint × sceneCode × method` 全集；
 - Rust 测试：清单条目全部被 http 分发覆盖、`scene.rs` 常量与清单一致；
 - TS 测试：`client.ts` 全部方法的 path/sceneCode ⊆ 清单；
-- 不做双语言 codegen（低依赖取舍，见计划决策记录）；
+- 不做双语言 codegen（低依赖取舍，见本 Spec 的契约和当前实现）；
 - 与 `SPEC-CONTENT-GITHUB-TRUTH-001` 的管理协议冻结协调：其新增管理 sceneCode 一并入 golden 清单，REPO-CONTRACT 交付的协议表与本清单为同一事实。
 
 ## 场景
@@ -83,17 +93,17 @@ backend/data      Data Server HTTP 适配 + 类型化事务操作：store/domain
 
 Given 门禁生效且豁免清零
 
-When 页面代码 import `common/client` 或 `solid/data`
+When 旧页面代码 import `common/client`、`common/data` 或 `solid/data`
 
 Then 质量门禁失败
 
 ### SPEC-ARCH-BOUNDARY-001-002
 
-Given 查询层就位
+Given 旧页面或新 `app/` 页面需要业务数据或宿主能力
 
-When 页面需要数据
+When 页面发起读取、写入或访问浏览器能力
 
-Then 页面只 import 查询层 hooks；参数映射、fallback（如无效 ID 的错误任务）、错误语义均在查询层，页面零数据装配代码
+Then 旧页面通过 `solid/queries`，新页面通过 habitat API/resource 和注入的 kernel ports；页面不直接装配 transport、存储或 wire DTO
 
 ### SPEC-ARCH-BOUNDARY-001-003
 
@@ -127,23 +137,28 @@ When 新增 / 改动任一场景（endpoint × sceneCode）而清单未同步，
 
 Then 对应测试失败（Rust 或 TS 侧红灯）
 
+### SPEC-ARCH-BOUNDARY-001-007
+
+Given 新代码位于 `src/frontend/app/`
+
+When 它导入旧前端运行时，或 kernel/infrastructure/habitat 绕过各自依赖方向
+
+Then 架构门禁失败并报告具体文件与边界规则
+
 ## 边界与失败
 
-- 查询层具体落位（`solid/data` 扩展 / `common/data` 下新模块 / 每端自建）由 R0 审查定稿并**报用户审定**；
-- 与在途计划的写集冲突（`http.rs`、`wire.rs`、`client.ts`、各页面文件）：治理的整改轮次排在对应计划归档或写集交接之后，串行执行；
-- 治理中发现"边界正确但实现腐化"的项：登记不动手，另立计划；
-- 门禁豁免清单是唯一合法的存量违规存在形式，禁止新增未登记豁免。
+- 旧页面查询层固定在 `solid/queries`；新运行时的数据用例位于 habitat，宿主实现位于 infrastructure，抽象能力位于 kernel；
+- 与其他当前工作的写集冲突（`http.rs`、`wire.rs`、`client.ts`、各页面文件）：先完成契约和写集协调，再串行执行整改；
+- 治理中发现“边界正确但实现腐化”的项：登记问题并另行明确范围，不在本 Spec 中隐式扩大改动；
+- 门禁豁免清单是唯一合法的暂存违规形式，禁止新增未登记豁免。
 
 ## 测试/验收证据
 
-- R0 审查：`AUDIT-REPORT.md` 按当前代码重核前后端违规、目标层与写集；查询层定稿为 `src/frontend/solid/queries/`。
-- 前端：两端全部页面零 `common/client` / `common/data` / `solid/data` import；查询层测试覆盖参数归一、无效 ID、URL 筛选、乱序响应丢弃、分页、分类 history 和管理命令编排。前端 typecheck、lint、format、107 项核心测试与 build 通过。
-- 后端：Mobile/T 型货架编排位于 Product/Mock `bff/`，HTTP 保留协议适配，protocol 只保留契约与纯映射；workspace fmt、clippy 和 tests 通过，Product/Mock 契约及真实 Product→Data 链路通过。
-- 门禁：架构规则 9 项正负样例通过，仓库扫描零违规、零豁免；规则覆盖 Product HTTP
+- 旧前端与新 `app/` 的当前边界均由 `ops/src/domain/architecture.ts` 及其正负样例测试守卫；文档不以历史计划代替当前扫描结果。
+- 前端历史交付曾通过 typecheck、lint、format、核心测试与 build；具体数量不作为长期契约，当前变更必须按现有命令重新验证。
+- 后端边界由 Rust 模块检查、契约测试和真实 Product→Data 链路测试共同覆盖；历史通过结果不替代当前复跑。
+- 门禁规则覆盖 Product HTTP
   snapshot 聚合与分类后代计算、Data Cargo manifest 的 HTML parser 和外部
-  HTTP/GitHub client 依赖；38 条 API golden 同时由 Rust 生产路由/scene 契约和 TS
-  client 实际调用测试对照。
-- 总门禁：2026-09-08 `ops quality check` 全部通过；06:56（Asia/Shanghai）基于当前源码
-  重建 integration 后 Desktop/Mobile T/F 代表路径的 52 项浏览器脚本连续两次通过，
-  页面错误 0。
-- 人工验收：代码与自动化证据已齐，最终产品验收由用户执行。
+  HTTP/GitHub client 依赖；API golden 同时由 Rust 生产路由/scene 契约和 TS client 实际调用测试对照。
+- 2026-09-08 曾有一次完整 `ops quality check` 与代表路径浏览器证据；它只证明当时快照，不证明后续版本。
+- 当前验收以现有 `ops quality check`、相关运行测试和用户产品确认共同决定。

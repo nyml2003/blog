@@ -3,7 +3,6 @@ kind: spec
 id: SPEC-ADMIN-AUTH-001
 status: accepted
 owner: backend
-plan_id: PLAN-ADMIN-AUTH-001
 last_reviewed: 2026-09-10
 ---
 
@@ -15,7 +14,7 @@ last_reviewed: 2026-09-10
 
 ## 非目标
 
-- 不做 TLS / 域名 / systemd unit 模板（归后续公网部署计划）；本计划只交付应用层鉴权，明文链路下的窃听风险见"边界与失败"；
+- 不做 TLS / 域名 / systemd unit 模板；当前 Spec 只约束应用层鉴权，明文链路下的窃听风险见“边界与失败”；
 - 不做 WebAuthn / Passkey（未来扩展方向，本期不承诺、不预建抽象）；
 - 不做多用户 / 角色体系（单人管理端，无用户表）；
 - 不动公开 API、Mobile 端、文章数据模型；
@@ -97,7 +96,7 @@ Then 直通无鉴权（显式开关），生产 / integration 场景鉴权全量
 
 ## 边界与失败
 
-- **明文链路**：TLS 落地前，session cookie 与登录凭证可被链路窃听——本计划交付的防护边界是"未授权访问"，不含链路机密性；公网部署计划必须先于 / 同时落地 TLS，中间期建议防火墙限源（运维文档建议，非本计划交付）；
+- **明文链路**：TLS 落地前，session cookie 与登录凭证可被链路窃听；本 Spec 的防护边界是“未授权访问”，不含链路机密性。公网部署时必须另行落实 TLS 和网络边界；
 - 内存 session 表重启登出，属可接受行为并写入用户文档；
 - 恢复码遗失且 TOTP 设备遗失 = 锁死，需服务器本地重新生成（ops 工具），文档明示；
 - 时钟偏移：TOTP ±1 窗口容忍；服务器 NTP 由部署层保证。
@@ -109,6 +108,5 @@ Then 直通无鉴权（显式开关），生产 / integration 场景鉴权全量
   fail closed、可信代理与 cookie 标志、TTY 边界和日志脱敏；
 - 真实浏览器证据已完成：恢复码登录、安全 `next`、认证后工作区、公开端隔离、页面错误
   和横向溢出检查均通过；
-- 命令结果、进程测试、安全复核和浏览器证据路径见
-  [PLAN-ADMIN-AUTH-001/EVIDENCE.md](../plans/archive/PLAN-ADMIN-AUTH-001/EVIDENCE.md)；
-- Spec 保持 draft，等待用户完成秘密保管与产品验收后再推进为 accepted。
+- 交付时的命令结果、进程测试、安全复核和浏览器证据曾单独记录；计划目录已移除，当前实现状态仍需以源码、自动化测试和实际运行复核；
+- 本 Spec 的行为契约保持 accepted；秘密保管、TLS 和公网部署属于独立的运行环境验收，不由本文件替代。
