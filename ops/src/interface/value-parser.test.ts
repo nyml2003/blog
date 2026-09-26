@@ -28,6 +28,17 @@ test('enum matching is exact and errors list the complete choices', () => {
   }
 });
 
+test('path keeps explicit non-empty paths verbatim and rejects empty or multi-line input', () => {
+  const model = { kind: 'path' } as const;
+  for (const text of ['/var/lib/blog/blog.db', 'relative/path.db', '~/state/blog.db', 'dir with spaces/x.db', './x']) {
+    assert.deepEqual(parseValue(model, { kind: 'value', text }), { ok: true, value: text });
+  }
+  for (const text of ['', '\n', '\r', 'a\nb', 'a\rb']) {
+    assert.equal(parseValue(model, { kind: 'value', text }).ok, false, JSON.stringify(text));
+  }
+  assert.equal(parseValue(model, { kind: 'presence', present: true }).ok, false);
+});
+
 test('switch accepts presence only and value models cannot manufacture missing input', () => {
   for (const present of [true, false]) {
     assert.deepEqual(parseValue({ kind: 'switch' }, { kind: 'presence', present }), { ok: true, value: present });
@@ -52,7 +63,6 @@ test('field declarations reject custom hooks, unknown models and invalid constra
     { kind: 'enum', values: [''] },
     { kind: 'enum', values: [1] },
     { kind: 'switch', default: true },
-    { kind: 'path' },
     { kind: 'string' },
   ];
   for (const model of malformed) {
@@ -60,4 +70,16 @@ test('field declarations reject custom hooks, unknown models and invalid constra
     const spec = { ...valid, model } as ParameterSpec;
     assert.throws(() => validateParameter(spec), /invalid|unsupported/);
   }
+});
+
+test('optional is a value-option-only declaration', () => {
+  validateParameter({ name: 'database-path', description: 'path', model: { kind: 'path' }, optional: true });
+  assert.throws(
+    () => validateParameter({ name: 'flag', description: 'flag', model: { kind: 'switch' }, optional: true }),
+    /switch cannot be optional/,
+  );
+  assert.throws(
+    () => validateParameter({ name: 'count', description: 'count', model: integer, optional: false } as unknown as ParameterSpec),
+    /invalid optional flag/,
+  );
 });

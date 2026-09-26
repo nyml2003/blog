@@ -51,9 +51,11 @@ export function parseCommandArgs(meta: CommandMeta, raw: readonly string[]): Par
   }
   for (const spec of meta.options ?? []) {
     if (Object.hasOwn(values, spec.name)) continue;
-    if (spec.model.kind !== 'switch') return { error: { message: `缺少选项: --${spec.name}` } };
-    const error = storeValue(values, spec, { kind: 'presence', present: false });
-    if (error) return { error };
+    if (spec.model.kind !== 'switch' && spec.optional !== true) return { error: { message: `缺少选项: --${spec.name}` } };
+    if (spec.model.kind === 'switch') {
+      const error = storeValue(values, spec, { kind: 'presence', present: false });
+      if (error) return { error };
+    }
   }
   return { args: values };
 }

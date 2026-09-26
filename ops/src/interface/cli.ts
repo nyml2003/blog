@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { resolveWorkspace } from '../domain/workspace.ts';
 import { reflectCommandRegistry } from '../domain/commands.ts';
+import { OpsError } from '../domain/errors.ts';
 import { NodeProcess, NodeProcessSupervisor, ConsoleRuntimeLog, NodeSignals } from '../infrastructure/process.ts';
 import { NodeFs } from '../infrastructure/fs.ts';
 import { TcpPortProbe, TcpReadiness } from '../infrastructure/net.ts';
@@ -169,7 +170,14 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
     dryRun,
     json,
   };
-  return await selected.handler(context, parsed.args);
+  try {
+    return await selected.handler(context, parsed.args);
+  } catch (error) {
+    if (error instanceof OpsError && error.code === 'USAGE') {
+      return usageError(error.message, selected.meta.path, `检查参数后重试: ops ${selected.meta.path.join(' ')} --help`);
+    }
+    throw error;
+  }
 }
 
 function unknownCommand(raw: readonly string[]): number {

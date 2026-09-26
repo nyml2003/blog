@@ -105,16 +105,17 @@ export const commandDefinitions: readonly CommandDefinition[] = [
   defineCommand({
     path: ['runtime', 'backend'],
     summary: '后端 API 栈: Product + Data（无页面）',
-    description: '启动 Rust Product API-only 与 Rust Data Server（显式选择 mock 或 test；mock 不创建 SQLite 文件）；不挂载前端、不启动 Vite，因此没有页面入口，只有 API 基址。',
-    examples: ['ops runtime backend --data test --content-source fixture --product-port 8080 --data-port 8081', 'ops runtime backend --data prod --content-source github --product-port 18080 --data-port 18081'],
+    description: '启动 Rust Product API-only 与 Rust Data Server（显式选择 mock、test 或 prod；mock 不创建 SQLite 文件；prod 必须显式提供 --database-path，Data 自动迁移、不加载 seed、退出不删库）；不挂载前端、不启动 Vite，因此没有页面入口，只有 API 基址。',
+    examples: ['ops runtime backend --data test --content-source fixture --product-port 8080 --data-port 8081', 'ops runtime backend --data prod --database-path ~/.local/state/blog/prod.db --content-source github --product-port 18080 --data-port 18081'],
     options: [
       { name: 'data', description: '数据语义（必须显式选择）', model: { kind: 'enum', values: DATA_MODES } },
+      { name: 'database-path', description: 'prod 数据模式必填,仅 --data prod 时允许（显式路径,无默认值）', model: { kind: 'path' }, optional: true },
       { name: 'content-source', description: '内容来源（必须显式选择；fixture 不读取 GitHub 凭证）', model: { kind: 'enum', values: CONTENT_SOURCES } },
       portOption('product-port', 'Product 候选端口'),
       portOption('data-port', 'Data 候选端口'),
     ],
     exitCodes: [{ code: 0, meaning: '--dry-run 打印计划（运行中的模式没有 0 退出路径，正常停止只能是 130/143）' }, FAILURE, SIGINT, SIGTERM],
-  }, (context, args) => runRuntimeMode(planMode({ mode: 'backend', dataMode: args.data, contentSource: args['content-source'], productPort: args['product-port'], dataPort: args['data-port'] }), runtimePorts(context), { dryRun: context.dryRun, json: context.json })),
+  }, (context, args) => runRuntimeMode(planMode({ mode: 'backend', dataMode: args.data, databasePath: args['database-path'], contentSource: args['content-source'], productPort: args['product-port'], dataPort: args['data-port'] }), runtimePorts(context), { dryRun: context.dryRun, json: context.json })),
   defineCommand({
     path: ['runtime', 'integration'],
     summary: '集成栈: 先构建前端，Product 挂载 web/dist',

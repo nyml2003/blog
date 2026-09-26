@@ -15,6 +15,12 @@ export function parseValue(model: ParameterModel, raw: RawParameter): ValueResul
     }
     return { ok: true, value: raw.text };
   }
+  if (model.kind === 'path') {
+    if (!isModelValue(model, raw.text)) {
+      return { ok: false, message: `非法路径: ${JSON.stringify(raw.text)} (${modelDescription(model)})` };
+    }
+    return { ok: true, value: raw.text };
+  }
   if (!/^[+-]?[0-9]+$/.test(raw.text)) {
     return { ok: false, message: `必须是十进制整数: ${JSON.stringify(raw.text)} (${modelDescription(model)})` };
   }

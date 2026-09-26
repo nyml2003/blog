@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { runDeliveryBuild, runRuntimeMode, type RuntimePorts } from './runtime.ts';
 import { planMode } from '../domain/runtime-plan.ts';
+import { OpsError } from '../domain/errors.ts';
 import { join } from 'node:path';
 import type { FsPort, LogLine, ManagedProcess, ProcessExit, ProcessGroupPort, ProcessPort, SpawnRequest } from '../domain/ports.ts';
 
@@ -190,6 +191,26 @@ test('backend allocates data first and points product at the actual data address
   assert.equal(harness.spawns[1]!.env?.BLOG_WEB_DIR, undefined, 'backend never mounts a frontend');
   assert.match(data.env?.BLOG_DATABASE_PATH ?? '', /target\/test-dbs\/\d+\.db/);
 
+  harness.emit('SIGINT');
+  assert.equal(await pending, 130);
+});
+
+test('prod data mode requires an explicit database path and passes it to the data process', async () => {
+  const isUsage = (error: unknown): boolean => error instanceof OpsError && error.code === 'USAGE' && error.exitCode === 10;
+  assert.throws(() => planMode({ mode: 'backend', dataMode: 'prod', productPort: 18080, dataPort: 18081 }), isUsage);
+  assert.throws(() => planMode({ mode: 'backend', dataMode: 'test', databasePath: '/tmp/x.db', productPort: 18080, dataPort: 18081 }), isUsage);
+
+  const harness = new Harness();
+  const pending = runRuntimeMode(
+    planMode({ mode: 'backend', dataMode: 'prod', databasePath: '/tmp/prod-verify.db', contentSource: 'fixture', productPort: 18080, dataPort: 18081 }),
+    harness.ports(),
+    options(),
+  );
+  await tick();
+  const data = harness.spawns[0]!;
+  assert.deepEqual(data.args, ['--listen', '127.0.0.1:18081', '--data-semantics', 'prod', '--data-database-path', '/tmp/prod-verify.db']);
+  assert.equal(data.env?.BLOG_DATABASE_PATH, undefined, 'prod never uses the test-path env injection');
+  assert.deepEqual(harness.spawns.map((process) => process.role), ['data', 'product']);
   harness.emit('SIGINT');
   assert.equal(await pending, 130);
 });

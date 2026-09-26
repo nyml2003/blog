@@ -62,3 +62,11 @@ test('field models generate required values, complete choices and switch semanti
   assert.doesNotMatch(format, /--check </);
   for (const flag of ['help', 'dry-run', 'json']) assert.match(format, new RegExp('--' + flag));
 });
+
+test('optional value options print brackets and an optional marker', () => {
+  const backend = renderCommandHelp(registry, ['runtime', 'backend']);
+  assert.match(backend, /\[--database-path <path>\]/);
+  assert.match(backend, /--database-path <path>.*\(可选; path/);
+  assert.match(backend, /--data <enum>.*\(必填; enum; 可选: mock, test, prod\)/);
+  assert.match(backend, /--database-path ~\/\.local\/state\/blog\/prod\.db/);
+});

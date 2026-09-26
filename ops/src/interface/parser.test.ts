@@ -37,6 +37,28 @@ test('missing, duplicate, unknown and extra arguments fail before dispatch', () 
   }
 });
 
+test('optional value options may be absent and still reject duplicates and invalid values', () => {
+  const optionalMeta = {
+    path: ['example'],
+    summary: 'example',
+    options: [
+      { name: 'mode', model: { kind: 'enum', values: ['first', 'second'] }, description: 'mode' },
+      { name: 'database-path', model: { kind: 'path' }, description: 'path', optional: true },
+    ],
+  } as const satisfies CommandMeta;
+  assert.deepEqual(parseCommandArgs(optionalMeta, ['--mode', 'first']), { args: { mode: 'first' } });
+  assert.deepEqual(
+    parseCommandArgs(optionalMeta, ['--mode', 'first', '--database-path', '/tmp/a.db']),
+    { args: { mode: 'first', 'database-path': '/tmp/a.db' } },
+  );
+  assert.match(
+    JSON.stringify(parseCommandArgs(optionalMeta, ['--mode', 'first', '--database-path', '/a', '--database-path', '/b'])),
+    /重复选项/,
+  );
+  assert.match(JSON.stringify(parseCommandArgs(optionalMeta, ['--mode', 'first', '--database-path', ''])), /非法路径/);
+  assert.match(JSON.stringify(parseCommandArgs(optionalMeta, ['--database-path', '--mode', 'first'])), /选项缺少值/);
+});
+
 test('ambient configuration cannot supply a missing value', () => {
   const previous = process.env.EXAMPLE_COUNT;
   process.env.EXAMPLE_COUNT = '3';

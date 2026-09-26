@@ -438,6 +438,43 @@ test('MODE-003: every run gets a fresh temp sqlite with the same seed and delete
   await assertNoTempDb(before);
 });
 
+test('MODE-PROD: backend --data prod keeps the explicit database across restarts and never seeds or deletes it', gate(PROCESS_TIER), async (t) => {
+  const base = await freeWindow(2);
+  const home = await mkdtemp(join(tmpdir(), 'ops-prod-db-'));
+  const dbPath = join(home, 'blog.db');
+  t.after(() => rm(home, { recursive: true, force: true }));
+  const args = ['runtime', 'backend', '--content-source', 'fixture', '--data', 'prod', '--database-path', dbPath, '--product-port', String(base), '--data-port', String(base + 1), '--json'];
+
+  const first = OpsRun.start(args);
+  t.after(() => first.dispose());
+  const payload = await first.ready();
+  const dataPort = serviceOf(payload, 'data').port;
+  const productPort = serviceOf(payload, 'product').port;
+  const diagnostics = await jsonOf<DataDiagnostics>(dataPort, '/data/v1/diagnostics');
+  assert.equal(diagnostics.data.semantics, 'prod');
+  assert.equal(diagnostics.data.database?.seeded, false, 'prod never loads the fixture seed');
+  assert.equal(diagnostics.data.database?.path, dbPath);
+  assert.ok((diagnostics.data.database?.applied_migrations.length ?? 0) >= 1, 'prod migrates automatically on start');
+  assert.ok(existsSync(dbPath), 'the prod database is created at the explicit path');
+  first.signal('SIGINT');
+  assert.equal(await first.exit(), 130);
+  assert.ok(existsSync(dbPath), 'prod never deletes the database on a clean exit');
+  await assertNoProcessLeftover([dataPort, productPort], ['data', 'product']);
+
+  const second = OpsRun.start(args);
+  t.after(() => second.dispose());
+  const secondPayload = await second.ready();
+  const list = await jsonOf<{ code: string; data: { total: number } }>(
+    serviceOf(secondPayload, 'product').port,
+    '/api/public/articles?sceneCode=public.article_list&pageSize=1',
+  );
+  assert.equal(list.code, 'OK', 'public reads stay available after reopening the same prod database');
+  second.signal('SIGINT');
+  assert.equal(await second.exit(), 130);
+  assert.ok(existsSync(dbPath));
+  await assertNoProcessLeftover([dataPort, productPort], ['data', 'product']);
+});
+
 test('PORT-002/PORT-005: a busy candidate increments once and printed, injected and bound addresses agree', gate(PROCESS_TIER), async (t) => {
   const base = await freeWindow(3);
   const dataPort = base;

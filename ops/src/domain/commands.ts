@@ -17,7 +17,11 @@ export interface CommandMeta {
 type Fields<M extends CommandMeta> =
   (M extends { options: readonly (infer F extends ParameterSpec)[] } ? F : never)
   | (M extends { positionals: readonly (infer F extends PositionalSpec)[] } ? F : never);
-export type ParsedArgs<M extends CommandMeta> = { [F in Fields<M> as F['name']]: ModelValue<F['model']> };
+export type ParsedArgs<M extends CommandMeta> = {
+  [F in Fields<M> as F extends { optional: true } ? never : F['name']]: ModelValue<F['model']>;
+} & {
+  [F in Fields<M> as F extends { optional: true } ? F['name'] : never]?: ModelValue<F['model']>;
+};
 export interface CommandContext {
   workspace: import('./workspace.ts').Workspace;
   process: import('./ports.ts').ProcessPort;
@@ -39,8 +43,15 @@ export interface GroupDefinition { readonly meta: GroupMeta }
 
 function argumentsMatch<M extends CommandMeta>(meta: M, args: CommandArgs): args is ParsedArgs<M> {
   const fields = [...(meta.options ?? []), ...(meta.positionals ?? [])];
-  return Object.keys(args).length === fields.length
-    && fields.every((field) => Object.hasOwn(args, field.name) && isModelValue(field.model, args[field.name]));
+  const allowed = new Set(fields.map((field) => field.name));
+  for (const key of Object.keys(args)) {
+    if (!allowed.has(key)) return false;
+  }
+  return fields.every((field) => {
+    const optional = field.model.kind !== 'switch' && field.optional === true;
+    if (!Object.hasOwn(args, field.name)) return optional;
+    return isModelValue(field.model, args[field.name]);
+  });
 }
 
 export function defineCommand<const M extends CommandMeta>(meta: M, handler: (context: CommandContext, args: ParsedArgs<M>) => Promise<number> | number): CommandDefinition {
@@ -78,6 +89,7 @@ export function validateRegistry(definitions: readonly CommandDefinition[]): voi
     }
     for (const spec of meta.positionals ?? []) {
       if (String(spec.model.kind) === 'switch') throw new Error(`positional cannot be switch: ${spec.name}`);
+      if (spec.optional !== undefined) throw new Error(`positional cannot be optional: ${spec.name}`);
     }
   }
   for (const definition of definitions) for (let i = 1; i < definition.meta.path.length; i++) {

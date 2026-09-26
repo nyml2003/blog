@@ -3,17 +3,21 @@ export const INT32_MAX = 2147483647;
 
 export type ValueModel =
   | { readonly kind: 'int32'; readonly min: number; readonly max: number }
-  | { readonly kind: 'enum'; readonly values: readonly string[] };
+  | { readonly kind: 'enum'; readonly values: readonly string[] }
+  | { readonly kind: 'path' };
 export type ParameterModel = ValueModel | { readonly kind: 'switch' };
 export interface ParameterSpec {
   readonly name: string;
   readonly description: string;
   readonly model: ParameterModel;
+  /** Value options only: an absent optional field stays missing instead of failing as required. */
+  readonly optional?: true;
 }
 export interface PositionalSpec extends ParameterSpec { readonly model: ValueModel }
 export type ModelValue<M extends ParameterModel> =
   M extends { kind: 'int32' } ? number :
-  M extends { kind: 'enum'; values: readonly (infer V)[] } ? V : boolean;
+  M extends { kind: 'enum'; values: readonly (infer V)[] } ? V :
+  M extends { kind: 'path' } ? string : boolean;
 export type CommandArgs = Record<string, string | number | boolean>;
 
 export const globalSwitches = [
@@ -29,9 +33,10 @@ function checkKeys(value: object, allowed: readonly string[]): void {
 }
 
 export function validateParameter(spec: ParameterSpec): void {
-  checkKeys(spec, ['name', 'description', 'model']);
+  checkKeys(spec, ['name', 'description', 'model', 'optional']);
   if (!/^[a-z][a-z0-9-]*$/.test(spec.name)) throw new Error(`invalid parameter name: ${spec.name}`);
   if (!spec.description.trim()) throw new Error(`missing parameter description: ${spec.name}`);
+  if (spec.optional !== undefined && spec.optional !== true) throw new Error(`invalid optional flag: ${spec.name}`);
   const model = spec.model;
   if (!model || typeof model !== 'object') throw new Error(`missing parameter model: ${spec.name}`);
   switch (model.kind) {
@@ -50,8 +55,12 @@ export function validateParameter(spec: ParameterSpec): void {
         throw new Error(`invalid enum values: ${spec.name}`);
       }
       return;
+    case 'path':
+      checkKeys(model, ['kind']);
+      return;
     case 'switch':
       checkKeys(model, ['kind']);
+      if (spec.optional !== undefined) throw new Error(`switch cannot be optional: ${spec.name}`);
       return;
     default:
       throw new Error(`unsupported parameter model: ${spec.name}`);
@@ -62,6 +71,7 @@ export function modelDescription(model: ParameterModel): string {
   switch (model.kind) {
     case 'int32': return `int32; 十进制整数; 范围 ${model.min}-${model.max}`;
     case 'enum': return `enum; 可选: ${model.values.join(', ')}`;
+    case 'path': return 'path; 非空路径字符串; 不 trim、不展开 ~';
     case 'switch': return 'switch; 出现=true, 未出现=false; 不接受值';
   }
 }
@@ -71,6 +81,7 @@ export function isModelValue<M extends ParameterModel>(model: M, value: unknown)
     case 'int32': return typeof value === 'number' && Number.isInteger(value)
       && value >= model.min && value <= model.max && value >= INT32_MIN && value <= INT32_MAX;
     case 'enum': return typeof value === 'string' && model.values.includes(value);
+    case 'path': return typeof value === 'string' && value.length > 0 && !value.includes('\n') && !value.includes('\r');
     case 'switch': return typeof value === 'boolean';
   }
 }

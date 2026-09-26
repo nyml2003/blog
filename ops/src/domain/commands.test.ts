@@ -53,3 +53,27 @@ test('local fields cannot override global switches', () => {
   const command = defineCommand({ path: ['example'], summary: 'example', options: [{ name: 'json', description: 'json', model: { kind: 'switch' } }] }, handler);
   assert.throws(() => validateRegistry([command]), /reserved global switch/);
 });
+
+test('optional value fields stay absent-aware at dispatch and positionals cannot be optional', () => {
+  const command = defineCommand({
+    path: ['example'], summary: 'example',
+    options: [
+      { name: 'data', description: 'data', model: { kind: 'enum', values: ['mock', 'test', 'prod'] } },
+      { name: 'database-path', description: 'path', model: { kind: 'path' }, optional: true },
+    ],
+  }, (_context, args) => {
+    const data: 'mock' | 'test' | 'prod' = args.data;
+    const path: string | undefined = args['database-path'];
+    return data === 'prod' && path !== undefined ? 1 : 0;
+  });
+  assert.equal(Reflect.apply(command.handler, undefined, [{}, { data: 'prod' }]), 0);
+  assert.equal(Reflect.apply(command.handler, undefined, [{}, { data: 'prod', 'database-path': '/tmp/x.db' }]), 1);
+  assert.throws(
+    () => Reflect.apply(command.handler, undefined, [{}, { data: 'prod', 'database-path': '' }]),
+    /invalid parsed arguments/,
+  );
+  assert.throws(
+    () => validateRegistry([defineCommand({ path: ['example'], summary: 'x', positionals: [{ name: 'p', model: { kind: 'path' }, description: 'p', optional: true }] }, handler)]),
+    /positional cannot be optional/,
+  );
+});

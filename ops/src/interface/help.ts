@@ -35,8 +35,15 @@ function rootGroups(registry: HelpRegistry): readonly GroupDefinition[] {
 
 function parameterHelp(spec: ParameterSpec): string {
   const suffix = spec.model.kind === 'switch' ? '' : ` <${spec.model.kind}>`;
-  const required = spec.model.kind === 'switch' ? '' : '必填; ';
+  const optional = spec.model.kind !== 'switch' && spec.optional === true;
+  const required = spec.model.kind === 'switch' ? '' : optional ? '可选; ' : '必填; ';
   return `      --${spec.name}${suffix}  ${spec.description} (${required}${modelDescription(spec.model)})`;
+}
+
+function optionUsage(option: ParameterSpec): string {
+  if (option.model.kind === 'switch') return `[--${option.name}]`;
+  const flag = `--${option.name} <${option.model.kind}>`;
+  return option.optional === true ? `[${flag}]` : flag;
 }
 
 function leafExitCodes(command: CommandDefinition): readonly { code: number; meaning: string }[] {
@@ -87,7 +94,7 @@ export function renderCommandHelp(registry: HelpRegistry, path: readonly string[
   const meta = command.meta;
   lines.push('', meta.summary);
   if (meta.description) lines.push(meta.description);
-  const usage = ['ops', ...path, ...(meta.positionals ?? []).map((position) => `<${position.name}>`), ...(meta.options ?? []).map((option) => option.model.kind === 'switch' ? `[--${option.name}]` : `--${option.name} <${option.model.kind}>`)].join(' ');
+  const usage = ['ops', ...path, ...(meta.positionals ?? []).map((position) => `<${position.name}>`), ...(meta.options ?? []).map(optionUsage)].join(' ');
   lines.push('', `用法: ${usage}`);
   lines.push('', '全局选项:', ...globalSwitches.map(parameterHelp));
   if (meta.positionals?.length) lines.push('', '位置参数:', ...meta.positionals.map((position) => `  ${position.name}  ${position.description} (必填; ${modelDescription(position.model)})`));

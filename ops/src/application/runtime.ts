@@ -93,7 +93,7 @@ export async function runRuntimeMode(plan: ModePlan, ports: RuntimePorts, option
 export async function runDeliveryBuild(ports: RuntimePorts, options: RunOptions): Promise<number> {
   const command = 'delivery build';
   const steps = await deliverySteps(ports);
-  const plan: ModePlan = { mode: 'dev', services: [], candidates: {}, builds: steps, entry: null, dataMode: null, scenario: null, watch: false, contentSource: 'fixture' };
+  const plan: ModePlan = { mode: 'dev', services: [], candidates: {}, builds: steps, entry: null, dataMode: null, databasePath: null, scenario: null, watch: false, contentSource: 'fixture' };
   if (options.dryRun) { printPlan(ports, options, command, plan); return 0; }
   try {
     for (const step of steps) await executeStep(step, ports);
@@ -253,6 +253,10 @@ async function spawnRequest(plan: ModePlan, ports: RuntimePorts, role: ServiceRo
     if (plan.dataMode === null) throw new Error('runtime plan missing data mode');
     args.push('--data-semantics', plan.dataMode);
     if (plan.dataMode === 'test') env[INJECTION_ENV.databasePath] = await testDatabasePath(ports);
+    if (plan.dataMode === 'prod') {
+      if (plan.databasePath === null) throw new Error('runtime plan missing database path');
+      args.push('--data-database-path', plan.databasePath);
+    }
   }
   if (role === 'product') {
     const data = requiredPort(allocated.get('data'), 'data');
@@ -320,7 +324,7 @@ function printPlan(ports: RuntimePorts, options: RunOptions, command: string, pl
     return;
   }
   ports.log.info(`dry-run: ${command}（不启动进程、不绑定端口、不写文件）`);
-  const flags = [plan.watch ? '--watch' : undefined, plan.dataMode ? `--data ${plan.dataMode}` : undefined, plan.scenario ? `--scenario ${plan.scenario}` : undefined].filter(Boolean).join(' ');
+  const flags = [plan.watch ? '--watch' : undefined, plan.dataMode ? `--data ${plan.dataMode}` : undefined, plan.databasePath ? `--database-path ${plan.databasePath}` : undefined, plan.scenario ? `--scenario ${plan.scenario}` : undefined].filter(Boolean).join(' ');
   if (plan.services.length > 0) ports.log.info(`模式: ${plan.mode}${flags ? ` ${flags}` : ''}`);
   for (const step of plan.builds) ports.log.info(`构建步骤: ${step.label}`);
   if (plan.watchBuild) ports.log.info(`构建监视: ${plan.watchBuild.label}`);

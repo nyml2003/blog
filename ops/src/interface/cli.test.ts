@@ -94,9 +94,28 @@ test('unknown scenario names and invalid data modes are usage errors', async () 
   assert.match(scenario.errors, /非法值: "nope"/);
   assert.match(scenario.errors, /default, empty, slow/);
 
-  const data = await capture(['runtime', 'backend', '--content-source', 'fixture', '--data', 'prod']);
+  const data = await capture(['runtime', 'backend', '--content-source', 'fixture', '--data', 'production', '--product-port', '8080', '--data-port', '8081']);
   assert.equal(data.code, 10);
-  assert.match(data.errors, /非法值: "prod"/);
+  assert.match(data.errors, /非法值: "production"/);
+  assert.match(data.errors, /mock, test, prod/);
+});
+
+test('prod requires an explicit database path while other data modes forbid it', async () => {
+  const missing = await capture(['runtime', 'backend', '--content-source', 'fixture', '--data', 'prod', '--product-port', '8080', '--data-port', '8081']);
+  assert.equal(missing.code, 10);
+  assert.match(missing.errors, /--data prod 必须显式提供 --database-path/);
+  assert.match(missing.errors, /如何修正/);
+  assert.match(missing.output, /用法: ops runtime backend/);
+  assert.doesNotMatch(missing.output, /dry-run:/);
+
+  const forbidden = await capture(['runtime', 'backend', '--content-source', 'fixture', '--data', 'test', '--database-path', '/tmp/x.db', '--product-port', '8080', '--data-port', '8081']);
+  assert.equal(forbidden.code, 10);
+  assert.match(forbidden.errors, /--database-path 仅允许与 --data prod 一起使用/);
+
+  const dryRun = await capture(['runtime', 'backend', '--content-source', 'fixture', '--data', 'prod', '--database-path', '/tmp/x.db', '--product-port', '18080', '--data-port', '18081', '--dry-run']);
+  assert.equal(dryRun.code, 0);
+  assert.match(dryRun.output, /dry-run: runtime backend/);
+  assert.match(dryRun.output, /--data prod --database-path \/tmp\/x\.db/);
 });
 
 test('integration refuses --data and the retired --host/--listen options', async () => {

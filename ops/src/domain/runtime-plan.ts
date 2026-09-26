@@ -1,9 +1,10 @@
 import type { LogSource, ServiceRole } from './ports.ts';
 import { isModelValue } from './parameters.ts';
 import { PORT_MIN, PORT_MAX } from './port-allocation.ts';
+import { EXIT_USAGE, OpsError } from './errors.ts';
 
 export type RuntimeMode = 'dev' | 'backend' | 'integration';
-export const DATA_MODES = ['mock', 'test'] as const;
+export const DATA_MODES = ['mock', 'test', 'prod'] as const;
 export type DataMode = (typeof DATA_MODES)[number];
 
 /** Named mock scenarios (WORKSTREAM-OPS-RUNTIME-MOCK); selection is CLI-only, never env or file. */
@@ -59,6 +60,8 @@ export interface ModePlan {
   /** Service that hosts the human entry URL, or `null` for API-only modes. */
   entry: ServiceRole | null;
   dataMode: DataMode | null;
+  /** Explicit prod database path; null for mock/test. */
+  databasePath: string | null;
   scenario: MockScenario | null;
   watch: boolean;
   contentSource: ContentSource;
@@ -66,7 +69,7 @@ export interface ModePlan {
 
 export type ModeOptions =
   | { mode: 'dev'; scenario: MockScenario; webPort: number; mockPort: number }
-  | { mode: 'backend'; dataMode: DataMode; productPort: number; dataPort: number; contentSource?: ContentSource }
+  | { mode: 'backend'; dataMode: DataMode; databasePath?: string; productPort: number; dataPort: number; contentSource?: ContentSource }
   | { mode: 'integration'; watch: boolean; productPort: number; dataPort: number; contentSource?: ContentSource };
 
 function requirePort(port: number): number {
@@ -92,6 +95,7 @@ export function planMode(options: ModeOptions): ModePlan {
       builds: [],
       entry: 'web',
       dataMode: null,
+      databasePath: null,
       scenario: options.scenario,
       watch: false,
       contentSource: 'fixture',
@@ -106,6 +110,17 @@ export function planMode(options: ModeOptions): ModePlan {
   if (options.mode === 'integration' && typeof options.watch !== 'boolean') {
     throw new Error('invalid runtime watch switch');
   }
+  let databasePath: string | null = null;
+  if (options.mode === 'backend') {
+    if (options.dataMode === 'prod') {
+      if (options.databasePath === undefined) {
+        throw new OpsError('USAGE', '--data prod 必须显式提供 --database-path', [], EXIT_USAGE);
+      }
+      databasePath = options.databasePath;
+    } else if (options.databasePath !== undefined) {
+      throw new OpsError('USAGE', '--database-path 仅允许与 --data prod 一起使用', [], EXIT_USAGE);
+    }
+  }
   const watch = options.mode === 'integration' && options.watch;
   return {
     mode: options.mode,
@@ -115,6 +130,7 @@ export function planMode(options: ModeOptions): ModePlan {
     watchBuild: watch ? frontendWatchBuild : undefined,
     entry: options.mode === 'integration' ? 'product' : null,
     dataMode: options.mode === 'integration' ? 'test' : options.dataMode,
+    databasePath,
     scenario: null,
     watch,
     contentSource: options.contentSource ?? 'fixture',
