@@ -2,6 +2,7 @@ node_modules/
 target/
 src/frontend/dist/
 src/frontend/.generated/
+src/frontend/common/validation/generated/
 .direnv/
 *.log
 .DS_Store

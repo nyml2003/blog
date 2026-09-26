@@ -52,7 +52,7 @@
 - [x] ops 契约测试与静态检查:123 例(110 通过、13 个默认跳过的真实进程用例);ops 语法检查全过;pnpm typecheck/lint/format/build 全过;
 - [ ] `ops quality check` 未全绿,两处既有失败与本次改动无关:(a) `scripts/test-article-html-wasm.mjs:14` 引用的 `docs/plans/archive/PLAN-ARTICLE-HTML-VALIDATION-001/fixtures/article-html-v1.json` 已随 plans 目录移除;(b) `src/frontend/app/kernel/ports/index.ts` 触发 kernel 架构边界(最后修改 3fb7b6b,本次未动);
 - [x] ops 类型校验:ops 不在项目 tsc 门禁内;单独用 tsc 7.0.2 strict 校验,本次改动文件 0 错误(全仓 ops 另有 22 条历史遗留错误,不在本期范围);
-- 备注:质量检查的 wasm 构建重新生成了 `src/frontend/common/validation/generated/article_html_wasm_bg.wasm`(既有产物漂移),是否还原待确认。
+- 备注:wasm-bindgen 生成产物(`src/frontend/common/validation/generated/`)已按用户要求移出 git 跟踪并加入 .gitignore(2026-09-26),构建流程会自动重新生成。
 
 ---
 
