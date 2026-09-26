@@ -53,12 +53,14 @@
 - [ ] `ops quality check` 未全绿,两处既有失败与本次改动无关:(a) `scripts/test-article-html-wasm.mjs:14` 引用的 `docs/plans/archive/PLAN-ARTICLE-HTML-VALIDATION-001/fixtures/article-html-v1.json` 已随 plans 目录移除;(b) `src/frontend/app/kernel/ports/index.ts` 触发 kernel 架构边界(最后修改 3fb7b6b,本次未动);
 - [x] ops 类型校验:ops 不在项目 tsc 门禁内;单独用 tsc 7.0.2 strict 校验,本次改动文件 0 错误(全仓 ops 另有 22 条历史遗留错误,不在本期范围);
 - 备注:wasm-bindgen 生成产物(`src/frontend/common/validation/generated/`)已按用户要求移出 git 跟踪并加入 .gitignore(2026-09-26),构建流程会自动重新生成。
+- 主控复核(2026-09-26):单元/契约测试复跑全绿(63 例,0 失败);E2E 档(`OPS_RUNTIME_E2E=1`)复跑 **MODE-PROD 通过**,核心验收属实。同档另有 3 个失败用例(`MODE-001`/`PORT-002+ENV-001` dev+Vite 链路 60s 超时 ×2、`FAIL-003` missing-binary stdout 断言 ×1),均不在 A 块改动面(prod/backend 用例全过),待归因;不阻塞部署,可与 quality check 两处既有失败一并处置。
 
 ---
 
 ## 工作块 B:服务器部署
 
 > 本工作块无代码开发,全部是构建、部署与验收操作;唯一入库产物是 systemd unit 文件(建议 `deploy/systemd/`,见 B1)。技术细节见 [`PLAN-PUBLIC-DEPLOY-001-TECH.md`](./PLAN-PUBLIC-DEPLOY-001-TECH.md) 第 3 节。
+> **前置:先完成本地生产彩排 [PLAN-LOCAL-REHEARSAL-001](./PLAN-LOCAL-REHEARSAL-001.md)(2026-09-26 拆出独立 plan),其发现的阻塞性问题回写本 plan。**
 
 ### B0 部署物与目标环境
 
@@ -66,10 +68,11 @@
 - 服务器基础准备(重置后、部署前):安装 nginx;创建系统用户 `blog`;创建 `/var/lib/blog/web/dist` 并从开发机上传前端 dist 与二进制(见下表);证书按决策点 6 上传。`admin-auth` 目录由凭证工具自行创建(0700),无需预建。
 - **构建方案已定(2026-09-26):macOS 交叉编译**。前端 `dist` 为纯静态文件,与平台无关;Rust binary 用 musl 静态链接(不依赖服务器 glibc 版本):
   1. 服务器 `uname -m` 定 target:`x86_64` → `x86_64-unknown-linux-musl`;`aarch64` → `aarch64-unknown-linux-musl`;
-  2. mac 准备:`brew install zig cargo-zigbuild` + `rustup target add <target>`;
-  3. `src/` workspace 下 `cargo zigbuild --release --target <target>`;产物在 `src/target/<target>/release/`;
+  2. mac 准备(2026-09-26 实测):`rustup target add <target>`(直连 rust-lang 很慢,用镜像 `RUSTUP_DIST_SERVER=https://mirrors.ustc.edu.cn/rust-static`);
+  3. 交叉工具走 nix、不装全局:`nix shell nixpkgs#zig nixpkgs#cargo-zigbuild -c sh -c 'export PATH="$HOME/.rustup/toolchains/stable-aarch64-apple-darwin/bin:$PATH"; cd src && cargo zigbuild --release --locked --target <target>'`;必须用 rustup 工具链的 cargo(nix 的 cargo 没有 musl std),内部 cargo-zigbuild/zig 由 nix shell 提供;brew 路径因本机未接受 Xcode 许可而不可用;
   4. 前端在 mac 上直接构建(与平台无关):`ops delivery build --dry-run` 核对步骤后执行,或单独 `pnpm -C src/frontend run build`,产物 `src/frontend/dist/`;
   5. 备选(若 zigbuild 不可行):Docker/colima 容器内构建。
+- 构建冒烟结果(2026-09-26):两个 target 的 product/data/blog-admin-credentials 均产出静态链接 ELF(`file` 验证),产物在 `src/target/<target>/release/`。
 - 传输清单与落位(产物目录 `src/target/<target>/release/`,target 见上):
 
 ```text
@@ -81,7 +84,7 @@ src/frontend/dist/(整目录)                → /var/lib/blog/web/dist/
 (凭证)                                     → /var/lib/blog/admin-auth/(B5 生成)
 ```
 
-### B1 systemd unit(完整模板,落仓库管理;建议放 `deploy/systemd/`,目录名执行时按仓库习惯定)
+### B1 systemd unit(已落位 `deploy/systemd/`,2026-09-26 入库)
 
 `/etc/systemd/system/blog-data.service`:
 
@@ -190,6 +193,7 @@ BLOG_CONTENT_REPO=nyml2003/blog-content BLOG_CONTENT_TOKEN=<token> ops content r
 
 - 幂等:对合法空仓库重复执行成功;创建空 `taxonomy.json` 与 `main`,不建样例文章(registry.ts:80-84);
 - token 用细粒度 PAT(仅授权该仓库)。
+- 执行记录(2026-09-26):仓库已存在且 `main` 已初始化(commit 9054323「Initialize empty blog content repository」),无需再跑 init;已从分支 `feature/2026-09-26-initial-articles` 经 [PR #1](https://github.com/nyml2003/blog-content/pull/1) 合入 3 篇初始文章,本地以 `--content-source github` 起栈验证:合入前公开端 0 篇、合入后 3 篇(文章类型「项目实践」),启动同步无失败。
 
 ### B5 备份与恢复(GitHub 即备份,2026-09-26 定)
 

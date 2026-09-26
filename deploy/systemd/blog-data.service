@@ -1,0 +1,16 @@
+[Unit]
+Description=Blog Data Server (SQLite)
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/data --listen 127.0.0.1:17801 --data-semantics prod --data-database-path /var/lib/blog/blog.db
+Restart=on-failure
+User=blog
+Group=blog
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/blog
+
+[Install]
+WantedBy=multi-user.target

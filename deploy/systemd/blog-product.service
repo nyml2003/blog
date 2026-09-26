@@ -1,0 +1,21 @@
+[Unit]
+Description=Blog Product API (public pages + /api)
+Wants=blog-data.service
+After=network.target blog-data.service
+
+[Service]
+ExecStart=/usr/local/bin/product --listen 127.0.0.1:17800 --data-addr http://127.0.0.1:17801 --web-dir /var/lib/blog/web/dist --content-source github
+Environment=BLOG_TRUSTED_PROXY_IPS=127.0.0.1
+Environment=BLOG_CONTENT_REPO=nyml2003/blog-content
+EnvironmentFile=/var/lib/blog/admin-auth/credentials.env
+EnvironmentFile=/var/lib/blog/product.env
+Restart=on-failure
+User=blog
+Group=blog
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/blog/admin-auth
+
+[Install]
+WantedBy=multi-user.target

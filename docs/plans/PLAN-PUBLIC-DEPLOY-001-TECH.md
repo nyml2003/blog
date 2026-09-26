@@ -119,7 +119,7 @@ Browser --HTTPS--> nginx:443 --HTTP(loopback)--> product:17800 --HTTP(loopback)-
 ### 3.1 构建与产物
 
 - 服务器架构:`uname -m` → `x86_64-unknown-linux-musl` 或 `aarch64-unknown-linux-musl`;
-- Rust 交叉编译:mac 上 `brew install zig cargo-zigbuild` + `rustup target add <target>`,在 `src/` 下 `cargo zigbuild --release --target <target>`;
+- Rust 交叉编译(2026-09-26 已验证):`rustup target add <target>`(USTC 镜像加速),工具走 `nix shell nixpkgs#zig nixpkgs#cargo-zigbuild`,在 `src/` 下用 rustup 工具链的 cargo 执行 `cargo zigbuild --release --locked --target <target>`(nix 的 cargo 没有 musl std;brew 因 Xcode 许可不可用);x86_64/aarch64 两个 target 均产出静态链接 ELF;
 - 依赖风险已核实:Product/Data 无 openssl/native-tls(`ureq` 用 rustls,SQLite 为 bundled `libsqlite3-sys`),musl 交叉编译可行;ring/libsqlite C 代码由 zig 的 cc 处理;
 - 前端:平台无关,在 flake 环境(`direnv allow` 或 `nix develop ./nix`)里 `pnpm -C src/frontend run build` 或 `ops delivery build`;注意 `ops delivery build` 产出的 Rust binary 是 mac 本地格式,**服务器二进制必须来自 zigbuild**;
 - 备选:若 zigbuild 首次失败,Docker/colima 容器内构建并拷出(musl 基础镜像)。
