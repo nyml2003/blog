@@ -134,23 +134,23 @@
    atoms. This block only owns layout. */
 .category-shelf {
   display: grid;
-  min-width: 0;
-  gap: 12px;
-}
-
-.category-shelf-tabs {
-  min-width: 0;
-}
-
-.category-controls {
-  display: grid;
   grid-template-columns: minmax(72px, 21%) minmax(0, 1fr);
   column-gap: 14px;
+  row-gap: 10px;
   align-items: start;
-  padding-bottom: 10px;
+  min-width: 0;
+}
+
+/* F 型货架:左栏一级分类跨两行,右栏自上而下为二级分类与文章列表。
+   中间两层包装只用于挂载状态,不生成盒子。 */
+.category-shelf-tabs,
+.category-controls {
+  display: contents;
 }
 
 .category-root-list {
+  grid-column: 1;
+  grid-row: 1 / span 2;
   position: sticky;
   top: var(--shell-header-sticky-top);
   display: grid;
@@ -161,6 +161,8 @@
 }
 
 .category-child-list {
+  grid-column: 2;
+  grid-row: 1;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -174,8 +176,14 @@
   flex: 0 0 auto;
 }
 
+.category-shelf .article-list {
+  grid-column: 2;
+  grid-row: 2;
+  min-width: 0;
+}
+
 @media (max-width: 360px) {
-  .category-controls {
+  .category-shelf {
     grid-template-columns: minmax(64px, 18%) minmax(0, 1fr);
     column-gap: 10px;
   }
