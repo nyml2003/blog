@@ -148,7 +148,6 @@
   column-gap: 14px;
   align-items: start;
   padding-bottom: 10px;
-  border-bottom: 2px solid var(--ink);
 }
 
 .category-root-list {
@@ -169,6 +168,11 @@
   padding-bottom: 2px;
   overflow-x: auto;
   scrollbar-width: thin;
+}
+
+.category-child-list .m-atom-tab {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 @media (max-width: 360px) {
