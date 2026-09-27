@@ -125,18 +125,31 @@ export function createMobileArticlesPage(
                   />
                 </div>
                 <div class="article-list">
-                  {model.articles.map((article) => (
-                    <ArticleCard
-                      article={{
-                        id: article.id,
-                        title: article.title,
-                        summary: article.summary,
-                        updatedAt: article.updatedAt,
-                        terms: [],
-                      }}
-                      context={context}
-                    />
-                  ))}
+                  {model.articles.map((article) => {
+                    const categoryId = article.categoryIds[0];
+                    const typeName = rootCategoryName(model, categoryId);
+                    return (
+                      <ArticleCard
+                        article={{
+                          id: article.id,
+                          title: article.title,
+                          summary: article.summary,
+                          updatedAt: article.updatedAt,
+                          terms:
+                            categoryId === undefined || typeName === undefined
+                              ? []
+                              : [
+                                  {
+                                    id: categoryId,
+                                    name: typeName,
+                                    kind: "topic",
+                                  },
+                                ],
+                        }}
+                        context={context}
+                      />
+                    );
+                  })}
                 </div>
               </section>
             );
@@ -145,6 +158,23 @@ export function createMobileArticlesPage(
       </MobileShell>
     );
   };
+}
+
+function rootCategoryName(
+  model: DeepReadonly<CategoryShelf>,
+  categoryId: number | undefined,
+): string | undefined {
+  if (categoryId === undefined) return undefined;
+  let current = model.taxonomy.categories.find(
+    (category) => category.id === categoryId,
+  );
+  while (current !== undefined && current.parentId !== undefined) {
+    const parentId = current.parentId;
+    current = model.taxonomy.categories.find(
+      (category) => category.id === parentId,
+    );
+  }
+  return current?.name;
 }
 
 function ForCategories(props: {
@@ -181,7 +211,7 @@ function ForCategories(props: {
         <button
           type="button"
           class={
-            !props.selection.childId ? "m-atom-tab is-selected" : "m-atom-tab"
+            !props.selection.childId ? "m-atom-chip is-selected" : "m-atom-chip"
           }
           onClick={() =>
             props.onSelect({
@@ -197,8 +227,8 @@ function ForCategories(props: {
             type="button"
             class={
               child.id === props.selection.childId
-                ? "m-atom-tab is-selected"
-                : "m-atom-tab"
+                ? "m-atom-chip is-selected"
+                : "m-atom-chip"
             }
             onClick={() =>
               props.onSelect({

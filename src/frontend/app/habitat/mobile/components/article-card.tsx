@@ -47,11 +47,11 @@ export function ArticleCard(props: ArticleCardProps) {
       </p>
       <div class="article-card-meta">
         <span class="article-card-tags">
-          <For each={terms().slice(0, 2)}>
+          <For each={terms().slice(1, 3)}>
             {(term) => <Tag content={term.name} options={{}} />}
           </For>
-          <Show when={terms().length > 2}>
-            <Tag content={`+${terms().length - 2}`} options={{}} />
+          <Show when={terms().length > 3}>
+            <Tag content={`+${terms().length - 3}`} options={{}} />
           </Show>
         </span>
         <time>{props.article.updatedAt.slice(0, 10)}</time>

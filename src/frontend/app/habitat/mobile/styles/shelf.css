@@ -158,11 +158,11 @@
   max-height: calc(100vh - 178px);
   padding-right: 9px;
   overflow-y: auto;
-  border-right: 1px solid var(--border);
 }
 
 .category-child-list {
   display: flex;
+  align-items: center;
   gap: 6px;
   min-width: 0;
   padding-bottom: 2px;
@@ -170,9 +170,8 @@
   scrollbar-width: thin;
 }
 
-.category-child-list .m-atom-tab {
+.category-child-list .m-atom-chip {
   flex: 0 0 auto;
-  white-space: nowrap;
 }
 
 @media (max-width: 360px) {
