@@ -85,7 +85,7 @@ systemd/*.service、nginx/blog.conf(模板)       → 渲染后安装
 
 流程(2026-09-27 修订):代码仓公开,两套 tag——`script-v*` 挂单文件安装器 `blog-deploy.mjs`,`build-v*` 挂双架构发布包;服务器 `/etc/blog/` 只放安装器、`blog.json`(serverName/contentRepo/contentToken)与证书;`node blog-deploy.mjs deploy|redeploy` 自动下载最新 build-v* 对应架构资产并幂等安装,无 release token、无环境变量。服务器操作均由用户执行。
 
-- 执行记录(2026-09-27):GitHub Actions(run 36296766094)全绿,Release [v0.1.0](https://github.com/nyml2003/blog/releases/tag/v0.1.0) 发布 x86_64/aarch64 两个资产(各约 4MB),含安装渲染冒烟。
+- 执行记录(2026-09-27):CI 两套流程跑通——`script-release` 发布 [script-v0.1.0](https://github.com/nyml2003/blog/releases/tag/script-v0.1.0)(blog-deploy.mjs),`build-release` 发布 [build-v0.1.0](https://github.com/nyml2003/blog/releases/tag/build-v0.1.0)(x86_64 发布包;aarch64 为切换前产物);旧 v0.1.0 Release 已删除;build 流程已改为仅构建 x86_64,手动触发验证通过。
 
 ### B1 systemd unit 模板(仓库 `deploy/systemd/`,安装时渲染)
 
