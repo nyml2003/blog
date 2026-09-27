@@ -1,14 +1,62 @@
 #!/usr/bin/env bash
-# 服务器端安装脚本:由 ops delivery package 渲染进发布包,不含任何秘密。
+# 服务器端安装脚本(环境无关):域名与内容仓库名由 /etc/blog/deploy.env 注入。
 # 用法:sudo bash install.sh
-#   TOKEN_FILE=<本机 token 文件>  可选,默认找调用者家目录的 product.env
-#   CERT_DIR=<证书目录>           可选,默认找调用者家目录的 cert/
+#   DEPLOY_ENV_FILE=<文件>   可选,默认 /etc/blog/deploy.env
+#   TOKEN_FILE=<token 文件>  可选,默认找调用者家目录的 product.env
+#   CERT_DIR=<证书目录>      可选,默认找调用者家目录的 cert/
 set -euo pipefail
 
-SERVER_NAME="{{serverName}}"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_FILE="${DEPLOY_ENV_FILE:-/etc/blog/deploy.env}"
 TOKEN_FILE="${TOKEN_FILE:-}"
 CERT_DIR="${CERT_DIR:-}"
+SERVER_NAME="${SERVER_NAME:-}"
+CONTENT_REPO="${CONTENT_REPO:-}"
+
+if [ -f "$CONFIG_FILE" ]; then
+  while IFS='=' read -r key value; do
+    case "$key" in
+      ''|'#'*) continue ;;
+      SERVER_NAME) SERVER_NAME="${SERVER_NAME:-$value}" ;;
+      CONTENT_REPO) CONTENT_REPO="${CONTENT_REPO:-$value}" ;;
+    esac
+  done < "$CONFIG_FILE"
+fi
+
+if ! [[ "$SERVER_NAME" =~ ^[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?$ ]]; then
+  echo "缺少或非法的 SERVER_NAME:请写入 $CONFIG_FILE 或用环境变量提供" >&2
+  exit 1
+fi
+if ! [[ "$CONTENT_REPO" =~ ^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$ ]]; then
+  echo "缺少或非法的 CONTENT_REPO:请写入 $CONFIG_FILE 或用环境变量提供" >&2
+  exit 1
+fi
+
+render_templates() {
+  RENDER_DIR="$ROOT_DIR/.rendered"
+  rm -rf "$RENDER_DIR"
+  mkdir -p "$RENDER_DIR/systemd" "$RENDER_DIR/nginx"
+  sed -e "s|{{serverName}}|$SERVER_NAME|g" -e "s|{{contentRepo}}|$CONTENT_REPO|g" \
+    systemd/blog-data.service > "$RENDER_DIR/systemd/blog-data.service"
+  sed -e "s|{{serverName}}|$SERVER_NAME|g" -e "s|{{contentRepo}}|$CONTENT_REPO|g" \
+    systemd/blog-product.service > "$RENDER_DIR/systemd/blog-product.service"
+  sed -e "s|{{serverName}}|$SERVER_NAME|g" -e "s|{{contentRepo}}|$CONTENT_REPO|g" \
+    nginx/blog.conf > "$RENDER_DIR/nginx/blog.conf"
+  if grep -rq '{{' "$RENDER_DIR"; then
+    echo "模板渲染后仍存在未解析占位符" >&2
+    exit 1
+  fi
+}
+
+cd "$ROOT_DIR"
+sha256sum -c SHA256SUMS
+
+# 冒烟模式:只校验并渲染模板,用于本地/CI 验证,不需要 root。
+if [ "${RENDER_ONLY:-}" = "1" ]; then
+  render_templates
+  echo "render ok: $SERVER_NAME -> $RENDER_DIR"
+  exit 0
+fi
 
 if [ "$(id -u)" != "0" ]; then
   echo "请以 root 运行:sudo bash install.sh" >&2
@@ -20,8 +68,7 @@ if [ -n "${SUDO_USER:-}" ]; then
   INVOKER_HOME="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
 fi
 
-cd "$ROOT_DIR"
-sha256sum -c SHA256SUMS
+render_templates
 
 if ! command -v nginx >/dev/null 2>&1; then
   apt-get update -qq
@@ -39,12 +86,12 @@ rm -rf /var/lib/blog/web/dist
 cp -a web/dist /var/lib/blog/web/dist
 chown -R blog:blog /var/lib/blog/web
 
-install -m 0644 systemd/blog-data.service /etc/systemd/system/blog-data.service
-install -m 0644 systemd/blog-product.service /etc/systemd/system/blog-product.service
+install -m 0644 "$RENDER_DIR/systemd/blog-data.service" /etc/systemd/system/blog-data.service
+install -m 0644 "$RENDER_DIR/systemd/blog-product.service" /etc/systemd/system/blog-product.service
 systemctl daemon-reload
 systemctl enable blog-data.service blog-product.service
 
-install -m 0644 nginx/blog.conf /etc/nginx/sites-available/blog.conf
+install -m 0644 "$RENDER_DIR/nginx/blog.conf" /etc/nginx/sites-available/blog.conf
 ln -sfn /etc/nginx/sites-available/blog.conf /etc/nginx/sites-enabled/blog.conf
 rm -f /etc/nginx/sites-enabled/default
 

@@ -197,7 +197,7 @@ WantedBy=multi-user.target
 
 设计要点:
 
-- 仓库中的 unit/nginx 是模板(`deploy/systemd/`、`deploy/nginx/blog.conf`),`{{contentRepo}}`/`{{serverName}}` 在 `ops delivery package` 打包时由仓库外配置注入;`ops delivery deploy` 幂等安装;
+- 仓库与发布包中的 unit/nginx 是模板(`deploy/systemd/`、`deploy/nginx/blog.conf`),`{{contentRepo}}`/`{{serverName}}` 在服务器安装时由 `install.sh` 读取 `/etc/blog/deploy.env` 注入;发布包环境无关、不含个人标识;
 - `--admin off`(决策点 8):公网不提供管理面,`/admin/*`、`/api/admin/*` 一律 404,不读取管理凭证,服务器不需要 `admin-auth` 目录;
 - `--content-source github` 必须显式传:Product 默认是 `fixture`(src/backend/product/src/cli.rs:132),漏掉会完全不读内容仓库;
 - 用 `Wants=` 而不是 `Requires=`:`Requires` 会让 `systemctl stop blog-data` 连带停掉 Product,和验收"data 停机时页面报错明确、恢复后自愈"矛盾;`Wants+After` 只保证启动顺序,不传播停止;
@@ -222,14 +222,12 @@ WantedBy=multi-user.target
 
 ### 3.5 从空服务器到可用的执行顺序
 
-1. (一次性,用户)重置服务器:加 SSH 公钥、云安全组放行 80/443、域名解析指向服务器;把阿里云证书放到服务器 `~/cert/<serverName>.pem|.key`、token 放到 `~/product.env`;
-2. (开发机)写仓库外配置 `~/.config/blog/deploy.json`(host/target/serverName/contentRepo);
-3. (开发机)`ops delivery package --config <配置>` 产出发布包;
-4. (用户)手动 `scp` 发布包到服务器并解包;
-5. (服务器,用户)`sudo bash install.sh`:校验 SHA256SUMS → 安装产物/配置/证书/token → 重启 → 健康检查;
-6. 走 B6 验收 + B5 恢复演练;更新版本重复 3~5 即可(install.sh 幂等)。
+1. (一次性,用户)重置服务器:加 SSH 公钥、云安全组放行 80/443、域名解析指向服务器;写 `/etc/blog/deploy.env`(SERVER_NAME/CONTENT_REPO)、放 `/etc/blog/release.token`(代码仓只读)、证书到 `~/cert/<serverName>.pem|.key`、内容 token 到 `~/product.env`;
+2. (开发机)打并推送 tag `v*` → GitHub Actions 构建双架构发布包并挂 Release(本地 `ops delivery package --target <t>` 等价);CI 会顺带做 install 渲染冒烟;
+3. (服务器,用户)`curl` 带只读 token 下载资产 → 解包 → `sudo bash install.sh`:校验 SHA256SUMS → 注入域名/仓库名 → 安装产物/配置/证书/token → 重启 → 健康检查;
+4. 走 B6 验收 + B5 恢复演练;更新版本重复 2~3 即可(install.sh 幂等)。
 
-可选的 SSH 自动化:`ops delivery deploy --config <配置>`(在 mac 上代办步骤 4~5);服务器操作归用户时不必用它。手工回退路径仍在计划 B1/B2/B3 节保留。
+手工回退路径仍在计划 B1/B2/B3 节保留(unit/nginx 内容与安装位置不变)。
 
 ### 3.6 备份与恢复(GitHub 即备份)
 
@@ -286,6 +284,6 @@ B 块:
 
 ## 7. 交付物
 
-- 仓库内:ops 代码变更与测试、`SPEC-OPS-PARAMETERS-001` 修订、`deploy/systemd/*.service`、计划/方案文档状态更新;
-- 服务器上:两个 unit、nginx 配置、`product.env`(token)、二进制与 dist(不入仓库);服务器无管理凭证;
+- 仓库内:ops 代码变更与测试、`SPEC-OPS-PARAMETERS-001` 修订、`deploy/`(unit/nginx 模板、install.sh、README)、`.github/workflows/release.yml`、计划/方案文档状态更新;
+- 服务器上:两个 unit、nginx 配置、`/etc/blog/deploy.env` 与 `release.token`、`product.env`(token)、证书、二进制与 dist;服务器无管理凭证;
 - 证据:质量检查输出、A3 手工验收记录、B6 验收与恢复演练记录。

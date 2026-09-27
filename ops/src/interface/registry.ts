@@ -5,11 +5,11 @@ import { runAdminCredentialCommand } from '../application/admin-auth.ts';
 import { initializeContentRepository } from '../application/content-repository.ts';
 import { runDeliveryBuild, runRuntimeMode, type RuntimePorts } from '../application/runtime.ts';
 import { runDeployPackage, type DeployPorts } from '../application/deploy-package.ts';
-import { runDeployApply, runDeployBundle } from '../application/deploy-run.ts';
+import { runDeployBundle } from '../application/deploy-bundle.ts';
 import { runPackageCheck } from '../application/package-check.ts';
 import { runPlaygroundDev } from '../application/playground.ts';
 import { planMode, MOCK_SCENARIOS, DATA_MODES, CONTENT_SOURCES } from '../domain/runtime-plan.ts';
-import { parseDeployConfig, type DeployConfig } from '../domain/deploy-plan.ts';
+import { DEPLOY_TARGETS } from '../domain/deploy-plan.ts';
 import { PORT_MIN, PORT_MAX } from '../domain/port-allocation.ts';
 
 const FAILURE = { code: 20, meaning: '执行失败（构建失败、端口耗尽、服务启动失败或运行中的服务退出）' };
@@ -38,20 +38,6 @@ function deployPorts(context: CommandContext): DeployPorts {
     reporter: context.reporter,
     root: context.workspace.root,
   };
-}
-
-function deployConfigOption() {
-  return { name: 'config', description: '部署配置(JSON,放仓库外)', model: { kind: 'path' } as const };
-}
-
-/** 读取并校验仓库外的部署配置;配置错误按用法错误返回 10。 */
-async function loadDeployConfig(context: CommandContext, path: string): Promise<DeployConfig | number> {
-  try {
-    return parseDeployConfig(await context.fs.read(path), context.environment.HOME);
-  } catch (error) {
-    context.reporter.fail(`部署配置不可用:${error instanceof Error ? error.message : String(error)}`);
-    return 10;
-  }
 }
 
 function portOption<const N extends string>(name: N, description: string) {
@@ -118,28 +104,12 @@ export const commandDefinitions: readonly CommandDefinition[] = [
   }, (context) => runDeliveryBuild(runtimePorts(context), { dryRun: context.dryRun, json: context.json })),
   defineCommand({
     path: ['delivery', 'package'],
-    summary: '构建并打包发布包（无秘密）',
-    description: '构建前端与 musl 交叉编译产物，渲染 systemd/nginx 模板，产出 deploy/dist/blog-release-*.tar.gz；手动上传到服务器 ~/blog-releases 后执行 ops delivery deploy。',
-    examples: ['ops delivery package --config ~/.config/blog/deploy.json', 'ops delivery package --config ~/.config/blog/deploy.json --dry-run'],
-    options: [deployConfigOption()],
+    summary: '构建环境无关的发布包(无秘密)',
+    description: '构建前端与 musl 交叉产物,连同 systemd/nginx 模板与 install.sh 打包为 deploy/dist/blog-release-<target>-*.tar.gz;域名/仓库名在服务器端由 install.sh 注入。',
+    examples: ['ops delivery package --target x86_64-unknown-linux-musl', 'ops delivery package --target aarch64-unknown-linux-musl --dry-run'],
+    options: [{ name: 'target', description: '目标架构(必须显式选择)', model: { kind: 'enum', values: DEPLOY_TARGETS } }],
     exitCodes: [{ code: 0, meaning: '发布包生成成功' }, FAILURE],
-  }, async (context, args) => {
-    const config = await loadDeployConfig(context, args.config);
-    if (typeof config === 'number') return config;
-    return runDeployPackage(config, deployPorts(context), { dryRun: context.dryRun });
-  }),
-  defineCommand({
-    path: ['delivery', 'deploy'],
-    summary: '从服务器发布包幂等安装',
-    description: 'SSH 到目标机：准备 nginx/blog 用户与目录，校验并解开发布包，安装二进制/dist/unit/nginx 配置，从 ~/cert 安装证书，上传本机 token，重启服务并做健康检查；可重复执行即发新版本。',
-    examples: ['ops delivery deploy --config ~/.config/blog/deploy.json', 'ops delivery deploy --config ~/.config/blog/deploy.json --dry-run'],
-    options: [deployConfigOption()],
-    exitCodes: [{ code: 0, meaning: '部署完成且健康检查通过' }, FAILURE],
-  }, async (context, args) => {
-    const config = await loadDeployConfig(context, args.config);
-    if (typeof config === 'number') return config;
-    return runDeployApply(config, deployPorts(context), { dryRun: context.dryRun });
-  }),
+  }, (context, args) => runDeployPackage(args.target, deployPorts(context), { dryRun: context.dryRun })),
   defineCommand({
     path: ['delivery', 'bundle'],
     summary: '把 ops CLI 打成单文件 JS',

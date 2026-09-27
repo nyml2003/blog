@@ -1,55 +1,47 @@
 # deploy
 
-`ops delivery package|deploy|bundle` 的约定与用法。
+发布包由 CI(打 tag 触发)构建并挂到 GitHub Release;服务器上解包后 `install.sh` 完成安装。
+发布包**环境无关**,不含域名、仓库名、token 或证书。
 
-## 日常发布(服务器操作由你执行)
+## 一次性配置(服务器)
+
+```text
+/etc/blog/deploy.env     0600  SERVER_NAME=<域名>
+                               CONTENT_REPO=<owner>/<内容仓库>
+/etc/blog/release.token  0600  代码仓只读 PAT(Contents: Read),用于下载 Release 资产
+~/cert/<域名>.pem|.key         阿里云证书(事实源)
+~/product.env            0600  内容仓库 token(BLOG_CONTENT_TOKEN=...)
+```
+
+## 发版
 
 ```sh
-# 1. 本机构建并打包(无秘密)
-ops delivery package --config ~/.config/blog/deploy.json
-
-# 2. 上传到服务器:发布包、证书、token 各就各位
-scp -p deploy/dist/blog-release-*.tar.gz <host>:~/
-scp -p <本机证书>/<域名>.pem <域名>.key <host>:~/cert/     # 服务器端约定目录
-scp -p ~/.local/state/blog/product.env <host>:~/product.env
-
-# 3. 服务器上解包并安装(幂等;重复执行即发新版本)
-tar -xzf blog-release-*.tar.gz -C blog-release && cd blog-release && sudo bash install.sh
+git tag v0.1.0 && git push origin v0.1.0
 ```
 
-`install.sh` 会校验 `SHA256SUMS`、准备 nginx/blog 用户与目录、安装二进制与 dist、安装 unit 与 nginx 配置、从 `~/cert` 安装证书、把 `~/product.env` 装成 `/var/lib/blog/product.env`(0600),最后重启服务并做健康检查。可用 `CERT_DIR` / `TOKEN_FILE` 覆盖默认位置。
+CI 构建 `x86_64` 与 `aarch64` 两个 musl 资产并挂到 Release。也可在 Actions 页手动触发(只出 workflow artifact,不发 Release)。
 
-可选的 SSH 自动化:在 mac 上 `ops delivery deploy --config ...` 会代为完成上面的传输与安装;服务器操作习惯手工时不用它。
+## 服务器更新(幂等;重复执行即发新版本)
 
-## 配置(放仓库外,建议 0600)
-
-```json
-{
-  "host": "blog",
-  "target": "x86_64-unknown-linux-musl",
-  "serverName": "example.com",
-  "contentRepo": "owner/blog-content"
-}
+```sh
+TOKEN=$(sudo cat /etc/blog/release.token)
+curl -fL -H "Authorization: Bearer $TOKEN" -o blog-release.tar.gz \
+  "https://github.com/<owner>/<repo>/releases/download/v0.1.0/blog-release-<target>-<stamp>.tar.gz"
+tar -xzf blog-release.tar.gz -C blog-release
+cd blog-release && sudo bash install.sh
 ```
 
-| 字段 | 必填 | 默认 | 说明 |
-| --- | --- | --- | --- |
-| `host` | 是 | - | SSH 目标,`~/.ssh/config` 别名或 `user@ip` |
-| `port` | 否 | ssh 配置 | 显式 SSH 端口 |
-| `target` | 是 | - | `x86_64-unknown-linux-musl` 或 `aarch64-unknown-linux-musl` |
-| `serverName` | 是 | - | 域名,渲染 nginx 与证书文件名 |
-| `contentRepo` | 是 | - | `owner/repo`,渲染进 Product unit |
-| `tokenFile` | 否 | `~/.local/state/blog/product.env` | 本机 0600 token 文件 |
-| `archiveRemoteDir` | 否 | `blog-releases` | 服务器上发布包目录(相对 `$HOME`) |
-| `certSourceDir` | 否 | `cert` | 服务器上证书目录(相对 `$HOME`) |
+`install.sh`:校验 `SHA256SUMS` → 读 `/etc/blog/deploy.env` → `sed` 渲染 unit/nginx 模板 → 安装二进制/dist/配置 → 从 `~/cert` 装证书、从 `~/product.env` 装 token(0600)→ 重启并健康检查。可用 `DEPLOY_ENV_FILE` / `CERT_DIR` / `TOKEN_FILE` 覆盖默认位置。
+
+## 本地构建(可选)
+
+```sh
+ops delivery package --target x86_64-unknown-linux-musl   # 产物在 deploy/dist/(已 gitignore)
+ops delivery bundle                                      # ops CLI 单文件 JS,任意有 Node 的机器可跑
+```
 
 ## 秘密边界
 
-- 仓库与发布包都不含 token、证书私钥、域名(模板占位符在打包时注入);
-- token 只在部署时从本机 0600 文件经 `scp` → `install 0600` 传输,内容不进命令行、日志与输出;
-- 证书私钥始终留在服务器 `~/cert/` 与 `/etc/nginx/cert/`;
-- 发布包可安全落在服务器磁盘,默认保留最近 3 份便于回滚。
-
-## 单文件脚本
-
-`ops delivery bundle` 会把 ops CLI 打成 `deploy/dist/blog-deploy.mjs`(依赖 node 内置模块),复制到任意有 Node 的机器即可执行 `node blog-deploy.mjs delivery deploy --config ...`。
+- 仓库与发布包都不含 token、证书、域名与仓库名;模板渲染在服务器安装时完成;
+- `deploy.env`、`release.token`、`product.env`、证书都留在服务器 0600 文件里;
+- 发布包带 `MANIFEST.json` 与 `SHA256SUMS`,安装前逐项校验。
