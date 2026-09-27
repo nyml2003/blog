@@ -1,6 +1,6 @@
 # PLAN-PUBLIC-DEPLOY-001 博客公网上线
 
-- 状态:进行中(2026-09-27;A 块、公网只读、通用发布包与 CI 工作流已就绪,门禁全绿;待打 tag 验证 Release 与准备服务器)
+- 状态:进行中(2026-09-27;CI 已跑通,Release v0.1.0 双架构资产就绪;待服务器一次性配置与安装验收)
 - 目标:博客以 HTTPS 公网可用,服务器重启自动恢复,文章数据有备份。
 - 读者:执行本计划的实现者(人或 agent)。本文件自包含,按节执行;标注「已核实」的事实均给出文件与行号,执行前可复核。
 - 范围:工作块 A(ops 放行 `prod` 数据模式)+ 工作块 B(服务器部署)。
@@ -85,6 +85,8 @@ systemd/*.service、nginx/blog.conf(模板渲染)   → /etc/systemd/system、/e
 ```
 
 流程:发布包由 CI(打 tag)构建并挂到 GitHub Release;服务器经只读 token 下载资产、解包后 `sudo bash install.sh`(域名/仓库名读 `/etc/blog/deploy.env`,证书放 `~/cert/`,token 放 `~/product.env`);数据由启动自动创建迁移。服务器操作均由用户执行。
+
+- 执行记录(2026-09-27):GitHub Actions(run 36296766094)全绿,Release [v0.1.0](https://github.com/nyml2003/blog/releases/tag/v0.1.0) 发布 x86_64/aarch64 两个资产(各约 4MB),含安装渲染冒烟。
 
 ### B1 systemd unit 模板(仓库 `deploy/systemd/`,安装时渲染)
 
