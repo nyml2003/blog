@@ -3,7 +3,7 @@ use article_html_core::{MAX_INPUT_BYTES, inspect, parse};
 #[test]
 fn shared_fixtures() {
     let fixtures: serde_json::Value = serde_json::from_str(include_str!(
-        "../../../../docs/plans/archive/PLAN-ARTICLE-HTML-VALIDATION-001/fixtures/article-html-v1.json"
+        "fixtures/article-html-v1.json"
     ))
     .unwrap();
     for case in fixtures["cases"].as_array().unwrap() {

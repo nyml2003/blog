@@ -11,7 +11,7 @@ const workspace = fileURLToPath(new URL("../", import.meta.url));
 const fixtures = JSON.parse(
   readFileSync(
     new URL(
-      "../docs/plans/archive/PLAN-ARTICLE-HTML-VALIDATION-001/fixtures/article-html-v1.json",
+      "../src/core/article-html-core/tests/fixtures/article-html-v1.json",
       import.meta.url,
     ),
     "utf8",
