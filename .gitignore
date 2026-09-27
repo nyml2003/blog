@@ -3,6 +3,7 @@ target/
 src/frontend/dist/
 src/frontend/.generated/
 src/frontend/common/validation/generated/
+deploy/dist/
 .direnv/
 *.log
 .DS_Store

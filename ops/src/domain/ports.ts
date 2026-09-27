@@ -12,6 +12,9 @@ export interface FsPort {
   exists(path: string): Promise<boolean>;
   files(root: string): Promise<string[]>;
   mkdir(path: string): Promise<void>;
+  write?(path: string, content: string): Promise<void>;
+  copy?(from: string, to: string): Promise<void>;
+  readBytes?(path: string): Promise<Buffer>;
   inspect?(path: string): Promise<FileMetadata>;
   readSecure?(path: string, maxBytes: number): Promise<SecureFile>;
   effectiveUid?(): number | undefined;

@@ -1,6 +1,6 @@
 # PLAN-PUBLIC-DEPLOY-001 博客公网上线
 
-- 状态:进行中(2026-09-27;A 块与公网只读模式已实现并实测,质量门禁已全绿;B 块待用户准备服务器/证书/PAT)
+- 状态:进行中(2026-09-27;A 块、公网只读与部署工具已实现并实测,质量门禁全绿;B 块待服务器重置/SSH 与证书就绪)
 - 目标:博客以 HTTPS 公网可用,服务器重启自动恢复,文章数据有备份。
 - 读者:执行本计划的实现者(人或 agent)。本文件自包含,按节执行;标注「已核实」的事实均给出文件与行号,执行前可复核。
 - 范围:工作块 A(ops 放行 `prod` 数据模式)+ 工作块 B(服务器部署)。
@@ -73,18 +73,18 @@
   4. 前端在 mac 上直接构建(与平台无关):`ops delivery build --dry-run` 核对步骤后执行,或单独 `pnpm -C src/frontend run build`,产物 `src/frontend/dist/`;
   5. 备选(若 zigbuild 不可行):Docker/colima 容器内构建。
 - 构建冒烟结果(2026-09-26):两个 target 的 product/data/blog-admin-credentials 均产出静态链接 ELF(`file` 验证),产物在 `src/target/<target>/release/`。
-- 传输清单与落位(产物目录 `src/target/<target>/release/`,target 见上):
+- 传输与落位已命令化(2026-09-27,决策点 9):`ops delivery package --config <仓库外配置>` 构建并产出无秘密发布包 `deploy/dist/blog-release-*.tar.gz`,包内布局:
 
 ```text
-src/target/<target>/release/product      → /usr/local/bin/product
-src/target/<target>/release/data         → /usr/local/bin/data
-src/target/<target>/release/blog-admin-credentials → /usr/local/bin/blog-admin-credentials
-src/frontend/dist/(整目录)                → /var/lib/blog/web/dist/
-(数据库)                                   → /var/lib/blog/blog.db(启动自动创建+迁移,无需预置)
-(凭证)                                     → /var/lib/blog/admin-auth/(B5 生成)
+MANIFEST.json(含 sha256,安装前校验)
+bin/product bin/data bin/blog-admin-credentials → /usr/local/bin/
+web/dist/(整目录)                               → /var/lib/blog/web/dist/
+systemd/*.service、nginx/blog.conf(模板渲染)   → /etc/systemd/system、/etc/nginx
 ```
 
-### B1 systemd unit(已落位 `deploy/systemd/`,2026-09-26 入库)
+手动 `scp` 到服务器 `~/blog-releases/` 后,`ops delivery deploy --config <配置>` 幂等安装;数据库启动自动创建迁移;token 由 deploy 从本机 0600 文件单独安装。
+
+### B1 systemd unit 模板(仓库 `deploy/systemd/`,打包时渲染)
 
 `/etc/systemd/system/blog-data.service`:
 
@@ -118,7 +118,7 @@ After=network.target blog-data.service
 [Service]
 ExecStart=/usr/local/bin/product --listen 127.0.0.1:17800 --data-addr http://127.0.0.1:17801 --web-dir /var/lib/blog/web/dist --content-source github --admin off
 Environment=BLOG_TRUSTED_PROXY_IPS=127.0.0.1
-Environment=BLOG_CONTENT_REPO=nyml2003/blog-content
+Environment=BLOG_CONTENT_REPO={{contentRepo}}
 EnvironmentFile=/var/lib/blog/product.env
 Restart=on-failure
 User=blog
@@ -132,15 +132,16 @@ WantedBy=multi-user.target
 ```
 
 说明:
+- 模板化(决策点 9):unit/nginx 在仓库里只保留占位符(`{{contentRepo}}`、`{{serverName}}`),打包时由仓库外配置注入;仓库不再出现域名与 GitHub 仓库名。
 - 内部端口已定(决策点 7):Product `17800`、Data `17801`(均回环);Data `--listen`、Product `--listen`/`--data-addr`、nginx `proxy_pass` 四处保持一致。
 - unit 两处修正(2026-09-26 评审,详见 TECH 文档 3.3):`--content-source github` 必传(Product 默认 fixture,漏传不读内容仓库,`src/backend/product/src/cli.rs:132`);`Requires` 改 `Wants`,否则 `systemctl stop blog-data` 会连带停掉 Product,和 B6「data 停机时页面报错明确、恢复后自愈」矛盾。
 - 公网只读(决策点 8,2026-09-26):unit 用 `--admin off`,管理面 `/admin/*`、`/api/admin/*` 一律 404,不读取凭证;服务器不再需要 `admin-auth` 目录与凭证文件,`ReadWritePaths` 相应移除;管理只存在于本地编辑栈。
 - `BLOG_CONTENT_TOKEN` 放独立文件 `/var/lib/blog/product.env`(root:root 0600,唯一内容 `BLOG_CONTENT_TOKEN=<token>`),由 unit `EnvironmentFile=` 加载;该文件不入仓库、不进 unit 明文。
 - Product 对 Data 短暂不可用的行为:GitHub 同步失败走 last-good 快照、公开读取继续(operations.md:51);Data 停机时 Product 请求失败——验收 B6 覆盖。
 
-### B2 nginx 配置(服务器重置后全新部署)
+### B2 nginx 配置(模板 `deploy/nginx/blog.conf`,打包时渲染)
 
-服务器重置后无既有站点,全新写入 80 跳转 + 443 反代:
+服务器重置后无既有站点,全新写入 80 跳转 + 443 反代;模板中 `{{serverName}}` 由配置注入:
 
 ```nginx
 server {
@@ -208,6 +209,7 @@ BLOG_CONTENT_REPO=nyml2003/blog-content BLOG_CONTENT_TOKEN=<token> ops content r
 - [ ] `systemctl restart blog-product` 或整机 reboot 后两服务自动恢复;
 - [ ] `systemctl stop blog-data` 后页面/接口报错明确(不 500 挂死),恢复 data 后服务自愈;
 - [ ] 恢复演练按 B5 执行成功:清空 DB 后从 main 重建,抽查文章、分类可读,推荐位为空属预期;
+- [ ] 发布包无秘密(tar 内容与 MANIFEST 不含 token/证书),`ops delivery deploy` 连续执行两次均成功(幂等);
 - [ ] HTTP(80)访问自动跳转 HTTPS;证书链有效。
 
 ---
@@ -222,6 +224,7 @@ BLOG_CONTENT_REPO=nyml2003/blog-content BLOG_CONTENT_TOKEN=<token> ops content r
 6. **证书来源**:**已定(2026-09-26):阿里云证书**。用户手动上传到用户目录(仓库外,唯一事实源,以上传位置为准);nginx 引用惯例位置 `/etc/nginx/cert/`,部署时复制过去(root:root 0600)。
 7. **内部端口**:**已定(2026-09-26):Product `127.0.0.1:17800`、Data `127.0.0.1:17801`**。避开 8080/8081 与 Linux 临时端口段(32768–60999);外部仍只有 80/443,unit 与 nginx 已同步。
 8. **公网面形态**:**已定(2026-09-26):公网只读 + 本地编辑**。Product 新增 `--admin <on|off|bypass>`(默认 `on`):服务器 unit 用 `off`,管理面 404、无凭证;本地编辑栈用 `bypass` 免密(接受本地 DNS rebinding 风险),或 `on` 走密码+TOTP;内容更新流程 = 本地提交 PR → 合入 → SSH `systemctl restart blog-product` 触发启动同步。Spec 与部署配置已同步(commit 记录见收尾)。
+9. **部署方式**:**已定(2026-09-27):命令化 + 模板化**。`ops delivery package` 产出无秘密发布包(手动 scp 到服务器 `~/blog-releases/`),`ops delivery deploy --config <仓库外配置>` 幂等安装与重启,`ops delivery bundle` 打成单文件 JS;unit/nginx 改为仓库模板,打包时注入 `serverName`/`contentRepo`,仓库不含个人标识;token/证书不进包、不进仓库。
 
 ## 已核实事实索引
 

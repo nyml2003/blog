@@ -182,7 +182,7 @@ After=network.target blog-data.service
 [Service]
 ExecStart=/usr/local/bin/product --listen 127.0.0.1:17800 --data-addr http://127.0.0.1:17801 --web-dir /var/lib/blog/web/dist --content-source github --admin off
 Environment=BLOG_TRUSTED_PROXY_IPS=127.0.0.1
-Environment=BLOG_CONTENT_REPO=nyml2003/blog-content
+Environment=BLOG_CONTENT_REPO={{contentRepo}}
 EnvironmentFile=/var/lib/blog/product.env
 Restart=on-failure
 User=blog
@@ -197,6 +197,7 @@ WantedBy=multi-user.target
 
 设计要点:
 
+- 仓库中的 unit/nginx 是模板(`deploy/systemd/`、`deploy/nginx/blog.conf`),`{{contentRepo}}`/`{{serverName}}` 在 `ops delivery package` 打包时由仓库外配置注入;`ops delivery deploy` 幂等安装;
 - `--admin off`(决策点 8):公网不提供管理面,`/admin/*`、`/api/admin/*` 一律 404,不读取管理凭证,服务器不需要 `admin-auth` 目录;
 - `--content-source github` 必须显式传:Product 默认是 `fixture`(src/backend/product/src/cli.rs:132),漏掉会完全不读内容仓库;
 - 用 `Wants=` 而不是 `Requires=`:`Requires` 会让 `systemctl stop blog-data` 连带停掉 Product,和验收"data 停机时页面报错明确、恢复后自愈"矛盾;`Wants+After` 只保证启动顺序,不传播停止;
@@ -221,15 +222,14 @@ WantedBy=multi-user.target
 
 ### 3.5 从空服务器到可用的执行顺序
 
-1. (开发机)确认服务器架构、交叉编译三件套、产出二进制与 dist;
-2. (用户)重置服务器、把证书传到用户目录;
-3. (服务器)装 nginx、建用户与目录、落位二进制与 dist;
-4. (服务器)写入两个 unit、`daemon-reload`、`enable`;
-5. (服务器)创建 `/var/lib/blog/product.env`(token);
-6. (服务器)放证书、写 nginx 配置、`nginx -t`、`reload`;
-7. (服务器)`systemctl start blog-data` → `systemctl start blog-product`,查 `/healthz` 与 `curl http://127.0.0.1:17800/product/diagnostics`;
-8. 走 B6 验收 + B5 恢复演练;
-9. (本地)编辑栈用 `--admin bypass`(免密)或 `--admin on`(密码+TOTP)编辑、提交 PR;合入后 SSH 重启 `blog-product` 同步。
+1. (一次性,用户)重置服务器:加 SSH 公钥、云安全组放行 80/443、域名解析指向服务器;把阿里云证书放到服务器 `~/cert/<serverName>.pem|.key`;
+2. (开发机)写仓库外配置 `~/.config/blog/deploy.json`(host/target/serverName/contentRepo);
+3. (开发机)`ops delivery package --config <配置>` 产出发布包;
+4. (用户)手动 `scp deploy/dist/blog-release-*.tar.gz <host>:blog-releases/`;
+5. (开发机)`ops delivery deploy --config <配置>`:准备环境 → 校验 → 安装 → 重启 → 健康检查;
+6. 走 B6 验收 + B5 恢复演练;更新版本重复 3~5 即可(幂等)。
+
+手工回退路径仍在计划 B1/B2/B3 节保留(unit/nginx 内容与安装位置不变)。
 
 ### 3.6 备份与恢复(GitHub 即备份)
 

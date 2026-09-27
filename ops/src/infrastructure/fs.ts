@@ -1,11 +1,20 @@
 import { constants } from 'node:fs';
-import { lstat, mkdir, open, readFile, readdir, stat } from 'node:fs/promises';
-import { join } from 'node:path';
+import { copyFile, lstat, mkdir, open, readFile, readdir, stat, writeFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 import type { FsPort } from '../domain/ports.ts';
 export class NodeFs implements FsPort {
   async read(path: string): Promise<string> { return readFile(path, 'utf8'); }
   async exists(path: string): Promise<boolean> { try { await stat(path); return true; } catch { return false; } }
   async mkdir(path: string): Promise<void> { await mkdir(path, { recursive: true }); }
+  async write(path: string, content: string): Promise<void> {
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(path, content, { mode: 0o644 });
+  }
+  async copy(from: string, to: string): Promise<void> {
+    await mkdir(dirname(to), { recursive: true });
+    await copyFile(from, to);
+  }
+  async readBytes(path: string): Promise<Buffer> { return readFile(path); }
   async inspect(path: string) {
     const metadata = await lstat(path);
     let kind: 'file' | 'directory' | 'symlink' | 'other' = 'other';
