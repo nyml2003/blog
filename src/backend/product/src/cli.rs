@@ -34,6 +34,14 @@ pub enum ContentSource {
     Github,
 }
 
+/// 管理面形态：`On` 密码+TOTP；`Off` 公网只读（管理面 404）；`Bypass` 本地免密。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AdminMode {
+    On,
+    Off,
+    Bypass,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProductAction {
     Serve,
@@ -49,6 +57,7 @@ pub struct Cli {
     pub content_source: ContentSource,
     pub content_repo: Option<String>,
     pub content_token: Option<String>,
+    pub admin: AdminMode,
 }
 
 #[derive(Debug)]
@@ -73,6 +82,7 @@ impl Cli {
         let mut data_addr: Option<String> = None;
         let mut web_dir: Option<PathBuf> = None;
         let mut content_source = None;
+        let mut admin = None;
         let mut args = values.into_iter().peekable();
 
         while let Some(arg) = args.next() {
@@ -121,6 +131,19 @@ impl Cli {
                         }
                     });
                 }
+                "--admin" => {
+                    let value = args.next().ok_or_else(|| missing("--admin"))?;
+                    admin = Some(match value.as_str() {
+                        "on" => AdminMode::On,
+                        "off" => AdminMode::Off,
+                        "bypass" => AdminMode::Bypass,
+                        _ => {
+                            return Err(CliError::Usage(
+                                "--admin expects on, off or bypass".to_owned(),
+                            ));
+                        }
+                    });
+                }
                 other => {
                     return Err(CliError::Usage(format!(
                         "unknown option '{other}'; run `product --help` for usage"
@@ -146,6 +169,7 @@ impl Cli {
             content_source,
             content_repo,
             content_token,
+            admin: admin.unwrap_or(AdminMode::On),
         })
     }
 }
@@ -162,6 +186,7 @@ fn parse_repository_action(values: &[String]) -> Result<Cli, CliError> {
             content_source: ContentSource::Github,
             content_repo: read_env(CONTENT_REPO_ENV),
             content_token: read_env(CONTENT_TOKEN_ENV),
+            admin: AdminMode::On,
         });
     }
     if values == ["content-repository", "init", "--help"] {
@@ -215,6 +240,7 @@ pub fn usage() -> String {
          --data-addr <URL>     Data server address (default {DEFAULT_DATA_ADDR})\n    \
          --web-dir <PATH>      Static frontend dir (integration; not mounted in this batch)\n    \
          --content-source <fixture|github>  Explicit content source (default fixture)\n    \
+         --admin <on|off|bypass>  Admin surface: on = password+TOTP (default), off = public read-only, bypass = local no-auth\n    \
          -h, --help            Print this help\n\
          \n\
          ENVIRONMENT:\n    \
@@ -294,6 +320,27 @@ mod tests {
         let parsed = Cli::parse(args(&["--content-source", "github"])).unwrap();
         assert_eq!(parsed.action, ProductAction::Serve);
         assert_eq!(parsed.content_source, ContentSource::Github);
+    }
+
+    #[test]
+    fn admin_mode_defaults_to_on_and_accepts_explicit_modes() {
+        assert_eq!(Cli::parse(args(&[])).unwrap().admin, AdminMode::On);
+        assert_eq!(
+            Cli::parse(args(&["--admin", "off"])).unwrap().admin,
+            AdminMode::Off
+        );
+        assert_eq!(
+            Cli::parse(args(&["--admin", "bypass"])).unwrap().admin,
+            AdminMode::Bypass
+        );
+        assert!(matches!(
+            Cli::parse(args(&["--admin", "wat"])),
+            Err(CliError::Usage(_))
+        ));
+        assert!(matches!(
+            Cli::parse(args(&["--admin"])),
+            Err(CliError::Usage(_))
+        ));
     }
 
     #[test]

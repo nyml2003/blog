@@ -1,6 +1,6 @@
 # PLAN-PUBLIC-DEPLOY-001 博客公网上线
 
-- 状态:进行中(2026-09-26;A 块已实现并通过进程级验收(质量门禁两处既有失败见 A3);B 块待用户准备仓库/证书/服务器)
+- 状态:进行中(2026-09-26;A 块与公网只读模式已实现并实测,质量门禁三处既有失败见 A3;B 块待用户准备服务器/证书/PAT)
 - 目标:博客以 HTTPS 公网可用,服务器重启自动恢复,文章数据有备份。
 - 读者:执行本计划的实现者(人或 agent)。本文件自包含,按节执行;标注「已核实」的事实均给出文件与行号,执行前可复核。
 - 范围:工作块 A(ops 放行 `prod` 数据模式)+ 工作块 B(服务器部署)。
@@ -50,7 +50,7 @@
 - [x] prod 起栈、重启数据仍在:真实进程 E2E `MODE-PROD` 通过(显式路径建库、自动迁移、不 seed、退出不删、重开同库可读),等同原验收 3+4;
 - [x] integration 行为不变:真实进程 E2E `MODE-004` 通过(固定 test、挂载 web/dist);
 - [x] ops 契约测试与静态检查:123 例(110 通过、13 个默认跳过的真实进程用例);ops 语法检查全过;pnpm typecheck/lint/format/build 全过;
-- [ ] `ops quality check` 未全绿,两处既有失败与本次改动无关:(a) `scripts/test-article-html-wasm.mjs:14` 引用的 `docs/plans/archive/PLAN-ARTICLE-HTML-VALIDATION-001/fixtures/article-html-v1.json` 已随 plans 目录移除;(b) `src/frontend/app/kernel/ports/index.ts` 触发 kernel 架构边界(最后修改 3fb7b6b,本次未动);
+- [ ] `ops quality check` 未全绿,三处既有失败与本次改动无关:(a) `scripts/test-article-html-wasm.mjs:14` 引用的 `docs/plans/archive/PLAN-ARTICLE-HTML-VALIDATION-001/fixtures/article-html-v1.json` 已随 plans 目录移除;(b) `src/frontend/app/kernel/ports/index.ts` 触发 kernel 架构边界(最后修改 3fb7b6b,本次未动);(c) `src/backend/product/src/http.rs:2015` 既有 `clippy::collapsible_match`(本次 diff 未触碰该表达式);
 - [x] ops 类型校验:ops 不在项目 tsc 门禁内;单独用 tsc 7.0.2 strict 校验,本次改动文件 0 错误(全仓 ops 另有 22 条历史遗留错误,不在本期范围);
 - 备注:wasm-bindgen 生成产物(`src/frontend/common/validation/generated/`)已按用户要求移出 git 跟踪并加入 .gitignore(2026-09-26),构建流程会自动重新生成。
 - 主控复核(2026-09-26):单元/契约测试复跑全绿(63 例,0 失败);E2E 档(`OPS_RUNTIME_E2E=1`)复跑 **MODE-PROD 通过**,核心验收属实。同档另有 3 个失败用例(`MODE-001`/`PORT-002+ENV-001` dev+Vite 链路 60s 超时 ×2、`FAIL-003` missing-binary stdout 断言 ×1),均不在 A 块改动面(prod/backend 用例全过),待归因;不阻塞部署,可与 quality check 两处既有失败一并处置。
@@ -116,17 +116,15 @@ Wants=blog-data.service
 After=network.target blog-data.service
 
 [Service]
-ExecStart=/usr/local/bin/product --listen 127.0.0.1:17800 --data-addr http://127.0.0.1:17801 --web-dir /var/lib/blog/web/dist --content-source github
+ExecStart=/usr/local/bin/product --listen 127.0.0.1:17800 --data-addr http://127.0.0.1:17801 --web-dir /var/lib/blog/web/dist --content-source github --admin off
 Environment=BLOG_TRUSTED_PROXY_IPS=127.0.0.1
 Environment=BLOG_CONTENT_REPO=nyml2003/blog-content
-EnvironmentFile=/var/lib/blog/admin-auth/credentials.env
 EnvironmentFile=/var/lib/blog/product.env
 Restart=on-failure
 User=blog
 Group=blog
 NoNewPrivileges=true
 ProtectSystem=strict
-ReadWritePaths=/var/lib/blog/admin-auth
 ProtectHome=true
 
 [Install]
@@ -136,8 +134,8 @@ WantedBy=multi-user.target
 说明:
 - 内部端口已定(决策点 7):Product `17800`、Data `17801`(均回环);Data `--listen`、Product `--listen`/`--data-addr`、nginx `proxy_pass` 四处保持一致。
 - unit 两处修正(2026-09-26 评审,详见 TECH 文档 3.3):`--content-source github` 必传(Product 默认 fixture,漏传不读内容仓库,`src/backend/product/src/cli.rs:132`);`Requires` 改 `Wants`,否则 `systemctl stop blog-data` 会连带停掉 Product,和 B6「data 停机时页面报错明确、恢复后自愈」矛盾。
-- 凭证 env 文件已核实:工具固定生成 `credentials.env`(state 目录内),内容固定三键 `BLOG_ADMIN_PASSWORD_HASH`、`BLOG_ADMIN_TOTP_SECRET`、`BLOG_ADMIN_RUNTIME_DIR`(指向 /var/lib/blog/admin-auth;`src/backend/product/src/bin/blog-admin-credentials.rs:16,127-129`、`src/backend/product/src/auth/config.rs:4-7`)。
-- `BLOG_CONTENT_TOKEN` 不得放入 `credentials.env`:工具只写三键,且文件已存在时拒绝执行(blog-admin-credentials.rs:120-122),手工追加违反「凭证不手工编辑」红线。改放独立文件 `/var/lib/blog/product.env`(root:root 0600,唯一内容 `BLOG_CONTENT_TOKEN=<token>`),由 unit 第二条 `EnvironmentFile=` 加载;该文件不入仓库、不进 unit 明文。
+- 公网只读(决策点 8,2026-09-26):unit 用 `--admin off`,管理面 `/admin/*`、`/api/admin/*` 一律 404,不读取凭证;服务器不再需要 `admin-auth` 目录与凭证文件,`ReadWritePaths` 相应移除;管理只存在于本地编辑栈。
+- `BLOG_CONTENT_TOKEN` 放独立文件 `/var/lib/blog/product.env`(root:root 0600,唯一内容 `BLOG_CONTENT_TOKEN=<token>`),由 unit `EnvironmentFile=` 加载;该文件不入仓库、不进 unit 明文。
 - Product 对 Data 短暂不可用的行为:GitHub 同步失败走 last-good 快照、公开读取继续(operations.md:51);Data 停机时 Product 请求失败——验收 B6 覆盖。
 
 ### B2 nginx 配置(服务器重置后全新部署)
@@ -158,6 +156,10 @@ server {
     ssl_certificate_key /etc/nginx/cert/ventusvocatflumen.cn.key;
     ssl_protocols TLSv1.2 TLSv1.3;
 
+    # 公网只读:管理面在 Product(--admin off)已是 404,这里再加一层兜底
+    location /admin { return 404; }
+    location /api/admin/ { return 404; }
+
     # 页面与 /api 同源,均由 Product(127.0.0.1:17800)提供
     location / {
         proxy_pass http://127.0.0.1:17800;
@@ -173,15 +175,9 @@ server {
 - `nginx -t` 通过后 `systemctl reload nginx`;
 - 前置条件核对:Product 仅在 socket peer 命中 `BLOG_TRUSTED_PROXY_IPS`、`X-Forwarded-For` 为单一合法 IP、`X-Forwarded-Proto` 为 http/https 时采用转发信息(operations.md:66),上述配置与之匹配(nginx 与 Product 同机,peer 即 127.0.0.1)。
 
-### B3 管理凭证初始化(服务器 TTY 上执行)
+### B3 管理凭证(已废弃:公网只读,决策点 8)
 
-```sh
-sudo -u blog /usr/local/bin/blog-admin-credentials init --state-dir /var/lib/blog/admin-auth
-```
-
-- 交互输入密码,TOTP secret 与 10 张恢复码只显示一次,当场录入验证器、恢复码另存;
-- 权限(目录 0700、文件 0600)由工具保证;文件名确认为 `credentials.env`,生成于 state 目录内(unit 第一条 EnvironmentFile 已指向它);
-- 另建 `/var/lib/blog/product.env`(root:root 0600)写入 `BLOG_CONTENT_TOKEN`(unit 第二条 EnvironmentFile;见 B1 说明)。
+服务器不提供管理面,不再初始化管理凭证;`admin-auth` 目录与 `credentials.env` 只属于本地编辑栈:`--admin on` 时在 mac 上按原流程初始化,`--admin bypass` 时不需要任何凭证。原服务器初始化命令与 0700/0600 权限约束仅保留给本地(见 `blog-admin-credentials --help`)。
 
 ### B4 内容仓库初始化(开发机执行)
 
@@ -207,8 +203,9 @@ BLOG_CONTENT_REPO=nyml2003/blog-content BLOG_CONTENT_TOKEN=<token> ops content r
 ### B6 上线验收清单
 
 - [ ] `https://ventusvocatflumen.cn` 公开端(Desktop + Mobile)打开正常,无页面错误;
-- [ ] 管理端登录(密码 + TOTP)→ 提交文章 → GitHub PR 合入 → 公开端可见;未合入 PR 的文章不出现在公开端;
-- [ ] `systemctl restart blog-product` 或整机 reboot 后两服务自动恢复(会话失效属预期);
+- [ ] 公网管理面不存在:`https://ventusvocatflumen.cn/admin`、`/admin/login.html`、`/api/admin/*` 全部 404;公开端只读;
+- [ ] 本地编辑闭环(在 mac 上,`--admin bypass` 或 `on`):新建/编辑文章 → 提交 PR → GitHub 合入 → SSH 执行 `systemctl restart blog-product` → 公网可见新内容;未合入 PR 的内容不可见;
+- [ ] `systemctl restart blog-product` 或整机 reboot 后两服务自动恢复;
 - [ ] `systemctl stop blog-data` 后页面/接口报错明确(不 500 挂死),恢复 data 后服务自愈;
 - [ ] 恢复演练按 B5 执行成功:清空 DB 后从 main 重建,抽查文章、分类可读,推荐位为空属预期;
 - [ ] HTTP(80)访问自动跳转 HTTPS;证书链有效。
@@ -224,6 +221,7 @@ BLOG_CONTENT_REPO=nyml2003/blog-content BLOG_CONTENT_TOKEN=<token> ops content r
 5. **既有服务处置**:**已定(2026-09-26):服务器整体重置**,彻底清空、不留老数据;nginx 与证书全新部署,不需要回退方案;
 6. **证书来源**:**已定(2026-09-26):阿里云证书**。用户手动上传到用户目录(仓库外,唯一事实源,以上传位置为准);nginx 引用惯例位置 `/etc/nginx/cert/`,部署时复制过去(root:root 0600)。
 7. **内部端口**:**已定(2026-09-26):Product `127.0.0.1:17800`、Data `127.0.0.1:17801`**。避开 8080/8081 与 Linux 临时端口段(32768–60999);外部仍只有 80/443,unit 与 nginx 已同步。
+8. **公网面形态**:**已定(2026-09-26):公网只读 + 本地编辑**。Product 新增 `--admin <on|off|bypass>`(默认 `on`):服务器 unit 用 `off`,管理面 404、无凭证;本地编辑栈用 `bypass` 免密(接受本地 DNS rebinding 风险),或 `on` 走密码+TOTP;内容更新流程 = 本地提交 PR → 合入 → SSH `systemctl restart blog-product` 触发启动同步。Spec 与部署配置已同步(commit 记录见收尾)。
 
 ## 已核实事实索引
 
@@ -254,6 +252,7 @@ BLOG_CONTENT_REPO=nyml2003/blog-content BLOG_CONTENT_TOKEN=<token> ops content r
 | Product 内容源默认 fixture,必须显式传 github | src/backend/product/src/cli.rs:132,112-123 |
 | Product 会挂载 --web-dir 静态文件(fallback) | src/backend/product/src/main.rs:167-177 |
 | 健康路由为 GET /healthz | src/backend/product/src/cli.rs:227 |
+| Product 管理面模式 `--admin on|off|bypass` | src/backend/product/src/cli.rs(AdminMode)、http.rs(admin_auth_gate) |
 
 ## 收尾要求(按 AGENTS.md)
 

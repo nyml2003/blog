@@ -25,6 +25,7 @@ use axum::routing::{any, get, post};
 use serde::Deserialize;
 
 use crate::bff;
+use crate::cli::AdminMode;
 use crate::content_contract::{ContentSnapshot, TaxonomyFile};
 use crate::content_service::{ContentService, ContentServiceError};
 use crate::content_workspace::{ArticleDraft, WorkspaceError, WorkspaceStatus, WorkspaceView};
@@ -58,6 +59,7 @@ pub struct AppState {
     pub static_files: Option<StaticFiles>,
     pub started: Instant,
     pub auth: Arc<ProductionAuthRuntime>,
+    pub admin: AdminMode,
 }
 
 pub fn router(state: Arc<AppState>) -> Router {
@@ -390,6 +392,13 @@ async fn admin_auth_gate(
     next: Next,
 ) -> Response {
     let path = request.uri().path();
+    let admin_surface =
+        path == "/admin" || path.starts_with("/admin/") || path.starts_with("/api/admin/");
+    match state.admin {
+        AdminMode::Off if admin_surface => return admin_not_found(),
+        AdminMode::Bypass => return next.run(request).await,
+        AdminMode::Off | AdminMode::On => {}
+    }
     let protected_api = path.starts_with("/api/admin/") && path != scene::ADMIN_SESSION_ENDPOINT;
     let protected_page =
         (path == "/admin" || path.starts_with("/admin/")) && path != "/admin/login.html";
@@ -447,6 +456,15 @@ async fn admin_auth_gate(
         response.headers_mut().append(header::SET_COOKIE, value);
     }
     response
+}
+
+fn admin_not_found() -> Response {
+    (
+        StatusCode::NOT_FOUND,
+        [(header::CONTENT_TYPE, "text/plain; charset=utf-8")],
+        "404 page not found\n",
+    )
+        .into_response()
 }
 
 fn verified_request_origin_from_request(

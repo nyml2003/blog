@@ -30,7 +30,9 @@ use std::time::{Duration, Instant};
 
 use tokio::net::TcpListener;
 
-use crate::cli::{Cli, CliError, ContentSource, EXIT_RUN_FAILURE, EXIT_USAGE, ProductAction};
+use crate::cli::{
+    AdminMode, Cli, CliError, ContentSource, EXIT_RUN_FAILURE, EXIT_USAGE, ProductAction,
+};
 use crate::data_client::DataClient;
 use crate::http::AppState;
 use product::auth::{ProductionAuthRuntime, ProductionAuthState};
@@ -92,12 +94,18 @@ async fn run(cli: Cli, data: DataClient, started: Instant) -> ExitCode {
     // 本批只做就绪观察并记录，不做启动失败（不接管 ops 的编排职责）。
     readiness_probe(&data).await;
     let auth = Arc::new(ProductionAuthRuntime::from_environment());
-    match auth.state() {
-        ProductionAuthState::Configured(_) => {
-            crate::product_info!("admin authentication configured");
-        }
-        ProductionAuthState::Unavailable(reasons) => {
-            crate::product_error!("admin authentication unavailable reasons={reasons:?}");
+    match cli.admin {
+        AdminMode::On => match auth.state() {
+            ProductionAuthState::Configured(_) => {
+                crate::product_info!("admin authentication configured");
+            }
+            ProductionAuthState::Unavailable(reasons) => {
+                crate::product_error!("admin authentication unavailable reasons={reasons:?}");
+            }
+        },
+        AdminMode::Off => crate::product_info!("admin disabled (public read-only)"),
+        AdminMode::Bypass => {
+            crate::product_error!("admin authentication bypassed: local/trusted environments only")
         }
     }
 
@@ -177,6 +185,7 @@ async fn run(cli: Cli, data: DataClient, started: Instant) -> ExitCode {
         static_files,
         started,
         auth,
+        admin: cli.admin,
     }));
     // 排空限时必须在**收到信号之后**才起算：先在 server 与信号之间等待（信号之前进程常驻），
     // 再进入限期排空。若把 deadline 与 server 一起 `select!`，进程会在 DRAIN_BUDGET 后自行

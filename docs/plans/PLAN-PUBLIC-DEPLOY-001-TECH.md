@@ -1,9 +1,9 @@
 # PLAN-PUBLIC-DEPLOY-001 技术方案(工作块 A + B)
 
-- 状态:草案(2026-09-26),待评审
+- 状态:已定稿(2026-09-26);A 块已实施,公网只读模式已实施;B 块待服务器准备
 - 上游:[PLAN-PUBLIC-DEPLOY-001](./PLAN-PUBLIC-DEPLOY-001.md)(目标、范围、验收、决策点)
 - 本文回答"具体怎么做";执行清单、验收复选框仍在计划文件
-- 结论:A 块改 ops 参数框架后放行 `--data prod`;B 块纯部署执行。评审重点见第 4、5 节
+- 结论:A 块改 ops 参数框架后放行 `--data prod`;B 块纯部署执行;公网只读(决策点 8)已并入方案
 
 ## 1. 系统总览
 
@@ -12,7 +12,7 @@
 | 组件 | 位置 | 说明 |
 | --- | --- | --- |
 | nginx | 服务器 `:80`/`:443` | 唯一公网入口;80 → 443;TLS 终止;反代到 Product |
-| Product | 服务器 `127.0.0.1:17800` | 公开页面(dist)+ `/api`;管理端鉴权;GitHub 工作区与同步 |
+| Product | 服务器 `127.0.0.1:17800` | 公开页面(dist)+ `/api`;`--admin off` 公网只读;GitHub 启动同步 |
 | Data | 服务器 `127.0.0.1:17801` | SQLite 缓存与事务操作;prod 语义:自动迁移、不 seed、退出不删 |
 | SQLite | 服务器 `/var/lib/blog/blog.db` | 可重建的运行缓存,内容真源是 GitHub 私有仓库 |
 | 内容仓库 | GitHub `nyml2003/blog-content` | 文章/分类/标签真源;PR 合入才发布 |
@@ -26,17 +26,19 @@ Browser --HTTPS--> nginx:443 --HTTP(loopback)--> product:17800 --HTTP(loopback)-
 
 ### 数据流(发布链路)
 
-1. 管理端保存只写 Product 的服务器本地工作区,不上公网、不改前台;
+1. 本地编辑栈(mac,`--admin bypass` 或 `on`)保存只写本机工作区,不上公网、不改前台;
 2. 工作台整批提交 → Product 写一个分支 + 一个 PR,服务器不自动合并;
-3. 用户在 GitHub 合入 `main` → 管理端手动同步(或服务重启时的启动同步)→ Product 拉取固定 commit → Data 单事务替换公开快照;
+3. 用户在 GitHub 合入 `main` → SSH 重启公网 Product(`systemctl restart blog-product`)触发启动同步 → 拉取固定 commit → Data 单事务替换公开快照;
 4. 公开端只读最后成功同步的快照;未合入 PR 的内容不可见。
 
 ### 安全边界
 
-- TLS 必须是唯一入口(应用层鉴权不含链路加密,明文会泄露 session);
+- TLS 必须是唯一入口(公网内容也值得链路加密与完整性);
 - Product/Data 只 `listen 127.0.0.1`,不直接暴露公网;
+- 公网 Product 以 `--admin off` 运行:管理页面与管理 API 一律 404,不存在登录入口,攻击面只剩公开读接口;
+- nginx 对 `/admin`、`/api/admin/` 另加 404 兜底,但不是唯一防线(真正的"没有管理面"由 Product 保证);
 - 转发信息只在 peer=127.0.0.1、`X-Forwarded-For` 为单一合法 IP、`X-Forwarded-Proto=http/https` 时采用(因此 `BLOG_TRUSTED_PROXY_IPS=127.0.0.1`);
-- 凭证:`credentials.env`(admin 三键,工具生成 0700/0600)与 `product.env`(content token,root 0600)都不入仓库、不进 unit 明文。
+- 服务器唯一凭证是 `product.env`(content token,root 0600);本地编辑栈的管理凭证或 bypass 只存在于 mac,不入仓库、不进 unit 明文。
 
 ## 2. 工作块 A:ops 放行 prod(技术方案)
 
@@ -178,10 +180,9 @@ Wants=blog-data.service
 After=network.target blog-data.service
 
 [Service]
-ExecStart=/usr/local/bin/product --listen 127.0.0.1:17800 --data-addr http://127.0.0.1:17801 --web-dir /var/lib/blog/web/dist --content-source github
+ExecStart=/usr/local/bin/product --listen 127.0.0.1:17800 --data-addr http://127.0.0.1:17801 --web-dir /var/lib/blog/web/dist --content-source github --admin off
 Environment=BLOG_TRUSTED_PROXY_IPS=127.0.0.1
 Environment=BLOG_CONTENT_REPO=nyml2003/blog-content
-EnvironmentFile=/var/lib/blog/admin-auth/credentials.env
 EnvironmentFile=/var/lib/blog/product.env
 Restart=on-failure
 User=blog
@@ -189,14 +190,14 @@ Group=blog
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/var/lib/blog/admin-auth
 
 [Install]
 WantedBy=multi-user.target
 ```
 
-设计要点(和计划原模板的两处修正):
+设计要点:
 
+- `--admin off`(决策点 8):公网不提供管理面,`/admin/*`、`/api/admin/*` 一律 404,不读取管理凭证,服务器不需要 `admin-auth` 目录;
 - `--content-source github` 必须显式传:Product 默认是 `fixture`(src/backend/product/src/cli.rs:132),漏掉会完全不读内容仓库;
 - 用 `Wants=` 而不是 `Requires=`:`Requires` 会让 `systemctl stop blog-data` 连带停掉 Product,和验收"data 停机时页面报错明确、恢复后自愈"矛盾;`Wants+After` 只保证启动顺序,不传播停止;
 - 内部端口 17800/17801(2026-09-26 决策):避开 8080/8081 等常见端口与 Linux 临时端口段(32768–60999);外部只开 80/443;四处端口配置(Data `--listen`、Product `--listen`/`--data-addr`、nginx `proxy_pass`)保持一致;
@@ -205,14 +206,15 @@ WantedBy=multi-user.target
 
 | 配置 | 来源 | 说明 |
 | --- | --- | --- |
-| `BLOG_ADMIN_PASSWORD_HASH` / `BLOG_ADMIN_TOTP_SECRET` / `BLOG_ADMIN_RUNTIME_DIR` | `credentials.env` | 工具生成,勿手改 |
 | `BLOG_CONTENT_TOKEN` | `product.env` | GitHub 细粒度 PAT(仅该仓库 Contents + Pull requests 读写) |
 | `BLOG_CONTENT_REPO` | unit `Environment=` | 非机密 |
 | `BLOG_TRUSTED_PROXY_IPS` | unit `Environment=` | 只配 `127.0.0.1` |
+| admin 三键(`BLOG_ADMIN_*`) | 本地编辑栈专用 | 服务器 `--admin off` 不读取;`--admin on` 的本地栈由 ops/环境注入 |
 
 ### 3.4 nginx 与 TLS
 
 - 全新 server 块:80 `return 301 https://$host$request_uri`;443 `ssl_protocols TLSv1.2 TLSv1.3`,证书取 `/etc/nginx/cert/ventusvocatflumen.cn.{pem,key}`;
+- `location /admin { return 404; }`、`location /api/admin/ { return 404; }` 作为管理面的纵深防御(Product `--admin off` 本身已 404);
 - `location /` 反代 `http://127.0.0.1:17800`,设置 `Host`、`X-Forwarded-For $remote_addr`、`X-Forwarded-Proto https`;
 - 证书事实源在用户上传的用户目录;部署时 `install -m 600` 复制到 `/etc/nginx/cert/`,更新证书=替换文件 + `nginx -t && systemctl reload nginx`;
 - Product 的路由约定:`GET /healthz`(健康检查)、`/api/public/*`(公开数据)、`/product/diagnostics`(注入配置与 Data 调用计数),静态页面由 fallback 提供。
@@ -220,15 +222,14 @@ WantedBy=multi-user.target
 ### 3.5 从空服务器到可用的执行顺序
 
 1. (开发机)确认服务器架构、交叉编译三件套、产出二进制与 dist;
-2. (用户)重置服务器、建好 `blog-content` 仓库、把证书传到用户目录;
+2. (用户)重置服务器、把证书传到用户目录;
 3. (服务器)装 nginx、建用户与目录、落位二进制与 dist;
 4. (服务器)写入两个 unit、`daemon-reload`、`enable`;
-5. (服务器 TTY)跑 `sudo -u blog /usr/local/bin/blog-admin-credentials init --state-dir /var/lib/blog/admin-auth`,录 TOTP、存恢复码;
-6. (服务器)创建 `/var/lib/blog/product.env`(token);
-7. (服务器)放证书、写 nginx 配置、`nginx -t`、`reload`;
-8. (开发机)`BLOG_CONTENT_REPO=nyml2003/blog-content BLOG_CONTENT_TOKEN=… ops content repository init`;
-9. (服务器)`systemctl start blog-data` → `systemctl start blog-product`,查 `/healthz` 与 `curl http://127.0.0.1:17800/product/diagnostics`;
-10. 走 B6 验收 + B5 恢复演练。
+5. (服务器)创建 `/var/lib/blog/product.env`(token);
+6. (服务器)放证书、写 nginx 配置、`nginx -t`、`reload`;
+7. (服务器)`systemctl start blog-data` → `systemctl start blog-product`,查 `/healthz` 与 `curl http://127.0.0.1:17800/product/diagnostics`;
+8. 走 B6 验收 + B5 恢复演练;
+9. (本地)编辑栈用 `--admin bypass`(免密)或 `--admin on`(密码+TOTP)编辑、提交 PR;合入后 SSH 重启 `blog-product` 同步。
 
 ### 3.6 备份与恢复(GitHub 即备份)
 
@@ -260,9 +261,10 @@ WantedBy=multi-user.target
 | 证书路径与权限 | TLS 不可用 | 事实源在用户目录;部署时复制到 /etc/nginx/cert,key 0600 |
 | 迁移不向后兼容 | 回滚需重建库 | 回滚前评估;必要时删库从 main 重建 |
 | 无自动发布/CI | 每次手工步骤 | 本文 3.5/3.7 即操作手册;后续可另立计划 |
+| 本地 `--admin bypass` 免密 | 本机浏览器可被 DNS rebinding 伪造管理写操作 | 用户已接受(2026-09-26 决策);该模式禁止用于公网,公网用 `--admin off` |
 | Product 静态挂载帮助文案过时("not mounted in this batch") | 误导 | 已核实实现会挂载(src/backend/product/src/main.rs:167-177);文案后续清理 |
 
-## 5. 待评审点
+## 5. 关键决策(已拍板)
 
 A 块:
 
@@ -273,9 +275,9 @@ A 块:
 
 B 块:
 
-5. unit 两处修正:`--content-source github` 必传、`Requires` 改 `Wants`(与验收语义一致);
-6. 服务器准备细节(系统用户、目录、权限表);
-7. 更新/回滚策略(旧二进制备份 + DB 可重建);
+5. unit 修正:`--content-source github` 必传、`Requires` 改 `Wants`(与验收语义一致);
+6. 公网只读(决策点 8):服务器 `--admin off` + nginx 404 兜底;本地编辑用 `bypass`(免密,接受 DNS rebinding 风险)或 `on`;
+7. 更新/回滚策略(旧二进制备份 + DB 可重建);内容更新 = 合入后 SSH 重启 `blog-product`;
 8. NTP、80/443 端口与防火墙前提。
 
 ## 6. 范围外
@@ -285,5 +287,5 @@ B 块:
 ## 7. 交付物
 
 - 仓库内:ops 代码变更与测试、`SPEC-OPS-PARAMETERS-001` 修订、`deploy/systemd/*.service`、计划/方案文档状态更新;
-- 服务器上:两个 unit、nginx 配置、凭证与 token 文件、二进制与 dist(不入仓库);
+- 服务器上:两个 unit、nginx 配置、`product.env`(token)、二进制与 dist(不入仓库);服务器无管理凭证;
 - 证据:质量检查输出、A3 手工验收记录、B6 验收与恢复演练记录。
