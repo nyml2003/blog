@@ -8,7 +8,7 @@
 
 ## 既定决策与红线(执行者必读)
 
-- 域名 `ventusvocatflumen.cn`。服务器将整体重置(2026-09-26 决定):既有服务、配置与数据全部清空,不保留、不回退;nginx 与证书按全新部署处理。证书用阿里云证书,由用户手动上传到用户目录(仓库外,唯一事实源);nginx 引用惯例位置 `/etc/nginx/cert/`(部署时复制,root:root 0600)。
+- 域名 `ventusvocatflumen.cn`。服务器将整体重置(2026-09-26 决定):既有服务、配置与数据全部清空,不保留、不回退;nginx 与证书按全新部署处理。证书用阿里云证书,放入 `/etc/blog/<域名>.pem|.key`(唯一事实源);nginx 引用 `/etc/nginx/cert/`(安装器复制,root:root 0600)。
 - 正式内容仓库已定(2026-09-26):GitHub 私有仓库 `nyml2003/blog-content`,专存文章内容,与代码仓库分离;该仓库由用户自行创建(B4 前置)。
 - TLS 必须先于/同时上线:应用层鉴权不含链路加密,明文公网会泄露 session cookie(SPEC-ADMIN-AUTH-001)。
 - `BLOG_TRUSTED_PROXY_IPS` 只配 `127.0.0.1`(nginx 同机),不得配宽泛网段(operations.md)。
@@ -77,14 +77,13 @@
 
 ```text
 MANIFEST.json(含 sha256,安装前校验)
-SHA256SUMS                            → install.sh 校验用
-install.sh                            → 服务器端安装器(渲染后,无秘密)
+SHA256SUMS
 bin/product bin/data bin/blog-admin-credentials → /usr/local/bin/
 web/dist/(整目录)                               → /var/lib/blog/web/dist/
-systemd/*.service、nginx/blog.conf(模板渲染)   → /etc/systemd/system、/etc/nginx
+systemd/*.service、nginx/blog.conf(模板)       → 渲染后安装
 ```
 
-流程:发布包由 CI(打 tag)构建并挂到 GitHub Release;服务器经只读 token 下载资产、解包后 `sudo bash install.sh`(域名/仓库名读 `/etc/blog/deploy.env`,证书放 `~/cert/`,token 放 `~/product.env`);数据由启动自动创建迁移。服务器操作均由用户执行。
+流程(2026-09-27 修订):代码仓公开,两套 tag——`script-v*` 挂单文件安装器 `blog-deploy.mjs`,`build-v*` 挂双架构发布包;服务器 `/etc/blog/` 只放安装器、`blog.json`(serverName/contentRepo/contentToken)与证书;`node blog-deploy.mjs deploy|redeploy` 自动下载最新 build-v* 对应架构资产并幂等安装,无 release token、无环境变量。服务器操作均由用户执行。
 
 - 执行记录(2026-09-27):GitHub Actions(run 36296766094)全绿,Release [v0.1.0](https://github.com/nyml2003/blog/releases/tag/v0.1.0) 发布 x86_64/aarch64 两个资产(各约 4MB),含安装渲染冒烟。
 
@@ -123,7 +122,7 @@ After=network.target blog-data.service
 ExecStart=/usr/local/bin/product --listen 127.0.0.1:17800 --data-addr http://127.0.0.1:17801 --web-dir /var/lib/blog/web/dist --content-source github --admin off
 Environment=BLOG_TRUSTED_PROXY_IPS=127.0.0.1
 Environment=BLOG_CONTENT_REPO={{contentRepo}}
-EnvironmentFile=/var/lib/blog/product.env
+EnvironmentFile=-/var/lib/blog/product.env
 Restart=on-failure
 User=blog
 Group=blog
@@ -136,11 +135,11 @@ WantedBy=multi-user.target
 ```
 
 说明:
-- 模板化(决策点 9):unit/nginx 在仓库与发布包里只保留占位符(`{{contentRepo}}`、`{{serverName}}`),安装时由 `install.sh` 读取 `/etc/blog/deploy.env` 注入;仓库与产物都不出现域名与 GitHub 仓库名。
+- 模板化(决策点 9):unit/nginx 在仓库与发布包里只保留占位符(`{{contentRepo}}`、`{{serverName}}`),由安装器在服务器读取 `/etc/blog/blog.json` 注入;仓库与产物都不出现域名与 GitHub 仓库名。
 - 内部端口已定(决策点 7):Product `17800`、Data `17801`(均回环);Data `--listen`、Product `--listen`/`--data-addr`、nginx `proxy_pass` 四处保持一致。
 - unit 两处修正(2026-09-26 评审,详见 TECH 文档 3.3):`--content-source github` 必传(Product 默认 fixture,漏传不读内容仓库,`src/backend/product/src/cli.rs:132`);`Requires` 改 `Wants`,否则 `systemctl stop blog-data` 会连带停掉 Product,和 B6「data 停机时页面报错明确、恢复后自愈」矛盾。
 - 公网只读(决策点 8,2026-09-26):unit 用 `--admin off`,管理面 `/admin/*`、`/api/admin/*` 一律 404,不读取凭证;服务器不再需要 `admin-auth` 目录与凭证文件,`ReadWritePaths` 相应移除;管理只存在于本地编辑栈。
-- `BLOG_CONTENT_TOKEN` 放独立文件 `/var/lib/blog/product.env`(root:root 0600,唯一内容 `BLOG_CONTENT_TOKEN=<token>`),由 unit `EnvironmentFile=` 加载;该文件不入仓库、不进 unit 明文。
+- `BLOG_CONTENT_TOKEN` 放独立文件 `/var/lib/blog/product.env`(root:root 0600,唯一内容 `BLOG_CONTENT_TOKEN=<token>`),由 unit `EnvironmentFile=-` 加载(可选:缺 token 时服务仍启动并走 last-good/空快照);该文件不入仓库、不进 unit 明文,由安装器从 `blog.json` 派生。
 - Product 对 Data 短暂不可用的行为:GitHub 同步失败走 last-good 快照、公开读取继续(operations.md:51);Data 停机时 Product 请求失败——验收 B6 覆盖。
 
 ### B2 nginx 配置(模板 `deploy/nginx/blog.conf`,安装时渲染)
@@ -176,7 +175,7 @@ server {
 ```
 
 - 目标系统 Ubuntu 24.04:`rm -f /etc/nginx/sites-enabled/default`(避免默认站点抢 80),配置落 `/etc/nginx/sites-available/blog.conf` 并软链;云安全组放行 80/443,启用 ufw 时 `ufw allow 80,443/tcp`;
-- 证书事实源在用户上传的用户目录(阿里云证书),部署时用 `install -m 600` 复制到 `/etc/nginx/cert/`,nginx 只引用这个惯例位置;证书更新后重新复制并 `reload nginx`(决策点 6);
+- 证书事实源在 `/etc/blog/<域名>.pem|.key`(阿里云证书),安装器复制到 `/etc/nginx/cert/`,nginx 只引用这个惯例位置;证书更新后重跑 `redeploy` 或重新复制并 `reload nginx`(决策点 6);
 - `nginx -t` 通过后 `systemctl reload nginx`;
 - 前置条件核对:Product 仅在 socket peer 命中 `BLOG_TRUSTED_PROXY_IPS`、`X-Forwarded-For` 为单一合法 IP、`X-Forwarded-Proto` 为 http/https 时采用转发信息(operations.md:66),上述配置与之匹配(nginx 与 Product 同机,peer 即 127.0.0.1)。
 
@@ -213,7 +212,7 @@ BLOG_CONTENT_REPO=nyml2003/blog-content BLOG_CONTENT_TOKEN=<token> ops content r
 - [ ] `systemctl restart blog-product` 或整机 reboot 后两服务自动恢复;
 - [ ] `systemctl stop blog-data` 后页面/接口报错明确(不 500 挂死),恢复 data 后服务自愈;
 - [ ] 恢复演练按 B5 执行成功:清空 DB 后从 main 重建,抽查文章、分类可读,推荐位为空属预期;
-- [ ] 发布包无秘密(不含 token/证书/域名/仓库名),`sudo bash install.sh` 连续执行两次均成功(幂等);
+- [ ] 发布包无秘密(不含 token/证书/域名/仓库名),`node blog-deploy.mjs redeploy` 连续执行两次均成功(幂等);
 - [ ] HTTP(80)访问自动跳转 HTTPS;证书链有效。
 
 ---
@@ -225,10 +224,10 @@ BLOG_CONTENT_REPO=nyml2003/blog-content BLOG_CONTENT_TOKEN=<token> ops content r
 3. **备份方式**:**已定(2026-09-26):GitHub 即备份**。内容仓库为真源,不做定期 DB 备份;接受推荐位/下架墓碑随 DB 丢失,恢复=清空后从 `main` 重建(见 B5);
 4. **服务器运行方式**:**已定(2026-09-26):不装 Nix/ops**,只放编译好的 binary + systemd;SQLite 负责实时交互与缓存,持久内容以 GitHub 内容仓库为准;
 5. **既有服务处置**:**已定(2026-09-26):服务器整体重置**,彻底清空、不留老数据;nginx 与证书全新部署,不需要回退方案;
-6. **证书来源**:**已定(2026-09-26):阿里云证书**。用户手动上传到用户目录(仓库外,唯一事实源,以上传位置为准);nginx 引用惯例位置 `/etc/nginx/cert/`,部署时复制过去(root:root 0600)。
+6. **证书来源**:**已定(2026-09-26;2026-09-27 修订位置):阿里云证书**,用户上传到 `/etc/blog/<serverName>.pem|.key`(唯一事实源);安装器复制到 `/etc/nginx/cert/`(root:root 0600)。
 7. **内部端口**:**已定(2026-09-26):Product `127.0.0.1:17800`、Data `127.0.0.1:17801`**。避开 8080/8081 与 Linux 临时端口段(32768–60999);外部仍只有 80/443,unit 与 nginx 已同步。
 8. **公网面形态**:**已定(2026-09-26):公网只读 + 本地编辑**。Product 新增 `--admin <on|off|bypass>`(默认 `on`):服务器 unit 用 `off`,管理面 404、无凭证;本地编辑栈用 `bypass` 免密(接受本地 DNS rebinding 风险),或 `on` 走密码+TOTP;内容更新流程 = 本地提交 PR → 合入 → SSH `systemctl restart blog-product` 触发启动同步。Spec 与部署配置已同步(commit 记录见收尾)。
-9. **部署方式**:**已定(2026-09-27,同日修订为通用包)**:`ops delivery package --target <musl-target>` 产出**环境无关**发布包;打 tag 触发 GitHub Actions 构建双架构资产并挂 Release;服务器用只读 token `curl` 下载,解包后 `sudo bash install.sh`;域名/仓库名由 `/etc/blog/deploy.env` 在安装时注入。仓库与产物零个人标识、零秘密;`ops delivery deploy`(本机 SSH 代办)已下线,`ops delivery bundle` 保留。
+9. **部署方式**:**已定(2026-09-27,同日再修订)**:代码仓转公开,两套 tag——`script-v*` 只挂单文件安装器 `blog-deploy.mjs`,`build-v*` 只挂双架构发布包;服务器配置只有 `/etc/blog/blog.json` 一份(serverName/contentRepo/contentToken)+ 同目录证书,其余由安装器派生;`init` 生成骨架,`deploy|redeploy` 自动下载最新 build-v* 并幂等安装,全程无 release token、无环境变量。bash `install.sh`、`deploy.env`、`release.token` 与 `ops delivery deploy/bundle` 全部下线。
 
 ## 已核实事实索引
 

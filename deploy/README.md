@@ -1,47 +1,47 @@
 # deploy
 
-发布包由 CI(打 tag 触发)构建并挂到 GitHub Release;服务器上解包后 `install.sh` 完成安装。
-发布包**环境无关**,不含域名、仓库名、token 或证书。
+部署由两套 Release 资产驱动。代码仓公开:`script-v*` 只挂安装器 `blog-deploy.mjs`,`build-v*` 只挂双架构发布包 tarball;服务器配置集中在 `/etc/blog/`。
 
-## 一次性配置(服务器)
+## 服务器一次性引导
+
+```sh
+apt-get install -y nodejs
+curl -fLo /etc/blog/blog-deploy.mjs \
+  https://github.com/nyml2003/blog/releases/download/script-v0.1.0/blog-deploy.mjs
+node /etc/blog/blog-deploy.mjs init
+# 编辑 /etc/blog/blog.json(serverName / contentRepo / contentToken),
+# 放证书 /etc/blog/<serverName>.pem 与 .key(0600)
+node /etc/blog/blog-deploy.mjs deploy
+```
+
+## 日常发版与服务器更新
+
+```sh
+# 发版(代码仓打 tag,CI 自动出资产)
+git tag script-v0.1.1 && git push origin script-v0.1.1   # 安装器有改动时
+git tag build-v0.1.1  && git push origin build-v0.1.1    # 二进制/页面有改动时
+
+# 服务器更新(幂等,自动取最新 build-v*)
+node /etc/blog/blog-deploy.mjs redeploy
+# 可选:--build-tag build-v0.1.1 固定版本;--dry-run 只看计划
+# 安装器自身更新:重下 script-v* 的 mjs 覆盖 /etc/blog/blog-deploy.mjs
+```
+
+## 目录与权限
 
 ```text
-/etc/blog/deploy.env     0600  SERVER_NAME=<域名>
-                               CONTENT_REPO=<owner>/<内容仓库>
-/etc/blog/release.token  0600  代码仓只读 PAT(Contents: Read),用于下载 Release 资产
-~/cert/<域名>.pem|.key         阿里云证书(事实源)
-~/product.env            0600  内容仓库 token(BLOG_CONTENT_TOKEN=...)
-```
-
-## 发版
-
-```sh
-git tag v0.1.0 && git push origin v0.1.0
-```
-
-CI 构建 `x86_64` 与 `aarch64` 两个 musl 资产并挂到 Release。也可在 Actions 页手动触发(只出 workflow artifact,不发 Release)。
-
-## 服务器更新(幂等;重复执行即发新版本)
-
-```sh
-TOKEN=$(sudo cat /etc/blog/release.token)
-curl -fL -H "Authorization: Bearer $TOKEN" -o blog-release.tar.gz \
-  "https://github.com/<owner>/<repo>/releases/download/v0.1.0/blog-release-<target>-<stamp>.tar.gz"
-tar -xzf blog-release.tar.gz -C blog-release
-cd blog-release && sudo bash install.sh
-```
-
-`install.sh`:校验 `SHA256SUMS` → 读 `/etc/blog/deploy.env` → `sed` 渲染 unit/nginx 模板 → 安装二进制/dist/配置 → 从 `~/cert` 装证书、从 `~/product.env` 装 token(0600)→ 重启并健康检查。可用 `DEPLOY_ENV_FILE` / `CERT_DIR` / `TOKEN_FILE` 覆盖默认位置。
-
-## 本地构建(可选)
-
-```sh
-ops delivery package --target x86_64-unknown-linux-musl   # 产物在 deploy/dist/(已 gitignore)
-ops delivery bundle                                      # ops CLI 单文件 JS,任意有 Node 的机器可跑
+/etc/blog/                     0700
+  blog-deploy.mjs              单文件安装器(公开下载,无秘密)
+  blog.json              0600  唯一配置:serverName / contentRepo / contentToken
+  <serverName>.pem       0644  证书(事实源)
+  <serverName>.key       0600
+派生(安装器管理,不手工编辑):
+  /var/lib/blog/product.env    0600  内容 token
+  /etc/nginx/cert/*            nginx 引用副本(安装时复制)
 ```
 
 ## 秘密边界
 
-- 仓库与发布包都不含 token、证书、域名与仓库名;模板渲染在服务器安装时完成;
-- `deploy.env`、`release.token`、`product.env`、证书都留在服务器 0600 文件里;
-- 发布包带 `MANIFEST.json` 与 `SHA256SUMS`,安装前逐项校验。
+- 仓库与发布包不含 token、证书、域名与仓库名;模板占位符由安装器在服务器注入;
+- 服务器唯一需要保管的是内容 token(`blog-content` 私有仓,Contents + Pull requests 读写);
+- 下载全部来自公开仓,不需要 release token,也没有任何环境变量。

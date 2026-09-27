@@ -135,7 +135,7 @@ Browser --HTTPS--> nginx:443 --HTTP(loopback)--> product:17800 --HTTP(loopback)-
 | `blog.db` | `/var/lib/blog/blog.db` | 首次启动由 data 创建 |
 | `credentials.env` + TOTP/恢复码状态 | `/var/lib/blog/admin-auth/` | 工具创建 0700/0600 |
 | `product.env`(token) | `/var/lib/blog/product.env` | root:root 0600 |
-| 阿里云证书 | 用户目录(事实源)→ `/etc/nginx/cert/`(引用) | root:root;key 0600 |
+| 阿里云证书 | `/etc/blog/<serverName>.pem` 与 `.key`(事实源)→ `/etc/nginx/cert/`(安装器复制) | key 0600 |
 
 ### 3.2 服务器基础准备(目标系统:Ubuntu 24.04,重置后)
 
@@ -183,7 +183,7 @@ After=network.target blog-data.service
 ExecStart=/usr/local/bin/product --listen 127.0.0.1:17800 --data-addr http://127.0.0.1:17801 --web-dir /var/lib/blog/web/dist --content-source github --admin off
 Environment=BLOG_TRUSTED_PROXY_IPS=127.0.0.1
 Environment=BLOG_CONTENT_REPO={{contentRepo}}
-EnvironmentFile=/var/lib/blog/product.env
+EnvironmentFile=-/var/lib/blog/product.env
 Restart=on-failure
 User=blog
 Group=blog
@@ -197,7 +197,7 @@ WantedBy=multi-user.target
 
 设计要点:
 
-- 仓库与发布包中的 unit/nginx 是模板(`deploy/systemd/`、`deploy/nginx/blog.conf`),`{{contentRepo}}`/`{{serverName}}` 在服务器安装时由 `install.sh` 读取 `/etc/blog/deploy.env` 注入;发布包环境无关、不含个人标识;
+- 仓库与发布包中的 unit/nginx 是模板(`deploy/systemd/`、`deploy/nginx/blog.conf`),`{{contentRepo}}`/`{{serverName}}` 由安装器 `blog-deploy.mjs` 读取 `/etc/blog/blog.json` 在服务器注入;发布包环境无关、不含个人标识;
 - `--admin off`(决策点 8):公网不提供管理面,`/admin/*`、`/api/admin/*` 一律 404,不读取管理凭证,服务器不需要 `admin-auth` 目录;
 - `--content-source github` 必须显式传:Product 默认是 `fixture`(src/backend/product/src/cli.rs:132),漏掉会完全不读内容仓库;
 - 用 `Wants=` 而不是 `Requires=`:`Requires` 会让 `systemctl stop blog-data` 连带停掉 Product,和验收"data 停机时页面报错明确、恢复后自愈"矛盾;`Wants+After` 只保证启动顺序,不传播停止;
@@ -217,15 +217,16 @@ WantedBy=multi-user.target
 - 全新 server 块:80 `return 301 https://$host$request_uri`;443 `ssl_protocols TLSv1.2 TLSv1.3`,证书取 `/etc/nginx/cert/ventusvocatflumen.cn.{pem,key}`;
 - `location /admin { return 404; }`、`location /api/admin/ { return 404; }` 作为管理面的纵深防御(Product `--admin off` 本身已 404);
 - `location /` 反代 `http://127.0.0.1:17800`,设置 `Host`、`X-Forwarded-For $remote_addr`、`X-Forwarded-Proto https`;
-- 证书事实源在用户上传的用户目录;部署时 `install -m 600` 复制到 `/etc/nginx/cert/`,更新证书=替换文件 + `nginx -t && systemctl reload nginx`;
+- 证书事实源在 `/etc/blog/<serverName>.pem|.key`;安装器复制到 `/etc/nginx/cert/`(AppArmor 下 nginx 只允许惯例目录),更新证书=替换事实源后重跑 `redeploy`;
 - Product 的路由约定:`GET /healthz`(健康检查)、`/api/public/*`(公开数据)、`/product/diagnostics`(注入配置与 Data 调用计数),静态页面由 fallback 提供。
 
 ### 3.5 从空服务器到可用的执行顺序
 
-1. (一次性,用户)重置服务器:加 SSH 公钥、云安全组放行 80/443、域名解析指向服务器;写 `/etc/blog/deploy.env`(SERVER_NAME/CONTENT_REPO)、放 `/etc/blog/release.token`(代码仓只读)、证书到 `~/cert/<serverName>.pem|.key`、内容 token 到 `~/product.env`;
-2. (开发机)打并推送 tag `v*` → GitHub Actions 构建双架构发布包并挂 Release(本地 `ops delivery package --target <t>` 等价);CI 会顺带做 install 渲染冒烟;
-3. (服务器,用户)`curl` 带只读 token 下载资产 → 解包 → `sudo bash install.sh`:校验 SHA256SUMS → 注入域名/仓库名 → 安装产物/配置/证书/token → 重启 → 健康检查;
-4. 走 B6 验收 + B5 恢复演练;更新版本重复 2~3 即可(install.sh 幂等)。
+1. (一次性,用户)重置服务器:加 SSH 公钥、云安全组放行 80/443、域名解析指向服务器;装 `nodejs`,下载 `script-v*` 的 `blog-deploy.mjs` 到 `/etc/blog/`;
+2. (服务器,用户)`node /etc/blog/blog-deploy.mjs init` → 填写 `/etc/blog/blog.json`(serverName/contentRepo/contentToken)+ 放证书 `/etc/blog/<serverName>.pem|.key`;
+3. (开发机)按需打 tag:`script-v*` 出安装器、`build-v*` 出双架构发布包(CI 自动);
+4. (服务器,用户)`node /etc/blog/blog-deploy.mjs deploy|redeploy`:自动下载最新 build-v* → 校验 SHA256SUMS → 注入域名/仓库名 → 安装产物/配置/证书/token → 重启 → 健康检查;
+5. 走 B6 验收 + B5 恢复演练;更新版本重复 3~4 即可(redeploy 幂等)。
 
 手工回退路径仍在计划 B1/B2/B3 节保留(unit/nginx 内容与安装位置不变)。
 
@@ -256,7 +257,7 @@ WantedBy=multi-user.target
 | cargo-zigbuild 首次失败 | 阻塞构建 | Docker/colima 容器构建备选 |
 | 服务器时钟漂移 | commit 时间戳异常 | 部署前确认 NTP |
 | 2C/2G 内存余量 | 运行稳定性 | 部署后看 RSS 与 diagnostics;current_thread 运行时 |
-| 证书路径与权限 | TLS 不可用 | 事实源在用户目录;部署时复制到 /etc/nginx/cert,key 0600 |
+| 证书路径与权限 | TLS 不可用 | 事实源 /etc/blog/;安装器复制到 /etc/nginx/cert,key 0600 |
 | 迁移不向后兼容 | 回滚需重建库 | 回滚前评估;必要时删库从 main 重建 |
 | 无自动发布/CI | 每次手工步骤 | 本文 3.5/3.7 即操作手册;后续可另立计划 |
 | 本地 `--admin bypass` 免密 | 本机浏览器可被 DNS rebinding 伪造管理写操作 | 用户已接受(2026-09-26 决策);该模式禁止用于公网,公网用 `--admin off` |
@@ -284,6 +285,6 @@ B 块:
 
 ## 7. 交付物
 
-- 仓库内:ops 代码变更与测试、`SPEC-OPS-PARAMETERS-001` 修订、`deploy/`(unit/nginx 模板、install.sh、README)、`.github/workflows/release.yml`、计划/方案文档状态更新;
-- 服务器上:两个 unit、nginx 配置、`/etc/blog/deploy.env` 与 `release.token`、`product.env`(token)、证书、二进制与 dist;服务器无管理凭证;
+- 仓库内:ops 代码变更与测试、`SPEC-OPS-PARAMETERS-001` 修订、`deploy/`(unit/nginx 模板、README)、安装器 `ops/src/installer/`、`.github/workflows/script-release.yml` 与 `build-release.yml`、计划/方案文档状态更新;
+- 服务器上:`/etc/blog/`(blog-deploy.mjs、blog.json、证书)、两个 unit、nginx 配置、`/var/lib/blog/product.env`(派生)、二进制与 dist;服务器无管理凭证、无 release token;
 - 证据:质量检查输出、A3 手工验收记录、B6 验收与恢复演练记录。

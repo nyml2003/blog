@@ -7,7 +7,7 @@ After=network.target blog-data.service
 ExecStart=/usr/local/bin/product --listen 127.0.0.1:17800 --data-addr http://127.0.0.1:17801 --web-dir /var/lib/blog/web/dist --content-source github --admin off
 Environment=BLOG_TRUSTED_PROXY_IPS=127.0.0.1
 Environment=BLOG_CONTENT_REPO={{contentRepo}}
-EnvironmentFile=/var/lib/blog/product.env
+EnvironmentFile=-/var/lib/blog/product.env
 Restart=on-failure
 User=blog
 Group=blog

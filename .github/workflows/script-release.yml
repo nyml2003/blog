@@ -1,0 +1,27 @@
+name: script-release
+
+on:
+  push:
+    tags: ['script-v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  installer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v27
+      - name: Build installer bundle
+        run: nix develop ./nix -c ops delivery installer
+      - uses: actions/upload-artifact@v4
+        with:
+          name: blog-deploy-mjs
+          path: deploy/dist/blog-deploy.mjs
+      - name: Publish release asset
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: deploy/dist/blog-deploy.mjs

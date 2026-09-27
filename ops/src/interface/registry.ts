@@ -5,7 +5,7 @@ import { runAdminCredentialCommand } from '../application/admin-auth.ts';
 import { initializeContentRepository } from '../application/content-repository.ts';
 import { runDeliveryBuild, runRuntimeMode, type RuntimePorts } from '../application/runtime.ts';
 import { runDeployPackage, type DeployPorts } from '../application/deploy-package.ts';
-import { runDeployBundle } from '../application/deploy-bundle.ts';
+import { runDeployInstaller } from '../application/deploy-installer.ts';
 import { runPackageCheck } from '../application/package-check.ts';
 import { runPlaygroundDev } from '../application/playground.ts';
 import { planMode, MOCK_SCENARIOS, DATA_MODES, CONTENT_SOURCES } from '../domain/runtime-plan.ts';
@@ -111,12 +111,12 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     exitCodes: [{ code: 0, meaning: '发布包生成成功' }, FAILURE],
   }, (context, args) => runDeployPackage(args.target, deployPorts(context), { dryRun: context.dryRun })),
   defineCommand({
-    path: ['delivery', 'bundle'],
-    summary: '把 ops CLI 打成单文件 JS',
-    description: '用 esbuild（nix 提供，不改仓库依赖）把 ops CLI 打包为 deploy/dist/blog-deploy.mjs，可在任意有 Node 的机器上执行。',
-    examples: ['ops delivery bundle', 'ops delivery bundle --dry-run'],
-    exitCodes: [{ code: 0, meaning: '单文件脚本生成成功' }, FAILURE],
-  }, (context) => runDeployBundle(deployPorts(context), { dryRun: context.dryRun })),
+    path: ['delivery', 'installer'],
+    summary: '打包服务器安装器(单文件 mjs)',
+    description: '用 esbuild（nix 提供）把 ops 安装器入口打成 deploy/dist/blog-deploy.mjs：init 生成 /etc/blog 骨架，deploy/redeploy 从公开 Release 下载对应架构发布包并幂等安装；构建后自动做 --help 冒烟。',
+    examples: ['ops delivery installer', 'ops delivery installer --dry-run'],
+    exitCodes: [{ code: 0, meaning: '安装器生成且 --help 冒烟通过' }, FAILURE],
+  }, (context) => runDeployInstaller(deployPorts(context), { dryRun: context.dryRun })),
   defineCommand({
     path: ['runtime', 'dev'],
     summary: '前端开发栈: Vite + Mock Product API',

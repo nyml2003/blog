@@ -1,8 +1,8 @@
-name: release
+name: build-release
 
 on:
   push:
-    tags: ['v*']
+    tags: ['build-v*']
   workflow_dispatch:
 
 permissions:
@@ -23,11 +23,6 @@ jobs:
         run: nix develop ./nix -c ops delivery package --target x86_64-unknown-linux-musl
       - name: Package aarch64
         run: nix develop ./nix -c ops delivery package --target aarch64-unknown-linux-musl
-      - name: Smoke-test install rendering
-        run: |
-          workdir="$(mktemp -d)"
-          tar -xzf deploy/dist/blog-release-x86_64-unknown-linux-musl-*.tar.gz -C "$workdir"
-          (cd "$workdir" && SERVER_NAME=example.com CONTENT_REPO=owner/blog-content RENDER_ONLY=1 bash install.sh)
       - uses: actions/upload-artifact@v4
         with:
           name: blog-release

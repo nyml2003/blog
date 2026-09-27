@@ -82,7 +82,6 @@ export async function runDeployPackage(target: DeployTarget, ports: DeployPorts,
       await fs.copy(join(ports.root, 'deploy', 'systemd', name), join(staging, 'systemd', name));
     }
     await fs.copy(join(ports.root, 'deploy', 'nginx', RELEASE_NGINX), join(staging, 'nginx', RELEASE_NGINX));
-    await fs.copy(join(ports.root, 'deploy', 'install.sh'), join(staging, 'install.sh'));
 
     const artifacts = releaseArtifacts();
     const sha256Map: Record<string, string> = {};

@@ -28,7 +28,6 @@ class PackageWorld {
     this.files.set(`${ROOT}/deploy/systemd/blog-data.service`, '[Service]\nExecStart=/usr/local/bin/data\n');
     this.files.set(`${ROOT}/deploy/systemd/blog-product.service`, '[Service]\nEnvironment=BLOG_CONTENT_REPO={{contentRepo}}\n');
     this.files.set(`${ROOT}/deploy/nginx/blog.conf`, 'server_name {{serverName}};\n');
-    this.files.set(`${ROOT}/deploy/install.sh`, '#!/usr/bin/env bash\nCONFIG_FILE="${DEPLOY_ENV_FILE:-/etc/blog/deploy.env}"\nset -euo pipefail\n');
     this.files.set(`${ROOT}/src/frontend/dist/index.html`, '<html></html>');
     this.files.set(`${ROOT}/src/frontend/dist/assets/app.js`, 'console.log(1)');
     for (const name of ['product', 'data', 'blog-admin-credentials']) {
@@ -68,8 +67,6 @@ test('package assembles an environment-independent release with checksums and no
   assert.match(product, /\{\{contentRepo\}\}/, 'templates must stay unrendered in the release');
   const nginx = world.files.get(`${ROOT}/deploy/dist/.staging/nginx/blog.conf`) ?? '';
   assert.match(nginx, /\{\{serverName\}\}/);
-  const install = world.files.get(`${ROOT}/deploy/dist/.staging/install.sh`) ?? '';
-  assert.match(install, /DEPLOY_ENV_FILE/);
 
   const manifestText = world.files.get(`${ROOT}/deploy/dist/.staging/MANIFEST.json`) ?? '';
   assert.doesNotMatch(manifestText, new RegExp(TOKEN_SENTINEL));
