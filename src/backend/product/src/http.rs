@@ -2011,16 +2011,17 @@ async fn respond(
     match result {
         Ok(mut trace) => {
             match &mut trace.outcome {
-                protocol::DataOutcome::ArticleDetail(detail) if scene == scene::ARTICLE_DETAIL => {
-                    if !article_html_core::inspect(&detail.content_html).valid {
-                        return envelope(
-                            &Envelope::<serde_json::Value>::failure(
-                                code::ARTICLE_NOT_FOUND,
-                                "article not found",
-                            ),
-                            StatusCode::NOT_FOUND,
-                        );
-                    }
+                protocol::DataOutcome::ArticleDetail(detail)
+                    if scene == scene::ARTICLE_DETAIL
+                        && !article_html_core::inspect(&detail.content_html).valid =>
+                {
+                    return envelope(
+                        &Envelope::<serde_json::Value>::failure(
+                            code::ARTICLE_NOT_FOUND,
+                            "article not found",
+                        ),
+                        StatusCode::NOT_FOUND,
+                    );
                 }
                 protocol::DataOutcome::Recommendation(items) => {
                     items.retain(|detail| article_html_core::inspect(&detail.content_html).valid);

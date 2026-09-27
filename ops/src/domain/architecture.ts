@@ -26,6 +26,11 @@ function importedModules(file: string, source: string): string[] {
   return modules;
 }
 
+/** Import paths like `./document` must not be mistaken for environment globals. */
+function withoutImports(source: string): string {
+  return source.replace(new RegExp(IMPORT_PATTERN.source, "g"), " ");
+}
+
 function containsPath(module: string, path: string): boolean {
   return module.includes(`/src/frontend/${path}`);
 }
@@ -106,7 +111,7 @@ function checkFrontendFile(file: string, source: string): Violation[] {
         module.startsWith("node:") ||
         /(?:^|\/)(?:zod|desktop-ui|mobile-ui|common|solid|desktop|mobile)(?:\/|$)/.test(module),
     );
-    if (importsEnvironment || /\b(?:fetch|AbortController|window|document|localStorage|sessionStorage|process)\b/.test(source)) {
+    if (importsEnvironment || /\b(?:fetch|AbortController|window|document|localStorage|sessionStorage|process)\b/.test(withoutImports(source))) {
       violations.push({
         file,
         message: "kernel must remain environment and framework independent",

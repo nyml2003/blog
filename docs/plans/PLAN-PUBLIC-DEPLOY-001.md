@@ -1,6 +1,6 @@
 # PLAN-PUBLIC-DEPLOY-001 博客公网上线
 
-- 状态:进行中(2026-09-26;A 块与公网只读模式已实现并实测,质量门禁三处既有失败见 A3;B 块待用户准备服务器/证书/PAT)
+- 状态:进行中(2026-09-27;A 块与公网只读模式已实现并实测,质量门禁已全绿;B 块待用户准备服务器/证书/PAT)
 - 目标:博客以 HTTPS 公网可用,服务器重启自动恢复,文章数据有备份。
 - 读者:执行本计划的实现者(人或 agent)。本文件自包含,按节执行;标注「已核实」的事实均给出文件与行号,执行前可复核。
 - 范围:工作块 A(ops 放行 `prod` 数据模式)+ 工作块 B(服务器部署)。
@@ -50,7 +50,7 @@
 - [x] prod 起栈、重启数据仍在:真实进程 E2E `MODE-PROD` 通过(显式路径建库、自动迁移、不 seed、退出不删、重开同库可读),等同原验收 3+4;
 - [x] integration 行为不变:真实进程 E2E `MODE-004` 通过(固定 test、挂载 web/dist);
 - [x] ops 契约测试与静态检查:123 例(110 通过、13 个默认跳过的真实进程用例);ops 语法检查全过;pnpm typecheck/lint/format/build 全过;
-- [ ] `ops quality check` 未全绿,三处既有失败与本次改动无关:(a) `scripts/test-article-html-wasm.mjs:14` 引用的 `docs/plans/archive/PLAN-ARTICLE-HTML-VALIDATION-001/fixtures/article-html-v1.json` 已随 plans 目录移除;(b) `src/frontend/app/kernel/ports/index.ts` 触发 kernel 架构边界(最后修改 3fb7b6b,本次未动);(c) `src/backend/product/src/http.rs:2015` 既有 `clippy::collapsible_match`(本次 diff 未触碰该表达式);
+- [x] `ops quality check` 全绿(2026-09-27):三处既有失败已单独修复——(a) fixture 从 git 历史恢复到 `src/core/article-html-core/tests/fixtures/`;(b) kernel 检查器修正 `from "./document"` 被误判为环境依赖;(c) `http.rs` clippy `collapsible_match` 折叠;
 - [x] ops 类型校验:ops 不在项目 tsc 门禁内;单独用 tsc 7.0.2 strict 校验,本次改动文件 0 错误(全仓 ops 另有 22 条历史遗留错误,不在本期范围);
 - 备注:wasm-bindgen 生成产物(`src/frontend/common/validation/generated/`)已按用户要求移出 git 跟踪并加入 .gitignore(2026-09-26),构建流程会自动重新生成。
 - 主控复核(2026-09-26):单元/契约测试复跑全绿(63 例,0 失败);E2E 档(`OPS_RUNTIME_E2E=1`)复跑 **MODE-PROD 通过**,核心验收属实。同档另有 3 个失败用例(`MODE-001`/`PORT-002+ENV-001` dev+Vite 链路 60s 超时 ×2、`FAIL-003` missing-binary stdout 断言 ×1),均不在 A 块改动面(prod/backend 用例全过),待归因;不阻塞部署,可与 quality check 两处既有失败一并处置。

@@ -2,10 +2,8 @@ use article_html_core::{MAX_INPUT_BYTES, inspect, parse};
 
 #[test]
 fn shared_fixtures() {
-    let fixtures: serde_json::Value = serde_json::from_str(include_str!(
-        "fixtures/article-html-v1.json"
-    ))
-    .unwrap();
+    let fixtures: serde_json::Value =
+        serde_json::from_str(include_str!("fixtures/article-html-v1.json")).unwrap();
     for case in fixtures["cases"].as_array().unwrap() {
         let result = inspect(case["source"].as_str().unwrap());
         assert_eq!(

@@ -35,6 +35,20 @@ test("enforces the new app foundation boundaries", () => {
   );
   assert.deepEqual(
     check(
+      "/repo/src/frontend/app/kernel/ports/index.ts",
+      'export type { DocumentPort } from "./document";',
+    ),
+    [],
+  );
+  assert.deepEqual(
+    check(
+      "/repo/src/frontend/app/kernel/ports/document.ts",
+      "export const title = document.title;",
+    ),
+    ["kernel must remain environment and framework independent"],
+  );
+  assert.deepEqual(
+    check(
       "/repo/src/frontend/app/infrastructure/browser/network.ts",
       'import { z } from "zod"; const path = "/api/items";',
     ),
