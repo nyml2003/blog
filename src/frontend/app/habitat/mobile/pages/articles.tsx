@@ -72,7 +72,7 @@ export function createMobileArticlesPage(
     };
     return (
       <MobileShell context={context} activeId="articles">
-        <header class="page-heading category-page-heading">
+        <header class="page-heading">
           <Text content="文章库" options={{ tone: "accent", size: "meta" }} />
           <Heading content={title} options={{ as: "h1", size: "page" }} />
           <Text
@@ -164,7 +164,11 @@ function ForCategories(props: {
         {roots.map((root) => (
           <button
             type="button"
-            class={root.id === props.selection.rootId ? "is-selected" : ""}
+            class={
+              root.id === props.selection.rootId
+                ? "m-atom-tab m-atom-tab--vertical is-selected"
+                : "m-atom-tab m-atom-tab--vertical"
+            }
             onClick={() =>
               props.onSelect({ rootId: root.id, childId: undefined })
             }
@@ -176,7 +180,9 @@ function ForCategories(props: {
       <div class="category-child-list">
         <button
           type="button"
-          class={!props.selection.childId ? "is-selected" : ""}
+          class={
+            !props.selection.childId ? "m-atom-tab is-selected" : "m-atom-tab"
+          }
           onClick={() =>
             props.onSelect({
               rootId: props.selection.rootId,
@@ -189,7 +195,11 @@ function ForCategories(props: {
         {children.map((child) => (
           <button
             type="button"
-            class={child.id === props.selection.childId ? "is-selected" : ""}
+            class={
+              child.id === props.selection.childId
+                ? "m-atom-tab is-selected"
+                : "m-atom-tab"
+            }
             onClick={() =>
               props.onSelect({
                 rootId: props.selection.rootId,

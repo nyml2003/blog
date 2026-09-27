@@ -11,6 +11,19 @@
   gap: 24px;
 }
 
+.settings-feedback {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--coral);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+}
+
+.settings-feedback .m-atom-text--meta {
+  margin: 0;
+}
+
 .page-heading .m-atom-text--accent {
   display: block;
   margin-bottom: 9px;
