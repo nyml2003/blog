@@ -11,7 +11,7 @@ import { spawnSync } from 'node:child_process';
 import { access, chmod, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { configTemplate, parseBlogConfig, seedFromLegacy, type BlogConfig } from './config.ts';
+import { apexAlias, configTemplate, parseBlogConfig, seedFromLegacy, type BlogConfig } from './config.ts';
 import {
   BIN_DIR,
   CONFIG_DIR,
@@ -231,7 +231,7 @@ async function runDeploy(options: Options, fetchImpl: FetchLike): Promise<number
     await verifyChecksums(workDir, join(workDir, 'SHA256SUMS'));
     ok('发布包校验通过');
 
-    const values = { serverName: config.serverName, contentRepo: config.contentRepo };
+    const values = { serverName: config.serverName, contentRepo: config.contentRepo, apexName: apexAlias(config.serverName) };
     const renderedDir = join(workDir, 'rendered');
     await mkdir(join(renderedDir, 'systemd'), { recursive: true, mode: 0o700 });
     await mkdir(join(renderedDir, 'nginx'), { recursive: true, mode: 0o700 });

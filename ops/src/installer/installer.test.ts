@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { configTemplate, parseBlogConfig, seedFromLegacy } from './config.ts';
+import { apexAlias, configTemplate, parseBlogConfig, seedFromLegacy } from './config.ts';
 import { renderTemplate } from './render.ts';
 import { fetchReleases, pickAsset, pickBuildRelease, targetForArch, verifyChecksums } from './release.ts';
 import { main } from './main.ts';
@@ -36,6 +36,12 @@ test('config rejects placeholders and unknown fields', () => {
     productEnv: 'BLOG_CONTENT_TOKEN=github_pat_test\n',
   });
   assert.deepEqual(seeded, VALID);
+});
+
+test('apex alias is derived only for www hostnames', () => {
+  assert.equal(apexAlias('www.blog.example.com'), 'blog.example.com');
+  assert.equal(apexAlias('blog.example.com'), '');
+  assert.equal(apexAlias('wwww.blog.example.com'), '');
 });
 
 test('templates substitute placeholders and refuse unresolved output', () => {

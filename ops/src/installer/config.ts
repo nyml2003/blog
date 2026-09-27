@@ -59,6 +59,11 @@ export function parseBlogConfig(text: string): BlogConfig {
   return { serverName, contentRepo, contentToken, ...(buildTag ? { buildTag } : {}) };
 }
 
+/** 从 `www.` 主域名派生裸域名别名,供 nginx 的 80 端口跳转使用;非 www 前缀返回空串。 */
+export function apexAlias(serverName: string): string {
+  return serverName.startsWith('www.') ? serverName.slice(4) : '';
+}
+
 /** 从旧散件文件内容里预填骨架(迁移用,缺失项忽略)。 */
 export function seedFromLegacy(input: {
   readonly deployEnv?: string;

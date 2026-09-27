@@ -214,7 +214,7 @@ WantedBy=multi-user.target
 
 ### 3.4 nginx 与 TLS
 
-- 全新 server 块:80 `return 301 https://$host$request_uri`;443 `ssl_protocols TLSv1.2 TLSv1.3`,证书取 `/etc/nginx/cert/ventusvocatflumen.cn.{pem,key}`;
+- 全新 server 块:80 把 `{{serverName}}` 与 `{{apexName}}`(www 前缀派生)301 到 `https://{{serverName}}`;443 `ssl_protocols TLSv1.2 TLSv1.3`,证书取 `/etc/nginx/cert/<serverName>.{pem,key}`(阿里云证书主体为 `www.ventusvocatflumen.cn`);
 - `location /admin { return 404; }`、`location /api/admin/ { return 404; }` 作为管理面的纵深防御(Product `--admin off` 本身已 404);
 - `location /` 反代 `http://127.0.0.1:17800`,设置 `Host`、`X-Forwarded-For $remote_addr`、`X-Forwarded-Proto https`;
 - 证书事实源在 `/etc/blog/<serverName>.pem|.key`;安装器复制到 `/etc/nginx/cert/`(AppArmor 下 nginx 只允许惯例目录),更新证书=替换事实源后重跑 `redeploy`;
@@ -247,7 +247,7 @@ WantedBy=multi-user.target
 
 - 服务状态与日志:`systemctl status blog-data blog-product`、`journalctl -u blog-product -f`;
 - 健康:`curl -s http://127.0.0.1:17800/healthz`;注入配置:`curl -s http://127.0.0.1:17800/product/diagnostics`;
-- 公网:`curl -sI https://ventusvocatflumen.cn`(证书链、80 跳转);
+- 公网:`curl -sI https://www.ventusvocatflumen.cn`(证书链、裸域 80 跳 www);
 - 数据停机演练:`systemctl stop blog-data` → 页面/接口应明确报错(非挂死)→ `systemctl start blog-data` → 自愈。
 
 ## 4. 风险与待决

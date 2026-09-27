@@ -8,7 +8,7 @@
 
 ## 既定决策与红线(执行者必读)
 
-- 域名 `ventusvocatflumen.cn`。服务器将整体重置(2026-09-26 决定):既有服务、配置与数据全部清空,不保留、不回退;nginx 与证书按全新部署处理。证书用阿里云证书,放入 `/etc/blog/<域名>.pem|.key`(唯一事实源);nginx 引用 `/etc/nginx/cert/`(安装器复制,root:root 0600)。
+- 域名 `www.ventusvocatflumen.cn`(阿里云证书主体,2026-09-27 修订)。服务器将整体重置(2026-09-26 决定):既有服务、配置与数据全部清空,不保留、不回退;nginx 与证书按全新部署处理。证书放入 `/etc/blog/<域名>.pem|.key`(唯一事实源);nginx 引用 `/etc/nginx/cert/`(安装器复制,root:root 0600)。裸域名 `ventusvocatflumen.cn` 的 HTTP 会 301 到 www;HTTPS 裸域名需要含 apex 的证书(当前证书只有 www)。
 - 正式内容仓库已定(2026-09-26):GitHub 私有仓库 `nyml2003/blog-content`,专存文章内容,与代码仓库分离;该仓库由用户自行创建(B4 前置)。
 - TLS 必须先于/同时上线:应用层鉴权不含链路加密,明文公网会泄露 session cookie(SPEC-ADMIN-AUTH-001)。
 - `BLOG_TRUSTED_PROXY_IPS` 只配 `127.0.0.1`(nginx 同机),不得配宽泛网段(operations.md)。
@@ -149,15 +149,15 @@ WantedBy=multi-user.target
 ```nginx
 server {
     listen 80;
-    server_name ventusvocatflumen.cn;
-    return 301 https://$host$request_uri;
+    server_name www.ventusvocatflumen.cn ventusvocatflumen.cn;
+    return 301 https://www.ventusvocatflumen.cn$request_uri;
 }
 
 server {
     listen 443 ssl;
-    server_name ventusvocatflumen.cn;
-    ssl_certificate     /etc/nginx/cert/ventusvocatflumen.cn.pem;
-    ssl_certificate_key /etc/nginx/cert/ventusvocatflumen.cn.key;
+    server_name www.ventusvocatflumen.cn;
+    ssl_certificate     /etc/nginx/cert/www.ventusvocatflumen.cn.pem;
+    ssl_certificate_key /etc/nginx/cert/www.ventusvocatflumen.cn.key;
     ssl_protocols TLSv1.2 TLSv1.3;
 
     # 公网只读:管理面在 Product(--admin off)已是 404,这里再加一层兜底
@@ -206,8 +206,8 @@ BLOG_CONTENT_REPO=nyml2003/blog-content BLOG_CONTENT_TOKEN=<token> ops content r
 
 ### B6 上线验收清单
 
-- [ ] `https://ventusvocatflumen.cn` 公开端(Desktop + Mobile)打开正常,无页面错误;
-- [ ] 公网管理面不存在:`https://ventusvocatflumen.cn/admin`、`/admin/login.html`、`/api/admin/*` 全部 404;公开端只读;
+- [ ] `https://www.ventusvocatflumen.cn` 公开端(Desktop + Mobile)打开正常,无页面错误;裸域 HTTP 301 到 www;
+- [ ] 公网管理面不存在:`https://www.ventusvocatflumen.cn/admin`、`/admin/login.html`、`/api/admin/*` 全部 404;公开端只读;
 - [ ] 本地编辑闭环(在 mac 上,`--admin bypass` 或 `on`):新建/编辑文章 → 提交 PR → GitHub 合入 → SSH 执行 `systemctl restart blog-product` → 公网可见新内容;未合入 PR 的内容不可见;
 - [ ] `systemctl restart blog-product` 或整机 reboot 后两服务自动恢复;
 - [ ] `systemctl stop blog-data` 后页面/接口报错明确(不 500 挂死),恢复 data 后服务自愈;

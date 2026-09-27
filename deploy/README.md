@@ -7,12 +7,14 @@
 ```sh
 apt-get install -y nodejs
 curl -fLo /etc/blog/blog-deploy.mjs \
-  https://github.com/nyml2003/blog/releases/download/script-v0.1.0/blog-deploy.mjs
+  https://github.com/nyml2003/blog/releases/download/script-v0.1.1/blog-deploy.mjs
 node /etc/blog/blog-deploy.mjs init
-# 编辑 /etc/blog/blog.json(serverName / contentRepo / contentToken),
+# 编辑 /etc/blog/blog.json:serverName 填证书上的名字(如 www.example.com)、contentRepo、contentToken;
 # 放证书 /etc/blog/<serverName>.pem 与 .key(0600)
 node /etc/blog/blog-deploy.mjs deploy
 ```
+
+说明:`serverName` 以证书主体为准(`www.` 前缀)。裸域名的 HTTP 会 301 到 `serverName`;HTTPS 裸域名需要包含 apex 的证书。
 
 ## 日常发版与服务器更新
 
