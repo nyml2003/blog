@@ -161,6 +161,7 @@ class PackageWorld {
     this.files.set(`${ROOT}/deploy/systemd/blog-data.service`, '[Service]\nExecStart=/usr/local/bin/data\n');
     this.files.set(`${ROOT}/deploy/systemd/blog-product.service`, '[Service]\nEnvironment=BLOG_CONTENT_REPO={{contentRepo}}\n');
     this.files.set(`${ROOT}/deploy/nginx/blog.conf`, 'server_name {{serverName}};\n');
+    this.files.set(`${ROOT}/deploy/install.sh`, '#!/usr/bin/env bash\nSERVER_NAME="{{serverName}}"\n');
     this.files.set(`${ROOT}/src/frontend/dist/index.html`, '<html></html>');
     this.files.set(`${ROOT}/src/frontend/dist/assets/app.js`, 'console.log(1)');
     for (const name of ['product', 'data', 'blog-admin-credentials']) {
@@ -200,6 +201,12 @@ test('package assembles rendered configs and a manifest without any secret', asy
   assert.doesNotMatch(product, /\{\{/);
   const nginx = world.files.get(`${ROOT}/deploy/dist/.staging/nginx/blog.conf`) ?? '';
   assert.match(nginx, /server_name example\.com;/);
+  const install = world.files.get(`${ROOT}/deploy/dist/.staging/install.sh`) ?? '';
+  assert.match(install, /SERVER_NAME="example\.com"/);
+  assert.doesNotMatch(install, /\{\{/);
+  const sums = (world.files.get(`${ROOT}/deploy/dist/.staging/SHA256SUMS`) ?? '').trim().split('\n');
+  assert.equal(sums.length, Object.keys(SHA).length);
+  for (const line of sums) assert.match(line, /^[0-9a-f]{64}  \S+$/);
   const manifestText = world.files.get(`${ROOT}/deploy/dist/.staging/MANIFEST.json`) ?? '';
   assert.doesNotMatch(manifestText, new RegExp(TOKEN_SENTINEL));
   const manifest = JSON.parse(manifestText) as ReleaseManifest;

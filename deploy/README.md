@@ -2,20 +2,24 @@
 
 `ops delivery package|deploy|bundle` 的约定与用法。
 
-## 日常发布
+## 日常发布(服务器操作由你执行)
 
 ```sh
 # 1. 本机构建并打包(无秘密)
 ops delivery package --config ~/.config/blog/deploy.json
 
-# 2. 手动上传到服务器约定目录
-scp deploy/dist/blog-release-*.tar.gz <host>:blog-releases/
+# 2. 上传到服务器:发布包、证书、token 各就各位
+scp -p deploy/dist/blog-release-*.tar.gz <host>:~/
+scp -p <本机证书>/<域名>.pem <域名>.key <host>:~/cert/     # 服务器端约定目录
+scp -p ~/.local/state/blog/product.env <host>:~/product.env
 
-# 3. 本机执行安装:准备环境、校验、替换产物、重启、健康检查
-ops delivery deploy --config ~/.config/blog/deploy.json
+# 3. 服务器上解包并安装(幂等;重复执行即发新版本)
+tar -xzf blog-release-*.tar.gz -C blog-release && cd blog-release && sudo bash install.sh
 ```
 
-步骤 3 是幂等的,重复执行等价于"发新版本":二进制、dist、unit、nginx 配置、证书、token 全部重新安装,服务最后统一重启。
+`install.sh` 会校验 `SHA256SUMS`、准备 nginx/blog 用户与目录、安装二进制与 dist、安装 unit 与 nginx 配置、从 `~/cert` 安装证书、把 `~/product.env` 装成 `/var/lib/blog/product.env`(0600),最后重启服务并做健康检查。可用 `CERT_DIR` / `TOKEN_FILE` 覆盖默认位置。
+
+可选的 SSH 自动化:在 mac 上 `ops delivery deploy --config ...` 会代为完成上面的传输与安装;服务器操作习惯手工时不用它。
 
 ## 配置(放仓库外,建议 0600)
 

@@ -222,14 +222,14 @@ WantedBy=multi-user.target
 
 ### 3.5 从空服务器到可用的执行顺序
 
-1. (一次性,用户)重置服务器:加 SSH 公钥、云安全组放行 80/443、域名解析指向服务器;把阿里云证书放到服务器 `~/cert/<serverName>.pem|.key`;
+1. (一次性,用户)重置服务器:加 SSH 公钥、云安全组放行 80/443、域名解析指向服务器;把阿里云证书放到服务器 `~/cert/<serverName>.pem|.key`、token 放到 `~/product.env`;
 2. (开发机)写仓库外配置 `~/.config/blog/deploy.json`(host/target/serverName/contentRepo);
 3. (开发机)`ops delivery package --config <配置>` 产出发布包;
-4. (用户)手动 `scp deploy/dist/blog-release-*.tar.gz <host>:blog-releases/`;
-5. (开发机)`ops delivery deploy --config <配置>`:准备环境 → 校验 → 安装 → 重启 → 健康检查;
-6. 走 B6 验收 + B5 恢复演练;更新版本重复 3~5 即可(幂等)。
+4. (用户)手动 `scp` 发布包到服务器并解包;
+5. (服务器,用户)`sudo bash install.sh`:校验 SHA256SUMS → 安装产物/配置/证书/token → 重启 → 健康检查;
+6. 走 B6 验收 + B5 恢复演练;更新版本重复 3~5 即可(install.sh 幂等)。
 
-手工回退路径仍在计划 B1/B2/B3 节保留(unit/nginx 内容与安装位置不变)。
+可选的 SSH 自动化:`ops delivery deploy --config <配置>`(在 mac 上代办步骤 4~5);服务器操作归用户时不必用它。手工回退路径仍在计划 B1/B2/B3 节保留。
 
 ### 3.6 备份与恢复(GitHub 即备份)
 

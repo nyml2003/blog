@@ -77,12 +77,14 @@
 
 ```text
 MANIFEST.json(含 sha256,安装前校验)
+SHA256SUMS                            → install.sh 校验用
+install.sh                            → 服务器端安装器(渲染后,无秘密)
 bin/product bin/data bin/blog-admin-credentials → /usr/local/bin/
 web/dist/(整目录)                               → /var/lib/blog/web/dist/
 systemd/*.service、nginx/blog.conf(模板渲染)   → /etc/systemd/system、/etc/nginx
 ```
 
-手动 `scp` 到服务器 `~/blog-releases/` 后,`ops delivery deploy --config <配置>` 幂等安装;数据库启动自动创建迁移;token 由 deploy 从本机 0600 文件单独安装。
+流程:手动 `scp` 发布包到服务器,解包后 `sudo bash install.sh`(证书放 `~/cert/`、token 放 `~/product.env`);数据由启动自动创建迁移。服务器操作均由用户执行;`ops delivery deploy` 是可选的本机 SSH 自动化。
 
 ### B1 systemd unit 模板(仓库 `deploy/systemd/`,打包时渲染)
 

@@ -75,6 +75,8 @@ export async function runDeployPackage(config: DeployConfig, ports: DeployPorts,
     }
     const nginxSource = await ports.fs.read(join(ports.root, 'deploy', 'nginx', 'blog.conf'));
     await fs.write(join(staging, 'nginx', 'blog.conf'), renderTemplate(nginxSource, values));
+    const installSource = await ports.fs.read(join(ports.root, 'deploy', 'install.sh'));
+    await fs.write(join(staging, 'install.sh'), renderTemplate(installSource, values));
 
     const hashed = [
       ...RELEASE_BINARIES.map((name) => `bin/${name}`),
@@ -86,6 +88,8 @@ export async function runDeployPackage(config: DeployConfig, ports: DeployPorts,
     for (const relative of hashed) {
       sha256Map[relative] = sha256(await fs.readBytes(join(staging, relative)));
     }
+    const checksums = hashed.map((relative) => `${sha256Map[relative]}  ${relative}`).join('\n');
+    await fs.write(join(staging, 'SHA256SUMS'), `${checksums}\n`);
     const manifest: ReleaseManifest = {
       format: 1,
       target: config.target,
