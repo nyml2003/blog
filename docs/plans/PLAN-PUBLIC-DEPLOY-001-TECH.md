@@ -224,7 +224,7 @@ WantedBy=multi-user.target
 
 1. (一次性,用户)重置服务器:加 SSH 公钥、云安全组放行 80/443、域名解析指向服务器;装 `nodejs`,下载 `script-v*` 的 `blog-deploy.mjs` 到 `/etc/blog/`;
 2. (服务器,用户)`node /etc/blog/blog-deploy.mjs init` → 填写 `/etc/blog/blog.json`(serverName/contentRepo/contentToken)+ 放证书 `/etc/blog/<serverName>.pem|.key`;
-3. (开发机)按需打 tag:`script-v*` 出安装器、`build-v*` 出双架构发布包(CI 自动);
+3. (开发机)按需打 tag:`script-v*` 出安装器、`build-v*` 出 x86_64 发布包(CI 自动;服务器为 x64,arm64 构建暂关,能力保留);
 4. (服务器,用户)`node /etc/blog/blog-deploy.mjs deploy|redeploy`:自动下载最新 build-v* → 校验 SHA256SUMS → 注入域名/仓库名 → 安装产物/配置/证书/token → 重启 → 健康检查;
 5. 走 B6 验收 + B5 恢复演练;更新版本重复 3~4 即可(redeploy 幂等)。
 

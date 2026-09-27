@@ -227,7 +227,7 @@ BLOG_CONTENT_REPO=nyml2003/blog-content BLOG_CONTENT_TOKEN=<token> ops content r
 6. **证书来源**:**已定(2026-09-26;2026-09-27 修订位置):阿里云证书**,用户上传到 `/etc/blog/<serverName>.pem|.key`(唯一事实源);安装器复制到 `/etc/nginx/cert/`(root:root 0600)。
 7. **内部端口**:**已定(2026-09-26):Product `127.0.0.1:17800`、Data `127.0.0.1:17801`**。避开 8080/8081 与 Linux 临时端口段(32768–60999);外部仍只有 80/443,unit 与 nginx 已同步。
 8. **公网面形态**:**已定(2026-09-26):公网只读 + 本地编辑**。Product 新增 `--admin <on|off|bypass>`(默认 `on`):服务器 unit 用 `off`,管理面 404、无凭证;本地编辑栈用 `bypass` 免密(接受本地 DNS rebinding 风险),或 `on` 走密码+TOTP;内容更新流程 = 本地提交 PR → 合入 → SSH `systemctl restart blog-product` 触发启动同步。Spec 与部署配置已同步(commit 记录见收尾)。
-9. **部署方式**:**已定(2026-09-27,同日再修订)**:代码仓转公开,两套 tag——`script-v*` 只挂单文件安装器 `blog-deploy.mjs`,`build-v*` 只挂双架构发布包;服务器配置只有 `/etc/blog/blog.json` 一份(serverName/contentRepo/contentToken)+ 同目录证书,其余由安装器派生;`init` 生成骨架,`deploy|redeploy` 自动下载最新 build-v* 并幂等安装,全程无 release token、无环境变量。bash `install.sh`、`deploy.env`、`release.token` 与 `ops delivery deploy/bundle` 全部下线。
+9. **部署方式**:**已定(2026-09-27,同日再修订)**:代码仓转公开,两套 tag——`script-v*` 只挂单文件安装器 `blog-deploy.mjs`,`build-v*` 挂发布包(服务器为 x64,CI 只构建 x86_64;`ops delivery package --target` 仍保留 aarch64 能力备用);服务器配置只有 `/etc/blog/blog.json` 一份(serverName/contentRepo/contentToken)+ 同目录证书,其余由安装器派生;`init` 生成骨架,`deploy|redeploy` 自动下载最新 build-v* 并幂等安装,全程无 release token、无环境变量。bash `install.sh`、`deploy.env`、`release.token` 与 `ops delivery deploy/bundle` 全部下线。
 
 ## 已核实事实索引
 

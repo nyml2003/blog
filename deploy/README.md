@@ -1,6 +1,6 @@
 # deploy
 
-部署由两套 Release 资产驱动。代码仓公开:`script-v*` 只挂安装器 `blog-deploy.mjs`,`build-v*` 只挂双架构发布包 tarball;服务器配置集中在 `/etc/blog/`。
+部署由两套 Release 资产驱动。代码仓公开:`script-v*` 只挂安装器 `blog-deploy.mjs`,`build-v*` 挂 x86_64 发布包 tarball(服务器为 x64;arm64 构建暂关,`ops delivery package --target` 能力保留);服务器配置集中在 `/etc/blog/`。
 
 ## 服务器一次性引导
 
