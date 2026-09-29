@@ -1,15 +1,15 @@
-import { resolveWorkspace } from '@fluvient-cli/cli-kit/workspace.ts';
+import { resolveWorkspace, type Workspace } from '@fluvient-cli/cli-kit/workspace.ts';
 import { NodeFs } from './fs.ts';
 import { NodeProcess, NodeProcessSupervisor, ConsoleRuntimeLog, NodeSignals } from './process.ts';
 import { TcpPortProbe, TcpReadiness } from './net.ts';
 import { TerminalReporter } from './reporter.ts';
 
-export function corePlugin() {
+export function corePlugin(options: { workspace?: Workspace } = {}) {
   return {
     name: 'cli-core',
     configure({ container }: { container: import('@fluvient-cli/cli-kit/container.ts').Container }) {
       const fs = new NodeFs();
-      const workspace = resolveWorkspace(import.meta.url);
+      const workspace = options.workspace ?? resolveWorkspace(import.meta.url);
       container.bind('workspace', workspace);
       container.bind('fs', fs);
       container.bind('process', new NodeProcess());

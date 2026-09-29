@@ -6,6 +6,14 @@ import { dryRunPlugin, jsonPlugin, usagePlugin, versionPlugin } from '@fluvient-
 import { installerPlugin } from './plugin.ts';
 import type { FetchLike } from './installer/release.ts';
 
+const installerWorkspace = {
+  root: '/etc/blog',
+  web: '/var/lib/blog/web',
+  apps: '/var/lib/blog',
+  appSource: '/etc/blog',
+  appTests: '/etc/blog',
+} as const;
+
 
 export function createApp(fetchImpl: FetchLike = globalThis.fetch): ReturnType<typeof createCliApp> {
   return createCliApp({
@@ -13,7 +21,7 @@ export function createApp(fetchImpl: FetchLike = globalThis.fetch): ReturnType<t
     description: '博客服务器安装器',
     version: packageInfo.version,
     entry: import.meta.url,
-    plugins: [corePlugin(), usagePlugin({ noCommandExit: 10 }), versionPlugin(), dryRunPlugin(), jsonPlugin(), installerPlugin(fetchImpl)],
+    plugins: [corePlugin({ workspace: installerWorkspace }), usagePlugin({ noCommandExit: 10 }), versionPlugin(), dryRunPlugin(), jsonPlugin(), installerPlugin(fetchImpl)],
   });
 }
 
