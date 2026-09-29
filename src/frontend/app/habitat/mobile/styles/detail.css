@@ -24,7 +24,7 @@
 }
 .detail-main {
   padding-top: 12px;
-  padding-bottom: calc(40px + var(--safe-area-bottom));
+  padding-bottom: calc(16px + var(--safe-area-bottom));
 }
 .mobile-article {
   max-width: 680px;
