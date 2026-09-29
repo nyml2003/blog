@@ -1,7 +1,7 @@
 ---
 kind: plan
 id: PLAN-FRONTEND-E2E-001
-status: ready
+status: partial
 owner: project-manager
 created: 2026-09-29
 last_reviewed: 2026-09-29
@@ -103,3 +103,11 @@ E2E 只覆盖高价值用户旅程，不把所有单元测试重新写一遍。�
 - 继续使用外部 `playwright-core` + Flake Chromium，还是引入项目锁定的 Playwright 包与浏览器安装流程；以可复现性、仓库体积和 CI 环境决定。
 - 管理端测试凭证采用专用 fixture、临时初始化命令还是测试 bypass；不得复用开发者真实凭证。
 - 失败 trace/video 的保留期限、CI artifact 大小和是否支持并行 worker；以本地资源和 CI 时限实测决定。
+
+## 收尾记录
+
+- 实际交付：新增 `ops e2e`；runner、隔离运行栈、端口分配、信号清理、Playwright 直接加载、公开 Desktop/Mobile 旅程、Mock empty/slow/server-error/malformed-response 场景、截图和失败截图产物均位于 `apps/blog/src/e2e/**`；参数 Spec、运行指南和测试指南已同步。
+- 已验证：`pnpm exec tsc --noEmit`、Ops CLI/help 测试、E2E runner 单测和 `git diff --check` 通过；dry-run 不探测端口、不启动进程、不写文件。
+- 未交付：当前环境未配置 Playwright 模块和 Chromium，未取得真实浏览器截图证据；管理端旅程、CI job、连续运行两次、trace/video 策略和真实 integration/dev 浏览器验收尚未完成。
+- 收尾原因：先归档已完成的 Ops 编排和可测试 runner，避免把环境缺失与未决的管理端/CI 资源条件伪装成完成。
+- 恢复条件：提供可执行的 `playwright-module` 与 Chromium 路径后，运行 `ops e2e` 的 integration/dev 场景并补齐 CI、管理端凭证隔离和重复运行验收。
