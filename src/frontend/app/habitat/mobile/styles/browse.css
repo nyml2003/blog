@@ -15,7 +15,7 @@
   top: var(--shell-header-sticky-top);
   display: grid;
   gap: 4px;
-  max-height: calc(100vh - 178px);
+  max-height: calc(100svh - 178px);
   padding-right: 9px;
   overflow-y: auto;
   border-right: 1px solid var(--border);

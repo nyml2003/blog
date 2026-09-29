@@ -1,3 +1,4 @@
+import { ArrowLeft } from "lucide-solid";
 import { For, Show } from "solid-js";
 import { StateMessage } from "../../../../desktop-ui";
 import { definePage } from "../../../../solid/page";
@@ -21,7 +22,8 @@ const App = () => {
           {(x) => (
             <article class="article">
               <a class="back-link" href={publicArchiveHref()}>
-                ← 返回文章档案
+                <ArrowLeft size={18} aria-hidden="true" />
+                <span>返回文章档案</span>
               </a>
               <p class="eyebrow">
                 {x().articleType?.name ?? `类型 #${x().articleTypeId}`}
@@ -36,7 +38,10 @@ const App = () => {
               <div class="article-accent" aria-hidden="true" />
               <ArticleBody html={x().contentHtml} />
               <footer class="article-footer">
-                <a href={publicArchiveHref()}>← 返回文章档案</a>
+                <a href={publicArchiveHref()}>
+                  <ArrowLeft size={18} aria-hidden="true" />
+                  <span>返回文章档案</span>
+                </a>
                 <span>FIELD NOTES</span>
               </footer>
             </article>

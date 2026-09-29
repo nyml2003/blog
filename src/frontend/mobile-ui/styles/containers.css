@@ -1,8 +1,7 @@
 .m-page-container {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
-  height: 100vh;
-  height: 100dvh;
+  height: 100svh;
   background: var(--paper);
   color: var(--ink);
   font-family: var(--font-body);

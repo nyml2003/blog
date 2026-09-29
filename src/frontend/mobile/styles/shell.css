@@ -4,7 +4,7 @@
 .skip-link {
   position: absolute;
   left: -999px;
-  top: 8px;
+  top: max(8px, var(--safe-area-top));
   background: var(--ink);
   color: var(--foreground-on-accent);
   padding: 10px;
@@ -21,7 +21,7 @@
   align-items: center;
   justify-content: flex-start;
   min-height: var(--shell-header-min-height);
-  padding: 8px 18px;
+  padding: max(8px, var(--safe-area-top)) 18px 8px;
   background: var(--surface-header);
   border-bottom: 1px solid var(--border);
 }
@@ -41,14 +41,15 @@
 }
 /* `.mobile-shell` is the theme and viewport scope rendered by every page. */
 .mobile-shell {
-  min-height: 100vh;
+  min-height: 100svh;
+  overflow-x: clip;
   background: var(--paper);
   color: var(--ink);
   font-family: var(--font-body);
 }
 .mobile-preview-page {
   width: min(375px, 100%);
-  min-height: 100vh;
+  min-height: 100svh;
   margin: 0 auto;
   overflow-x: hidden;
   box-shadow: 0 0 0 1px var(--border);

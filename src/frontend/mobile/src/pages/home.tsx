@@ -1,3 +1,4 @@
+import { ArrowRight } from "lucide-solid";
 import { createSignal } from "solid-js";
 import { definePage } from "../../../solid/page";
 import { Heading, Link, Text } from "../../../mobile-ui/atoms";
@@ -46,7 +47,7 @@ const App = () => {
             content={
               <>
                 <span>浏览全部文章</span>
-                <span aria-hidden="true">→</span>
+                <ArrowRight size={18} aria-hidden="true" />
               </>
             }
             href={mobileArticlesHref()}

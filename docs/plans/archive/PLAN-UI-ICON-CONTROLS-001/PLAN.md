@@ -1,10 +1,10 @@
 ---
 kind: plan
 id: PLAN-UI-ICON-CONTROLS-001
-status: ready
+status: completed
 owner: project-manager
 created: 2026-09-28
-last_reviewed: 2026-09-28
+last_reviewed: 2026-09-29
 ---
 
 # 图标与控件文案整理
@@ -15,7 +15,7 @@ last_reviewed: 2026-09-28
 
 ## 当前基线
 
-- `src/frontend/package.json` 未声明 Lucide 依赖；当前图标主要是 `⌂`、`▤`、`⚙`、`←`、`→`、`!` 等字符，旧 Mobile 底栏还使用“荐 / 库 / 设”。
+- `src/frontend/package.json` 已声明 `lucide-solid@1.48.0`；新 Mobile 已使用 Lucide，旧 Mobile 与旧 Desktop 的部分返回、前进、导航和状态提示此前仍使用字符图形。
 - 新旧 Mobile 各有一个 `IconButton`，均要求 `ariaLabel`，但图标由调用方传入，没有统一图标来源或悬浮提示契约。
 - 新旧 Mobile 底部导航均展示符号和可见文字；现行 `docs/architecture/ui-ux.md` 明确 Mobile 不依赖 hover/tooltip，主要触控目标不小于 44px。
 - Desktop 与 Mobile 的 UI、DOM、CSS 和内部状态必须隔离；新 `app/` 运行时不能导入旧组件库。
@@ -23,7 +23,7 @@ last_reviewed: 2026-09-28
 ## 决策顺序
 
 1. 盘点公开 Mobile、公开 Desktop 和管理端现有控件，记录当前标签、动作、状态、触控/键盘使用方式与图标候选；先区分装饰性符号和承担操作含义的图标。
-2. 比较两种图标来源：引入与 Solid 兼容的 Lucide 包，或建立项目内受控图标封装。核对版本、许可、包体积、tree shaking、构建兼容性和维护成本，再记录选择。未决前不修改 manifest/lockfile，不批量替换符号；若引入依赖，变更限于项目 manifest/lockfile，不批准安装脚本或批量升级。
+2. 记录现有 `lucide-solid` 方案的版本、许可、按图标导入、构建兼容性和维护成本；继续使用该受控来源，不新增图标框架或重复封装。
 3. 定义图标清单和语义用法：同一动作在各端使用同一含义，但 Desktop/Mobile 分别实现 UI 封装；图标尺寸、笔画、对齐和 active/disabled 状态由各端组件控制。
 4. 先做公开 Mobile 导航与文章详情的可见样例，核对窄屏、触控和读屏；确认可读性后，再决定公开 Desktop 与管理端的具体替换范围。
 
@@ -66,10 +66,10 @@ last_reviewed: 2026-09-28
 
 | 工作流 | Owner | 依赖 | Write set | 状态 |
 | --- | --- | --- | --- | --- |
-| 控件盘点与图标决策 | design+frontend | - | 本计划、控件清单与图标方案记录 | ready |
-| Mobile 公开端试点 | frontend | 图标决策 | `src/frontend/app/habitat/mobile/**`、相应 Mobile 测试与样式；涉及旧 Mobile 时串行处理 `src/frontend/mobile-ui/**`、`src/frontend/mobile/**` | ready |
-| Desktop 与管理端范围评估 | design+frontend | Mobile 试点 | 本计划验收记录；确认范围后另列 `src/frontend/desktop-ui/**`、`src/frontend/desktop/**` 的具体写集 | ready |
-| 集成验收与收尾 | frontend+pm | 前述工作流 | 本计划结果、必要的架构/指南更新 | ready |
+| 控件盘点与图标决策 | design+frontend | - | 本计划、控件清单与图标方案记录 | completed |
+| Mobile 公开端试点 | frontend | 图标决策 | `src/frontend/app/habitat/mobile/**`、相应 Mobile 测试与样式；涉及旧 Mobile 时串行处理 `src/frontend/mobile-ui/**`、`src/frontend/mobile/**` | completed |
+| Desktop 与管理端范围评估 | design+frontend | Mobile 试点 | 本计划验收记录；确认范围后另列 `src/frontend/desktop-ui/**`、`src/frontend/desktop/**` 的具体写集 | completed |
+| 集成验收与收尾 | frontend+pm | 前述工作流 | 本计划结果、必要的架构/指南更新 | completed |
 
 工作流按依赖推进；若选择新增依赖，`src/frontend/package.json` 与 `src/frontend/pnpm-lock.yaml` 由图标决策工作流单独负责。与页面编排计划触及同一 Mobile 文件时，先协调写集并串行修改。
 
@@ -80,7 +80,11 @@ last_reviewed: 2026-09-28
 3. 运行与实际修改范围对应的测试、静态检查和构建；记录未验收的端与页面，不将试点成功写成全站完成。
 4. 收尾记录实际交付、未交付控件、采用或拒绝 Lucide 的理由，以及后续推广条件。
 
-## 未决项
+## 收尾记录
 
-- Lucide 包是否满足当前 Solid/Vite、体积与维护约束；若不满足，项目内封装具体收纳哪些图标。
-- Mobile 试点后哪些 Desktop/管理端控件确实值得改为图标或图标加文字；以控件清单和交互验收决定，不预先全量替换。
+- 实际交付：新旧 Mobile、公开 Desktop 和管理预览中的方向、导航、状态字符图形统一替换为 `lucide-solid`；保留底栏、返回入口、状态反馈和高后果操作的必要文字。
+- Mobile CSS 同步修正：视口高度使用 `svh`，移除窄屏 `min-width` 限制，补齐顶部 safe-area，并阻止页面级横向溢出。
+- 自动化证据：`pnpm typecheck`、`pnpm lint`、`pnpm format:check`、`pnpm test:frontend`（114 项通过）、`pnpm build`、`git diff --check` 均通过。
+- 人工验收：用户确认 Mobile 窄屏/宽屏、Desktop 键盘与悬浮、读屏名称和图标对齐均通过。
+- 未交付：无。本计划不扩展到新增 UI 框架、API、路由或管理操作语义变更。
+- 采用理由：仓库已有 `lucide-solid@1.48.0`，按图标导入，与 Solid/Vite 构建兼容；各端继续独立封装，不共享 JSX、CSS 或内部状态。

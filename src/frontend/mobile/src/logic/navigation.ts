@@ -10,19 +10,16 @@ export const mobileNavigationItems = () =>
     {
       id: "home",
       href: siteRouteRequired("mobile-home"),
-      mark: "荐",
       label: "推荐",
     },
     {
       id: "articles",
       href: siteRouteRequired("mobile-articles"),
-      mark: "库",
       label: "文章库",
     },
     {
       id: "settings",
       href: siteRouteRequired("mobile-settings"),
-      mark: "设",
       label: "设置",
     },
   ] as const satisfies readonly NavigationItem[];

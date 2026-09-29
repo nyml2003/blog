@@ -1,3 +1,4 @@
+import { CircleAlert, CircleDashed, Inbox } from "lucide-solid";
 import { Show } from "solid-js";
 import { Button, Text } from "../atoms";
 
@@ -11,9 +12,9 @@ export type StateMessageProps = {
 
 export function StateMessage(props: StateMessageProps) {
   const icon = () => {
-    if (props.kind === "loading") return "◌";
-    if (props.kind === "empty") return "○";
-    return "!";
+    if (props.kind === "loading") return <CircleDashed size={20} />;
+    if (props.kind === "empty") return <Inbox size={20} />;
+    return <CircleAlert size={20} />;
   };
 
   return (

@@ -1,3 +1,4 @@
+import { ArrowRight } from "lucide-solid";
 import { For, Show } from "solid-js";
 import { Heading, Link, Text } from "../../../mobile-ui/atoms";
 import { mobileArticleListHref } from "../../../solid/queries";
@@ -58,7 +59,7 @@ export function ShelfSection(p: { section: ArticleShelfSection }) {
               content={
                 <>
                   <span>查看全部</span>
-                  <span aria-hidden="true">→</span>
+                  <ArrowRight size={18} aria-hidden="true" />
                 </>
               }
               href={entry.href}

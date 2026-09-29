@@ -99,7 +99,7 @@ E2E 只覆盖高价值用户旅程，不把所有单元测试重新写一遍。�
 
 ## 未决项
 
-- E2E 命令放在 `ops` registry、根目录脚本，还是两者都提供；取决于是否修改当前 runtime Spec。
+- E2E 统一由 `ops` 管理，提供独立、显式的 E2E 子命令；具体参数和进程契约在 Runner 工作流中确定。
 - 继续使用外部 `playwright-core` + Flake Chromium，还是引入项目锁定的 Playwright 包与浏览器安装流程；以可复现性、仓库体积和 CI 环境决定。
 - 管理端测试凭证采用专用 fixture、临时初始化命令还是测试 bypass；不得复用开发者真实凭证。
 - 失败 trace/video 的保留期限、CI artifact 大小和是否支持并行 worker；以本地资源和 CI 时限实测决定。

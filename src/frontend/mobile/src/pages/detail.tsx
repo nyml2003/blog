@@ -1,3 +1,4 @@
+import { ArrowLeft } from "lucide-solid";
 import { For, Show } from "solid-js";
 import { definePage } from "../../../solid/page";
 import { Heading, Link, Tag, Text } from "../../../mobile-ui/atoms";
@@ -44,7 +45,12 @@ const App = () => {
       {pageStyles()}
       <header class="reading-bar">
         <Link
-          content="← 文章库"
+          content={
+            <>
+              <ArrowLeft size={18} aria-hidden="true" />
+              <span>文章库</span>
+            </>
+          }
           href={mobileArticlesHref()}
           options={{ onClick: returnToArticleList }}
         />
@@ -102,7 +108,12 @@ const App = () => {
               <ArticleBody html={article.snapshot()?.contentHtml ?? ""} />
               <footer class="detail-footer">
                 <Link
-                  content="← 返回文章库"
+                  content={
+                    <>
+                      <ArrowLeft size={18} aria-hidden="true" />
+                      <span>返回文章库</span>
+                    </>
+                  }
                   href={mobileArticlesHref()}
                   options={{ onClick: returnToArticleList }}
                 />

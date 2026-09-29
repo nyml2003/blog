@@ -3,7 +3,7 @@ kind: spec
 id: SPEC-OPS-RUNTIME-001
 status: accepted
 owner: product
-last_reviewed: 2026-09-19
+last_reviewed: 2026-09-29
 ---
 
 # 运行模式、命令与进程契约
@@ -20,7 +20,7 @@ last_reviewed: 2026-09-19
 - 不定义 Product 外部 HTTP 契约（路径、`sceneCode`、envelope、领域错误码）——沿用 `docs/architecture/data-and-api.md`（ARCH-DATA-API），本 Spec 只在背压场景引用其结果。
 - 不定义 Mock 场景内容与 session 语义，本 Spec 只约束“如何用 CLI 选中场景”。
 - 不做公网监听、TLS、守护进程化；本期所有监听地址固定为回环地址。
-- 不引入 E2E runner；`integration` 不是浏览器自动化。
+- E2E runner 由 `ops` 作为独立、显式的浏览器验收子命令管理；`integration` 本身仍不是浏览器自动化。
 
 ## 引用（引用而非重定义）
 

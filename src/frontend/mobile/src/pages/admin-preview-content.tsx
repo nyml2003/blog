@@ -1,3 +1,4 @@
+import { ArrowLeft } from "lucide-solid";
 import { For, Show } from "solid-js";
 import { definePage } from "../../../solid/page";
 import { Heading, Link, Tag, Text } from "../../../mobile-ui/atoms";
@@ -31,7 +32,12 @@ const App = () => {
     <div class="mobile-shell mobile-preview-page">
       <header class="reading-bar">
         <Link
-          content="← 返回编辑"
+          content={
+            <>
+              <ArrowLeft size={18} aria-hidden="true" />
+              <span>返回编辑</span>
+            </>
+          }
           href={adminArticleEditHref(id ?? "")}
           options={{}}
         />
@@ -76,7 +82,12 @@ const App = () => {
               <ArticleBody html={saved().contentHtml} />
               <footer class="detail-footer">
                 <Link
-                  content="← 返回编辑"
+                  content={
+                    <>
+                      <ArrowLeft size={18} aria-hidden="true" />
+                      <span>返回编辑</span>
+                    </>
+                  }
                   href={adminArticleEditHref(id ?? "")}
                   options={{}}
                 />

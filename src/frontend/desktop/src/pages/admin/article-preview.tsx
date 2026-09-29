@@ -1,3 +1,4 @@
+import { ArrowLeft } from "lucide-solid";
 import { For, Show } from "solid-js";
 import { StateMessage } from "../../../../desktop-ui";
 import { definePage } from "../../../../solid/page";
@@ -57,7 +58,8 @@ export function AdminArticlePreview(props: { mobile?: boolean }) {
           {(saved) => (
             <article class="article">
               <a class="back-link" href={adminArticleEditHref(saved().id)}>
-                ← 返回编辑
+                <ArrowLeft size={18} aria-hidden="true" />
+                <span>返回编辑</span>
               </a>
               <p class="eyebrow">
                 {saved().articleType?.name ?? `类型 #${saved().articleTypeId}`}

@@ -1,3 +1,4 @@
+import { ArrowRight } from "lucide-solid";
 import { For, Show } from "solid-js";
 import { Button, StateMessage } from "../../../desktop-ui";
 import type { ArticleType } from "../../../common/contracts/domain";
@@ -40,7 +41,7 @@ function PublicShelf(props: {
             </div>
             <div class="archive-type">
               <span>{article.articleType?.name ?? "阅读全文"}</span>
-              <span aria-hidden="true">→</span>
+              <ArrowRight size={18} aria-hidden="true" />
             </div>
           </a>
         )}
