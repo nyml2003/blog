@@ -1,7 +1,7 @@
 import { constants } from 'node:fs';
 import { copyFile, lstat, mkdir, open, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import type { FsPort } from '../domain/ports.ts';
+import type { FsPort } from '../framework/ports.ts';
 export class NodeFs implements FsPort {
   async read(path: string): Promise<string> { return readFile(path, 'utf8'); }
   async exists(path: string): Promise<boolean> { try { await stat(path); return true; } catch { return false; } }

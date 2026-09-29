@@ -380,6 +380,11 @@ fn assert_product_t_shelf_contract(port: u16) {
     assert_eq!(archive["selectedFilterId"], "all");
     assert_eq!(archive["total"], 45);
     assert_eq!(archive["articles"].as_array().unwrap().len(), 20);
+    let first_article = &archive["articles"][0];
+    assert_eq!(
+        first_article["href"],
+        protocol::site_routes::public_article_detail_href(first_article["id"].as_i64().unwrap())
+    );
     assert!(archive["articles"][0].get("contentHtml").is_none());
 
     let engineering = get(

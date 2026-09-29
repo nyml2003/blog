@@ -71,8 +71,10 @@
 }
 
 .m-bottom-nav-mark {
-  font-size: 15px;
-  line-height: 1;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
 }
 
 .m-bottom-nav-label {
@@ -127,12 +129,13 @@
 }
 
 .m-state-message-icon {
+  display: flex;
+  justify-content: center;
   color: var(--coral);
   flex: 0 0 100%;
-  font-size: 24px;
 }
 
-.m-state-message.is-loading .m-state-message-icon {
+.m-state-message.is-loading .m-state-message-icon svg {
   animation: m-state-spin var(--motion-spin-duration) linear infinite;
 }
 

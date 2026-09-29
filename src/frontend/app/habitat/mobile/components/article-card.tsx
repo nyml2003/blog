@@ -1,9 +1,8 @@
 import { For, Show } from "solid-js";
-import type { MobilePageContext } from "../context";
-import { route } from "../context";
 import { Heading, Tag, Text } from "../ui";
 
 export interface ArticleCardProps {
+  readonly href: string;
   readonly article: {
     readonly id: number;
     readonly title: string;
@@ -15,16 +14,12 @@ export interface ArticleCardProps {
       readonly kind: "topic" | "tag";
     }[];
   };
-  readonly context: MobilePageContext;
 }
 
 export function ArticleCard(props: ArticleCardProps) {
   const terms = () => props.article.terms;
   return (
-    <a
-      class="article-card"
-      href={`${route(props.context.routes, "mobile-article-detail")}?id=${props.article.id}`}
-    >
+    <a class="article-card" href={props.href}>
       <Show when={terms().length > 0}>
         <p class="article-card-type">
           <Text

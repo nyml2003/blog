@@ -164,6 +164,7 @@ pub struct ArticleListPage {
 #[serde(rename_all = "camelCase")]
 pub struct ShelfCard {
     pub id: i64,
+    pub href: String,
     pub title: String,
     pub summary: String,
     pub updated_at: String,
@@ -303,6 +304,7 @@ pub fn to_details(items: &[InternalArticleDetail]) -> Vec<ArticleDetail> {
 fn shelf_card(item: &InternalArticleListItem) -> ShelfCard {
     ShelfCard {
         id: item.id,
+        href: crate::site_routes::public_article_detail_href(item.id),
         title: item.title.clone(),
         summary: item.summary.clone(),
         updated_at: item.updated_at.clone(),
@@ -321,6 +323,7 @@ pub fn to_shelf_cards_from_details(items: &[InternalArticleDetail]) -> Vec<Shelf
         .iter()
         .map(|item| ShelfCard {
             id: item.id,
+            href: crate::site_routes::public_article_detail_href(item.id),
             title: item.title.clone(),
             summary: item.summary.clone(),
             updated_at: item.updated_at.clone(),

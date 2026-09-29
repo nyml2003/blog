@@ -154,7 +154,7 @@ Then 架构门禁失败并报告具体文件与边界规则
 
 ## 测试/验收证据
 
-- 旧前端与新 `app/` 的当前边界均由 `ops/src/domain/architecture.ts` 及其正负样例测试守卫；文档不以历史计划代替当前扫描结果。
+- 旧前端与新 `app/` 的当前边界均由 `ops/src/commands/quality/architecture.ts` 及其正负样例测试守卫；文档不以历史计划代替当前扫描结果。
 - 前端历史交付曾通过 typecheck、lint、format、核心测试与 build；具体数量不作为长期契约，当前变更必须按现有命令重新验证。
 - 后端边界由 Rust 模块检查、契约测试和真实 Product→Data 链路测试共同覆盖；历史通过结果不替代当前复跑。
 - 门禁规则覆盖 Product HTTP

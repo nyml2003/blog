@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createMobileApi } from "../../../app/habitat/api/mobile";
+import {
+  articleIdFromSearch,
+  canReturnToSite,
+} from "../../../app/bootstrap/mobile/detail-input";
 import { ok } from "../../../app/kernel/result";
 import type {
   NetworkPort,
@@ -94,4 +98,59 @@ test("mobile API rejects invalid Zod payloads as protocol failures", async () =>
   if (result.ok) return;
   assert.equal(result.error.kind, "protocol");
   assert.ok(result.error.issues?.some((issue) => issue.includes("articles")));
+});
+
+test("mobile API retains the server-owned article href", async () => {
+  const result = await createMobileApi(
+    network({
+      status: 200,
+      headers: {},
+      body: body({
+        filters: [{ id: "all", name: "全部" }],
+        selectedFilterId: "all",
+        articles: [
+          {
+            id: 7,
+            href: "/m/articles/detail.html?id=7",
+            title: "文章",
+            summary: "摘要",
+            updatedAt: "2026-09-28T00:00:00Z",
+            terms: [],
+          },
+        ],
+        total: 1,
+      }),
+    }),
+  )
+    .tShelf.get({ surface: "archive", filterId: "all" })
+    .start();
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(result.value.articles[0]?.href, "/m/articles/detail.html?id=7");
+});
+
+test("detail input rejects invalid IDs and only returns into same-site history", () => {
+  assert.equal(articleIdFromSearch("?id=7"), 7);
+  for (const search of [
+    "",
+    "?id=0",
+    "?id=-1",
+    "?id=1.5",
+    "?id=9007199254740992",
+  ]) {
+    assert.equal(articleIdFromSearch(search), undefined);
+  }
+  assert.equal(
+    canReturnToSite("https://blog.test/m/articles", "https://blog.test", 2),
+    true,
+  );
+  assert.equal(
+    canReturnToSite("https://other.test/page", "https://blog.test", 2),
+    false,
+  );
+  assert.equal(
+    canReturnToSite("https://blog.test/m/articles", "https://blog.test", 1),
+    false,
+  );
+  assert.equal(canReturnToSite("", "https://blog.test", 2), false);
 });

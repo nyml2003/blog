@@ -188,6 +188,7 @@ test("category shelf and workspace commands keep taxonomy workflow fields at the
     articles: [
       {
         id: 8,
+        href: "/m/articles/detail.html?id=8",
         title: "边界",
         summary: "分类",
         updatedAt: "2026-09-08T00:00:00Z",
@@ -228,6 +229,10 @@ test("category shelf and workspace commands keep taxonomy workflow fields at the
   );
 
   if (!shelfResult.ok) assert.fail("category shelf must decode");
+  assert.equal(
+    shelfResult.value.articles[0]?.href,
+    "/m/articles/detail.html?id=8",
+  );
   const normalizedTaxonomy = shelfResult.value.taxonomy;
   await client.contentTaxonomy
     .save({ expectedVersion: 4, taxonomy: normalizedTaxonomy })

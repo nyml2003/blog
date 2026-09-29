@@ -9,7 +9,7 @@ apt-get install -y nodejs
 curl -fLo /etc/blog/blog-deploy.mjs \
   https://github.com/nyml2003/blog/releases/download/script-v0.1.1/blog-deploy.mjs
 node /etc/blog/blog-deploy.mjs init
-# 编辑 /etc/blog/blog.json:serverName 填证书上的名字(如 www.example.com)、contentRepo、contentToken;
+# 编辑 /etc/blog/blog.json:serverName 填证书上的名字(如 www.example.com)、contentRepo、contentToken、buildTag 保持为 latest;
 # 放证书 /etc/blog/<serverName>.pem 与 .key(0600)
 node /etc/blog/blog-deploy.mjs deploy
 ```
@@ -25,7 +25,7 @@ git tag build-v0.1.1  && git push origin build-v0.1.1    # 二进制/页面有�
 
 # 服务器更新(幂等,自动取最新 build-v*)
 node /etc/blog/blog-deploy.mjs redeploy
-# 可选:--build-tag build-v0.1.1 固定版本;--dry-run 只看计划
+# --dry-run 只看计划;版本策略由 blog.json 的 buildTag=latest 控制
 # 安装器自身更新:重下 script-v* 的 mjs 覆盖 /etc/blog/blog-deploy.mjs
 ```
 
@@ -34,7 +34,7 @@ node /etc/blog/blog-deploy.mjs redeploy
 ```text
 /etc/blog/                     0700
   blog-deploy.mjs              单文件安装器(公开下载,无秘密)
-  blog.json              0600  唯一配置:serverName / contentRepo / contentToken
+  blog.json              0600  唯一配置:serverName / contentRepo / contentToken / buildTag
   <serverName>.pem       0644  证书(事实源)
   <serverName>.key       0600
 派生(安装器管理,不手工编辑):

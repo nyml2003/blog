@@ -1,9 +1,8 @@
-import { For, Show, onMount, type Component } from "solid-js";
-import type { MobilePageContext } from "../context";
-import { route } from "../context";
-import { useMobileResource } from "../resource";
+import { ArrowLeft } from "lucide-solid";
+import { For, Show, type Component } from "solid-js";
+import { useMobileDetail, type MobileDetailInput } from "../logic/detail";
 import { ArticleBody } from "../components";
-import { Heading, Link, StateMessage, Tag, Text } from "../ui";
+import { Heading, StateMessage, Tag, Text } from "../ui";
 
 function displayDate(value: string): string {
   const date = new Date(value);
@@ -15,42 +14,43 @@ function displayDate(value: string): string {
   }).format(date);
 }
 
-export function createMobileDetailPage(context: MobilePageContext): Component {
+export function createMobileDetailPage(input: MobileDetailInput): Component {
   return function MobileDetailPage() {
-    const rawId = new URLSearchParams(context.navigation.current().search).get(
-      "id",
+    const detail = useMobileDetail(input);
+    const backLink = (
+      <a
+        class="detail-back"
+        href={detail.articleListHref}
+        aria-label="返回上一页"
+        title="返回上一页"
+        onClick={detail.onBack}
+      >
+        <ArrowLeft size={20} aria-hidden="true" />
+      </a>
     );
-    const id =
-      rawId !== null && /^\d+$/.test(rawId) ? Number(rawId) : undefined;
-    const resource = useMobileResource(() =>
-      context.api.article.getPublished(id ?? 0),
-    );
-    if (id === undefined || !Number.isSafeInteger(id) || id <= 0) {
-      return <DetailError retry={undefined} />;
+    if (detail.kind === "invalid") {
+      return (
+        <div class="mobile-shell">
+          <header class="reading-bar">
+            {backLink}
+            <span>阅读</span>
+          </header>
+          <main id="main" class="mobile-main detail-main">
+            <DetailError retry={undefined} />
+          </main>
+        </div>
+      );
     }
-    onMount(() => void resource.start());
-    const article = () => resource.state().snapshot;
-    const articleListHref = route(context.routes, "mobile-articles");
-    const goBack = (event: MouseEvent) => {
-      const current = context.navigation.current();
-      if (current.state && current.pathname === articleListHref) {
-        event.preventDefault();
-        context.navigation.back();
-      }
-    };
+    const article = () => detail.state().snapshot;
     return (
       <div class="mobile-shell">
         <header class="reading-bar">
-          <Link
-            content="← 文章库"
-            href={articleListHref}
-            options={{ onClick: goBack }}
-          />
+          {backLink}
           <span>阅读</span>
         </header>
         <main id="main" class="mobile-main detail-main">
           <Show
-            when={resource.state().status !== "loading"}
+            when={detail.state().status !== "loading"}
             fallback={
               <StateMessage
                 kind="loading"
@@ -61,7 +61,7 @@ export function createMobileDetailPage(context: MobilePageContext): Component {
           >
             <Show
               when={article()}
-              fallback={<DetailError retry={() => void resource.refetch()} />}
+              fallback={<DetailError retry={detail.retry} />}
             >
               {(value) => (
                 <article class="mobile-article">
@@ -90,13 +90,6 @@ export function createMobileDetailPage(context: MobilePageContext): Component {
                     </p>
                   </header>
                   <ArticleBody html={value().contentHtml} />
-                  <footer class="detail-footer">
-                    <Link
-                      content="← 返回文章库"
-                      href={articleListHref}
-                      options={{ onClick: goBack }}
-                    />
-                  </footer>
                 </article>
               )}
             </Show>
@@ -109,14 +102,10 @@ export function createMobileDetailPage(context: MobilePageContext): Component {
 
 function DetailError(props: { readonly retry: (() => void) | undefined }) {
   return (
-    <div class="mobile-shell">
-      <main id="main" class="mobile-main detail-main">
-        <StateMessage
-          kind="error"
-          text="文章不存在或暂不可见"
-          onRetry={props.retry}
-        />
-      </main>
-    </div>
+    <StateMessage
+      kind="error"
+      text="文章不存在或暂不可见"
+      onRetry={props.retry}
+    />
   );
 }

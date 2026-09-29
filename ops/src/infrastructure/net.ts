@@ -1,6 +1,6 @@
 import { connect, createServer, type Server } from 'node:net';
-import type { PortProbe, ReadinessOptions, ReadinessProbe } from '../domain/ports.ts';
-import { LISTEN_HOST } from '../domain/errors.ts';
+import type { PortProbe, ReadinessOptions, ReadinessProbe } from '../framework/ports.ts';
+import { LISTEN_HOST } from '../framework/errors.ts';
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => { setTimeout(resolve, ms); });

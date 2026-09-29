@@ -63,6 +63,13 @@ pub fn site_routes_payload() -> Result<SiteRoutesPayload, String> {
         .clone()
 }
 
+/// 生成公开文章详情链接。路由路径始终来自内嵌的站点路由清单。
+pub fn public_article_detail_href(id: i64) -> String {
+    let payload = site_routes_payload().expect("embedded site routes manifest must parse");
+    let path = payload.routes["mobile-article-detail"].as_str();
+    format!("{path}?id={id}")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -76,6 +83,15 @@ mod tests {
         assert_eq!(
             payload.routes["mobile-article-detail"],
             "/m/articles/detail.html"
+        );
+    }
+
+    #[test]
+    fn article_href_uses_embedded_route_and_article_id() {
+        let routes = site_routes_payload().expect("embedded manifest must parse");
+        assert_eq!(
+            public_article_detail_href(42),
+            format!("{}?id=42", routes.routes["mobile-article-detail"])
         );
     }
 

@@ -13,8 +13,8 @@ import type {
   ServiceRole,
   SignalPort,
   SpawnRequest,
-} from '../domain/ports.ts';
-import { withLogPrefix } from '../domain/runtime-plan.ts';
+} from '../framework/ports.ts';
+import { withLogPrefix } from '../framework/service-contract.ts';
 
 const RECENT_LOG_LIMIT = 50;
 

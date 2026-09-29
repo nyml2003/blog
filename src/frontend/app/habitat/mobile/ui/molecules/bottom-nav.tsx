@@ -1,3 +1,4 @@
+import { House, LibraryBig, Settings2 } from "lucide-solid";
 import { For } from "solid-js";
 import { Link } from "../atoms";
 import type { NavigationItem } from "../../logic/navigation";
@@ -22,7 +23,9 @@ export function BottomNav(props: BottomNavProps) {
                 content={
                   <>
                     <span aria-hidden="true" class="m-bottom-nav-mark">
-                      {item.mark}
+                      {item.id === "home" && <House size={20} />}
+                      {item.id === "articles" && <LibraryBig size={20} />}
+                      {item.id === "settings" && <Settings2 size={20} />}
                     </span>
                     <span class="m-bottom-nav-label">{item.label}</span>
                   </>

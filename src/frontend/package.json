@@ -23,6 +23,7 @@
     "@codemirror/lint": "6.8.5",
     "@codemirror/state": "6.5.2",
     "@codemirror/view": "6.36.5",
+    "lucide-solid": "1.48.0",
     "solid-js": "1.9.15",
     "zod": "^4.5.4"
   },

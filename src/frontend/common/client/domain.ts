@@ -33,6 +33,7 @@ export type ContentTaxonomy = {
 
 export type CategoryShelfArticle = {
   readonly id: number;
+  readonly href: string;
   readonly title: string;
   readonly summary: string;
   readonly updatedAt: string;
@@ -151,6 +152,7 @@ export const contentTaxonomySchema = z.object({
 });
 const categoryShelfArticleSchema = z.object({
   id,
+  href: z.string(),
   title: z.string(),
   summary: z.string(),
   updatedAt: z.string(),

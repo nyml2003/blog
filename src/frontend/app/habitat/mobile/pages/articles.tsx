@@ -130,6 +130,7 @@ export function createMobileArticlesPage(
                     const typeName = rootCategoryName(model, categoryId);
                     return (
                       <ArticleCard
+                        href={article.href}
                         article={{
                           id: article.id,
                           title: article.title,
@@ -146,7 +147,6 @@ export function createMobileArticlesPage(
                                   },
                                 ],
                         }}
-                        context={context}
                       />
                     );
                   })}

@@ -1851,7 +1851,7 @@ fn taxonomy_json(value: &TaxonomyFile) -> serde_json::Value {
     serde_json::json!({ "version": value.version, "nextCategoryId": value.next_category_id, "nextTagId": value.next_tag_id, "categories": value.categories.iter().map(|v| serde_json::json!({"id":v.id,"name":v.name,"parentId":v.parent_id,"position":v.position})).collect::<Vec<_>>(), "tags": value.tags.iter().map(|v| serde_json::json!({"id":v.id,"name":v.name})).collect::<Vec<_>>() })
 }
 fn article_card_json(value: &protocol::ContentSnapshotArticle) -> serde_json::Value {
-    serde_json::json!({ "id": value.meta.id, "title": value.meta.title, "summary": value.meta.summary, "categoryIds": value.meta.category_ids, "tagIds": value.meta.tag_ids, "updatedAt": value.meta.updated_at })
+    serde_json::json!({ "id": value.meta.id, "href": protocol::site_routes::public_article_detail_href(value.meta.id), "title": value.meta.title, "summary": value.meta.summary, "categoryIds": value.meta.category_ids, "tagIds": value.meta.tag_ids, "updatedAt": value.meta.updated_at })
 }
 fn content_article_json(value: &protocol::ContentSnapshotArticle) -> serde_json::Value {
     serde_json::json!({

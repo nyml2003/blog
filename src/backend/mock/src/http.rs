@@ -975,7 +975,7 @@ async fn mobile_category_shelf(
         },
         None => None,
     };
-    let result = state.store.read(&scope, |domain| domain.content_category_shelf(selected).map(|articles| { let taxonomy = taxonomy_json(&domain.content_workspace().1.taxonomy); let articles: Vec<_> = articles.into_iter().map(content_article_json).collect(); serde_json::json!({"taxonomy":taxonomy,"selectedCategoryId":selected,"total":articles.len(),"articles":articles}) }));
+    let result = state.store.read(&scope, |domain| domain.content_category_shelf(selected).map(|articles| { let taxonomy = taxonomy_json(&domain.content_workspace().1.taxonomy); let articles: Vec<_> = articles.into_iter().map(mobile_article_card_json).collect(); serde_json::json!({"taxonomy":taxonomy,"selectedCategoryId":selected,"total":articles.len(),"articles":articles}) }));
     match result {
         Ok(value) => finish(&state, label, StatusCode::OK, &Envelope::ok(value)),
         Err(failure) => domain_failure(&state, label, &failure, Instant::now()),
@@ -1493,6 +1493,9 @@ fn taxonomy_json(value: &protocol::Taxonomy) -> Value {
 }
 fn content_article_json(value: &protocol::ContentSnapshotArticle) -> Value {
     serde_json::json!({"id":value.meta.id,"title":value.meta.title,"summary":value.meta.summary,"updatedAt":value.meta.updated_at,"createdAt":value.meta.created_at,"publishedAt":value.meta.published_at,"categoryIds":value.meta.category_ids,"tagIds":value.meta.tag_ids,"contentHtml":value.content_html})
+}
+fn mobile_article_card_json(value: &protocol::ContentSnapshotArticle) -> Value {
+    serde_json::json!({"id":value.meta.id,"href":protocol::site_routes::public_article_detail_href(value.meta.id),"title":value.meta.title,"summary":value.meta.summary,"updatedAt":value.meta.updated_at,"categoryIds":value.meta.category_ids,"tagIds":value.meta.tag_ids})
 }
 fn workspace_json(domain: &crate::domain::DomainState) -> Value {
     let (version, snapshot, pull) = domain.content_workspace();

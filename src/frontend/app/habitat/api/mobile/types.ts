@@ -36,6 +36,7 @@ export type MobileArticle = z.output<typeof mobileArticleSchema>;
 
 const shelfArticleSchema = z.object({
   id: positiveId,
+  href: z.string(),
   title: z.string(),
   summary: z.string(),
   updatedAt: z.string(),
@@ -75,6 +76,7 @@ export const categoryShelfSchema = z.object({
   articles: z.array(
     z.object({
       id: positiveId,
+      href: z.string(),
       title: z.string(),
       summary: z.string(),
       updatedAt: z.string(),

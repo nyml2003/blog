@@ -17,6 +17,8 @@
 .reading-bar a {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  width: var(--touch-target);
   min-height: var(--touch-target);
   color: var(--blue);
 }
@@ -77,17 +79,4 @@
 .detail-meta time {
   font-family: ui-monospace, monospace;
   white-space: nowrap;
-}
-.detail-footer {
-  margin-top: 36px;
-  padding-top: 18px;
-  border-top: 1px solid var(--border);
-  color: var(--muted);
-  font-size: 12px;
-}
-.detail-footer a {
-  display: inline-flex;
-  align-items: center;
-  min-height: var(--touch-target);
-  color: var(--blue);
 }

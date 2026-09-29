@@ -1,3 +1,4 @@
+import { ArrowRight } from "lucide-solid";
 import { For, Show, createEffect, createSignal } from "solid-js";
 import type { Component } from "solid-js";
 import type { MobilePageContext } from "../context";
@@ -94,7 +95,7 @@ export function createMobileHomePage(context: MobilePageContext): Component {
                   <div class="article-list">
                     <For each={snapshot()?.articles ?? []}>
                       {(article) => (
-                        <ArticleCard article={article} context={context} />
+                        <ArticleCard article={article} href={article.href} />
                       )}
                     </For>
                   </div>
@@ -108,7 +109,7 @@ export function createMobileHomePage(context: MobilePageContext): Component {
             content={
               <>
                 <span>浏览全部文章</span>
-                <span aria-hidden="true">→</span>
+                <ArrowRight size={18} aria-hidden="true" />
               </>
             }
             href={route(context.routes, "mobile-articles")}
