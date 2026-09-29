@@ -17,7 +17,7 @@ last_reviewed: 2026-09-19
 | **Product** | 唯一面向浏览器的后端进程。所有 API 请求先到它；它懂业务但不碰数据库 | `src/backend/product/`，端口 8080 |
 | **Data** | 只被 Product 调用的存储进程。只会执行 25 种预定义操作，不懂业务、不解析 HTML、不知道 GitHub | `src/backend/data/`，端口 8081 |
 | **Mock** | 开发时的假 Product。写前端不用启动真实后端，还能模拟慢响应/服务器错误等 5 种故障 | `src/backend/mock/`，端口 9090 |
-| **ops** | 本仓库自研的开发工具链 CLI。所有质量检查、启动服务、凭证生成都走它 | `ops/`，命令表在 `ops/src/commands/registry.ts` |
+| **ops** | 本仓库自研的开发工具链 CLI。所有质量检查、启动服务、凭证生成都走它 | `ops/`，命令表在 `apps/blog/src/registry.ts` |
 
 ## 数据与契约
 
@@ -60,13 +60,13 @@ last_reviewed: 2026-09-19
 
 | 术语 | 人话 | 落点 |
 | --- | --- | --- |
-| **门禁（quality gate）** | `ops quality check`：Rust 三件套 + ops 契约测试 + 前端五件套 + 架构边界扫描，任一红即失败 | `ops/src/commands/quality/quality-check.ts` |
-| **架构边界扫描** | 用规则检查"谁不许 import 谁"（页面不许碰数据层、Data 不许解析 HTML 等），违规即红 | `ops/src/commands/quality/architecture.ts` |
+| **门禁（quality gate）** | `ops quality check`：Rust 三件套 + ops 契约测试 + 前端五件套 + 架构边界扫描，任一红即失败 | `apps/blog/src/quality/quality-check.ts` |
+| **架构边界扫描** | 用规则检查"谁不许 import 谁"（页面不许碰数据层、Data 不许解析 HTML 等），违规即红 | `apps/blog/src/quality/architecture.ts` |
 | **golden 测试** | 把契约写成"标准答案文件"（如 `docs/api/routes.json`），测试对照文件与代码完全一致，防止两边漂移 | `src/backend/product/tests/api_routes.rs`、`src/frontend/tests/common/client/client.test.ts` |
 | **数据语义（mock/test/prod）** | Data 进程的三种启动姿势：mock=内存无磁盘；test=临时库用完即删；prod=显式路径（ops 目前只放行前两种） | `src/backend/data/src/semantics.rs` |
-| **fail-closed** | 出问题时宁可拒绝服务也不放行/降级。登录、凭证读取、启动检查都遵循 | `src/backend/product/src/auth/`、`ops/src/commands/admin/admin-auth.ts` |
-| **端口（port）/适配器（adapter）** | 六角形架构词汇：port=抽象接口，adapter=具体实现（如文件系统、进程、网络的真实现）。好处是规则可脱离环境测试 | `ops/src/framework/`、`ops/src/infrastructure/` |
-| **dry-run** | 只打印将要做什么、不实际执行。ops 的全局开关 | `ops/src/framework/parameters.ts` |
+| **fail-closed** | 出问题时宁可拒绝服务也不放行/降级。登录、凭证读取、启动检查都遵循 | `src/backend/product/src/auth/`、`apps/blog/src/admin/admin-auth.ts` |
+| **端口（port）/适配器（adapter）** | 六角形架构词汇：port=抽象接口，adapter=具体实现（如文件系统、进程、网络的真实现）。好处是规则可脱离环境测试 | `packages/cli-kit/src/`、`packages/cli-core/src/` |
+| **dry-run** | 只打印将要做什么、不实际执行。ops 的全局开关 | `packages/cli-kit/src/parameters.ts` |
 
 ## 流程词
 

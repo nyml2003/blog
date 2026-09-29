@@ -12,6 +12,8 @@
   "include": [
     "packages/*/src",
     "packages/*/test",
+    "apps/blog/src",
+    "apps/blog-deploy/src",
     "apps/playground/src",
     "apps/playground/test",
     "scripts"

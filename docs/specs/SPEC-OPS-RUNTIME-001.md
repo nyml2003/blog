@@ -550,7 +550,7 @@ Then 记录是否出现半写产物、资源 404 或新旧资源混用，以及�
 
 | Spec 场景 | 证据 | Owner |
 | --- | --- | --- |
-| `CMD-001`–`CMD-009`、`PORT-001`、`PORT-004`、`ENV-001`–`ENV-004`、`LOG-001`、`LOG-002` | ops 契约测试（`ops/test/**/*.test.ts`） | testing / frontend-core |
+| `CMD-001`–`CMD-009`、`PORT-001`、`PORT-004`、`ENV-001`–`ENV-004`、`LOG-001`、`LOG-002` | ops 契约测试（`apps/blog/test/**/*.test.ts`） | testing / frontend-core |
 | `MODE-001`–`MODE-004`、`PORT-002`、`PORT-003`、`PORT-005`、`FAIL-001`–`FAIL-007` | ops runtime 集成测试（子进程真实启停） | testing |
 | `FAIL-008`、`FAIL-009` | Rust Data/Product 测试与运行证据 | backend |
 | `MODE-002`、`MODE-003` | Rust 契约/夹具测试与运行证据 | backend |

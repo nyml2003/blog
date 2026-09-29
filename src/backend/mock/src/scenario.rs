@@ -2,7 +2,7 @@
 //!
 //! 场景只由 CLI 选中（`--scenario`，缺省 [`DEFAULT_NAME`]）；不读环境变量、不读配置
 //! 文件。集合与 ops 侧
-//! `ops/src/commands/runtime/runtime-plan.ts` 的 `MOCK_SCENARIOS` 一一对应，顺序也一致。
+//! `apps/blog/src/runtime/runtime-plan.ts` 的 `MOCK_SCENARIOS` 一一对应，顺序也一致。
 //!
 //! 行为定义（交付记录里有完整场景 × 端点表）：
 //!
@@ -129,7 +129,7 @@ mod tests {
 
     #[test]
     fn names_match_the_ops_side_collection_in_order() {
-        // `ops/src/commands/runtime/runtime-plan.ts` 的 MOCK_SCENARIOS；两侧必须同步修订。
+        // `apps/blog/src/runtime/runtime-plan.ts` 的 MOCK_SCENARIOS；两侧必须同步修订。
         assert_eq!(
             Scenario::names(),
             &[

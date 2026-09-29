@@ -1,0 +1,14 @@
+{
+  "name": "@blog/blog-deploy",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --experimental-strip-types --test 'test/**/*.test.ts'"
+  },
+  "dependencies": {
+    "@fluvient-cli/cli-kit": "workspace:*",
+    "@fluvient-cli/cli-core": "workspace:*",
+    "@fluvient-cli/cli-plugins": "workspace:*"
+  }
+}

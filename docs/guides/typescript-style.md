@@ -10,7 +10,7 @@ last_reviewed: 2026-09-19
 
 ## 目标和适用范围
 
-本规范的目标是降低认知复杂度，让控制流、错误路径、边界条件和业务意图可以独立阅读。它适用于项目内所有人工维护的 TypeScript 和 TSX，包括 `src/frontend/common`、`src/frontend/solid`、Desktop、Mobile、Vite 配置、`ops/src`、测试、脚本和工具代码。
+本规范的目标是降低认知复杂度，让控制流、错误路径、边界条件和业务意图可以独立阅读。它适用于项目内所有人工维护的 TypeScript 和 TSX，包括 `src/frontend/common`、`src/frontend/solid`、Desktop、Mobile、Vite 配置、`apps/blog/src`、测试、脚本和工具代码。
 
 本规范约束表达方式，不改变业务协议、运行时行为、页面架构或平台隔离边界。简单且无副作用的代码可以保持简洁；规则不是把某个语法一律列为禁用项。
 

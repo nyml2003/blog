@@ -27,8 +27,8 @@
 
             root="$OPS_WORKSPACE_ROOT"
             while :; do
-              if [ -f "$root/ops/src/entrypoints/cli.ts" ]; then
-                exec node --experimental-strip-types "$root/ops/src/entrypoints/cli.ts" "$@"
+              if [ -f "$root/apps/blog/src/main.ts" ]; then
+                exec node --experimental-strip-types "$root/apps/blog/src/main.ts" "$@"
               fi
 
               if [ "$root" = "/" ] || [ -z "$root" ]; then

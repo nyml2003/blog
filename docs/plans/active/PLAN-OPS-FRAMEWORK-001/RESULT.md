@@ -8,9 +8,9 @@
 
 ## 结果
 
-- `ops/src/framework/`、`ops/src/commands/`、`ops/src/entrypoints/` 已完成物理分层。
-- `ops/src/entrypoints/` 仅保留 `cli.ts` 和 `installer.ts`；命令注册表归入命令层。
-- 测试迁移到独立的 `ops/test/`，质量检查同时覆盖 `ops/src/` 与 `ops/test/`。
+- `packages/cli-kit/`、`packages/cli-core/`、`packages/cli-plugins/`、`apps/blog/`、`apps/blog-deploy/` 已完成物理分层。
+- 旧 `ops/` 目录已删除；主 CLI 和 installer 分别由两个 app 入口提供。
+- 测试迁移到独立的 `apps/blog/test/` 与 `apps/blog-deploy/test/`，质量检查覆盖新的 app 源码和测试。
 - 安装器复用统一参数框架，必须显式指定 `init`、`deploy` 或 `redeploy`；`buildTag` 保留在 `blog.json`，当前只允许 `latest`。
 - Release 选择使用严格的 `build-vA.B.C` 稳定版本解析与最高版本排序。
 
@@ -18,9 +18,9 @@
 
 | Spec/验收项 | 证据 | 结果 |
 | --- | --- | --- |
-| 框架、命令、入口分层 | `find ops/src/entrypoints -maxdepth 1 -type f` 仅输出 `cli.ts`、`installer.ts`；质量架构测试通过 | passed |
-| 全量 ops 回归 | `node --experimental-strip-types --test 'ops/test/**/*.test.ts'`：122 passed、13 skipped、0 failed | passed |
-| 质量门禁 | `node --experimental-strip-types ops/src/entrypoints/cli.ts quality check`：Rust、ops、前端、构建及架构检查全通过 | passed |
+| 框架、命令、入口分层 | `@fluvient-cli/*` workspace 包、`apps/blog`、`apps/blog-deploy` 测试和质量边界检查通过 | passed |
+| 全量 ops 回归 | `node --experimental-strip-types --test 'apps/blog/test/**/*.test.ts'`：122 passed、13 skipped、0 failed | passed |
+| 质量门禁 | `node --experimental-strip-types apps/blog/src/main.ts quality check`：Rust、ops、前端、构建及架构检查全通过 | passed |
 | installer bundle | esbuild bundle、`--help`、`init`/参数错误冒烟及裁剪符号检查通过 | passed |
 
 ## 生效变化

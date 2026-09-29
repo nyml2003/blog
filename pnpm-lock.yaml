@@ -33,6 +33,30 @@ importers:
         specifier: 7.0.2
         version: 7.0.2
 
+  apps/blog:
+    dependencies:
+      '@fluvient-cli/cli-core':
+        specifier: workspace:*
+        version: link:../../packages/cli-core
+      '@fluvient-cli/cli-kit':
+        specifier: workspace:*
+        version: link:../../packages/cli-kit
+      '@fluvient-cli/cli-plugins':
+        specifier: workspace:*
+        version: link:../../packages/cli-plugins
+
+  apps/blog-deploy:
+    dependencies:
+      '@fluvient-cli/cli-core':
+        specifier: workspace:*
+        version: link:../../packages/cli-core
+      '@fluvient-cli/cli-kit':
+        specifier: workspace:*
+        version: link:../../packages/cli-kit
+      '@fluvient-cli/cli-plugins':
+        specifier: workspace:*
+        version: link:../../packages/cli-plugins
+
   apps/playground:
     dependencies:
       '@fluvient-loom/command':
@@ -63,6 +87,20 @@ importers:
       vite:
         specifier: 8.2.2
         version: 8.2.2(@types/node@26.4.1)(esbuild@0.28.2)(tsx@4.23.13)
+
+  packages/cli-core:
+    dependencies:
+      '@fluvient-cli/cli-kit':
+        specifier: workspace:*
+        version: link:../cli-kit
+
+  packages/cli-kit: {}
+
+  packages/cli-plugins:
+    dependencies:
+      '@fluvient-cli/cli-kit':
+        specifier: workspace:*
+        version: link:../cli-kit
 
   packages/command:
     dependencies:

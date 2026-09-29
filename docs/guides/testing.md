@@ -33,7 +33,7 @@ pnpm -C src/frontend run test:core
 pnpm -C src/frontend run build
 ```
 
-`ops quality check` 负责汇总上述门禁与 ops 契约测试。runtime 全栈端到端测试由 `OPS_RUNTIME_E2E` 环境变量门控（`ops/test/commands/runtime/runtime.stack.test.ts`）：默认跳过保持快速反馈，`1` 跑进程级，`full` 追加构建级。
+`ops quality check` 负责汇总上述门禁与 ops 契约测试。runtime 全栈端到端测试由 `OPS_RUNTIME_E2E` 环境变量门控（`apps/blog/test/commands/runtime/runtime.stack.test.ts`）：默认跳过保持快速反馈，`1` 跑进程级，`full` 追加构建级。
 
 ## 架构边界门禁
 
@@ -46,4 +46,4 @@ pnpm -C src/frontend run build
 - `common/client` 保持框架无关；
 - protocol 不承载货架编排，Product 不直接访问 SQLite，Data 不解析 HTML 或访问 GitHub。
 
-规则的正负样例位于 `ops/test/commands/quality/architecture.test.ts`。违规会让 `ops quality check` 返回 `20`，报告包含文件路径与对应边界说明。
+规则的正负样例位于 `apps/blog/test/commands/quality/architecture.test.ts`。违规会让 `ops quality check` 返回 `20`，报告包含文件路径与对应边界说明。

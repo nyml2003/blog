@@ -22,7 +22,7 @@ last_reviewed: 2026-09-19
 | 看数据怎么存 | `src/backend/data/src/store/sqlite.rs` + `migrations/` |
 | 看内容怎么变成 GitHub PR | `src/backend/product/src/content_workspace/`（状态机）+ `github/`（传输） |
 | 看登录/权限 | `src/backend/product/src/auth/` |
-| 看开发命令 | 先运行 `ops help` 看当前命令面，再看 `docs/guides/operations.md` 与实现 `ops/src/commands/registry.ts` |
+| 看开发命令 | 先运行 `ops help` 看当前命令面，再看 `docs/guides/operations.md` 与实现 `apps/blog/src/registry.ts` |
 
 ## 一页总图
 

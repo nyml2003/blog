@@ -1,0 +1,13 @@
+{
+  "name": "@fluvient-cli/cli-core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*.ts": "./src/*.ts"
+  },
+  "dependencies": {
+    "@fluvient-cli/cli-kit": "workspace:*"
+  }
+}
