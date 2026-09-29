@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseCommandArgs, extractGlobalSwitches } from '../src/parser.ts';
+import type { ParameterSpec } from '../src/parameters.ts';
 import type { CommandMeta } from '../src/commands.ts';
 
 const meta = {
@@ -71,15 +72,20 @@ test('ambient configuration cannot supply a missing value', () => {
 });
 
 test('globals use switch semantics and respect the end-of-options delimiter', () => {
-  assert.deepEqual(extractGlobalSwitches(['--json', 'quality', 'check', '--dry-run', '--json']), {
-    raw: ['quality', 'check'], indices: [1, 2], controls: { help: false, dryRun: true, json: true },
+  const globals = [
+    { name: 'help', description: 'help', model: { kind: 'switch' as const } },
+    { name: 'dry-run', description: 'dry-run', model: { kind: 'switch' as const } },
+    { name: 'json', description: 'json', model: { kind: 'switch' as const } },
+  ] satisfies readonly ParameterSpec[];
+  assert.deepEqual(extractGlobalSwitches(['--json', 'quality', 'check', '--dry-run', '--json'], globals), {
+    raw: ['quality', 'check'], indices: [1, 2], values: { json: true, 'dry-run': true },
   });
-  assert.deepEqual(extractGlobalSwitches(['--', '--json', '--help']), {
-    raw: ['--', '--json', '--help'], indices: [0, 1, 2], controls: { help: false, dryRun: false, json: false },
+  assert.deepEqual(extractGlobalSwitches(['--', '--json', '--help'], globals), {
+    raw: ['--', '--json', '--help'], indices: [0, 1, 2], values: {},
   });
   for (const name of ['help', 'json', 'dry-run']) {
     for (const value of ['true', 'false', '']) {
-      assert.match(JSON.stringify(extractGlobalSwitches(['--' + name + '=' + value])), /switch 不接受值/);
+      assert.match(JSON.stringify(extractGlobalSwitches(['--' + name + '=' + value], globals)), /switch 不接受值/);
     }
   }
 });

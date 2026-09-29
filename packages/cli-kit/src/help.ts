@@ -1,4 +1,4 @@
-import { globalSwitches, modelDescription, type ParameterSpec } from './parameters.ts';
+import { modelDescription, type ParameterSpec } from './parameters.ts';
 import type { CommandDefinition, GroupDefinition } from './commands.ts';
 
 export interface HelpRegistry {
@@ -54,9 +54,11 @@ function leafExitCodes(command: CommandDefinition): readonly { code: number; mea
   return [...codes].sort((left, right) => left.code - right.code);
 }
 
-export function renderCommandHelp(registry: HelpRegistry, path: readonly string[] = []): string {
+export function renderCommandHelp(registry: HelpRegistry, path: readonly string[] = [], options: { name?: string; globalOptions?: readonly ParameterSpec[] } = {}): string {
   const command = registry.resolve(path);
-  const lines = [`blog ops${path.length ? ` ${path.join(' ')}` : ''}`];
+  const name = options.name ?? 'cli';
+  const globalOptions = options.globalOptions ?? [];
+  const lines = [`${name}${path.length ? ` ${path.join(' ')}` : ''}`];
 
   if (!path.length) {
     lines.push('', '命令分组:');
@@ -71,10 +73,9 @@ export function renderCommandHelp(registry: HelpRegistry, path: readonly string[
         .filter((definition) => definition.meta.path[0] === group.meta.path[0])
         .sort((left, right) => left.meta.path.join(' ').localeCompare(right.meta.path.join(' ')));
       for (const child of children) {
-        lines.push(`  ops ${child.meta.path.join(' ')}  ${child.meta.summary}`);
+        lines.push(`  ${name} ${child.meta.path.join(' ')}  ${child.meta.summary}`);
       }
     }
-    lines.push('', '常用入口:', '  ops workspace doctor', '  ops runtime dev --scenario default --web-port 5173 --mock-port 9090', '  ops quality check', '  ops delivery build');
     return lines.join('\n');
   }
 
@@ -87,16 +88,16 @@ export function renderCommandHelp(registry: HelpRegistry, path: readonly string[
     for (const child of childrenFor(registry, path)) {
       lines.push(`  ${child.meta.path.slice(path.length).join(' ')}  ${child.meta.summary}`);
     }
-    lines.push('', `继续查看: ops ${path.join(' ')} <command> --help`);
+    lines.push('', `继续查看: ${name} ${path.join(' ')} <command> --help`);
     return lines.join('\n');
   }
 
   const meta = command.meta;
   lines.push('', meta.summary);
   if (meta.description) lines.push(meta.description);
-  const usage = ['ops', ...path, ...(meta.positionals ?? []).map((position) => `<${position.name}>`), ...(meta.options ?? []).map(optionUsage)].join(' ');
+  const usage = [name, ...path, ...(meta.positionals ?? []).map((position) => `<${position.name}>`), ...(meta.options ?? []).map(optionUsage)].join(' ');
   lines.push('', `用法: ${usage}`);
-  lines.push('', '全局选项:', ...globalSwitches.map(parameterHelp));
+  if (globalOptions.length) lines.push('', '全局选项:', ...globalOptions.map(parameterHelp));
   if (meta.positionals?.length) lines.push('', '位置参数:', ...meta.positionals.map((position) => `  ${position.name}  ${position.description} (必填; ${modelDescription(position.model)})`));
   if (meta.options?.length) lines.push('', '选项:', ...meta.options.map(parameterHelp));
   if (meta.examples?.length) lines.push('', '示例:', ...meta.examples.map((example) => `  ${example}`));

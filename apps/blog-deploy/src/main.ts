@@ -1,81 +1,22 @@
 #!/usr/bin/env node
-import type { ParsedArgs } from '@fluvient-cli/cli-kit/commands.ts';
-import { extractGlobalSwitches, normalizeAliases, parseCommandArgs } from '@fluvient-cli/cli-kit/parser.ts';
-import { renderCommandHelp } from '@fluvient-cli/cli-kit/help.ts';
-import { EXIT_FAILURE, EXIT_USAGE } from '@fluvient-cli/cli-kit/errors.ts';
-import { isEntry, runEntry } from '@fluvient-cli/cli-kit/entry.ts';
-import { runInstallerCommand } from './installer/main.ts';
+import { createCliApp, isEntry, runEntry } from '@fluvient-cli/cli-kit/index.ts';
+import { corePlugin } from '@fluvient-cli/cli-core/plugin.ts';
+import { dryRunPlugin, jsonPlugin, usagePlugin, versionPlugin } from '@fluvient-cli/cli-plugins';
+import { installerPlugin } from './plugin.ts';
 import type { FetchLike } from './installer/release.ts';
-import { deployMeta, initMeta, installerRegistry, redeployMeta } from './installer/registry.ts';
 
-const registry = installerRegistry;
-
-function usage(): string {
-  return [
-    'blog-deploy - 博客服务器安装器',
-    '',
-    '用法:',
-    '  node blog-deploy.mjs init [--config <path>] [--force]',
-    '  node blog-deploy.mjs deploy|redeploy [--config <path>] [--dry-run]',
-    '',
-    '说明:',
-    '  buildTag 固定从 blog.json 读取 latest。',
-    '  --dry-run 只展示计划,不下载、不安装。',
-    '  --config 默认 /etc/blog/blog.json。',
-  ].join('\n');
+export function createApp(fetchImpl: FetchLike = globalThis.fetch): ReturnType<typeof createCliApp> {
+  return createCliApp({
+    name: 'blog-deploy',
+    description: '博客服务器安装器',
+    version: '0.1.0',
+    entry: import.meta.url,
+    plugins: [corePlugin(), usagePlugin({ noCommandExit: 10 }), versionPlugin(), dryRunPlugin(), jsonPlugin(), installerPlugin(fetchImpl)],
+  });
 }
 
-function printUsageError(message: string, command?: string): number {
-  console.error(message);
-  console.error(usage());
-  if (command && registry.resolve([command])) console.log(renderCommandHelp(registry, [command]));
-  return EXIT_USAGE;
-}
-
-function commandFrom(raw: readonly string[]): string | undefined {
-  const command = raw[0];
-  return command && registry.resolve([command]) ? command : undefined;
-}
-
-type InstallerArgs = ParsedArgs<typeof initMeta> | ParsedArgs<typeof deployMeta> | ParsedArgs<typeof redeployMeta>;
-
-function parseInstallerArgs(command: string, raw: readonly string[]) {
-  if (command === 'init') return parseCommandArgs(initMeta, raw);
-  if (command === 'deploy') return parseCommandArgs(deployMeta, raw);
-  return parseCommandArgs(redeployMeta, raw);
-}
-
-function installerOptions(commandArgs: InstallerArgs, dryRun: boolean) {
-  return {
-    configFile: commandArgs.config,
-    dryRun,
-    force: Boolean(commandArgs.force),
-  };
-}
-
-export async function main(argv: readonly string[] = process.argv.slice(2), fetchImpl?: FetchLike): Promise<number> {
-  const globals = extractGlobalSwitches(normalizeAliases(argv));
-  if ('error' in globals) return printUsageError(globals.error.message);
-  const { raw, controls } = globals;
-  const helpRequested = controls.help;
-  if (raw[0] === '--help' || raw.length === 0 && helpRequested) {
-    console.log(usage());
-    return 0;
-  }
-  const command = commandFrom(raw);
-  if (!command) return helpRequested ? printUsageError(`未知命令: ${raw.join(' ')}`) : printUsageError('必须指定命令:init、deploy 或 redeploy');
-  if (helpRequested) {
-    console.log(renderCommandHelp(registry, [command]));
-    return 0;
-  }
-  const parsed = parseInstallerArgs(command, raw.slice(1));
-  if ('error' in parsed) return printUsageError(parsed.error.message, command);
-  try {
-    return await runInstallerCommand(command, installerOptions(parsed.args, controls.dryRun), fetchImpl ?? globalThis.fetch);
-  } catch (error) {
-    console.error(error instanceof Error ? error.message : String(error));
-    return EXIT_FAILURE;
-  }
+export async function main(argv: readonly string[] = process.argv.slice(2), fetchImpl: FetchLike = globalThis.fetch): Promise<number> {
+  return createApp(fetchImpl).run(argv);
 }
 
 if (isEntry(import.meta.url)) runEntry(main);

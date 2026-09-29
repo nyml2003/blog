@@ -1,19 +1,19 @@
 import type { CliPlugin } from '@fluvient-cli/cli-kit/plugin.ts';
-import type { CommandContext } from '@fluvient-cli/cli-kit/commands.ts';
-import { ConsoleRuntimeLog } from '@fluvient-cli/cli-core/process.ts';
+import type { FetchLike } from './installer/release.ts';
+import { installerDefinitions } from './installer/registry.ts';
+import { runInstallerCommand } from './installer/main.ts';
 import { WorkspaceBinaries } from '@fluvient-cli/cli-core/binaries.ts';
-import { commandDefinitions, groupDefinitions } from './registry.ts';
+import { ConsoleRuntimeLog } from '@fluvient-cli/cli-core/process.ts';
 
-export function blogPlugin(): CliPlugin {
+export function installerPlugin(fetchImpl: FetchLike): CliPlugin {
   return {
-    name: 'blog',
-    commands: commandDefinitions,
-    groups: groupDefinitions,
+    name: 'installer',
+    commands: installerDefinitions(fetchImpl, runInstallerCommand),
     configure({ container }) {
       const workspace = container.get<import('@fluvient-cli/cli-kit/workspace.ts').Workspace>('workspace');
       const fs = container.get<import('@fluvient-cli/cli-kit/ports.ts').FsPort>('fs');
       container.bind('binaries', new WorkspaceBinaries(fs, workspace.root));
-      container.bind('commandContext', (globals: Record<string, string | number | boolean>): CommandContext => ({
+      container.bind('commandContext', (globals: Record<string, string | number | boolean>) => ({
         workspace,
         process: container.get('process'),
         supervisor: container.get('supervisor'),

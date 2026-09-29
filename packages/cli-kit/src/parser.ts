@@ -1,13 +1,9 @@
 import type { CommandMeta, CommandArgs, ParsedArgs } from './commands.ts';
-import { globalSwitches, type ParameterSpec } from './parameters.ts';
+import type { ParameterSpec } from './parameters.ts';
 import { parseValue, type RawParameter } from './value-parser.ts';
 
 export interface ParseFailure { message: string }
 export type ParseResult<M extends CommandMeta = CommandMeta> = { args: ParsedArgs<M> } | { error: ParseFailure };
-
-export function normalizeAliases(argv: readonly string[]): string[] {
-  return argv.map((token) => token === '-h' || token === 'help' ? '--help' : token);
-}
 
 function storeValue(args: CommandArgs, spec: ParameterSpec, raw: RawParameter): ParseFailure | undefined {
   const parsed = parseValue(spec.model, raw);
@@ -17,7 +13,7 @@ function storeValue(args: CommandArgs, spec: ParameterSpec, raw: RawParameter): 
 }
 
 export function parseCommandArgs<const M extends CommandMeta>(meta: M, raw: readonly string[]): ParseResult<M> {
-  const options = new Map<string, ParameterSpec>([...globalSwitches, ...(meta.options ?? [])].map((spec) => [`--${spec.name}`, spec]));
+  const options = new Map<string, ParameterSpec>((meta.options ?? []).map((spec) => [`--${spec.name}`, spec]));
   const values: CommandArgs = {};
   const positionalValues: string[] = [];
   for (let index = 0; index < raw.length; index += 1) {
@@ -30,7 +26,6 @@ export function parseCommandArgs<const M extends CommandMeta>(meta: M, raw: read
     if (!spec) return { error: { message: `未知选项: ${key}` } };
     if (spec.model.kind === 'switch') {
       if (equal !== -1) return { error: { message: `${key}: switch 不接受值` } };
-      if (globalSwitches.some((field) => field.name === spec.name)) continue;
       const error = storeValue(values, spec, { kind: 'presence', present: true });
       if (error) return { error };
       continue;
@@ -64,13 +59,12 @@ export function parseCommandArgs<const M extends CommandMeta>(meta: M, raw: read
   return { args: values as ParsedArgs<M> };
 }
 
-export type GlobalControls = { help: boolean; dryRun: boolean; json: boolean };
-type GlobalResult = { raw: string[]; indices: number[]; controls: GlobalControls } | { error: ParseFailure };
+export type GlobalResult = { raw: string[]; indices: number[]; values: CommandArgs } | { error: ParseFailure };
 
-export function extractGlobalSwitches(tokens: readonly string[]): GlobalResult {
+export function extractGlobalSwitches(tokens: readonly string[], specs: readonly ParameterSpec[]): GlobalResult {
   const raw: string[] = [];
   const indices: number[] = [];
-  const controls: GlobalControls = { help: false, dryRun: false, json: false };
+  const values: CommandArgs = {};
   for (let index = 0; index < tokens.length; index += 1) {
     const token = tokens[index];
     if (token === '--') {
@@ -79,18 +73,15 @@ export function extractGlobalSwitches(tokens: readonly string[]): GlobalResult {
       break;
     }
     const key = token.split('=', 1)[0];
-    const spec = globalSwitches.find((field) => `--${field.name}` === key);
+    const spec = specs.find((field) => `--${field.name}` === key);
     if (!spec) { raw.push(token); indices.push(index); continue; }
     const input: RawParameter = token === key
       ? { kind: 'presence', present: true }
       : { kind: 'value', text: token.slice(key.length + 1) };
     const parsed = parseValue(spec.model, input);
     if (!parsed.ok) return { error: { message: `${key}: ${parsed.message}` } };
-    switch (spec.name) {
-      case 'help': controls.help = true; break;
-      case 'dry-run': controls.dryRun = true; break;
-      case 'json': controls.json = true; break;
-    }
+    const error = storeValue(values, spec, input);
+    if (error) return { error };
   }
-  return { raw, indices, controls };
+  return { raw, indices, values };
 }

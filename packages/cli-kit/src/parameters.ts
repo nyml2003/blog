@@ -20,12 +20,6 @@ export type ModelValue<M extends ParameterModel> =
   M extends { kind: 'path' } ? string : boolean;
 export type CommandArgs = Record<string, string | number | boolean>;
 
-export const globalSwitches = [
-  { name: 'help', description: '显示帮助', model: { kind: 'switch' } },
-  { name: 'dry-run', description: '只显示操作，不执行副作用', model: { kind: 'switch' } },
-  { name: 'json', description: '使用命令的 JSON 输出模式', model: { kind: 'switch' } },
-] as const satisfies readonly ParameterSpec[];
-
 function checkKeys(value: object, allowed: readonly string[]): void {
   for (const key of Object.keys(value)) {
     if (!allowed.includes(key)) throw new Error(`unsupported parameter metadata: ${key}`);

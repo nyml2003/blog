@@ -1,4 +1,6 @@
 import { defineCommand, reflectCommandRegistry, type CommandDefinition, type CommandMeta } from '@fluvient-cli/cli-kit/commands.ts';
+import type { FetchLike } from './release.ts';
+import type { InstallerOptions } from './main.ts';
 
 export const initMeta = {
   path: ['init'],
@@ -28,10 +30,16 @@ export const redeployMeta = {
   examples: ['node blog-deploy.mjs redeploy', 'node blog-deploy.mjs redeploy --dry-run'],
 } satisfies CommandMeta;
 
-export const installerDefinitions: readonly CommandDefinition[] = [
-  defineCommand(initMeta, () => 0),
-  defineCommand(deployMeta, () => 0),
-  defineCommand(redeployMeta, () => 0),
-];
+export type InstallerRunner = (command: string, options: InstallerOptions, fetchImpl: FetchLike) => Promise<number>;
 
-export const installerRegistry = reflectCommandRegistry(installerDefinitions);
+export function installerDefinitions(fetchImpl: FetchLike, run: InstallerRunner): readonly CommandDefinition[] {
+  return [
+    defineCommand(initMeta, (context, args) => run('init', { configFile: args.config, dryRun: context.dryRun, force: args.force }, fetchImpl)),
+    defineCommand(deployMeta, (context, args) => run('deploy', { configFile: args.config, dryRun: context.dryRun, force: false }, fetchImpl)),
+    defineCommand(redeployMeta, (context, args) => run('redeploy', { configFile: args.config, dryRun: context.dryRun, force: false }, fetchImpl)),
+  ];
+}
+
+export function installerRegistry(fetchImpl: FetchLike, run: InstallerRunner) {
+  return reflectCommandRegistry(installerDefinitions(fetchImpl, run));
+}

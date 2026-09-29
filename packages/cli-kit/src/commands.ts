@@ -1,4 +1,4 @@
-import { globalSwitches, isModelValue, validateParameter, type ParameterSpec, type PositionalSpec, type ModelValue, type CommandArgs } from './parameters.ts';
+import { isModelValue, validateParameter, type ParameterSpec, type PositionalSpec, type ModelValue, type CommandArgs } from './parameters.ts';
 export type { CommandArgs, PositionalSpec } from './parameters.ts';
 export type OptionSpec = ParameterSpec;
 export interface ExitCodeSpec { code: number; meaning: string }
@@ -71,7 +71,7 @@ export function defineCommand<const M extends CommandMeta>(meta: M, handler: (co
   return Object.freeze({ meta: Object.freeze({ ...meta, path: Object.freeze([...meta.path]), options: Object.freeze([...(meta.options ?? [])]), positionals: Object.freeze([...(meta.positionals ?? [])]) }), handler: invoke });
 }
 
-export function validateRegistry(definitions: readonly CommandDefinition[]): void {
+export function validateRegistry(definitions: readonly CommandDefinition[], reservedOptions: readonly string[] = []): void {
   const seen = new Set<string>();
   for (const definition of definitions) {
     const { meta } = definition;
@@ -83,7 +83,7 @@ export function validateRegistry(definitions: readonly CommandDefinition[]): voi
     const names = new Set<string>();
     for (const spec of [...(meta.positionals ?? []), ...(meta.options ?? [])]) {
       validateParameter(spec);
-      if (globalSwitches.some((field) => field.name === spec.name)) throw new Error(`reserved global switch: ${spec.name}`);
+      if (reservedOptions.includes(spec.name)) throw new Error(`reserved global switch: ${spec.name}`);
       if (names.has(spec.name)) throw new Error(`duplicate argument ${spec.name}: ${key}`);
       names.add(spec.name);
     }
@@ -105,8 +105,9 @@ export function defineGroup(meta: GroupMeta): GroupDefinition {
 export function reflectCommandRegistry(
   definitions: readonly CommandDefinition[],
   groups: readonly GroupDefinition[] = [],
+  reservedOptions: readonly string[] = [],
 ) {
-  validateRegistry(definitions);
+  validateRegistry(definitions, reservedOptions);
   const byPath = new Map(definitions.map((d) => [d.meta.path.join(' '), d]));
   const groupByPath = new Map(groups.map((group) => [group.meta.path.join(' '), group]));
   const groupPaths = new Set<string>();

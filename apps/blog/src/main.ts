@@ -7,7 +7,7 @@ import { blogPlugin } from './plugin.ts';
 export { commandDefinitions, groupDefinitions } from './registry.ts';
 
 const app = createCliApp({
-  name: 'blog',
+  name: 'ops',
   description: '博客开发工具链',
   version: '0.1.0',
   entry: import.meta.url,

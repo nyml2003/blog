@@ -120,7 +120,15 @@ macro_rules! appended_article {
                 "）。"
             ),
             article_type_id: $type_id,
-            content_html: concat!("<p>append-", stringify!($id), "</p>"),
+            content_html: concat!(
+                "<h2>", $type_name, "实践记录</h2>",
+                "<p>这是第 ", stringify!($id), " 篇演示文章，用来展示知识库在手机上的长文阅读效果。正文保留清晰的段落层次，方便快速定位结论和上下文。</p>",
+                "<p>在实际工作中，先记录问题出现的条件，再说明采用的判断依据。这样复盘时不会只剩下一句结论，也能让后来阅读的人理解当时为什么选择这条路径。</p>",
+                "<h3>记录要点</h3>",
+                "<ul><li>先确认输入、边界和可观察的结果。</li><li>把关键取舍写在实现旁边，避免依赖口头记忆。</li><li>用一次可重复的验证收束本轮工作。</li></ul>",
+                "<p>这段内容来自 Mock 的确定性样本，文章编号和分类会随着列表数据变化，但正文结构保持稳定。你可以继续向下滚动，检查移动端的行距、标题层级和底部留白。</p>",
+                "<p>最后，把仍未解决的问题单独列出来。明确下一步需要什么证据，比把所有内容都写成已经完成更有用。</p>"
+            ),
             status: "published",
             created_at: APPEND_CREATED_AT,
             updated_at: $updated_at,
