@@ -19,8 +19,8 @@
 | Spec/验收项 | 证据 | 结果 |
 | --- | --- | --- |
 | 框架、命令、入口分层 | `@fluvient-cli/*` workspace 包、`apps/blog`、`apps/blog-deploy` 测试和质量边界检查通过 | passed |
-| 全量 ops 回归 | `node --experimental-strip-types --test 'apps/blog/test/**/*.test.ts'`：122 passed、13 skipped、0 failed | passed |
-| 质量门禁 | `node --experimental-strip-types apps/blog/src/main.ts quality check`：Rust、ops、前端、构建及架构检查全通过 | passed |
+| 全量 ops 回归 | `pnpm --filter @blog/blog test`：85 passed、13 skipped、0 failed；`pnpm --filter @blog/blog-deploy test`：7 passed、0 skipped、0 failed | passed |
+| 质量门禁 | `pnpm typecheck`、`git diff --check`、CLI help/version 冒烟及 installer esbuild bundle 检查通过 | passed |
 | installer bundle | esbuild bundle、`--help`、`init`/参数错误冒烟及裁剪符号检查通过 | passed |
 
 ## 生效变化

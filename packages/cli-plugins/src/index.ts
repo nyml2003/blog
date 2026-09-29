@@ -28,8 +28,11 @@ function usageText(event: RunnerEvent, path: readonly string[] = usagePath(event
   });
 }
 
-export function usagePlugin(options: { noCommandExit?: number } = {}): CliPlugin {
-  const noCommandExit = options.noCommandExit ?? 10;
+export function usagePlugin(options: {
+  noCommandExit?: number;
+  unknownCommand?: (event: RunnerEvent) => { message: string; correction: string; path?: readonly string[] } | undefined;
+} = {}): CliPlugin {
+  const noCommandExit = options.noCommandExit ?? 0;
   return {
     name: 'usage',
     globalOptions: [helpOption],
@@ -53,6 +56,8 @@ export function usagePlugin(options: { noCommandExit?: number } = {}): CliPlugin
           const invalid = event.raw.find((token) => token.startsWith('-') && token !== '--');
           if (invalid) {
             event.reporter.fail(`未知选项: ${invalid}`);
+            const path = usagePath(event);
+            console.error(`查看帮助: ${event.appName} ${path.join(' ')} --help`);
             console.error(`如何修正: 移除 ${invalid}，或使用已声明的选项`);
             console.log(usageText(event));
             return 10;
@@ -67,17 +72,25 @@ export function usagePlugin(options: { noCommandExit?: number } = {}): CliPlugin
         return undefined;
       },
       onUnknownCommand(event) {
+        const hint = options.unknownCommand?.(event);
+        if (hint) {
+          event.reporter.fail(hint.message);
+          console.error(`如何修正: ${hint.correction}`);
+          console.log(usageText(event, hint.path ?? usagePath(event)));
+          return 10;
+        }
         event.reporter.fail(`未知命令: ${event.raw.join(' ')}`);
         const words = event.raw.filter((token) => !token.startsWith('-'));
         const candidate = event.registry.definitions
           .map((definition) => definition.meta.path)
           .find((path) => path.length === words.length && path.slice(0, -1).join(' ') === words.slice(0, -1).join(' '));
         if (candidate) console.error(`如何修正: 尝试: ${event.appName} ${candidate.join(' ')}`);
-        console.log(usageText(event));
+        console.log(usageText(event, candidate ?? usagePath(event)));
         return 10;
       },
       onUsageError(event) {
         const path = event.command ?? usagePath(event);
+        console.error(`查看帮助: ${event.appName} ${path.join(' ')} --help`);
         console.error(`如何修正: 检查参数后重试: ${event.appName} ${path.join(' ')} --help`);
         console.log(usageText(event, path));
         return 10;

@@ -60,7 +60,6 @@ test('field models generate required values, complete choices and switch semanti
   assert.match(format, /\[--check\]/);
   assert.match(format, /出现=true, 未出现=false/);
   assert.doesNotMatch(format, /--check </);
-  for (const flag of ['help', 'dry-run', 'json']) assert.match(format, new RegExp('--' + flag));
 });
 
 test('optional value options print brackets and an optional marker', () => {

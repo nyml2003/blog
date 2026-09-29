@@ -12,8 +12,9 @@ function storeValue(args: CommandArgs, spec: ParameterSpec, raw: RawParameter): 
   return undefined;
 }
 
-export function parseCommandArgs<const M extends CommandMeta>(meta: M, raw: readonly string[]): ParseResult<M> {
-  const options = new Map<string, ParameterSpec>((meta.options ?? []).map((spec) => [`--${spec.name}`, spec]));
+export function parseCommandArgs<const M extends CommandMeta>(meta: M, raw: readonly string[], ignoredOptions: readonly ParameterSpec[] = []): ParseResult<M> {
+  const globalNames = new Set(ignoredOptions.map((spec) => spec.name));
+  const options = new Map<string, ParameterSpec>([...(ignoredOptions ?? []), ...(meta.options ?? [])].map((spec) => [`--${spec.name}`, spec]));
   const values: CommandArgs = {};
   const positionalValues: string[] = [];
   for (let index = 0; index < raw.length; index += 1) {
@@ -26,6 +27,7 @@ export function parseCommandArgs<const M extends CommandMeta>(meta: M, raw: read
     if (!spec) return { error: { message: `未知选项: ${key}` } };
     if (spec.model.kind === 'switch') {
       if (equal !== -1) return { error: { message: `${key}: switch 不接受值` } };
+      if (globalNames.has(spec.name)) continue;
       const error = storeValue(values, spec, { kind: 'presence', present: true });
       if (error) return { error };
       continue;

@@ -3,6 +3,14 @@ import type { CommandContext } from '@fluvient-cli/cli-kit/commands.ts';
 import { ConsoleRuntimeLog } from '@fluvient-cli/cli-core/process.ts';
 import { WorkspaceBinaries } from '@fluvient-cli/cli-core/binaries.ts';
 import { commandDefinitions, groupDefinitions } from './registry.ts';
+import type { RunnerEvent } from '@fluvient-cli/cli-kit/runner.ts';
+
+export function blogUnknownCommand(event: RunnerEvent): { message: string; correction: string; path?: readonly string[] } | undefined {
+  const text = event.raw.join(' ');
+  if (text.startsWith('runtime serve')) return { message: '命令已删除: runtime serve', correction: `迁移到 ${event.appName} runtime integration`, path: ['runtime'] };
+  if (text.startsWith('database migrate') || text === 'database') return { message: `命令已删除: ${text}`, correction: `迁移到 ${event.appName} runtime backend` };
+  return undefined;
+}
 
 export function blogPlugin(): CliPlugin {
   return {

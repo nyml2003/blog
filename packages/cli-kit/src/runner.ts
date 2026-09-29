@@ -75,7 +75,7 @@ export async function runCli(args: readonly string[], dependencies: RunnerDepend
   const transformed = dependencies.hooks?.transformArgs?.(args) ?? args;
   const globalsResult = extractGlobalSwitches(transformed, dependencies.globalOptions);
   if ('error' in globalsResult) return reportUsageError(globalsResult.error.message, [], transformed, {}, dependencies);
-  const { raw, values: globals } = globalsResult;
+  const { raw, indices, values: globals } = globalsResult;
   const event: RunnerEvent = {
     appName: dependencies.appName,
     appVersion: dependencies.appVersion,
@@ -93,7 +93,9 @@ export async function runCli(args: readonly string[], dependencies: RunnerDepend
   if (group || raw.length === 0) return (await dependencies.hooks?.beforeRun?.({ ...event, path: raw })) ?? EXIT_USAGE;
   const { selected, selectedLength } = selectCommand(raw, dependencies.registry);
   if (!selected) return (await dependencies.hooks?.onUnknownCommand?.(event)) ?? EXIT_USAGE;
-  const parsed = parseCommandArgs(selected.meta, raw.slice(selectedLength));
+  const commandIndex = indices[selectedLength - 1];
+  const argumentStart = commandIndex === undefined ? selectedLength : commandIndex + 1;
+  const parsed = parseCommandArgs(selected.meta, transformed.slice(argumentStart), dependencies.globalOptions);
   if ('error' in parsed) return reportUsageError(parsed.error.message, selected.meta.path, transformed, globals, dependencies);
   const context = dependencies.createContext(globals);
   try {
