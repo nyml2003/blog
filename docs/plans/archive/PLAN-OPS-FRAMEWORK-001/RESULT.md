@@ -31,5 +31,5 @@
 
 ## 未决项与后续计划
 
-- 尚未执行真实 CI `script-release`/`build-release` 发布验证。
+- `script-release` 已通过：tag `script-v0.1.3`，Release 已上传 `blog-deploy.mjs`；`build-release` 未执行，因为本次变更只涉及 CLI/installer。
 - 尚未在真实服务器执行 `node /etc/blog/blog-deploy.mjs redeploy`；需要发布产物和服务器环境后再验收。
