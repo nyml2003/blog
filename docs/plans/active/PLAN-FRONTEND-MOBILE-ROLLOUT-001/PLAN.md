@@ -1,7 +1,7 @@
 ---
 kind: plan
 id: PLAN-FRONTEND-MOBILE-ROLLOUT-001
-status: ready
+status: partial
 owner: project-manager
 created: 2026-09-29
 last_reviewed: 2026-09-29
@@ -55,12 +55,12 @@ last_reviewed: 2026-09-29
 
 | 工作流 | Owner | 依赖 | Write set | 状态 |
 | --- | --- | --- | --- | --- |
-| 页面基线与重复逻辑清单 | frontend+pm | - | 本计划、页面职责矩阵和测试设计；不改产品源码 | ready |
-| Mobile 文章库与检索页 | frontend | 基线清单 | `src/frontend/app/bootstrap/mobile/articles.tsx`、`article-list.tsx`、对应 pages/logic/tests、文章卡片使用处 | ready |
-| Mobile 首页推荐页 | frontend | 文章库与检索页 | `src/frontend/app/bootstrap/mobile/home.tsx`、对应 page/logic/tests、推荐筛选调用处 | ready |
-| Mobile 设置页 | frontend | 基线清单 | `src/frontend/app/bootstrap/mobile/settings-page.tsx`、对应 page/logic/tests；不得改首绘模块契约 | ready |
-| 详情页回归与共享逻辑收敛 | frontend | 前述页面至少两个完成 | 详情试点相关 logic、共享纯函数和测试；仅保留有真实重复证据的抽取 | ready |
-| 新 Mobile 集成验收与收尾 | frontend+pm | 上述工作流 | 本计划结果、职责矩阵、浏览器证据和必要架构记录 | ready |
+| 页面基线与重复逻辑清单 | frontend+pm | - | 本计划、页面职责矩阵和测试设计；不改产品源码 | completed |
+| Mobile 文章库与检索页 | frontend | 基线清单 | `src/frontend/app/bootstrap/mobile/articles.tsx`、`article-list.tsx`、对应 pages/logic/tests、文章卡片使用处 | completed |
+| Mobile 首页推荐页 | frontend | 文章库与检索页 | `src/frontend/app/bootstrap/mobile/home.tsx`、对应 page/logic/tests、推荐筛选调用处 | completed |
+| Mobile 设置页 | frontend | 基线清单 | `src/frontend/app/bootstrap/mobile/settings-page.tsx`、对应 page/logic/tests；不得改首绘模块契约 | completed |
+| 详情页回归与共享逻辑收敛 | frontend | 前述页面至少两个完成 | 详情试点相关 logic、共享纯函数和测试；仅保留有真实重复证据的抽取 | completed |
+| 新 Mobile 集成验收与收尾 | frontend+pm | 上述工作流 | 本计划结果、职责矩阵、浏览器证据和必要架构记录 | partial |
 
 工作流按依赖串行推进。首页、文章库和文章检索写集可能交叉使用 `ArticleCard` 与 Mobile API 类型，由同一 owner 串行修改。`PLAN-UI-ICON-CONTROLS-001` 若仍在执行，图标依赖和控件写集必须先协调，不重复修改同一文件。
 
@@ -80,3 +80,19 @@ last_reviewed: 2026-09-29
 - 各页面失败/空状态是否足够相似以共享视图函数；必须先有真实重复证据。
 - 本计划是否覆盖全部五个页面，还是在文章库与首页验收后以 `partial` 收尾；取决于收益、回归风险和写集冲突。
 - 是否在本计划结束后再处理旧 Mobile；它不自动成为本计划待办。
+
+## 执行结果
+
+### 已交付
+
+- 首页、文章库、文章检索和设置页改为接收页面专用输入；壳层导航只接收路由清单。
+- 首页推荐、文章分类参数、分类导航、设置读取/保存/补偿和详情请求分别收敛到 `logic` 层；页面只负责状态展示和局部交互。
+- 文章卡片继续使用后端返回的 `href`；未改变公开 API、wire DTO、文章可见性、首绘设置或页面 alias。
+- 新增分类参数与导航测试，以及页面宿主能力边界回归测试；资源层已有测试覆盖过期结果、取消和重取。
+- `ops quality check` 除首次发现并修复的 lint 警告外，其余 Rust、类型检查、格式、核心测试、构建和架构边界均通过；修复后 `pnpm lint` 已通过。
+
+### 未完成与证据限制
+
+- 未完成 Playwright 窄屏/宽屏浏览器验收。当前环境没有 `playwright-core` 或 Chromium；项目 Flake 获取依赖时仍缺少浏览器模块，因此没有截图、像素或真实交互证据。
+- 现有自动化覆盖 API、参数、设置、资源竞态/取消和源码边界；首页、文章库、设置页的完整渲染级交互仍需浏览器环境补验。
+- 继续推进条件：提供项目要求的 Playwright 模块和 Chromium 可执行文件后，运行 `ops e2e` 的 `dev` 场景及 `integration` 场景，补录至少一个窄屏和一个宽屏结果，再决定是否将本计划改为 `completed`。

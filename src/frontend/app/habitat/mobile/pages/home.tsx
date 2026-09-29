@@ -1,35 +1,24 @@
 import { ArrowRight } from "lucide-solid";
-import { For, Show, createEffect, createSignal } from "solid-js";
+import { For, Show } from "solid-js";
 import type { Component } from "solid-js";
-import type { MobilePageContext } from "../context";
+import type { MobileRouteContext } from "../context";
+import type { MobileApi } from "../../api/mobile";
 import { route } from "../context";
-import { useMobileResource } from "../resource";
+import { useMobileHome } from "../logic/home";
 import { ArticleCard } from "../components";
 import { Heading, Link, StateMessage, TabGroup, Text } from "../ui";
 import { MobileShell } from "./shared";
 
-export function createMobileHomePage(context: MobilePageContext): Component {
+export interface MobileHomePageInput extends MobileRouteContext {
+  readonly api: Pick<MobileApi, "tShelf">;
+}
+
+export function createMobileHomePage(input: MobileHomePageInput): Component {
   return function MobileHomePage() {
-    const [selection, setSelection] = createSignal({
-      surface: "recommendation" as const,
-      filterId: "all",
-    });
-    const resource = useMobileResource(() =>
-      context.api.tShelf.get(selection()),
-    );
-    let started = false;
-    createEffect(() => {
-      selection();
-      if (!started) {
-        started = true;
-        void resource.start();
-        return;
-      }
-      void resource.refetch();
-    });
-    const snapshot = () => resource.state().snapshot ?? resource.state().latest;
+    const home = useMobileHome(input);
+    const snapshot = home.snapshot;
     return (
-      <MobileShell context={context} activeId="home">
+      <MobileShell context={input} activeId="home">
         <header class="page-heading">
           <Text
             content="技术知识库"
@@ -47,20 +36,18 @@ export function createMobileHomePage(context: MobilePageContext): Component {
               id: filter.id,
               label: filter.name,
             }))}
-            selectedId={selection().filterId}
-            onChange={(filterId) =>
-              setSelection({ surface: "recommendation", filterId })
-            }
+            selectedId={home.selection().filterId}
+            onChange={home.selectFilter}
             ariaLabel="文章类型筛选"
             orientation="horizontal"
           />
           <div
             class="mobile-t-shelf-content"
             aria-live="polite"
-            aria-busy={resource.state().status === "loading"}
+            aria-busy={home.resource.state().status === "loading"}
           >
             <Show
-              when={resource.state().status !== "loading"}
+              when={home.resource.state().status !== "loading"}
               fallback={
                 <StateMessage
                   kind="loading"
@@ -70,12 +57,12 @@ export function createMobileHomePage(context: MobilePageContext): Component {
               }
             >
               <Show
-                when={resource.state().error === undefined}
+                when={home.resource.state().error === undefined}
                 fallback={
                   <StateMessage
                     kind="error"
                     text="推荐内容加载失败"
-                    onRetry={() => void resource.refetch()}
+                    onRetry={home.retry}
                   />
                 }
               >
@@ -112,7 +99,7 @@ export function createMobileHomePage(context: MobilePageContext): Component {
                 <ArrowRight size={18} aria-hidden="true" />
               </>
             }
-            href={route(context.routes, "mobile-articles")}
+            href={route(input.routes, "mobile-articles")}
             options={{ variant: "cta" }}
           />
         </div>

@@ -10,7 +10,9 @@ import { runPackageCheck } from './quality/package-check.ts';
 import { runPlaygroundDev } from './playground/playground.ts';
 import { planMode, MOCK_SCENARIOS, DATA_MODES, CONTENT_SOURCES } from './runtime/runtime-plan.ts';
 import { DEPLOY_TARGETS } from './delivery/deploy-plan.ts';
+import { RELEASE_KINDS, runRelease } from './release/release.ts';
 import { PORT_MIN, PORT_MAX } from '@fluvient-cli/cli-kit/port-allocation.ts';
+import { E2E_MODES, E2E_SCENARIOS, runE2e } from './e2e/e2e.ts';
 
 const FAILURE = { code: 20, meaning: '执行失败（构建失败、端口耗尽、服务启动失败或运行中的服务退出）' };
 const SIGINT = { code: 130, meaning: 'SIGINT（Ctrl-C）触发的清理退出' };
@@ -45,6 +47,19 @@ function portOption<const N extends string>(name: N, description: string) {
 }
 
 export const commandDefinitions: readonly CommandDefinition[] = [
+  defineCommand({
+    path: ['e2e'],
+    summary: '运行浏览器端到端测试',
+    description: '启动隔离的 runtime 栈，执行公开端 Playwright 旅程，保存截图并在结束时清理所有子进程。必须显式选择模式；不并入 quality check。',
+    examples: ['ops e2e --mode integration --playwright-module playwright-core/index.mjs --chromium-path /nix/store/.../chromium', 'ops e2e --mode dev --scenario empty --playwright-module playwright-core/index.mjs --chromium-path /nix/store/.../chromium'],
+    options: [
+      { name: 'mode', description: 'E2E 运行栈（必须显式选择）', model: { kind: 'enum', values: E2E_MODES } },
+      { name: 'scenario', description: 'dev Mock 场景（仅 --mode dev 可用）', model: { kind: 'enum', values: E2E_SCENARIOS }, optional: true },
+      { name: 'playwright-module', description: 'Playwright 模块路径或模块名（必须显式提供）', model: { kind: 'path' } },
+      { name: 'chromium-path', description: 'Chromium 可执行文件路径（必须显式提供）', model: { kind: 'path' } },
+    ],
+    exitCodes: [{ code: 0, meaning: '浏览器场景通过或 --dry-run 成功' }, { code: 10, meaning: '参数或命令用法错误' }, FAILURE],
+  }, (context, args) => runE2e(context, args)),
   defineCommand({ path: ['workspace', 'doctor'], summary: '检查本地开发依赖', description: '验证 Node、pnpm、Rust 和 Cargo 是否可用。', examples: ['ops workspace doctor'], exitCodes: [{ code: 0, meaning: '依赖齐全' }, { code: 20, meaning: '缺少依赖' }] }, async ({ process: p, workspace, reporter, dryRun }) => { let ok = true; reporter.section(dryRun ? 'workspace doctor dry-run' : 'workspace doctor'); for (const name of ['node', 'pnpm', 'rustc', 'cargo']) { if (dryRun) { reporter.info(`检查命令: ${name}`); continue; } const r = await p.run('sh', ['-c', `command -v ${name}`], workspace.root); if (r.code) { ok = false; reporter.fail(`${name} missing`); } else reporter.ok(`${name} available`); } return ok ? 0 : 20 }),
   defineCommand({ path: ['quality', 'check'], summary: '执行项目质量检查', description: '运行 Rust 三件套（cargo fmt --all --check、cargo clippy -D warnings、cargo test --workspace）、ops 契约测试、前端 typecheck/lint/format/test/build 和前后端架构边界检查。', examples: ['ops quality check'], exitCodes: [{ code: 0, meaning: '检查通过' }, { code: 20, meaning: '检查失败' }] }, ({ workspace, process, fs, reporter, dryRun }) => { if (dryRun) { reporter.section('quality check dry-run'); reporter.info('将执行 cargo fmt --all --check、cargo clippy --workspace --all-targets -- -D warnings、cargo test --workspace、ops 契约测试、pnpm typecheck/lint/format:check/test:core/build 和前后端架构边界检查'); return 0; } return runCheck(workspace, process, fs, reporter).then((ok) => ok ? 0 : 20); }),
   defineCommand({ path: ['quality', 'lint'], summary: '运行前端 Oxlint', description: '使用 pnpm 执行 blog-web 的 lint 脚本，并将 warning 视为失败。', examples: ['ops quality lint'], exitCodes: [{ code: 0, meaning: 'lint 通过' }, { code: 20, meaning: 'lint 失败' }] }, ({ workspace, process, reporter, dryRun }) => { if (dryRun) { reporter.section('quality lint dry-run'); reporter.info('pnpm -C src/frontend run lint'); return 0; } return runWebQuality(workspace, process, reporter, 'lint').then((ok) => ok ? 0 : 20); }),
@@ -118,6 +133,15 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     exitCodes: [{ code: 0, meaning: '安装器生成且 --help 冒烟通过' }, FAILURE],
   }, (context) => runDeployInstaller(deployPorts(context), { dryRun: context.dryRun })),
   defineCommand({
+    path: ['release'],
+    summary: '预检并发布 Script 或 Build tag',
+    description: '检查 main 分支和干净工作树，按发布类型自动递增 patch 版本，预览 tag 后在 --yes 下创建并推送；不会修改服务器。',
+    positionals: [{ name: 'kind', description: '发布类型', model: { kind: 'enum', values: RELEASE_KINDS } }],
+    options: [{ name: 'yes', model: { kind: 'switch' }, description: '确认创建并推送 tag' }],
+    examples: ['ops release script --dry-run', 'ops release build --yes', 'ops release both --yes'],
+    exitCodes: [{ code: 0, meaning: '预检成功或 tag 已推送' }, { code: 10, meaning: '参数或命令用法错误' }, FAILURE],
+  }, (context, args) => runRelease(args.kind, { process: context.process, reporter: context.reporter, root: context.workspace.root }, { dryRun: context.dryRun, confirmed: args.yes })),
+  defineCommand({
     path: ['runtime', 'dev'],
     summary: '前端开发栈: Vite + Mock Product API',
     description: '启动 Mock（--scenario 选择命名场景）与 Vite dev server，并把 Mock 实际地址注入 BLOG_API_ORIGIN；不启动 Product/Data，页面数据只来自 Mock。最终访问地址是 Vite 地址。',
@@ -163,6 +187,7 @@ export const groupDefinitions = [
   defineGroup({ path: ['quality'], summary: '质量', description: '运行格式、静态检查、测试和前端质量任务。', order: 20, workflow: '提交前验证' }),
   defineGroup({ path: ['package'], summary: '内核包', description: '@fluvient-loom workspace 包门禁：平台中立护栏 + typecheck/test/smoke，独立于 quality 全量检查。', order: 25, workflow: '内核包开发期验证' }),
   defineGroup({ path: ['playground'], summary: '演示页', description: '启动 apps/playground 移动端三页 demo（Vite dev），--host 供手机经局域网访问。', order: 26, workflow: '内核包演示与验收' }),
+  defineGroup({ path: ['e2e'], summary: '浏览器验收', description: '通过隔离运行栈执行显式的 Playwright 浏览器回归测试，不并入快速质量门禁。', order: 28, workflow: '浏览器回归验收' }),
   defineGroup({
     path: ['runtime'],
     summary: '运行模式',
@@ -173,4 +198,5 @@ export const groupDefinitions = [
   defineGroup({ path: ['admin'], summary: '管理鉴权', description: '初始化单管理员凭证并维护一次性恢复码。', order: 35, workflow: '管理端凭证运维' }),
   defineGroup({ path: ['content'], summary: '内容仓库', description: '初始化和维护 GitHub 内容真源。', order: 40, workflow: '内容仓库运维' }),
   defineGroup({ path: ['delivery'], summary: '交付', description: '构建前端与 Rust 交付物。', order: 50, workflow: '交付前构建' }),
+  defineGroup({ path: ['release'], summary: '发布', description: '预检、创建并推送 Script/Build 发布 tag。', order: 60, workflow: '发布交付物' }),
 ] as const;

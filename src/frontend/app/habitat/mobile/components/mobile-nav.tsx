@@ -1,9 +1,9 @@
 import { Link, Text } from "../ui";
 import { route } from "../context";
-import type { MobilePageContext } from "../context";
+import type { MobileRouteContext } from "../context";
 
 export interface MobileNavProps {
-  readonly context: MobilePageContext;
+  readonly context: MobileRouteContext;
 }
 
 export function MobileNav(props: MobileNavProps) {

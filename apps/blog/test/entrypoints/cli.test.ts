@@ -33,6 +33,7 @@ test('root help lists every leaf in a stable group order', async () => {
     'admin recovery regenerate',
     'content repository init',
     'delivery build',
+    'release',
     'runtime dev',
     'runtime backend',
     'runtime integration',
@@ -139,6 +140,24 @@ test('deleted commands point at their migration target and exit 10', async () =>
   assert.equal(migrate.code, 10);
   assert.match(migrate.errors, /命令已删除: database migrate/);
   assert.match(migrate.errors, /ops runtime backend/);
+});
+
+test('e2e requires an explicit mode and validates scenario combinations before browser setup', async () => {
+  const missingMode = await capture(['e2e', '--mode']);
+  assert.equal(missingMode.code, 10);
+  assert.match(missingMode.errors, /选项缺少值|缺少必填选项/);
+
+  const missingScenario = await capture(['e2e', '--mode', 'dev', '--playwright-module', 'playwright-core/index.mjs', '--chromium-path', '/tmp/chromium']);
+  assert.equal(missingScenario.code, 10);
+  assert.match(missingScenario.errors, /--mode dev 必须显式提供 --scenario/);
+
+  const invalidScenario = await capture(['e2e', '--mode', 'integration', '--scenario', 'empty', '--playwright-module', 'playwright-core/index.mjs', '--chromium-path', '/tmp/chromium']);
+  assert.equal(invalidScenario.code, 10);
+  assert.match(invalidScenario.errors, /--scenario 仅允许与 --mode dev 一起使用/);
+
+  const dryRun = await capture(['e2e', '--mode', 'dev', '--scenario', 'empty', '--playwright-module', 'playwright-core/index.mjs', '--chromium-path', '/tmp/chromium', '--dry-run']);
+  assert.equal(dryRun.code, 0);
+  assert.match(dryRun.output, /不启动进程、不绑定端口、不写文件/);
 });
 
 test('dry run prints the plan without binding ports or spawning processes', async () => {

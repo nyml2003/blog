@@ -11,6 +11,10 @@ import type {
 } from "../../kernel";
 import type { MobileApi, SiteRoutes } from "../api/mobile";
 
+export interface MobileRouteContext {
+  readonly routes: SiteRoutes;
+}
+
 export interface MobilePageContext {
   readonly api: MobileApi;
   readonly routes: SiteRoutes;

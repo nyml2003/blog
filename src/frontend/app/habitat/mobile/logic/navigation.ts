@@ -1,4 +1,4 @@
-import type { MobilePageContext } from "../context";
+import type { MobileRouteContext } from "../context";
 import { route } from "../context";
 
 export interface NavigationItem {
@@ -8,7 +8,7 @@ export interface NavigationItem {
 }
 
 export function mobileNavigationItems(
-  context: MobilePageContext,
+  context: MobileRouteContext,
 ): readonly NavigationItem[] {
   return [
     {

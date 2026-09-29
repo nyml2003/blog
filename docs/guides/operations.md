@@ -3,7 +3,7 @@ kind: guide
 id: GUIDE-OPERATIONS
 status: current
 owner: operations
-last_reviewed: 2026-09-19
+last_reviewed: 2026-09-29
 ---
 
 # 开发与运维指南
@@ -19,9 +19,14 @@ nix develop ./nix
 ops workspace doctor
 ops quality check
 ops delivery build
+ops release script --dry-run
+ops release build --yes
+ops release both --yes
 ops runtime dev --scenario default --web-port 5173 --mock-port 9090
 ops runtime backend --content-source fixture --data mock --product-port 8080 --data-port 8081
 ops runtime integration --content-source fixture --product-port 8080 --data-port 8081
+ops e2e --mode integration --playwright-module playwright-core/index.mjs --chromium-path /nix/store/.../chromium
+ops e2e --mode dev --scenario empty --playwright-module playwright-core/index.mjs --chromium-path /nix/store/.../chromium
 ops admin credentials init
 ops admin recovery regenerate
 BLOG_CONTENT_REPO=owner/repository BLOG_CONTENT_TOKEN=... ops content repository init
@@ -31,17 +36,43 @@ BLOG_CONTENT_REPO=owner/repository BLOG_CONTENT_TOKEN=... ops content repository
 
 ## 运行模式
 
+## 发布
+
+`ops release` 是唯一的发布入口。它只允许在 `main` 分支、干净工作树上运行，并按发布类型读取已有 tag 后自动递增 patch 版本：`script` 和 `build` 各自维护版本序列，`both` 使用同一提交但不要求两个版本号相同。
+
+先用 dry-run 查看提交、远程仓库和将创建的 tag：
+
+```text
+ops release script --dry-run
+ops release build --dry-run
+ops release both --dry-run
+```
+
+确认输出无误后，添加 `--yes` 才会创建并推送 tag：
+
+```text
+ops release script --yes
+ops release build --yes
+ops release both --yes
+```
+
+命令不会覆盖已有 tag、不会修改服务器，也不会把 GitHub Actions 的异步结果当作本地成功；推送后需按输出的 workflow 地址检查 Release 资产、checksum、安装器 `--help` 和发布包清单。服务器更新仍单独执行 `redeploy` 并人工确认。
+
 | 命令 | 进程 | 数据来源 | 页面入口 |
 | --- | --- | --- | --- |
 | `ops runtime dev --scenario <NAME> --web-port <PORT> --mock-port <PORT>` | Vite dev + Mock Product API | Mock（`default`/`empty`/`slow`/`server-error`/`malformed-response`） | Vite 实际绑定地址 |
 | `ops runtime backend --content-source <fixture\|github> --data <mock\|test> --product-port <PORT> --data-port <PORT>` | Rust Product API-only + Rust Data | Data 为 `mock`（内存夹具）或 `test`（临时 SQLite）；内容来源单独显式选择 | 无，API 基址即 Product 地址 |
 | `ops runtime integration --content-source <fixture\|github> --product-port <PORT> --data-port <PORT> [--watch]` | 先构建 `src/frontend/dist`，再启动 Rust Product（挂载 `src/frontend/dist`）+ Rust Data(test) | Data 固定为 `test`；内容来源单独显式选择 | Product 地址，页面与 `/api` 同源 |
 | `ops delivery build` | 无（只构建 `src/frontend/dist` 与 Rust Product/Data/Mock binary，不编译 Go 目标） | — | — |
+| `ops e2e --mode integration` | Ops 启动隔离的 integration 栈并在同一进程内执行 Playwright | fixture + Data(test) | Product 页面与 `/api` 同源 |
+| `ops e2e --mode dev --scenario <NAME>` | Ops 启动隔离的 Vite + Mock 栈并在同一进程内执行 Playwright | Mock 命名场景 | Vite 实际绑定地址 |
 
 约定：
 
 - 参数契约见 [SPEC-OPS-PARAMETERS-001](../specs/SPEC-OPS-PARAMETERS-001.md)。有值参数必填且不得重复，禁止环境变量补值；帮助列出全部枚举与范围。`default` 只是需要显式选择的场景名称。
 - `--watch`、`--check`、`--help`、`--dry-run`、`--json` 为 switch：出现 true，缺省 false，重复幂等，不接受 `=true`/`=false`。`ops quality format` 写入，`ops quality format --check` 只检查；dry-run 仍须完整参数。
+- `ops e2e` 必须显式选择 `--mode`、`--playwright-module` 和 `--chromium-path`；`integration` 不接受 `--scenario`，`dev` 必须显式选择一个 Mock 场景。浏览器依赖不从环境变量补值。
+- E2E 不属于 `ops quality check`；失败产物写入 `target/e2e/<run-id>/`，包含截图以及页面 console/pageerror 诊断。
 
 - 端口候选必须由对应 `--web-port`/`--product-port`/`--data-port`/`--mock-port`（十进制 int32，`1024`–`65535`）显式提供，无默认值；被占用时从候选值起逐次 +1（最多尝试 10 个端口），实际绑定结果即注入给依赖方的地址。
 - 监听地址固定 `127.0.0.1`，不提供 `--host`/`--listen`；`--scenario` 只接受命名场景，通过 CLI 传入，不读取环境变量。

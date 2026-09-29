@@ -3,7 +3,7 @@ kind: spec
 id: SPEC-OPS-PARAMETERS-001
 status: accepted
 owner: infrastructure
-last_reviewed: 2026-09-19
+last_reviewed: 2026-09-29
 ---
 
 # Ops 字段参数模型
@@ -40,6 +40,7 @@ last_reviewed: 2026-09-19
 | `runtime dev` | 必填 `--scenario` enum: default, empty, slow, server-error, malformed-response；必填 `--web-port`、`--mock-port` int32 |
 | `runtime backend` | 必填 `--data` enum: mock, test, prod；可选 `--database-path` path（仅 `--data prod` 时必填且只允许出现）；必填 `--content-source` enum: fixture, github；必填 `--product-port`、`--data-port` int32 |
 | `runtime integration` | `--watch` switch；必填 `--content-source` enum: fixture, github；必填 `--product-port`、`--data-port` int32 |
+| `e2e` | 必填 `--mode` enum: integration, dev；可选 `--scenario` enum: empty, slow, server-error, malformed-response（仅 dev）；必填 `--playwright-module`、`--chromium-path` path |
 | `quality format` | `--check` switch；缺省写入格式化结果，出现时只检查 |
 | 全局 | `--help`、`--dry-run`、`--json` switch，保留原有职责 |
 

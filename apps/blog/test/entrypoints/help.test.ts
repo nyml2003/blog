@@ -13,6 +13,7 @@ test('root and leaf help are generated from the same registry', () => {
   assert.match(root, /workspace/);
   assert.match(root, /quality/);
   assert.match(root, /delivery/);
+  assert.match(root, /e2e/);
   for (const definition of commandDefinitions) assert.match(root, new RegExp(definition.meta.path.join(' ')));
   assert.match(renderCommandHelp(registry, ['runtime', 'dev']), /BLOG_API_ORIGIN|Mock/);
   assert.match(renderCommandHelp(registry, ['runtime', 'dev']), /示例:/);

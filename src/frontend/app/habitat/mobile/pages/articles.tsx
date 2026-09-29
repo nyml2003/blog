@@ -1,77 +1,28 @@
-import {
-  createEffect,
-  createMemo,
-  createSignal,
-  onCleanup,
-  type Component,
-} from "solid-js";
-import type { MobilePageContext } from "../context";
+import { type Component } from "solid-js";
+import type { MobileRouteContext } from "../context";
+import type { MobileApi } from "../../api/mobile";
+import type { NavigationPort } from "../../../kernel";
 import type { CategoryShelf } from "../../api/mobile";
 import type { DeepReadonly } from "../../../kernel";
-import { useMobileResource } from "../resource";
+import { useMobileArticles, rootCategoryName } from "../logic/articles";
 import { ArticleCard } from "../components";
 import { Heading, StateMessage, Text } from "../ui";
 import { MobileShell } from "./shared";
-import {
-  categoryHref,
-  categoryIdFromSearch,
-  categoryRequestId,
-  categorySelection,
-  type CategorySelection,
-} from "../logic/category";
+import type { CategorySelection } from "../logic/category";
 
-function categoryNavigation(
-  context: MobilePageContext,
-  selection: CategorySelection,
-): void {
-  const current = context.navigation.current();
-  context.navigation.push(categoryHref(current.pathname, selection), {
-    ...(typeof current.state === "object" && current.state !== null
-      ? current.state
-      : {}),
-  });
+export interface MobileArticlesPageInput extends MobileRouteContext {
+  readonly api: Pick<MobileApi, "categoryShelf">;
+  readonly navigation: NavigationPort;
 }
 
 export function createMobileArticlesPage(
-  context: MobilePageContext,
+  input: MobileArticlesPageInput,
   title: string,
 ): Component {
   return function MobileArticlesPage() {
-    const [requestedId, setRequestedId] = createSignal(
-      categoryIdFromSearch(context.navigation.current().search),
-    );
-    const resource = useMobileResource(() =>
-      context.api.categoryShelf.get(requestedId()),
-    );
-    let started = false;
-    createEffect(() => {
-      requestedId();
-      if (!started) {
-        started = true;
-        void resource.start();
-        return;
-      }
-      void resource.refetch();
-    });
-    const current = createMemo(
-      () => resource.state().snapshot ?? resource.state().latest,
-    );
-    const selection = createMemo(() => {
-      const model = current();
-      return model === undefined
-        ? undefined
-        : categorySelection(model, requestedId());
-    });
-    const onPopState = () =>
-      setRequestedId(categoryIdFromSearch(context.navigation.current().search));
-    const popHandle = context.navigation.subscribePopState(onPopState);
-    onCleanup(() => popHandle.release());
-    const select = (next: CategorySelection) => {
-      setRequestedId(categoryRequestId(next));
-      categoryNavigation(context, next);
-    };
+    const articles = useMobileArticles(input);
     return (
-      <MobileShell context={context} activeId="articles">
+      <MobileShell context={input} activeId="articles">
         <header class="page-heading">
           <Text content="文章库" options={{ tone: "accent", size: "meta" }} />
           <Heading content={title} options={{ as: "h1", size: "page" }} />
@@ -82,18 +33,18 @@ export function createMobileArticlesPage(
         </header>
         <div class="category-shelf-content">
           {(() => {
-            const model = current();
-            if (resource.state().error !== undefined) {
+            const model = articles.current();
+            if (articles.resource.state().error !== undefined) {
               return (
                 <StateMessage
                   kind="error"
                   text="分类加载失败，请稍后重试"
-                  onRetry={() => void resource.refetch()}
+                  onRetry={articles.retry}
                 />
               );
             }
             if (model === undefined)
-              return resource.state().status === "loading" ? (
+              return articles.resource.state().status === "loading" ? (
                 <StateMessage
                   kind="loading"
                   text="正在加载分类…"
@@ -103,10 +54,10 @@ export function createMobileArticlesPage(
                 <StateMessage
                   kind="error"
                   text="分类加载失败，请稍后重试"
-                  onRetry={() => void resource.refetch()}
+                  onRetry={articles.retry}
                 />
               );
-            const selected = selection();
+            const selected = articles.selection();
             if (selected === undefined)
               return (
                 <StateMessage
@@ -121,7 +72,7 @@ export function createMobileArticlesPage(
                   <ForCategories
                     model={model}
                     selection={selected}
-                    onSelect={select}
+                    onSelect={articles.select}
                   />
                 </div>
                 <div class="article-list">
@@ -158,23 +109,6 @@ export function createMobileArticlesPage(
       </MobileShell>
     );
   };
-}
-
-function rootCategoryName(
-  model: DeepReadonly<CategoryShelf>,
-  categoryId: number | undefined,
-): string | undefined {
-  if (categoryId === undefined) return undefined;
-  let current = model.taxonomy.categories.find(
-    (category) => category.id === categoryId,
-  );
-  while (current !== undefined && current.parentId !== undefined) {
-    const parentId = current.parentId;
-    current = model.taxonomy.categories.find(
-      (category) => category.id === parentId,
-    );
-  }
-  return current?.name;
 }
 
 function ForCategories(props: {

@@ -18,6 +18,10 @@ jobs:
         run: nix develop ./nix -c pnpm install --frozen-lockfile
       - name: Build installer bundle
         run: nix develop ./nix -c ops delivery installer
+      - name: Validate installer bundle
+        run: |
+          test -s deploy/dist/blog-deploy.mjs
+          node deploy/dist/blog-deploy.mjs --help >/dev/null
       - uses: actions/upload-artifact@v4
         with:
           name: blog-deploy-mjs

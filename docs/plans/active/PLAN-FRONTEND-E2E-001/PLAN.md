@@ -45,7 +45,7 @@ E2E 只覆盖高价值用户旅程，不把所有单元测试重新写一遍。�
 
 ## 运行策略
 
-- 优先复用 `playwright-core` + 项目 Flake 提供的 Chromium，避免重复下载浏览器；明确 `BLOG_PLAYWRIGHT_MODULE`、`BLOG_CHROMIUM_PATH` 和缺失时的可读错误。
+- 优先复用 `playwright-core` + 项目 Flake 提供的 Chromium，避免重复下载浏览器；由 `ops e2e` 通过显式参数接收模块和 Chromium 路径，缺失时可读失败。
 - 建立独立 E2E 命令，负责启动隔离的 integration/dev 栈、等待健康与页面可达、执行测试、保存日志/截图/trace、按信号清理子进程。命令必须使用临时端口、临时数据库和隔离 Mock session。
 - 默认 `ops quality check` 保持快速，不自动启动浏览器；提供显式 `ops ... e2e` 或等价脚本，并在 CI 中单独 job 运行。是否把命令纳入 ops 由 Spec 决策工作流确认。
 - 测试失败保留最小诊断包：场景名、viewport、页面 URL、console/pageerror、截图；trace/video 只在失败或显式开关时保存，控制资源占用。
@@ -81,7 +81,7 @@ E2E 只覆盖高价值用户旅程，不把所有单元测试重新写一遍。�
 | 工作流 | Owner | 依赖 | Write set | 状态 |
 | --- | --- | --- | --- | --- |
 | E2E 契约与运行策略 | qa+pm | - | 本计划、`docs/guides/testing.md`、必要时 `SPEC-OPS-RUNTIME-001.md` | ready |
-| Runner 与隔离栈 | qa+infra | 契约与运行策略 | `e2e/**` 或 `scripts/e2e/**`、测试配置、隔离启动/清理代码、package/ops 入口 | ready |
+| Runner 与隔离栈 | qa+infra | 契约与运行策略 | `apps/blog/src/e2e/**`、测试配置、隔离启动/清理代码、ops 入口 | ready |
 | 公开端旅程 | frontend+qa | Runner 与隔离栈 | E2E 场景、fixture、截图/trace 规则 | ready |
 | 故障与设置旅程 | frontend+qa | Runner 与隔离栈 | Mock 场景接线（如必要）、E2E 场景与故障断言 | ready |
 | 管理端与专项安全旅程 | frontend+qa | Runner、凭证/数据隔离决策 | 管理端 E2E、正文预览专项迁移或保留适配 | ready |

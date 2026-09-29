@@ -29,3 +29,12 @@ test("new app layers keep legacy and dependency boundaries", () => {
     }
   }
 });
+
+test("public mobile pages keep host capabilities in bootstrap and logic", () => {
+  const pageRoot = join(root, "habitat", "mobile", "pages");
+  for (const file of files(pageRoot).filter((path) => path.endsWith(".tsx"))) {
+    const source = readFileSync(file, "utf8");
+    assert.doesNotMatch(source, /MobilePageContext/);
+    assert.doesNotMatch(source, /\bcontext\.(api|navigation|persistence)\b/);
+  }
+});

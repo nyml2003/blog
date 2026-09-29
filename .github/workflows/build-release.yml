@@ -21,6 +21,12 @@ jobs:
         run: nix develop ./nix -c pnpm install --frozen-lockfile
       - name: Package x86_64
         run: nix develop ./nix -c ops delivery package --target x86_64-unknown-linux-musl
+      - name: Validate release package
+        run: |
+          archive=$(find deploy/dist -maxdepth 1 -name 'blog-release-*.tar.gz' -print -quit)
+          test -n "$archive"
+          tar -tzf "$archive" | grep -Eq '^\./MANIFEST\.json$'
+          tar -tzf "$archive" | grep -Eq '^\./SHA256SUMS$'
       - uses: actions/upload-artifact@v4
         with:
           name: blog-release

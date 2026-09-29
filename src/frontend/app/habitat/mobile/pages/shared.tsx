@@ -1,11 +1,11 @@
 import type { JSX } from "solid-js";
-import type { MobilePageContext } from "../context";
+import type { MobileRouteContext } from "../context";
 import { mobileNavigationItems } from "../logic/navigation";
 import { BottomNav } from "../ui";
 import { MobileNav } from "../components";
 
 export interface MobileShellProps {
-  readonly context: MobilePageContext;
+  readonly context: MobileRouteContext;
   readonly activeId: string;
   readonly children: JSX.Element;
 }
