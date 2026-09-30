@@ -3,7 +3,7 @@
 ## 计划
 
 - Plan ID：`PLAN-OPS-OUTPUT-STANDARD-001`
-- 当前状态：`partial`
+- 当前状态：`completed`
 - 收尾日期：2026-09-30
 
 ## 已交付
@@ -21,14 +21,15 @@
 | --- | --- |
 | `pnpm typecheck` | passed |
 | `git diff --check` | passed |
-| CLI 入口测试 | 19 passed |
-| `pnpm --filter @blog/blog test` | 95 passed；13 个真实 runtime 用例按现有环境跳过 |
+| CLI 入口测试 | 21 passed |
+| `pnpm --filter @blog/blog test` | 105 passed；13 个真实 runtime 用例默认跳过 |
 | `pnpm --filter @blog/blog-deploy test` | 8 passed |
 | `ops quality check` | passed |
+| `OPS_RUNTIME_E2E=1` runtime stack | 12 passed |
+| `OPS_RUNTIME_E2E=full` runtime stack | 14 passed |
 
-## 未完成与恢复条件
+## 收尾说明
 
-- 部分领域 helper 仍以裸数字退出码传递；需要继续按命令组迁移成结构化 `Result`。
-- 目前的脱敏只覆盖敏感字段名和有限文本模式；还需要完整的秘密注入测试。
-- 真实 runtime、E2E、Release 的 JSON 终止事件顺序和消费者迁移尚未验收；13 个真实 runtime 用例默认跳过。
-- 埋点只提供可注入事件端口和空适配器；真实指标、审计和追踪消费者属于后续扩展。
+- 外部进程数字退出码只存在于进程端口；命令 handler 边界统一返回结构化 `Result`。
+- 脱敏、截断、NDJSON 纯净性、来源保留、信号清理和真实 runtime 事件顺序均有测试证据。
+- 埋点当前是可注入端口和空适配器，指标、审计和追踪消费者属于后续扩展，不阻塞本计划归档。

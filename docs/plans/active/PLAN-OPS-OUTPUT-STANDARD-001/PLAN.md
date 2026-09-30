@@ -1,7 +1,7 @@
 ---
 kind: plan
 id: PLAN-OPS-OUTPUT-STANDARD-001
-status: partial
+status: completed
 owner: project-manager
 created: 2026-09-29
 last_reviewed: 2026-09-30
@@ -19,9 +19,9 @@ last_reviewed: 2026-09-30
 
 - `SPEC-OPS-RUNTIME-001` 已规定运行栈日志前缀、stdout/stderr 分工、`--json` NDJSON、终止事件和退出码；这是当前契约基线。本计划可以经明确更新 Spec 后整体替换旧契约，不能留下同名参数的双重语义。
 - `packages/cli-core/src/reporter.ts` 提供 `section/ok/fail/info` 的人类输出；CLI 生产路径通过 OutputPort 适配终端、NDJSON 与测试捕获，旧 Runtime Spec 和运维指南已指向统一输出协议。
-- runtime 子进程日志已有 `[web]`、`[product]`、`[data]`、`[mock]`、`[ops]` 前缀及运行期事件；delivery、quality、admin、content、release、e2e、help、参数错误等输出尚未使用一套完整协议。
-- `--json` 当前主要服务 runtime 生命周期，尚未形成所有入口和命令通用的事件模型；同一错误可能同时出现在 reporter 文本、异常摘要和进程日志中。
-- E2E/Release runner 和测试已有对当前 JSON 形状及退出行为的直接依赖，切换新协议时必须一起迁移。
+- runtime 子进程日志保留 `[web]`、`[product]`、`[data]`、`[mock]`、`[ops]` 来源；delivery、quality、admin、content、release、e2e、help 和参数错误均通过统一事件边界输出。
+- `--json` 已形成所有入口和命令通用的 NDJSON 事件模型，终止结果唯一且最后输出。
+- E2E/Release runner、测试和指南已迁移到新事件字段；旧 JSON 形状不再被解析。
 
 ## 输出模型
 
@@ -82,9 +82,9 @@ last_reviewed: 2026-09-30
 | --- | --- | --- | --- | --- |
 | 输出契约与事件模型 | qa+pm | - | 本计划、必要的 ops Spec 与指南 | completed |
 | Reporter/错误模型基础设施 | infra | 契约与事件模型 | `packages/cli-kit/**`、`packages/cli-core/**`、公共测试 | completed |
-| 全量命令与入口迁移 | infra | 基础设施 | `apps/blog/src/**`、命令测试、入口测试 | partial |
-| 消费者同步切换 | qa+release | 新协议冻结、全量命令迁移 | E2E/Release runner、CI、脚本、指南、协议测试 | partial |
-| 集成验收 | qa+pm | 上述工作流 | 质量报告、输出样例、计划结果 | partial |
+| 全量命令与入口迁移 | infra | 基础设施 | `apps/blog/src/**`、命令测试、入口测试 | completed |
+| 消费者同步切换 | qa+release | 新协议冻结、全量命令迁移 | E2E/Release runner、CI、脚本、指南、协议测试 | completed |
+| 集成验收 | qa+pm | 上述工作流 | 质量报告、输出样例、计划结果 | completed |
 
 Reporter、错误类型、CLI runner 和 Spec 属于共享写集，必须串行修改。迁移可按命令组实施，但只有全量命令和仓库内消费者同时切换后才算完成；中间状态不得作为可发布兼容版本。
 
@@ -111,10 +111,10 @@ Reporter、错误类型、CLI runner 和 Spec 属于共享写集，必须串行�
 - runner 已归一化命令结果，并输出命令完成结果及 `command.started/finished` 埋点；现有 Reporter 调用通过 OutputPort 输出。
 - `workspace doctor`、`quality check/lint/format` 和 `package check` 已迁移为显式 `Result` 返回，runner 兼容层不再参与这些命令的成败判断。
 - runtime JSON 已追加统一 `schemaVersion`、`event`、`code`、`exitCode`、`message` 字段；日志保留来源和 stdout/stderr 流；runtime 接受 breaking change。
-- 已验证 `pnpm typecheck`、`git diff --check`、`ops quality check`、CLI 入口测试 19/19、OutputPort 测试 2/2；博客命令测试 95 passed、13 skipped；blog-deploy 测试 8/8。
+- 已验证 `pnpm typecheck`、`git diff --check`、`ops quality check`、CLI 入口测试 21/21、OutputPort 测试 2/2；博客命令测试 105 passed、13 个默认跳过；blog-deploy 测试 8/8；`OPS_RUNTIME_E2E=1` 真实进程验收 12/12；`OPS_RUNTIME_E2E=full` 全量 runtime 验收 14/14。
 
 ## 收尾说明
 
-- 底层外部进程仍以操作系统数字退出码交互，命令入口映射为 `Result`；部分领域 helper 尚未完成全链路 `Result` 化。
-- `ErrorDetail` 仍允许开放字段；目前只有字段名和有限文本模式脱敏，尚不足以证明任意子进程输出不泄露秘密。
-- 埋点当前只提供可注入事件端口和空适配器。真实 runtime、E2E、Release 的输出契约验收尚未完成。
+- 外部进程端口保留操作系统数字退出码，进入命令 handler 边界后统一映射为 `Result<CommandValue, OpsFailure>`；注册到 runner 的命令处理器不再暴露裸退出码。
+- OutputPort 适配器统一执行敏感字段、内嵌凭证模式和长文本截断；真实子进程 stdout/stderr、无换行尾行、信号、端口和构建路径均已验收。
+- 埋点通过可注入 `OutputPort` 提供 `command.started/finished` 和阶段事件，当前不落盘联网，后续可增加消费者而不改变命令接口。

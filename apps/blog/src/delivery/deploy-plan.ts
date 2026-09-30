@@ -63,9 +63,10 @@ export function packageSteps(target: DeployTarget, workspaceRoot: string, archiv
       cwd: workspaceRoot,
     },
     {
+      // 工具链走 ./nix#cross(flake.lock 锁定),不引用滚动的 nixpkgs# 注册表。
       label: `交叉编译 Rust(${target})`,
       command: 'nix',
-      args: ['shell', 'nixpkgs#zig', 'nixpkgs#cargo-zigbuild', '-c', 'sh', '-c', crossScript],
+      args: ['develop', './nix#cross', '-c', 'sh', '-c', crossScript],
       cwd: workspaceRoot,
     },
     {

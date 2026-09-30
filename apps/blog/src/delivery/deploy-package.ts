@@ -27,6 +27,10 @@ function requireFilePorts(fs: FsPort): Required<Pick<FsPort, 'write' | 'copy' | 
   return { write: fs.write.bind(fs), copy: fs.copy.bind(fs), readBytes: fs.readBytes.bind(fs) };
 }
 
+// 失败输出保留末尾 12000 字符:链接器/编译器错误通常在 stderr 尾部,
+// 2000 字符会把 undefined symbol 等关键行截掉,导致 CI 上无法定位。
+const FAILURE_DETAIL_CHARS = 12_000;
+
 async function runStep(step: PackageStep, ports: DeployPorts): Promise<number> {
   const result = await ports.process.run(step.command, [...step.args], step.cwd);
   if (result.code === EXIT_OK) {
@@ -35,7 +39,11 @@ async function runStep(step: PackageStep, ports: DeployPorts): Promise<number> {
   }
   ports.reporter.fail(`${step.label}(exit ${result.code})`);
   const detail = (result.stderr || result.stdout).trim();
-  if (detail) ports.reporter.info(detail.slice(-2000));
+  if (detail) {
+    for (const line of detail.slice(-FAILURE_DETAIL_CHARS).split('\n')) {
+      ports.reporter.info(line);
+    }
+  }
   return EXIT_FAILURE;
 }
 

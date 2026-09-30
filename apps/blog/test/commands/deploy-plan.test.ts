@@ -17,6 +17,9 @@ test('target parsing only accepts the musl release targets', () => {
 test('package plan builds for the chosen target and archives under deploy/dist', () => {
   const steps = packageSteps('aarch64-unknown-linux-musl', '/repo', '/repo/deploy/dist/blog-release-a.tar.gz');
   assert.equal(steps.length, 3);
+  // 交叉编译工具链必须来自 flake.lock 锁定的 ./nix#cross,禁止滚动注册表。
+  assert.equal(steps[1]!.command, 'nix');
+  assert.deepEqual(steps[1]!.args.slice(0, 4), ['develop', './nix#cross', '-c', 'sh']);
   assert.match(steps[1]!.args.at(-1)!, /cargo zigbuild --release --locked --target aarch64-unknown-linux-musl/);
   assert.equal(steps[2]!.command, 'tar');
   assert.match(steps[2]!.args.join(' '), /deploy\/dist\/blog-release-a\.tar\.gz/);

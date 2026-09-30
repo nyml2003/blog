@@ -22,9 +22,9 @@ function captureReporter() {
 
 class PackageWorld {
   readonly files = new Map<string, string>();
-  readonly commands: Array<{ command: string; args: string[] }> = [];
+  readonly commands: Array<{ command: string; args: string[] }>;
 
-  constructor() {
+  constructor(failing?: { command: string; stderr: string }) {
     this.files.set(`${ROOT}/deploy/systemd/blog-data.service`, '[Service]\nExecStart=/usr/local/bin/data\n');
     this.files.set(`${ROOT}/deploy/systemd/blog-product.service`, '[Service]\nEnvironment=BLOG_CONTENT_REPO={{contentRepo}}\n');
     this.files.set(`${ROOT}/deploy/nginx/blog.conf`, 'server_name {{serverName}};\n');
@@ -33,14 +33,19 @@ class PackageWorld {
     for (const name of ['product', 'data', 'blog-admin-credentials']) {
       this.files.set(`${ROOT}/src/target/${TARGET}/release/${name}`, `binary:${name}`);
     }
+    this.commands = [];
+    this.process = {
+      run: async (command, args): Promise<ProcessResult> => {
+        this.commands.push({ command, args: [...args] });
+        if (failing !== undefined && command === failing.command) {
+          return { code: 101, stdout: '', stderr: failing.stderr };
+        }
+        return { code: 0, stdout: '', stderr: '' };
+      },
+    };
   }
 
-  readonly process: ProcessPort = {
-    run: async (command, args): Promise<ProcessResult> => {
-      this.commands.push({ command, args: [...args] });
-      return { code: 0, stdout: '', stderr: '' };
-    },
-  };
+  readonly process: ProcessPort;
 
   readonly fs: FsPort = {
     read: async (path) => this.files.get(path) ?? '',
@@ -92,4 +97,18 @@ test('package dry-run performs no build or file writes', async () => {
   assert.equal(code, 0);
   assert.equal(world.commands.length, 0);
   assert.match(lines.join('\n'), /发布包将写入/);
+});
+
+test('package failure keeps linker error lines that fall outside the old 2000-char window', async () => {
+  const marker = 'ld.lld: error: undefined symbol: sqlite3_malloc';
+  const noise = Array.from({ length: 12 }, (_unused, index) => `ld.lld: error: undefined symbol: filler_${index} ${'y'.repeat(240)}`);
+  const world = new PackageWorld({ command: 'nix', stderr: [marker, ...noise].join('\n') });
+  const { reporter, lines } = captureReporter();
+
+  const code = await runDeployPackage(TARGET, world.ports(reporter), { dryRun: false });
+
+  assert.equal(code, 20);
+  const output = lines.join('\n');
+  assert.match(output, /交叉编译 Rust/);
+  assert.match(output, /sqlite3_malloc/, '首行链接错误(超出旧 2000 字符窗口)必须保留在失败输出中');
 });

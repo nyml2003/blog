@@ -2,6 +2,17 @@ import { join } from 'node:path';
 import type { DeployPorts } from './deploy-package.ts';
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from '@fluvient-cli/cli-kit/errors.ts';
 
+// 与 deploy-package 保持一致:失败输出保留足够长度,避免截断吞掉关键错误行。
+const FAILURE_DETAIL_CHARS = 12_000;
+
+function reportFailureDetail(ports: DeployPorts, output: string): void {
+  const detail = output.trim();
+  if (!detail) return;
+  for (const line of detail.slice(-FAILURE_DETAIL_CHARS).split('\n')) {
+    ports.reporter.info(line);
+  }
+}
+
 /** 把服务器安装器打包成单文件 mjs(esbuild 走 nix,不改仓库依赖)。 */
 export async function runDeployInstaller(ports: DeployPorts, options: { dryRun: boolean }): Promise<number> {
   const entry = join(ports.root, 'apps', 'blog-deploy', 'src', 'main.ts');
@@ -33,13 +44,13 @@ export async function runDeployInstaller(ports: DeployPorts, options: { dryRun: 
   const build = await ports.process.run('nix', args, ports.root);
   if (build.code !== 0) {
     ports.reporter.fail(`installer 打包失败(exit ${build.code})`);
-    ports.reporter.info((build.stderr || build.stdout).trim().slice(-2000));
+    reportFailureDetail(ports, build.stderr || build.stdout);
     return EXIT_FAILURE;
   }
   const smoke = await ports.process.run('node', [output, '--help'], ports.root);
   if (smoke.code !== 0) {
     ports.reporter.fail(`installer --help 冒烟失败(exit ${smoke.code})`);
-    ports.reporter.info((smoke.stderr || smoke.stdout).trim().slice(-2000));
+    reportFailureDetail(ports, smoke.stderr || smoke.stdout);
     return EXIT_FAILURE;
   }
   ports.reporter.ok(`安装器已生成:${output}`);

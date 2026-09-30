@@ -64,6 +64,16 @@
             export PATH="${opsCommand}/bin:$PATH"
           '';
         };
+
+        # 交叉编译发布包专用 shell:zig/cargo-zigbuild 必须来自锁定的
+        # nixos-26.05,禁止走滚动的 nixpkgs# 注册表(unstable 一更新,
+        # 发布 CI 就可能拿到未经本项目验证的工具链)。
+        cross = pkgs.mkShell {
+          packages = with pkgs; [
+            zig
+            cargo-zigbuild
+          ];
+        };
       });
     };
 }
