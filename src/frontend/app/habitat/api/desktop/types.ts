@@ -30,12 +30,27 @@ export const tShelfSchema = z.object({
 
 export const siteRoutesSchema = z.object({ routes: z.record(z.string(), z.string()) });
 
+export const articleSchema = z.object({
+  id: positiveId,
+  title: z.string(),
+  summary: z.string(),
+  articleTypeId: positiveId,
+  articleType: z.object({ id: positiveId, name: z.string() }).nullish(),
+  contentHtml: z.string(),
+  status: z.enum(["draft", "published"]),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  publishedAt: z.string().nullish(),
+  terms: z.array(termSchema).nullish(),
+}).transform((value) => ({ ...value, articleType: value.articleType ?? undefined, publishedAt: value.publishedAt ?? undefined, terms: value.terms ?? undefined }));
+
 export type TShelf = z.output<typeof tShelfSchema>;
 export type TShelfInput = {
   readonly surface: "recommendation" | "archive";
   readonly filterId: string;
 };
 export type SiteRoutes = z.output<typeof siteRoutesSchema>;
+export type DesktopArticle = z.output<typeof articleSchema>;
 
 export interface DesktopApiFailure {
   readonly kind: "network" | "timeout" | "protocol" | "remote";
@@ -51,5 +66,8 @@ export interface DesktopApi {
   };
   readonly tShelf: {
     get(input: TShelfInput): import("../../../kernel/ports").DataTask<TShelf, DesktopApiFailure>;
+  };
+  readonly article: {
+    getPublished(id: number): import("../../../kernel/ports").DataTask<DesktopArticle, DesktopApiFailure>;
   };
 }

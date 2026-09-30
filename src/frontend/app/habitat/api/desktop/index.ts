@@ -1,2 +1,2 @@
 export { createDesktopApi } from "./client";
-export type { DesktopApi, DesktopApiFailure, SiteRoutes, TShelf, TShelfInput } from "./types";
+export type { DesktopApi, DesktopApiFailure, DesktopArticle, SiteRoutes, TShelf, TShelfInput } from "./types";

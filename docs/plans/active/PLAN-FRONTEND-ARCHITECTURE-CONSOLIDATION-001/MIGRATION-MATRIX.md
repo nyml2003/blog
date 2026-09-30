@@ -14,8 +14,8 @@
 | Page id | 平台/场景 | 当前入口 | 目标入口 | 数据与命令 | 当前状态 | 可删除对象 |
 | --- | --- | --- | --- | --- | --- | --- |
 | `desktop-public-home` | Desktop 公开首页 | `desktop/src/pages/public/home.tsx` | `app/bootstrap/desktop/home.tsx` | Desktop `tShelf` resource；类型筛选；文章详情语义导航 | `building` | 旧首页、Desktop 旧 Header/T 型货架中仅由首页使用的部分 |
-| `desktop-public-articles` | Desktop 公开文章库 | `desktop/src/pages/public/articles.tsx` | `app/bootstrap/desktop/articles.tsx` | 文章列表 resource；筛选；详情导航 | `inventory` | 旧文章库入口及专属逻辑 |
-| `desktop-public-detail` | Desktop 公开详情 | `desktop/src/pages/public/detail.tsx` | `app/bootstrap/desktop/detail.tsx` | 文章详情 resource；返回/文章库导航 | `inventory` | 旧详情入口及专属逻辑 |
+| `desktop-public-articles` | Desktop 公开文章库 | `desktop/src/pages/public/articles.tsx` | `app/bootstrap/desktop/articles.tsx` | 文章列表 resource；筛选；详情导航 | `building` | 旧文章库入口及专属逻辑 |
+| `desktop-public-detail` | Desktop 公开详情 | `desktop/src/pages/public/detail.tsx` | `app/bootstrap/desktop/detail.tsx` | 文章详情 resource；正文渲染；返回/文章库导航 | `building` | 旧详情入口及专属逻辑 |
 | `mobile-admin-article-preview` | Mobile 管理预览 | `mobile/src/pages/admin-preview-content.tsx` | `app/bootstrap/mobile/admin-preview-content.tsx` | 管理预览 API；HTML 校验；预览状态 | `inventory` | 旧预览入口及专属旧组件 |
 
 其余 Desktop 管理页面和剩余旧 Mobile 页面在公开页面切片完成后补入本表。没有登记在本表的页面不得标记为“可删除”。

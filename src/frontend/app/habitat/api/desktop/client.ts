@@ -3,12 +3,13 @@ import { cancellationFailure } from "../../../kernel/cancellation";
 import type { DataTask, NetworkPort, NetworkRequest } from "../../../kernel/ports";
 import type { Result } from "../../../kernel/result";
 import { z } from "zod";
-import { siteRoutesSchema, tShelfSchema, type DesktopApi, type DesktopApiFailure, type TShelfInput } from "./types";
+import { articleSchema, siteRoutesSchema, tShelfSchema, type DesktopApi, type DesktopApiFailure, type TShelfInput } from "./types";
 
 const envelopeSchema = z.object({ code: z.string(), message: z.string().optional(), data: z.unknown() });
 const routes = {
   siteRoutes: { endpoint: "/api/public/site-routes", sceneCode: "public.site_routes" },
   tShelf: { endpoint: "/api/public/t-shelf", sceneCode: "public.t_shelf" },
+  article: { endpoint: "/api/public/articles", sceneCode: "public.article_detail" },
 } as const;
 
 function requestPath(endpoint: string, sceneCode: string, parameters: Record<string, string | undefined>): string {
@@ -60,5 +61,6 @@ export function createDesktopApi(network: NetworkPort): DesktopApi {
   return {
     siteRoutes: { get: () => request(network, getRequest(requestPath(routes.siteRoutes.endpoint, routes.siteRoutes.sceneCode, {})), siteRoutesSchema) },
     tShelf: { get: (input: TShelfInput) => request(network, getRequest(requestPath(routes.tShelf.endpoint, routes.tShelf.sceneCode, { surface: input.surface, filter_id: input.filterId })), tShelfSchema) },
+    article: { getPublished: (id) => request(network, getRequest(requestPath(routes.article.endpoint, routes.article.sceneCode, { id: String(id) })), articleSchema) },
   };
 }

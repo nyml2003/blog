@@ -59,3 +59,34 @@ test("desktop API reports invalid payloads as protocol failures", async () => {
   if (result.ok) return;
   assert.equal(result.error.kind, "protocol");
 });
+
+test("desktop API requests a published article by id and normalizes optional fields", async () => {
+  let requestPath = "";
+  const result = await createDesktopApi({
+    request(request) {
+      requestPath = request.path;
+      return Promise.resolve(ok({
+        status: 200,
+        headers: {},
+        body: body({
+          id: 7,
+          title: "文章",
+          summary: "摘要",
+          articleTypeId: 2,
+          articleType: null,
+          contentHtml: "<p>正文</p>",
+          status: "published",
+          createdAt: "2026-09-28T00:00:00Z",
+          updatedAt: "2026-09-28T00:00:00Z",
+          publishedAt: null,
+          terms: null,
+        }),
+      }));
+    },
+  }).article.getPublished(7).start();
+  assert.equal(result.ok, true);
+  assert.equal(requestPath, "/api/public/articles?sceneCode=public.article_detail&id=7");
+  if (!result.ok) return;
+  assert.equal(result.value.articleType, undefined);
+  assert.equal(result.value.terms, undefined);
+});
