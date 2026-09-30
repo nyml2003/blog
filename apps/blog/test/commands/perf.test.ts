@@ -225,18 +225,21 @@ test('aggregateNavigationMetrics counts transfers, cache hits and api durations'
       { name: '/assets/app.js', durationMs: 0, transferBytes: 0, decodedBytes: 111_424 },
       { name: '/api/public/site-routes?sceneCode=x', durationMs: 25, transferBytes: 900, decodedBytes: 900 },
       { name: '/api/public/t-shelf?sceneCode=x', durationMs: 60, transferBytes: 5_000, decodedBytes: 5_000 },
+      { name: '/favicon.ico', durationMs: 5, transferBytes: 64, decodedBytes: 64 },
     ],
   };
 
   const aggregated = aggregateNavigationMetrics(raw);
   assert.equal(aggregated.htmlMs, 12);
+  assert.equal(aggregated.htmlBytes, 800);
   assert.deepEqual(aggregated.js, { requests: 2, bytes: 111_424 });
   assert.deepEqual(aggregated.css, { requests: 1, bytes: 21_364 });
   assert.equal(aggregated.siteRoutesMs, 25);
   assert.deepEqual(aggregated.dataApi, { requests: 1, bytes: 5_000, totalMs: 60 });
-  assert.equal(aggregated.requestCount, 5);
-  assert.equal(aggregated.transferredBytes, 800 + 111_424 + 21_364 + 0 + 900 + 5_000);
+  assert.equal(aggregated.requestCount, 6);
+  assert.equal(aggregated.transferredBytes, 800 + 111_424 + 21_364 + 0 + 900 + 5_000 + 64);
   assert.equal(aggregated.cacheHits, 1);
+  assert.equal(aggregated.otherBytes, 64);
   assert.deepEqual(aggregated.staticAssets, {
     decodedBytes: 2 * 111_424 + 21_364,
     reusedDecodedBytes: 111_424,

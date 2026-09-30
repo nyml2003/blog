@@ -45,16 +45,14 @@ blog/
 │   │   ├── data/           ← Data 进程：SQLite 持久化（8081），不懂业务
 │   │   └── mock/           ← Mock 进程：开发时顶替 Product（9090），5 种故障场景
 │   └── frontend/
-│       ├── app/kernel/     ← 平台中立的 ports、Result、Task、Resource 与状态原语
-│       ├── app/infrastructure/ ← browser/memory 等宿主适配器
-│       ├── app/habitat/    ← 新运行时的 API 组合、Mobile 逻辑、页面和 UI
-│       ├── app/bootstrap/  ← 新运行时页面入口与首绘装配
-│       ├── pages.registry.ts ← 全部 17 个页面的登记表（单一事实源）
-│       ├── site-routes.json  ← 页面路由清单（后端经 /api/public/site-routes 下发）
-│       ├── desktop-ui/      ← Desktop 独立基础组件库
-│       ├── app/habitat/validation/ ← HTML 诊断契约
-│       ├── app/infrastructure/browser/validation/ ← WASM 浏览器适配
-│       └── build/           ← Vite 插件：按注册表生成各页 HTML 入口
+ │       ├── app/kernel/     ← 应用层残余：desired-state 状态原语（ports/Result/Task 已归 @fluvient-loom 包）
+ │       ├── app/habitat/    ← 新运行时的 API 组合、Mobile 逻辑、页面和 UI
+ │       ├── app/bootstrap/  ← 新运行时页面入口与首绘装配（唯一触碰浏览器全局的层）
+ │       ├── pages.registry.ts ← 全部 17 个页面的登记表（单一事实源）
+ │       ├── site-routes.json  ← 页面路由清单（后端经 /api/public/site-routes 下发）
+ │       ├── desktop-ui/      ← Desktop 独立基础组件库
+ │       ├── app/habitat/validation/ ← HTML 诊断契约与 WASM 浏览器产物（generated/）
+ │       └── build/           ← Vite 插件：按注册表生成各页 HTML 入口
 ├── packages/               ← @fluvient-loom 可复用包（ports/query/command/web/gesture 等）
 ├── apps/playground/        ← 包能力与移动手势的独立演示、实证入口
 ├── ops/                    ← 开发工具链 CLI（Node 直跑 TS，零依赖）
@@ -132,21 +130,19 @@ pages.registry.ts（页面登记表）
 | 目录 | 内容 | 规则 |
 | --- | --- | --- |
 | `pages.registry.ts` | 17 个页面的登记表 | 加页面只改这里 + 建入口文件 |
-| `app/kernel/` | 新运行时的无宿主核心 | 不依赖 Solid、DOM、网络或旧页面层 |
-| `app/infrastructure/` | browser/memory 等适配器 | 只实现 kernel ports，不承载页面业务 |
-| `app/habitat/` | 新运行时的 API、资源、Mobile 逻辑与 UI | 通过注入 ports 工作，不导入旧页面层 |
-| `app/bootstrap/` | 新运行时页面入口与首绘装配 | 只做 composition root |
+| `app/kernel/` | 应用层残余：desired-state 状态原语 | ports/Result/Task/Resource 统一来自 `@fluvient-loom/port|common|query` |
+| `app/habitat/` | 新运行时的 API、资源、Mobile 逻辑与 UI | 通过注入 ports 工作，不导入旧页面层或宿主适配器包 |
+| `app/bootstrap/` | 新运行时页面入口与首绘装配 | 只做 composition root，唯一允许装配 `@fluvient-loom/web` 适配器的层 |
 | `app/habitat/desktop/` | Desktop 页面逻辑、页面和 UI | 页面只编排已注入的 API、资源和命令 |
 | `app/habitat/mobile/` | Mobile 页面逻辑、页面和 UI | 页面只编排已注入的 API、资源和命令 |
 | `app/habitat/api/` | 页面域 API 与 wire schema | 不访问 UI 或宿主适配器 |
-| `app/infrastructure/browser/` | 网络、存储、导航和 WASM 适配器 | 只实现宿主 ports |
 
 ### packages/ 与 apps/ —— 可复用能力工作区
 
-根目录 pnpm workspace 只覆盖 `packages/*` 和 `apps/*`。`packages/` 提供
-`@fluvient-loom` 的平台中立能力、宿主适配和 Web/手势模块，`apps/playground/` 用于独立演示与
-真机验证；它们与 `src/frontend/` 同仓库演进，但不等同于博客页面运行时。入口以各包
-`package.json`、根 `package.json` 和 `ops package check` 为准。
+根目录 pnpm workspace 覆盖 `packages/*`、`apps/*` 和 `src/frontend`。`packages/` 提供
+`@fluvient-loom` 的平台中立能力、宿主适配和 Web/手势模块，博客前端通过 workspace 依赖
+消费这些包；`apps/playground/` 用于独立演示与实机验证。入口以各包 `package.json`、根
+`package.json` 和 `ops package check` 为准。
 
 ### ops/ —— 开发工具链
 
@@ -154,7 +150,7 @@ pages.registry.ts（页面登记表）
 
 ## 当前布局状态
 
-- `app/` 是唯一页面运行时：`kernel` 保持平台中立，`infrastructure` 提供宿主适配，`habitat` 负责应用组合，`bootstrap` 负责页面入口。
+- `app/` 是唯一页面运行时：`kernel` 只保留应用层状态原语，协议与宿主适配统一来自 `@fluvient-loom` workspace 包，`habitat` 负责应用组合，`bootstrap` 负责页面入口与适配器装配。
 - 全部 17 个注册页面均已接入 `app/bootstrap/`，旧页面、旧查询层和旧 Mobile UI 已删除。
 - `desktop-ui/` 与 `app/habitat/mobile/ui/` 分别维护 Desktop、Mobile 的 UI 边界。
 - 计划目录当前不作为代码地图的一部分。后续计划重新建立后，应只登记仍然有效的工作范围，不回填旧索引。

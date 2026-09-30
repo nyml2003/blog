@@ -81,10 +81,12 @@ export function classifyResource(name: string): ResourceKind {
 
 export interface AggregatedRunNumbers {
   readonly htmlMs: number | undefined;
+  readonly htmlBytes: number;
   readonly js: { readonly requests: number; readonly bytes: number };
   readonly css: { readonly requests: number; readonly bytes: number };
   readonly siteRoutesMs: number | undefined;
   readonly dataApi: { readonly requests: number; readonly bytes: number; readonly totalMs: number };
+  readonly otherBytes: number;
   readonly requestCount: number;
   readonly transferredBytes: number;
   readonly cacheHits: number;
@@ -106,6 +108,7 @@ export function aggregateNavigationMetrics(raw: RawNavigationMetrics): Aggregate
   let siteRoutesMs: number | undefined;
   let cacheHits = 0;
   let resourceBytes = 0;
+  let otherBytes = 0;
   let staticDecodedBytes = 0;
   let staticReusedDecodedBytes = 0;
   for (const resource of raw.resources) {
@@ -130,14 +133,18 @@ export function aggregateNavigationMetrics(raw: RawNavigationMetrics): Aggregate
       dataApiRequests += 1;
       dataApiBytes += resource.transferBytes;
       dataApiTotalMs += resource.durationMs;
+    } else if (kind === 'other') {
+      otherBytes += resource.transferBytes;
     }
   }
   return {
     htmlMs: raw.html?.responseEndMs,
+    htmlBytes: raw.html?.transferBytes ?? 0,
     js: { requests: jsRequests, bytes: jsBytes },
     css: { requests: cssRequests, bytes: cssBytes },
     siteRoutesMs,
     dataApi: { requests: dataApiRequests, bytes: dataApiBytes, totalMs: dataApiTotalMs },
+    otherBytes,
     requestCount: raw.resources.length,
     transferredBytes: resourceBytes + (raw.html?.transferBytes ?? 0),
     cacheHits,
@@ -191,6 +198,10 @@ export interface JourneySummary {
     readonly requestCount?: Stat;
     readonly staticAssetReuseRate?: Stat;
     readonly staticAssetReusedBytes?: Stat;
+    readonly staticAssetDecodedBytes?: Stat;
+    readonly htmlBytes?: Stat;
+    readonly dataApiBytes?: Stat;
+    readonly otherBytes?: Stat;
   };
 }
 
@@ -212,6 +223,10 @@ export function buildJourneySummary(runs: readonly JourneyRun[]): JourneySummary
         .map((sample) => sample.metrics.staticAssets.reuseRate)
         .filter(defined)),
       staticAssetReusedBytes: summarizeNumbers(runs.map((sample) => sample.metrics.staticAssets.reusedDecodedBytes)),
+      staticAssetDecodedBytes: summarizeNumbers(runs.map((sample) => sample.metrics.staticAssets.decodedBytes)),
+      htmlBytes: summarizeNumbers(runs.map((sample) => sample.metrics.htmlBytes)),
+      dataApiBytes: summarizeNumbers(runs.map((sample) => sample.metrics.dataApi.bytes)),
+      otherBytes: summarizeNumbers(runs.map((sample) => sample.metrics.otherBytes)),
     },
   };
 }
@@ -494,6 +509,10 @@ function printProfileSummary(context: CommandContext, profile: ProfileResult): v
     const requests = journey.summary.requestCount?.median;
     const reuseRate = journey.summary.staticAssetReuseRate?.median;
     const reusedBytes = journey.summary.staticAssetReusedBytes?.median;
+    const decodedBytes = journey.summary.staticAssetDecodedBytes?.median;
+    const htmlBytes = journey.summary.htmlBytes?.median;
+    const dataApiBytes = journey.summary.dataApiBytes?.median;
+    const otherBytes = journey.summary.otherBytes?.median;
     const fcp = journey.summary.firstContentfulPaintMs?.median;
     const lcp = journey.summary.largestContentfulPaintMs?.median;
     const parts = [
@@ -503,7 +522,8 @@ function printProfileSummary(context: CommandContext, profile: ProfileResult): v
       `LCP 中位 ${formatMs(lcp)}`,
       `传输 ${formatBytes(transferred)}`,
       `缓存命中 ${hits === undefined ? '-' : `${hits}/${requests ?? '-'}`}`,
-      `JS/CSS 复用 ${formatBytes(reusedBytes)}（${reuseRate === undefined ? '-' : `${Math.round(reuseRate * 100)}%`}）`,
+      `JS/CSS 复用 ${formatBytes(reusedBytes)}/${formatBytes(decodedBytes)}（${reuseRate === undefined ? '-' : `${(reuseRate * 100).toFixed(1)}%`}）`,
+      `HTML/API/其他 ${formatBytes(htmlBytes)}/${formatBytes(dataApiBytes)}/${formatBytes(otherBytes)}`,
     ];
     context.log.info(`[${profile.profile}] ${journey.journey}: ${parts.join(' | ')}`);
   }

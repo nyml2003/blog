@@ -3,7 +3,7 @@ kind: architecture
 id: ARCH-FRONTEND
 status: current
 owner: frontend
-last_reviewed: 2026-09-19
+last_reviewed: 2026-09-30
 ---
 
 # Frontend 架构
@@ -20,15 +20,19 @@ last_reviewed: 2026-09-19
 
 ```text
 src/frontend/
-├── app/          # 新运行时：kernel / infrastructure / habitat / bootstrap
+├── app/          # 新运行时：kernel / habitat / bootstrap
 ├── desktop-ui/   # Desktop 独立基础组件库
 ├── build/        # Vite 页面生成插件
 └── pages.registry.ts # 页面登记表
 ```
 
-`app/kernel` 保持平台中立，提供 ports、Result、Task、Resource 和可逆状态原语；
-`app/infrastructure` 提供 browser、memory 等宿主适配器；`app/habitat` 负责 API、页面逻辑和
-Mobile UI 的组合；`app/bootstrap` 只负责页面入口与首绘装配。
+协议与宿主适配的唯一来源是 workspace 包：`@fluvient-loom/port`（宿主无关 ports）、
+`@fluvient-loom/common`（Result、取消、基础类型）、`@fluvient-loom/query`（Task/Resource）、
+`@fluvient-loom/web`（浏览器适配器）和 `@fluvient-loom/node`（Node 与内存适配器）。
+`app/kernel` 不再维护同名 ports，只剩 `desired-state` 等应用层状态原语，作为应用内的
+残余模块存在。`app/habitat` 负责 API、页面逻辑和 Mobile UI 的组合；`app/bootstrap`
+只负责把浏览器原生对象和运行配置装配进 workspace 适配器，是唯一允许触碰浏览器全局的层，
+habitat 与页面不直接导入 `@fluvient-loom/web`/`node`。
 
 所有注册页面均使用 `app/bootstrap/`，Desktop 与 Mobile 的业务逻辑和 UI 分别位于
 `app/habitat/desktop/` 与 `app/habitat/mobile/`。
@@ -67,8 +71,8 @@ T 型货架首次请求同时取得筛选项和首个筛选项对应的文章；
 
 ## Mobile 设置
 
-当前公开 Mobile 设置使用 `app/kernel` 的 persistence ports 和可逆状态命令、
-`app/infrastructure` 的 browser/memory 适配器，以及 `app/habitat/mobile` 的页面组合。
+当前公开 Mobile 设置使用 `@fluvient-loom/port` 的 persistence ports 与可逆状态命令、
+`@fluvient-loom/web`/`node` 的 browser/memory 适配器，以及 `app/habitat/mobile` 的页面组合。
 设置以 `blog.mobile.settings.v1` 快照持久化；旧的 theme/font key 只用于兼容读取和迁移。
 保存失败时恢复上一次稳定快照并提供重试，页面不直接访问存储。
 
@@ -81,8 +85,8 @@ T 型货架首次请求同时取得筛选项和首个筛选项对应的文章；
 
 ## 正文校验
 
-`app/habitat/validation` 定义诊断 schema，`app/infrastructure/browser/validation` 装配共享 Rust core 的 WASM；页面通过注入的编辑器 API 使用，不维护 TS allowlist。B Desktop 预览只能消费当前源码的成功校验结果；session preview 重新验证存储内容。WASM 加载失败、过期结果或无效正文均不注入 `innerHTML`，也不能绕过服务端保存校验。公开正文由 Product 的原生同源规则保证，见 `SPEC-ARTICLE-HTML-VALIDATION-001`。
+`app/habitat/validation` 定义诊断 schema，其 `generated/` 子目录装配共享 Rust core 的 WASM 浏览器产物（构建期由 wasm-bindgen 生成，博客私有，不属于通用宿主适配器）；页面通过注入的编辑器 API 使用，不维护 TS allowlist。B Desktop 预览只能消费当前源码的成功校验结果；session preview 重新验证存储内容。WASM 加载失败、过期结果或无效正文均不注入 `innerHTML`，也不能绕过服务端保存校验。公开正文由 Product 的原生同源规则保证，见 `SPEC-ARTICLE-HTML-VALIDATION-001`。
 
 ## Client 注入与拦截器
 
-`app/infrastructure/browser` 提供网络、存储和导航适配器；Mock 会话拦截器在 bootstrap composition root 装配，Mock 专用类型与常量不泄漏到页面和领域模型。
+`@fluvient-loom/web` 提供网络、存储和导航适配器；Mock 会话拦截器在 bootstrap composition root 装配，Mock 专用类型与常量不泄漏到页面和领域模型。
