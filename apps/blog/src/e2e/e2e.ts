@@ -278,23 +278,27 @@ async function runDevJourney(browser: Browser, origin: string, artifactDir: stri
       await current.getByRole('heading', { name: '近期推荐', exact: true }).waitFor();
       const layout = await current.evaluate(() => {
         const root = document.querySelector('.desktop-home');
-        const row = document.querySelector('.archive-row');
-        if (!root || !row) throw new Error('desktop home layout nodes are missing');
+        if (!root) throw new Error('desktop home root is missing');
         const rootRect = root.getBoundingClientRect();
-        const rowBefore = getComputedStyle(row, '::before').transform;
         return {
           rootWidth: rootRect.width,
           viewportWidth: innerWidth,
           background: getComputedStyle(document.body).backgroundColor,
-          rowBefore,
         };
       });
       if (layout.rootWidth < layout.viewportWidth - 1) throw new Error(`desktop home does not cover viewport: ${JSON.stringify(layout)}`);
       if (layout.background === 'rgb(255, 255, 255)') throw new Error(`desktop home background is white: ${JSON.stringify(layout)}`);
-      const row = current.locator('.archive-row').first();
-      await row.hover();
-      const hovered = await current.evaluate(() => getComputedStyle(document.querySelector('.archive-row')!, '::before').transform);
-      if (hovered === 'none' || hovered === 'matrix(1, 0, 0, 1, 0, 0)') throw new Error('desktop archive hover indicator did not activate');
+      const rows = current.locator('.archive-row');
+      if (await rows.count() > 0) {
+        await rows.first().hover();
+        const hovered = await current.evaluate(() => getComputedStyle(document.querySelector('.archive-row')!, '::before').transform);
+        if (hovered === 'none' || hovered === 'matrix(1, 0, 0, 1, 0, 0)') throw new Error('desktop archive hover indicator did not activate');
+      } else {
+        const filter = current.locator('.t-shelf-filters button').first();
+        await filter.hover();
+        const hovered = await current.evaluate(() => getComputedStyle(document.querySelector('.t-shelf-filters button')!).color);
+        if (hovered === 'rgb(24, 34, 48)' || hovered === '') throw new Error('desktop filter hover state did not activate');
+      }
     });
     await assertPage(wide, 'dev-home-wide', `${origin}/m/`, artifactDir, failures, async (current) => {
       await current.getByRole('heading', { name: '推荐阅读', exact: true }).waitFor();

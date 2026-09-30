@@ -16,7 +16,6 @@
     "apps/blog/src",
     "apps/blog-deploy/src",
     "apps/playground/src",
-    "apps/playground/test",
-    "scripts"
+    "apps/playground/test"
   ]
 }

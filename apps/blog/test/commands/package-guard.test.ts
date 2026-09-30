@@ -38,7 +38,7 @@ test('platform global member access is a violation', () => {
 test('files outside packages/*/src are ignored', () => {
   const violations = guard({
     '/ws/packages/command/test/a.test.ts': 'import test from "node:test";',
-    '/ws/scripts/package-smoke.ts': 'import assert from "node:assert/strict";',
+    '/ws/apps/blog/test/packages/package-smoke.ts': 'import assert from "node:assert/strict";',
     '/ws/src/frontend/app/kernel/task.ts': 'import { ok } from "./result";',
   });
   assert.deepEqual(violations, []);

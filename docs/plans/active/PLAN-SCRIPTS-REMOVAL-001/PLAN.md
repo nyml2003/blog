@@ -1,7 +1,7 @@
 ---
 kind: plan
 id: PLAN-SCRIPTS-REMOVAL-001
-status: ready
+status: partial
 owner: project-manager
 created: 2026-09-30
 last_reviewed: 2026-09-30
@@ -107,3 +107,29 @@ last_reviewed: 2026-09-30
 - 历史浏览器脚本的深度 HTML 验收是否全部并入 `ops e2e`，或保留为前端测试目录中的显式专项 runner。
 - `browser-libs.nix` 的最终目录和命名，以及本地 flake 与 CI 是否共享同一浏览器依赖声明。
 - 根 `package.json` 的 `smoke`/`check` 是否删除、改成 ops 委托，还是保留为极薄的开发别名；不得形成第二套业务入口。
+
+## 执行记录（2026-09-30）
+
+### 已交付
+
+- `scripts/` 目录已删除，五个文件全部完成归属迁移或清理：
+  - `build-article-html-wasm.mjs` → `src/frontend/build/build-article-html-wasm.mjs`（未决项 1 决策：归前端构建工具目录，ops 各命令经 `pnpm -C src/frontend run build/dev` 间接调用，无需改 ops 侧）；
+  - `test-article-html-wasm.mjs` → `src/frontend/tests/wasm/test-article-html-wasm.mjs`，`test:core` 内部路径同步更新，parity 与边界测试原样保留；
+  - `package-smoke.ts` → `apps/blog/test/packages/package-smoke.ts`，转为 node:test 风格，由 `ops package check` 经 `pnpm exec tsx` 直接调度并走 reporter 输出（未决项 2 决策：内置步骤）。注意 `@fluvient-loom` 包使用无扩展名相对导入，裸 `node --experimental-strip-types` 无法解析，必须经 tsx 执行，因此文件名不带 `.test` 以避开 apps/blog 的 node --test 发现 glob；
+  - `test-article-html-browser.mjs` 直接删除（零消费者，`ops e2e` 为唯一浏览器入口）；
+  - `browser-libs.nix` 直接删除：零消费者且 `builtins.getFlake (toString ../.)` 指向的根 flake 已迁至 `nix/`，表达式本就无法求值（未决项 4 决策：不保留死配置，如未来需要 Chromium 运行库打包应在 `nix/flake.nix` 内重建）。
+- 根 `package.json`：删除 `smoke` script，`check` 收窄为 `pnpm typecheck && pnpm test`（未决项 5 决策）；devDependencies 未动（`tsx`/`@fluvient-loom/*` 归属清理需更新 lockfile，留待后续）。
+- 根 `tsconfig.json` 移除 `"scripts"` include；`ops package check` 的 registry 描述、dry-run 文案与实现标签同步更新；`package-guard.test.ts` fixture 路径更新。
+- 顺带修复：删除 `src/frontend/pnpm-workspace.yaml`（e3459c3 重构残留，嵌套 workspace 声明会使 `pnpm -C src/frontend` 的依赖自检把 src/frontend 当孤立 workspace 而安装失败）。
+
+### 验证证据
+
+- 迁移前基线：`pnpm run smoke` 通过；`node scripts/test-article-html-wasm.mjs` 287 用例通过；`wasm:build` 通过。
+- 迁移后：`pnpm -C src/frontend run test:core` 全绿（含新路径 wasm 构建、parity 287 用例、四套前端测试）；`ops quality check` exit 0（Rust 三件套、ops 契约测试、前端 typecheck/lint/format:check/test:core/build、架构边界全部通过）；`pnpm test` 递归全绿；`ops package check` 中新接线的 package smoke 步骤 OK。
+- 残留扫描：`rg` 检索旧脚本路径与 `pnpm smoke`，仅本计划与归档计划的历史记述命中。
+
+### 未完成与外部阻塞
+
+- `ops package check` 整体仍 exit 20，两个失败点均为并行工作流的进行中状态、非本计划改动引入：中立性护栏不认识 `@fluvient-cli/*` 新 scope 与 `mobile-h5-solid-atoms` 的 solid-js 依赖（架构整合/基础设施包工作流的欠账）；根 `pnpm typecheck` 因 atoms 包 `.tsx` 缺少根级 JSX 配置失败。恢复条件：上述工作流落地后重跑 `ops package check` 应全绿。
+- `ops e2e` 与 CI `build-release`（`ops delivery package` 走 musl 交叉编译）未在本机运行，需要浏览器环境与交叉工具链；相关代码路径未被本计划修改（e2e/delivery 均经 pnpm scripts 间接使用 wasm 构建）。
+- 未决项 3（历史浏览器脚本的深度 HTML 验收能力）未迁移即删除，缺口记录：管理端编辑器诊断定位与按钮禁用、伪造直发 422、WASM 加载失败降级、网络 503 输入保留、毒化 sessionStorage 缓存拦截。后续如需要，应作为 `ops e2e` 的 scenario 补齐，不再恢复独立脚本。

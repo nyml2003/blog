@@ -3,10 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "wasm:build": "node ../../scripts/build-article-html-wasm.mjs",
+    "wasm:build": "node build/build-article-html-wasm.mjs",
     "dev": "pnpm wasm:build && vite",
     "build": "pnpm wasm:build && vite build",
-    "test:core": "pnpm wasm:build && node ../../scripts/test-article-html-wasm.mjs && pnpm test:foundation && pnpm test:mobile && pnpm test:desktop-ui && pnpm test:frontend",
+    "test:core": "pnpm wasm:build && node tests/wasm/test-article-html-wasm.mjs && pnpm test:foundation && pnpm test:mobile && pnpm test:desktop-ui && pnpm test:frontend",
     "test:foundation": "tsc --noEmit -p tests/app/tsconfig.json && tsc --noEmit -p tests/app/kernel/tsconfig.json && tsx --test tests/app/kernel/kernel.test.ts tests/app/kernel/desired-state.test.ts tests/app/infrastructure/infrastructure.test.ts tests/app/architecture/source-layout.test.ts",
     "test:mobile": "tsc --noEmit -p tests/app/tsconfig.json && tsx --test tests/app/api/mobile.test.ts tests/app/mobile/category.test.ts tests/app/mobile/settings.test.ts",
     "test:desktop-ui": "tsc --noEmit -p tests/desktop-ui/tsconfig.json && tsx --test tests/desktop-ui/desktop-ui.test.ts",

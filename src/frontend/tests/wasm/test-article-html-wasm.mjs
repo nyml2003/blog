@@ -5,13 +5,13 @@ import { fileURLToPath } from "node:url";
 import {
   initSync,
   inspect_html,
-} from "../src/frontend/app/infrastructure/browser/validation/generated/article_html_wasm.js";
+} from "../../app/infrastructure/browser/validation/generated/article_html_wasm.js";
 
-const workspace = fileURLToPath(new URL("../", import.meta.url));
+const workspace = fileURLToPath(new URL("../../../../", import.meta.url));
 const fixtures = JSON.parse(
   readFileSync(
     new URL(
-      "../src/core/article-html-core/tests/fixtures/article-html-v1.json",
+      "../../../../src/core/article-html-core/tests/fixtures/article-html-v1.json",
       import.meta.url,
     ),
     "utf8",
@@ -56,7 +56,7 @@ const expected = JSON.parse(native.stdout);
 initSync({
   module: readFileSync(
     new URL(
-      "../src/frontend/app/infrastructure/browser/validation/generated/article_html_wasm_bg.wasm",
+      "../../app/infrastructure/browser/validation/generated/article_html_wasm_bg.wasm",
       import.meta.url,
     ),
   ),

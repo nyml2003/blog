@@ -25,13 +25,26 @@ export async function runPackageCheck(
   }
   if (!violations.length) reporter.ok('platform neutrality guard');
 
+  const smoke = await process.run(
+    'pnpm',
+    ['exec', 'tsx', 'apps/blog/test/packages/package-smoke.ts'],
+    workspace.root,
+  );
+  if (smoke.code !== 0) {
+    passed = false;
+    reporter.fail('package smoke (@fluvient-loom lifecycle + Node adapter)');
+    reporter.info(smoke.stderr || smoke.stdout);
+  } else {
+    reporter.ok('package smoke (@fluvient-loom lifecycle + Node adapter)');
+  }
+
   const result = await process.run('pnpm', ['run', 'check'], workspace.root);
   if (result.code !== 0) {
     passed = false;
-    reporter.fail('pnpm check (typecheck + test + smoke)');
+    reporter.fail('pnpm check (typecheck + test)');
     reporter.info(result.stderr || result.stdout);
   } else {
-    reporter.ok('pnpm check (typecheck + test + smoke)');
+    reporter.ok('pnpm check (typecheck + test)');
   }
   return passed;
 }

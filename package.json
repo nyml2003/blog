@@ -5,8 +5,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "pnpm -r run test",
-    "smoke": "tsx scripts/package-smoke.ts",
-    "check": "pnpm typecheck && pnpm test && pnpm smoke"
+    "check": "pnpm typecheck && pnpm test"
   },
   "devDependencies": {
     "@fluvient-loom/command": "workspace:*",

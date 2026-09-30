@@ -23,7 +23,7 @@ last_reviewed: 2026-09-30
 - `src/frontend/app/infrastructure/browser` 提供 network、persistence、navigation、scheduler、document、viewport、space-time、operation-id 和 task factory。
 - `src/frontend/app/infrastructure/memory` 提供内存 persistence 和 operation-id。
 - 现有 `@fluvient-loom/port` 已定义网络、持久化、导航、调度、任务等协议；`@fluvient-loom/web` 已有浏览器 persistence、document、navigation、scheduler、operation-id；`@fluvient-loom/node` 已有内存 persistence、Node network、scheduler 和 operation-id。
-- `app/kernel/ports`、`app/kernel/task`、`app/kernel/result` 与现有 `@fluvient-loom/common`、`port`、`query` 存在相似能力，当前前端仍直接依赖 `app/kernel`。
+- `app/kernel/ports`、`app/kernel/task`、`app/kernel/result` 与现有 `@fluvient-loom/common`、`port`、`query` 存在相似能力，当前前端仍直接依赖 `app/kernel`。2026-09-30 已逐文件核对：全部重名接口与实现零签名漂移，仅 import 来源不同，见 [PORTS-MAPPING.md](./PORTS-MAPPING.md)。
 - `app/infrastructure/browser/validation/generated` 的 HTML 校验 WASM 属于博客正文协议和构建产物，不是通用宿主适配器。
 - 当前工作树有其他前端架构迁移改动；本计划只处理基础设施包边界、适配器迁移和对应验证。
 
@@ -114,8 +114,10 @@ last_reviewed: 2026-09-30
 
 ## 未决项
 
-- 最终以 `@fluvient-loom/port` 还是 `app/kernel/ports` 作为唯一公共协议；两者不能长期并列。
+事实核对见 [PORTS-MAPPING.md](./PORTS-MAPPING.md)（2026-09-30，零漂移已验证）。
+
+已决（2026-09-30）：唯一公共协议定为 `@fluvient-loom/port` + `@fluvient-loom/common`。`app/kernel` 收缩为应用层残余（`desired-state` 等），`SpaceTimePort`、`ViewportPort` 上移 `port` 包；架构文档在消费者切换落地时同步更新。
 - `createBrowserNetwork` 是否纳入现有 `@fluvient-loom/web`，以及是否需要拆分 fetch/JSON 解码策略。
-- `createBrowserDataTask` 是否删除并统一使用 `@fluvient-loom/query`，还是保留浏览器 AbortController 适配子路径。
-- `ViewportPort`、`DocumentPort`、`SpaceTimePort` 是否扩展到公共 `port` 包，还是作为 web 包私有类型。
+- `createBrowserDataTask` 是否删除并统一使用 `@fluvient-loom/query`，还是保留浏览器 AbortController 适配子路径。核对结果：源码零消费者，与 `query` 包实现逐行重复，建议删除。
+- `ViewportPort`、`DocumentPort`、`SpaceTimePort` 是否扩展到公共 `port` 包，还是作为 web 包私有类型。`DocumentPort` 已在 `port` 包；`ViewportPort`、`SpaceTimePort` 建议上移 `port` 包。
 - workspace 包是否先保持 private；npm 发布需要另行确认版本策略、license、仓库元数据和 CI provenance。
