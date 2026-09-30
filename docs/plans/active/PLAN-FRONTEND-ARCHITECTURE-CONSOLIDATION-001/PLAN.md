@@ -102,6 +102,10 @@ Desktop 与 Mobile 只在 UI、布局、交互密度和平台专属状态上不�
 
 ## 迁移工作流
 
+迁移按页面垂直切片推进，不先批量铺设空页面再统一收尾。每个页面都必须经历
+“新入口 → 新数据链路 → 新 UI → 行为验收 → 引用扫描 → 删除旧实现”这一完整闭环；
+基础设施 workstream 只在有真实页面消费者和可验证结果时算完成。
+
 | 工作流 | Owner | 依赖 | Write set | 状态 |
 | --- | --- | --- | --- | --- |
 | 新基线与页面契约 | frontend+qa | - | 新 Spec、架构文档、页面 environment/navigation 类型与测试 | ready |
@@ -113,6 +117,17 @@ Desktop 与 Mobile 只在 UI、布局、交互密度和平台专属状态上不�
 | 基线验收与文档收尾 | qa+pm | 旧链路删除 | architecture、Spec、CODEMAP、指南、验收证据 | ready |
 
 共享的页面契约、registry、Vite build、导航 adapter 和公共测试属于串行写集；具体页面可按平台和页面组推进，但不得在删除旧模块前合并未完成的消费者迁移。
+
+### 首批页面顺序
+
+1. Desktop 公开首页：验证 Desktop environment、API/resource、语义导航和 `desktop-ui` 接入。
+2. Desktop 公开文章列表、详情：复用已验证的 Desktop runtime，完成公开端闭环。
+3. Mobile 管理文章预览：验证管理预览的权限、正文校验和 Mobile UI 边界。
+4. Desktop 管理登录、列表、编辑、新建、taxonomy、发布工作台和预览：按业务流程拆分，每页独立验收。
+5. 剩余旧 Mobile 页面、logic、components 和 `mobile-ui` 能力迁移。
+6. 全量消费者扫描后，按模块逐项删除旧链路。
+
+每个页面开始前登记以下信息，完成后补齐证据：旧 entry、目标 bootstrap、目标 habitat/page logic、API 和 command、权限、状态路径、测试、E2E 场景、可删除文件。
 
 ## 每个页面的迁移清单
 
@@ -139,14 +154,14 @@ Desktop 与 Mobile 只在 UI、布局、交互密度和平台专属状态上不�
 
 ## 验收标准
 
-1. 每个 registry 页面都有唯一的新 bootstrap 入口和对应 habitat/page logic；不再存在旧 `definePage` 页面入口。
-2. Desktop 与 Mobile 页面遵守同一生命周期和 environment 协议，平台差异只出现在平台 UI、交互和明确的页面逻辑中。
+1. 每个 registry `page id` 都有明确的新 bootstrap 映射和对应 habitat/page logic；允许多个页面在语义相同且 alias 差异明确时共享实现，但不得保留旧 `definePage` 页面入口。
+2. Desktop 与 Mobile 页面遵守同一生命周期、environment 和 navigation intent 协议；API、页面逻辑和 UI 可以按平台或业务域独立实现。
 3. 页面源码不包含 API endpoint、route alias、storage 访问、transport 创建或 wire DTO 映射。
 4. `solid/page`、`solid/queries`、旧 Mobile 页面链路、`common/client`、`common/data`、旧页面专属的 `common/validation` 调用和无消费者的 `mobile-ui` 已删除；只保留 HTML 校验协议、诊断、WASM 能力及其必要适配。
-5. `pages.registry.ts`、`site-routes.json`、后端路由清单和构建输出保持一致。
+5. `pages.registry.ts`、`site-routes.json`、后端路由清单、Product 静态入口白名单和构建输出保持一致。
 6. 公开端、管理端、Desktop 预览、Mobile 预览的权限、文章状态、正文校验和导航行为不回归。
 7. 浏览器 E2E 覆盖 Desktop 公开/管理和 Mobile 公开/预览的关键路径；单元测试覆盖页面逻辑和边界状态。
-8. `ops quality check`、前端 typecheck/lint/format/build、核心测试及相关 E2E 通过。
+8. `ops quality check`、前端 typecheck/lint/format/build 和核心测试通过；相关 E2E 另有真实 runtime 证据。
 
 ## 风险与处理
 

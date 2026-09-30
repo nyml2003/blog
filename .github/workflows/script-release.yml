@@ -19,13 +19,20 @@ jobs:
       - name: Install workspace dependencies
         run: nix develop ./nix -c pnpm install --frozen-lockfile
       - name: Build installer bundle
-        run: nix develop ./nix -c ops delivery installer
+        run: |
+          if [[ "$GITHUB_REF_NAME" == script-v* ]]; then
+            BLOG_DEPLOY_RELEASE_VERSION="${GITHUB_REF_NAME#script-v}" nix develop ./nix -c ops delivery installer
+          else
+            nix develop ./nix -c ops delivery installer
+          fi
       - name: Validate installer bundle
         run: |
           test -s deploy/dist/blog-deploy.mjs
           node deploy/dist/blog-deploy.mjs --help >/dev/null
           printf '%s  %s\n' "$(sha256sum deploy/dist/blog-deploy.mjs | cut -d' ' -f1)" blog-deploy.mjs > SHA256SUMS
-          test "${GITHUB_REF_NAME#script-v}" = "$(node -p "require('./apps/blog-deploy/package.json').version")"
+          if [[ "$GITHUB_REF_NAME" == script-v* ]]; then
+            test "${GITHUB_REF_NAME#script-v}" = "$(node deploy/dist/blog-deploy.mjs --version)"
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: blog-deploy-mjs

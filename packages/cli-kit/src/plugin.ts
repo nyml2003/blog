@@ -45,6 +45,7 @@ export function createCliApp(options: CliAppOptions): CliApp {
   const globalOptions = options.plugins.flatMap((plugin) => plugin.globalOptions ?? []);
   const registry = reflectCommandRegistry(definitions, groups, globalOptions.map((option) => option.name));
   const reporter = container.get<Reporter>('reporter');
+  const output = container.get<import('./output.ts').OutputPort>('output');
   const createContext = container.get<(globals: CommandArgs) => CommandContext>('commandContext');
   const hooks: RunnerHooks = {
     transformArgs: (args) => options.plugins.reduce((current, plugin) => plugin.hooks?.transformArgs?.(current) ?? current, args),
@@ -73,6 +74,6 @@ export function createCliApp(options: CliAppOptions): CliApp {
   return {
     container,
     registry,
-    run: (argv = process.argv.slice(2)) => runCli(argv, { appName: options.name, appVersion: options.version, registry, reporter, globalOptions, hooks, createContext }),
+  run: (argv = process.argv.slice(2)) => runCli(argv, { appName: options.name, appVersion: options.version, registry, reporter, output, globalOptions, hooks, createContext }),
   };
 }

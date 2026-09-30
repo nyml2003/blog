@@ -13,9 +13,14 @@ import { DEPLOY_TARGETS } from './delivery/deploy-plan.ts';
 import { RELEASE_KINDS, runRelease } from './release/release.ts';
 import { PORT_MIN, PORT_MAX } from '@fluvient-cli/cli-kit/port-allocation.ts';
 import { E2E_MODES, E2E_SCENARIOS, runE2e } from './e2e/e2e.ts';
+import { err, ok, type Result } from '@fluvient-cli/cli-kit/result.ts';
+import type { OpsFailure, OpsErrorCode } from '@fluvient-cli/cli-kit/errors.ts';
 
 const FAILURE = { code: 20, meaning: '执行失败（构建失败、端口耗尽、服务启动失败或运行中的服务退出）' };
 const SIGINT = { code: 130, meaning: 'SIGINT（Ctrl-C）触发的清理退出' };
+function commandResult(success: boolean, code: OpsErrorCode = 'EXTERNAL_COMMAND_FAILED'): Result<{ readonly exitCode?: number }, OpsFailure> {
+  return success ? ok({ exitCode: 0 }) : err({ code, message: code, details: [], exitCode: code === 'USAGE' ? 10 : 20 });
+}
 const SIGTERM = { code: 143, meaning: 'SIGTERM 触发的清理退出' };
 
 function runtimePorts(context: CommandContext): RuntimePorts {

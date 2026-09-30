@@ -1,10 +1,10 @@
 ---
 kind: plan
 id: PLAN-OPS-OUTPUT-STANDARD-001
-status: ready
+status: partial
 owner: project-manager
 created: 2026-09-29
-last_reviewed: 2026-09-29
+last_reviewed: 2026-09-30
 ---
 
 # ops 输出标准化
@@ -103,3 +103,16 @@ Reporter、错误类型、CLI runner 和 Spec 属于共享写集，必须串行�
 - breaking change 的稳妥落地方式是在一个有界切换点同时更新生产者、消费者、测试和文档，而不是长期维护双格式；本计划遵循一次性整体切换，不安排兼容窗口。
 - 输出协议仍需 `schemaVersion`，它用于识别当前协议和未来明确升级，不代表要兼容旧版本。
 - 实现时采用分层边界：`packages/cli-kit` 承载协议类型与 reporter，`apps/blog` runner 负责命令/运行时语义；子进程行作为标准事件类型，而不是直接透传。
+
+## 实施结果（2026-09-30）
+
+- `packages/cli-kit` 新增结构化 `Result`、错误码集合、`OpsFailure` 和 `OutputEvent/OutputPort`；`cli-core` 提供终端输出适配器与测试捕获适配器。
+- runner 已归一化旧命令退出码，并输出命令完成结果及 `command.started/finished` 埋点；现有 Reporter 调用通过 OutputPort 输出。
+- runtime JSON 已追加统一 `schemaVersion`、`event`、`code`、`exitCode`、`message` 字段；runtime 接受 breaking change。
+- 已验证 `pnpm typecheck`、`git diff --check`、CLI 入口测试 17/17、OutputPort 测试 1/1；博客命令测试 91 passed、13 skipped。
+
+## 尚未交付
+
+- 各命令实现尚未全部改成显式 `Result<Success, OpsFailure>`，当前由 runner 兼容归一化裸退出码。
+- `ErrorDetail` 仍有旧的开放字段，尚未收敛成完整封闭联合。
+- 脱敏、长日志截断和真实埋点消费者未实现；当前只提供结构化事件边界、空行为和测试收集器。

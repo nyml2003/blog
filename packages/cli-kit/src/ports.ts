@@ -21,6 +21,8 @@ export interface FsPort {
 }
 
 export interface Reporter { section(title: string): void; ok(message: string): void; fail(message: string): void; info(message: string): void }
+export type { OutputChannel, OutputEvent, OutputLevel, OutputLogEvent, OutputPort, OutputResultEvent, OutputTelemetryEvent } from './output.ts';
+export { CaptureOutputPort, NullOutputPort } from './output.ts';
 
 export type ServiceRole = 'web' | 'product' | 'data' | 'mock';
 export type LogSource = ServiceRole | 'ops';

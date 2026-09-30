@@ -3,6 +3,7 @@ import { NodeFs } from './fs.ts';
 import { NodeProcess, NodeProcessSupervisor, ConsoleRuntimeLog, NodeSignals } from './process.ts';
 import { TcpPortProbe, TcpReadiness } from './net.ts';
 import { TerminalReporter } from './reporter.ts';
+import { ConsoleOutputPort } from './output.ts';
 
 export function corePlugin(options: { workspace?: Workspace } = {}) {
   return {
@@ -14,7 +15,9 @@ export function corePlugin(options: { workspace?: Workspace } = {}) {
       container.bind('fs', fs);
       container.bind('process', new NodeProcess());
       container.bind('supervisor', new NodeProcessSupervisor());
-      container.bind('reporter', new TerminalReporter());
+      const output = new ConsoleOutputPort();
+      container.bind('output', output);
+      container.bind('reporter', new TerminalReporter(output));
       container.bind('probe', new TcpPortProbe());
       container.bind('readiness', new TcpReadiness());
       container.bind('signals', new NodeSignals());

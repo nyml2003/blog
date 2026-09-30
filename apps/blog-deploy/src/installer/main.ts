@@ -44,13 +44,16 @@ import {
 } from './release.ts';
 import { RELEASE_BINARIES, RELEASE_NGINX, RELEASE_UNITS } from '../deploy-plan.ts';
 
+declare const __BLOG_DEPLOY_RELEASE_VERSION__: string | undefined;
+
 export interface InstallerOptions {
   readonly configFile?: string;
   readonly dryRun: boolean;
   readonly force: boolean;
 }
 /** The package version is the single source of truth for script-v* releases. */
-export const INSTALLER_VERSION = packageInfo.version;
+export const INSTALLER_VERSION =
+  typeof __BLOG_DEPLOY_RELEASE_VERSION__ === 'string' ? __BLOG_DEPLOY_RELEASE_VERSION__ : packageInfo.version;
 class RunError extends Error {}
 
 function configPath(options: InstallerOptions): string {

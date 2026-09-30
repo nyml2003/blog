@@ -1,7 +1,9 @@
-import { EXIT_USAGE, OpsError } from './errors.ts';
+import { EXIT_FAILURE, EXIT_USAGE, errorFromUnknown, OpsError, type OpsFailure } from './errors.ts';
 import type { CommandArgs, CommandContext, CommandDefinition, GroupDefinition } from './commands.ts';
 import type { ParameterSpec } from './parameters.ts';
 import type { Reporter } from './ports.ts';
+import type { OutputPort } from './output.ts';
+import { err, isResult, ok, type Result } from './result.ts';
 import { extractGlobalSwitches, parseCommandArgs } from './parser.ts';
 
 export interface RunnerRegistry {
@@ -20,6 +22,7 @@ export interface RunnerEvent {
   readonly globals: CommandArgs;
   readonly registry: RunnerRegistry;
   readonly reporter: Reporter;
+  readonly output: OutputPort;
   readonly globalOptions: readonly ParameterSpec[];
 }
 
@@ -35,6 +38,7 @@ export interface RunnerDependencies {
   readonly appVersion: string;
   readonly registry: RunnerRegistry;
   readonly reporter: Reporter;
+  readonly output: OutputPort;
   readonly globalOptions: readonly ParameterSpec[];
   readonly hooks?: RunnerHooks;
   createContext(globals: CommandArgs): CommandContext;
@@ -64,6 +68,7 @@ async function reportUsageError(message: string, path: readonly string[], args: 
     globals,
     registry: dependencies.registry,
     reporter: dependencies.reporter,
+    output: dependencies.output,
     globalOptions: dependencies.globalOptions,
     message,
     command: path,
@@ -85,6 +90,7 @@ export async function runCli(args: readonly string[], dependencies: RunnerDepend
     globals,
     registry: dependencies.registry,
     reporter: dependencies.reporter,
+    output: dependencies.output,
     globalOptions: dependencies.globalOptions,
   };
   const beforeRun = await dependencies.hooks?.beforeRun?.(event);
@@ -98,8 +104,26 @@ export async function runCli(args: readonly string[], dependencies: RunnerDepend
   const parsed = parseCommandArgs(selected.meta, transformed.slice(argumentStart), dependencies.globalOptions);
   if ('error' in parsed) return reportUsageError(parsed.error.message, selected.meta.path, transformed, globals, dependencies);
   const context = dependencies.createContext(globals);
+  dependencies.output.telemetry({ name: 'command.started', data: { command: selected.meta.path.join(' ') } });
   try {
-    return await selected.handler(context, parsed.args);
+    const rawResult = await selected.handler(context, parsed.args);
+    const result: Result<{ readonly exitCode?: number }, OpsFailure> = isResult(rawResult)
+      ? rawResult as Result<{ readonly exitCode?: number }, OpsFailure>
+      : rawResult === 0
+        ? ok({ exitCode: 0 })
+        : err(errorFromUnknown(new OpsError(rawResult === EXIT_USAGE ? 'USAGE' : 'EXTERNAL_COMMAND_FAILED', `command exited with ${rawResult}`, [], rawResult), rawResult === EXIT_USAGE ? 'USAGE' : 'EXTERNAL_COMMAND_FAILED', rawResult || EXIT_FAILURE));
+    const exitCode = result.ok ? (result.value.exitCode ?? 0) : result.error.exitCode;
+    const command = selected.meta.path.join(' ');
+    const jsonMode = (dependencies.output as OutputPort & { readonly jsonMode?: boolean }).jsonMode === true;
+    if (!(jsonMode && command.startsWith('runtime '))) dependencies.output.result({
+      status: result.ok ? 'success' : 'failure',
+      command,
+      exitCode,
+      code: result.ok ? 'OK' : result.error.code,
+      data: result.ok ? result.value : { details: result.error.details },
+    });
+    dependencies.output.telemetry({ name: 'command.finished', data: { command, ok: result.ok, exitCode, code: result.ok ? 'OK' : result.error.code } });
+    return exitCode;
   } catch (error) {
     if (error instanceof OpsError && error.code === 'USAGE') return reportUsageError(error.message, selected.meta.path, transformed, globals, dependencies);
     throw error;

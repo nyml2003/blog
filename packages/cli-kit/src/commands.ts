@@ -1,4 +1,6 @@
 import { isModelValue, validateParameter, type ParameterSpec, type PositionalSpec, type ModelValue, type CommandArgs } from './parameters.ts';
+import type { OutputPort } from './output.ts';
+import type { Result } from './result.ts';
 export type { CommandArgs, PositionalSpec } from './parameters.ts';
 export type OptionSpec = ParameterSpec;
 export interface ExitCodeSpec { code: number; meaning: string }
@@ -28,6 +30,7 @@ export interface CommandContext {
   supervisor: import('./ports.ts').ProcessSupervisor;
   fs: import('./ports.ts').FsPort;
   reporter: import('./ports.ts').Reporter;
+  output: OutputPort;
   log: import('./ports.ts').RuntimeLog;
   probe: import('./ports.ts').PortProbe;
   readiness: import('./ports.ts').ReadinessProbe;
@@ -37,7 +40,8 @@ export interface CommandContext {
   dryRun: boolean;
   json: boolean;
 }
-export type CommandHandler = (context: CommandContext, args: CommandArgs) => Promise<number> | number;
+export type CommandOutcome = number | Result<{ readonly exitCode?: number }, import('./errors.ts').OpsFailure>;
+export type CommandHandler = (context: CommandContext, args: CommandArgs) => Promise<CommandOutcome> | CommandOutcome;
 export interface CommandDefinition { readonly meta: CommandMeta; readonly handler: CommandHandler }
 export interface GroupDefinition { readonly meta: GroupMeta }
 
@@ -54,7 +58,7 @@ function argumentsMatch<M extends CommandMeta>(meta: M, args: CommandArgs): args
   });
 }
 
-export function defineCommand<const M extends CommandMeta>(meta: M, handler: (context: CommandContext, args: ParsedArgs<M>) => Promise<number> | number): CommandDefinition {
+export function defineCommand<const M extends CommandMeta>(meta: M, handler: (context: CommandContext, args: ParsedArgs<M>) => Promise<CommandOutcome> | CommandOutcome): CommandDefinition {
   for (const field of [...(meta.options ?? []), ...(meta.positionals ?? [])]) {
     validateParameter(field);
     if (field.model.kind === 'enum') Object.freeze(field.model.values);

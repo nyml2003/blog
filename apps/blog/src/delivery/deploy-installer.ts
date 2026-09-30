@@ -16,6 +16,14 @@ export async function runDeployInstaller(ports: DeployPorts, options: { dryRun: 
     '--target=node18',
     `--outfile=${output}`,
   ];
+  const releaseVersion = process.env.BLOG_DEPLOY_RELEASE_VERSION;
+  if (releaseVersion !== undefined) {
+    if (!/^\d+\.\d+\.\d+$/.test(releaseVersion)) {
+      ports.reporter.fail(`installer 版本非法:${releaseVersion}`);
+      return 10;
+    }
+    args.push(`--define:__BLOG_DEPLOY_RELEASE_VERSION__=${JSON.stringify(releaseVersion)}`);
+  }
   if (options.dryRun) {
     ports.reporter.info(`nix ${args.join(' ')}`);
     return 0;

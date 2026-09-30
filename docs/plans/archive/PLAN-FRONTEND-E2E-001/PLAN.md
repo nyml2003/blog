@@ -80,12 +80,12 @@ E2E 只覆盖高价值用户旅程，不把所有单元测试重新写一遍。�
 
 | 工作流 | Owner | 依赖 | Write set | 状态 |
 | --- | --- | --- | --- | --- |
-| E2E 契约与运行策略 | qa+pm | - | 本计划、`docs/guides/testing.md`、必要时 `SPEC-OPS-RUNTIME-001.md` | ready |
-| Runner 与隔离栈 | qa+infra | 契约与运行策略 | `apps/blog/src/e2e/**`、测试配置、隔离启动/清理代码、ops 入口 | ready |
-| 公开端旅程 | frontend+qa | Runner 与隔离栈 | E2E 场景、fixture、截图/trace 规则 | ready |
-| 故障与设置旅程 | frontend+qa | Runner 与隔离栈 | Mock 场景接线（如必要）、E2E 场景与故障断言 | ready |
-| 管理端与专项安全旅程 | frontend+qa | Runner、凭证/数据隔离决策 | 管理端 E2E、正文预览专项迁移或保留适配 | ready |
-| CI 与验收收尾 | qa+pm | 以上工作流 | CI job、指南、测试报告、计划结果 | ready |
+| E2E 契约与运行策略 | qa+pm | - | 本计划、`docs/guides/testing.md`、必要时 `SPEC-OPS-RUNTIME-001.md` | completed |
+| Runner 与隔离栈 | qa+infra | 契约与运行策略 | `apps/blog/src/e2e/**`、测试配置、隔离启动/清理代码、ops 入口 | completed |
+| 公开端旅程 | frontend+qa | Runner 与隔离栈 | E2E 场景、fixture、截图/trace 规则 | completed |
+| 故障与设置旅程 | frontend+qa | Runner 与隔离栈 | Mock 场景接线（如必要）、E2E 场景与故障断言 | completed |
+| 管理端与专项安全旅程 | frontend+qa | Runner、凭证/数据隔离决策 | 管理端 E2E、正文预览专项迁移或保留适配 | partial |
+| CI 与验收收尾 | qa+pm | 以上工作流 | CI job、指南、测试报告、计划结果 | partial |
 
 不同旅程可以并行写不同场景文件；runner、ops 入口、锁文件和测试配置属于共享写集，必须串行修改。
 
@@ -106,8 +106,8 @@ E2E 只覆盖高价值用户旅程，不把所有单元测试重新写一遍。�
 
 ## 收尾记录
 
-- 实际交付：新增 `ops e2e`；runner、隔离运行栈、端口分配、信号清理、Playwright 直接加载、公开 Desktop/Mobile 旅程、Mock empty/slow/server-error/malformed-response 场景、截图、失败截图和机器可读的 `report.json` 均位于 `apps/blog/src/e2e/**`；参数 Spec、运行指南和测试指南已同步。
+- 实际交付：新增 `ops e2e`；runner、隔离运行栈、端口分配、信号清理、Playwright 直接加载、公开 Desktop/Mobile 旅程、Mock empty/slow/server-error/malformed-response 场景、Mock 管理端登录与危险 HTML 校验旅程、截图、失败截图和机器可读的 `report.json` 均位于 `apps/blog/src/e2e/**`；参数 Spec、运行指南和测试指南已同步。
 - 已验证：`pnpm exec tsc --noEmit`、Ops CLI/help 测试、E2E runner 单测和 `git diff --check` 通过；dry-run 不探测端口、不启动进程、不写文件。真实浏览器曾执行 `ops e2e --mode dev --scenario empty`，产物为 `target/e2e/1790734393013-79109`；真实 integration 已执行并通过，产物为 `target/e2e/1790734421610-79268`。在解除进程限制后，Flake Chromium 再次通过，产物为 `target/e2e/1790735536343-83417`；系统 Chrome 也通过，产物为 `target/e2e/1790735507916-83280`。受限环境中的失败报告 `target/e2e/1790735083183-82199/report.json` 已记录 `failed` 状态和 Chromium 错误摘要。
-- 未交付：管理端登录/编辑主链路、CI job、连续运行两次的专门验收、失败 trace/video 策略，以及设置保存失败的专用 Mock 场景仍未完成。
+- 未交付：真实 Product 管理凭证下的登录/编辑主链路、CI job、连续运行两次的专门验收、失败 trace/video 策略，以及设置保存失败的专用 Mock 场景仍未完成。Mock 管理端登录和危险 HTML 拒绝已自动化；保存接口已有 runtime stack API 集成证据，浏览器编辑器保存仍保留为后续专项。
 - 收尾原因：Ops 编排、公开端旅程、开发态故障场景和真实 integration/dev 浏览器证据已具备；管理端凭证隔离与 CI 资源条件仍未形成可审查实现，因此保持 `partial`。
 - 恢复条件：提供专用管理端 fixture/凭证隔离方案和 CI 浏览器资源预算后，补齐管理端旅程、CI job、重复运行验收及失败诊断策略，再评估是否完整归档。

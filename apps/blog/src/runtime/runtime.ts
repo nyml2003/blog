@@ -320,7 +320,7 @@ function reportFailure(ports: RuntimePorts, options: RunOptions, command: string
 function printPlan(ports: RuntimePorts, options: RunOptions, command: string, plan: ModePlan): void {
   const entry = plan.entry ? `http://${LISTEN_HOST}:${plan.candidates[plan.entry]}` : null;
   if (options.json) {
-    ports.log.json({ ok: true, command, dryRun: true, services: plan.services.map((role) => serviceAddress(role, requiredPort(plan.candidates[role], role))), entry, builds: plan.builds.map((step) => step.label) });
+    ports.log.json({ schemaVersion: 1, event: 'dry_run', ok: true, command, exitCode: 0, code: 'DRY_RUN', message: 'dry run', dryRun: true, services: plan.services.map((role) => serviceAddress(role, requiredPort(plan.candidates[role], role))), entry, builds: plan.builds.map((step) => step.label) });
     return;
   }
   ports.log.info(`dry-run: ${command}（不启动进程、不绑定端口、不写文件）`);

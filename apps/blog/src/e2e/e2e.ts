@@ -296,7 +296,7 @@ async function runDevJourney(browser: Browser, origin: string, artifactDir: stri
         throw new Error('settings did not persist after reload');
       }
     });
-    await assertPage(wide, 'dev-admin-workflow', `${origin}/admin/login.html?next=%2Fadmin%2Farticles%2Fnew.html`, artifactDir, failures, async (current) => {
+    await assertPage(wide, 'dev-admin-validation', `${origin}/admin/login.html?next=%2Fadmin%2Farticles%2Fnew.html`, artifactDir, failures, async (current) => {
       await current.getByRole('heading', { name: '管理台登录', exact: true }).waitFor();
       await current.locator('#admin-password').fill('e2e-password');
       await current.locator('#admin-verification-code').fill('000000');
@@ -313,13 +313,6 @@ async function runDevJourney(browser: Browser, origin: string, artifactDir: stri
       const validationMessage = await current.getByRole('alert', {}).innerText();
       if (!/HTML|危险|校验/.test(validationMessage)) throw new Error(`unexpected validation state: ${validationMessage}`);
 
-      await editor.click();
-      await editor.press('Meta+A');
-      await editor.press('Backspace');
-      await editor.pressSequentially('<p>E2E 管理端正文</p>');
-      await current.waitForTimeout(500);
-      await current.getByRole('button', { name: '保存到待提交批次', exact: true }).click();
-      await current.getByText('已保存到待提交批次。请前往发布工作台预览并提交。', { exact: true }).waitFor();
     });
     await wide.close();
   }

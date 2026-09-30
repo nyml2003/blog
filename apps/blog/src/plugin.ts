@@ -3,6 +3,7 @@ import type { CommandContext } from '@fluvient-cli/cli-kit/commands.ts';
 import { ConsoleRuntimeLog } from '@fluvient-cli/cli-core/process.ts';
 import { WorkspaceBinaries } from '@fluvient-cli/cli-core/binaries.ts';
 import { commandDefinitions, groupDefinitions } from './registry.ts';
+import type { OutputPort } from '@fluvient-cli/cli-kit/output.ts';
 import type { RunnerEvent } from '@fluvient-cli/cli-kit/runner.ts';
 
 export function blogUnknownCommand(event: RunnerEvent): { message: string; correction: string; path?: readonly string[] } | undefined {
@@ -27,6 +28,7 @@ export function blogPlugin(): CliPlugin {
         supervisor: container.get('supervisor'),
         fs,
         reporter: container.get('reporter'),
+        output: configureOutput(container.get<OutputPort>('output'), globals.json === true),
         log: new ConsoleRuntimeLog(globals.json === true),
         probe: container.get('probe'),
         readiness: container.get('readiness'),
@@ -38,4 +40,10 @@ export function blogPlugin(): CliPlugin {
       }));
     },
   };
+}
+
+function configureOutput(output: OutputPort, json: boolean): OutputPort {
+  const configurable = output as OutputPort & { setJson?: (value: boolean) => void };
+  configurable.setJson?.(json);
+  return output;
 }

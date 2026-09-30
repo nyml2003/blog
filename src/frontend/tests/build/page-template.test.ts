@@ -158,8 +158,10 @@ test("registered entries use definePage and mobile has one CSS entry", () => {
   const entryFiles = new Set(pageRegistry.map((page) => page.entry));
   for (const entry of entryFiles) {
     const source = readFileSync(resolve(frontendRoot, entry.slice(1)), "utf8");
-    if (entry.startsWith("/app/bootstrap/")) {
+    if (entry.startsWith("/app/bootstrap/mobile/")) {
       assert.match(source, /mountMobilePage\([^;]+\);/);
+    } else if (entry.startsWith("/app/bootstrap/desktop/")) {
+      assert.match(source, /mountDesktopPage\([^;]+\);/);
     } else {
       assert.match(source, /definePage\([A-Za-z]+\);/);
     }

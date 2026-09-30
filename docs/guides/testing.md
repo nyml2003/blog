@@ -35,7 +35,7 @@ pnpm -C src/frontend run build
 
 `ops quality check` 负责汇总上述门禁与 ops 契约测试。runtime 全栈端到端测试由 `OPS_RUNTIME_E2E` 环境变量门控（`apps/blog/test/commands/runtime/runtime.stack.test.ts`）：默认跳过保持快速反馈，`1` 跑进程级，`full` 追加构建级。
 
-浏览器 E2E 由独立的 `ops e2e` 管理，不纳入默认 `ops quality check`。运行时显式传入 `--playwright-module` 和 `--chromium-path`；`ops e2e --mode integration` 验证真实 Product/Data 同源栈，`ops e2e --mode dev --scenario <NAME>` 验证 Vite + Mock 场景。截图、`report.json` 和页面诊断保存在 `target/e2e/<run-id>/`；报告记录最终状态和错误摘要。
+浏览器 E2E 由独立的 `ops e2e` 管理，不纳入默认 `ops quality check`。运行时显式传入 `--playwright-module` 和 `--chromium-path`；`ops e2e --mode integration` 验证真实 Product/Data 同源栈，`ops e2e --mode dev --scenario <NAME>` 验证 Vite + Mock 场景。`empty` 场景还覆盖 Mock 管理端登录、进入新建文章和危险 HTML 拒绝。截图、`report.json` 和页面诊断保存在 `target/e2e/<run-id>/`；报告记录最终状态和错误摘要。
 
 ## 架构边界门禁
 

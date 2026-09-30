@@ -16,7 +16,7 @@ export const pageRegistry = [
     id: "desktop-public-home",
     platform: "desktop",
     outputPath: "desktop/pages/public-home/index.html",
-    entry: "/desktop/src/pages/public/home.tsx",
+    entry: "/app/bootstrap/desktop/home.tsx",
     title: "首页 - 技术知识库",
     description: undefined,
     aliases: ["/"],
