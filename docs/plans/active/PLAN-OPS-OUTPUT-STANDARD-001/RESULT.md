@@ -11,6 +11,7 @@
 - CLI 共享层新增结构化 Result、错误码和统一 OutputPort。
 - 终端、NDJSON 和测试捕获适配边界已建立；日志、最终结果和埋点事件已分开。
 - runner 已归一化旧命令退出码，并输出命令完成结果及埋点。
+- `workspace doctor`、`quality check/lint/format` 和 `package check` 已改为显式 `Result` 返回。
 - runtime JSON 已采用统一 `schemaVersion`、`event`、`code`、`exitCode`、`message` 字段，接受 breaking change。
 
 ## 验证证据

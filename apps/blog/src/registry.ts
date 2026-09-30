@@ -14,14 +14,20 @@ import { RELEASE_KINDS, runRelease } from './release/release.ts';
 import { PORT_MIN, PORT_MAX } from '@fluvient-cli/cli-kit/port-allocation.ts';
 import { E2E_MODES, E2E_SCENARIOS, runE2e } from './e2e/e2e.ts';
 import { err, ok, type Result } from '@fluvient-cli/cli-kit/result.ts';
-import type { OpsFailure, OpsErrorCode } from '@fluvient-cli/cli-kit/errors.ts';
+import { EXIT_FAILURE, EXIT_OK, EXIT_SIGINT, EXIT_SIGTERM, EXIT_USAGE, type OpsFailure, type OpsErrorCode } from '@fluvient-cli/cli-kit/errors.ts';
 
-const FAILURE = { code: 20, meaning: '执行失败（构建失败、端口耗尽、服务启动失败或运行中的服务退出）' };
-const SIGINT = { code: 130, meaning: 'SIGINT（Ctrl-C）触发的清理退出' };
+const FAILURE = { code: EXIT_FAILURE, meaning: '执行失败（构建失败、端口耗尽、服务启动失败或运行中的服务退出）' };
+const SIGINT = { code: EXIT_SIGINT, meaning: 'SIGINT（Ctrl-C）触发的清理退出' };
 function commandResult(success: boolean, code: OpsErrorCode = 'EXTERNAL_COMMAND_FAILED'): Result<{ readonly exitCode?: number }, OpsFailure> {
-  return success ? ok({ exitCode: 0 }) : err({ code, message: code, details: [], exitCode: code === 'USAGE' ? 10 : 20 });
+  return success ? ok({ exitCode: EXIT_OK }) : err({ code, message: code, details: [], exitCode: code === 'USAGE' ? EXIT_USAGE : EXIT_FAILURE });
 }
-const SIGTERM = { code: 143, meaning: 'SIGTERM 触发的清理退出' };
+
+function commandExitResult(exitCode: number): Result<{ readonly exitCode?: number }, OpsFailure> {
+  if (exitCode === EXIT_OK) return ok({ exitCode: EXIT_OK });
+  const code: OpsErrorCode = exitCode === EXIT_USAGE ? 'USAGE' : exitCode === EXIT_SIGINT || exitCode === EXIT_SIGTERM ? 'CANCELLED' : 'EXTERNAL_COMMAND_FAILED';
+  return err({ code, message: code, details: [], exitCode });
+}
+const SIGTERM = { code: EXIT_SIGTERM, meaning: 'SIGTERM 触发的清理退出' };
 
 function runtimePorts(context: CommandContext): RuntimePorts {
   return {
@@ -64,12 +70,12 @@ export const commandDefinitions: readonly CommandDefinition[] = [
       { name: 'chromium-path', description: 'Chromium 可执行文件路径（必须显式提供）', model: { kind: 'path' } },
     ],
     exitCodes: [{ code: 0, meaning: '浏览器场景通过或 --dry-run 成功' }, { code: 10, meaning: '参数或命令用法错误' }, FAILURE],
-  }, (context, args) => runE2e(context, args)),
-  defineCommand({ path: ['workspace', 'doctor'], summary: '检查本地开发依赖', description: '验证 Node、pnpm、Rust 和 Cargo 是否可用。', examples: ['ops workspace doctor'], exitCodes: [{ code: 0, meaning: '依赖齐全' }, { code: 20, meaning: '缺少依赖' }] }, async ({ process: p, workspace, reporter, dryRun }) => { let ok = true; reporter.section(dryRun ? 'workspace doctor dry-run' : 'workspace doctor'); for (const name of ['node', 'pnpm', 'rustc', 'cargo']) { if (dryRun) { reporter.info(`检查命令: ${name}`); continue; } const r = await p.run('sh', ['-c', `command -v ${name}`], workspace.root); if (r.code) { ok = false; reporter.fail(`${name} missing`); } else reporter.ok(`${name} available`); } return ok ? 0 : 20 }),
-  defineCommand({ path: ['quality', 'check'], summary: '执行项目质量检查', description: '运行 Rust 三件套（cargo fmt --all --check、cargo clippy -D warnings、cargo test --workspace）、ops 契约测试、前端 typecheck/lint/format/test/build 和前后端架构边界检查。', examples: ['ops quality check'], exitCodes: [{ code: 0, meaning: '检查通过' }, { code: 20, meaning: '检查失败' }] }, ({ workspace, process, fs, reporter, dryRun }) => { if (dryRun) { reporter.section('quality check dry-run'); reporter.info('将执行 cargo fmt --all --check、cargo clippy --workspace --all-targets -- -D warnings、cargo test --workspace、ops 契约测试、pnpm typecheck/lint/format:check/test:core/build 和前后端架构边界检查'); return 0; } return runCheck(workspace, process, fs, reporter).then((ok) => ok ? 0 : 20); }),
-  defineCommand({ path: ['quality', 'lint'], summary: '运行前端 Oxlint', description: '使用 pnpm 执行 blog-web 的 lint 脚本，并将 warning 视为失败。', examples: ['ops quality lint'], exitCodes: [{ code: 0, meaning: 'lint 通过' }, { code: 20, meaning: 'lint 失败' }] }, ({ workspace, process, reporter, dryRun }) => { if (dryRun) { reporter.section('quality lint dry-run'); reporter.info('pnpm -C src/frontend run lint'); return 0; } return runWebQuality(workspace, process, reporter, 'lint').then((ok) => ok ? 0 : 20); }),
-  defineCommand({ path: ['quality', 'format'], summary: '格式化前端源文件', description: '不带 --check 时写入 Biome 格式化结果；带 --check 时只检查、不修改文件。', examples: ['ops quality format --check'], options: [{ name: 'check', model: { kind: 'switch' }, description: '只检查格式，不写入文件' }], exitCodes: [{ code: 0, meaning: '格式化通过' }, { code: 20, meaning: '格式化失败或存在未格式化文件' }] }, ({ workspace, process, reporter, dryRun }, args) => { const check = args.check === true; if (dryRun) { reporter.section('quality format dry-run'); reporter.info(`pnpm -C src/frontend run ${check ? 'format:check' : 'format'}`); return 0; } return runWebQuality(workspace, process, reporter, check ? 'format:check' : 'format').then((ok) => ok ? 0 : 20); }),
-  defineCommand({ path: ['package', 'check'], summary: '执行 @fluvient-loom 包门禁', description: '平台中立护栏（packages/*/src 零 node/web/solid 依赖）+ workspace typecheck/test/smoke；独立于 ops quality check。', examples: ['ops package check'], exitCodes: [{ code: 0, meaning: '检查通过' }, FAILURE] }, ({ workspace, process, fs, reporter, dryRun }) => { if (dryRun) { reporter.section('package check dry-run'); reporter.info('将执行平台中立护栏扫描与 pnpm run check（typecheck + test + smoke）'); return 0; } return runPackageCheck(workspace, process, fs, reporter).then((ok) => ok ? 0 : 20); }),
+  }, (context, args) => runE2e(context, args).then(commandExitResult)),
+  defineCommand({ path: ['workspace', 'doctor'], summary: '检查本地开发依赖', description: '验证 Node、pnpm、Rust 和 Cargo 是否可用。', examples: ['ops workspace doctor'], exitCodes: [{ code: 0, meaning: '依赖齐全' }, { code: 20, meaning: '缺少依赖' }] }, async ({ process: p, workspace, reporter, dryRun }) => { let passed = true; reporter.section(dryRun ? 'workspace doctor dry-run' : 'workspace doctor'); for (const name of ['node', 'pnpm', 'rustc', 'cargo']) { if (dryRun) { reporter.info(`检查命令: ${name}`); continue; } const r = await p.run('sh', ['-c', `command -v ${name}`], workspace.root); if (r.code) { passed = false; reporter.fail(`${name} missing`); } else reporter.ok(`${name} available`); } return commandResult(passed); }),
+  defineCommand({ path: ['quality', 'check'], summary: '执行项目质量检查', description: '运行 Rust 三件套（cargo fmt --all --check、cargo clippy -D warnings、cargo test --workspace）、ops 契约测试、前端 typecheck/lint/format/test/build 和前后端架构边界检查。', examples: ['ops quality check'], exitCodes: [{ code: 0, meaning: '检查通过' }, { code: 20, meaning: '检查失败' }] }, ({ workspace, process, fs, reporter, dryRun }) => { if (dryRun) { reporter.section('quality check dry-run'); reporter.info('将执行 cargo fmt --all --check、cargo clippy --workspace --all-targets -- -D warnings、cargo test --workspace、ops 契约测试、pnpm typecheck/lint/format:check/test:core/build 和前后端架构边界检查'); return commandResult(true); } return runCheck(workspace, process, fs, reporter).then((passed) => commandResult(passed)); }),
+  defineCommand({ path: ['quality', 'lint'], summary: '运行前端 Oxlint', description: '使用 pnpm 执行 blog-web 的 lint 脚本，并将 warning 视为失败。', examples: ['ops quality lint'], exitCodes: [{ code: 0, meaning: 'lint 通过' }, { code: 20, meaning: 'lint 失败' }] }, ({ workspace, process, reporter, dryRun }) => { if (dryRun) { reporter.section('quality lint dry-run'); reporter.info('pnpm -C src/frontend run lint'); return commandResult(true); } return runWebQuality(workspace, process, reporter, 'lint').then((passed) => commandResult(passed)); }),
+  defineCommand({ path: ['quality', 'format'], summary: '格式化前端源文件', description: '不带 --check 时写入 Biome 格式化结果；带 --check 时只检查、不修改文件。', examples: ['ops quality format --check'], options: [{ name: 'check', model: { kind: 'switch' }, description: '只检查格式，不写入文件' }], exitCodes: [{ code: 0, meaning: '格式化通过' }, { code: 20, meaning: '格式化失败或存在未格式化文件' }] }, ({ workspace, process, reporter, dryRun }, args) => { const check = args.check === true; if (dryRun) { reporter.section('quality format dry-run'); reporter.info(`pnpm -C src/frontend run ${check ? 'format:check' : 'format'}`); return commandResult(true); } return runWebQuality(workspace, process, reporter, check ? 'format:check' : 'format').then((passed) => commandResult(passed)); }),
+  defineCommand({ path: ['package', 'check'], summary: '执行 @fluvient-loom 包门禁', description: '平台中立护栏（packages/*/src 零 node/web/solid 依赖）+ workspace typecheck/test/smoke；独立于 ops quality check。', examples: ['ops package check'], exitCodes: [{ code: 0, meaning: '检查通过' }, FAILURE] }, ({ workspace, process, fs, reporter, dryRun }) => { if (dryRun) { reporter.section('package check dry-run'); reporter.info('将执行平台中立护栏扫描与 pnpm run check（typecheck + test + smoke）'); return commandResult(true); } return runPackageCheck(workspace, process, fs, reporter).then((passed) => commandResult(passed)); }),
   defineCommand({
     path: ['playground', 'dev'],
     summary: '启动 @fluvient-loom 演示页（Vite）',
@@ -90,9 +96,9 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     if (dryRun) {
       reporter.section('playground dev dry-run');
       reporter.info(`pnpm -C apps/playground exec vite --port ${port} --strictPort${host ? ' --host' : ''}`);
-      return 0;
+      return commandResult(true);
     }
-    return runPlaygroundDev(workspace, process, reporter, { host, port });
+    return runPlaygroundDev(workspace, process, reporter, { host, port }).then(commandExitResult);
   }),
   defineCommand({
     path: ['admin', 'credentials', 'init'],
@@ -100,28 +106,28 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: '通过 TTY 隐藏输入密码，生成 Argon2id 哈希、TOTP secret 与一次性恢复码；敏感值不进入 argv 或 ops 日志。',
     examples: ['ops admin credentials init'],
     exitCodes: [{ code: 0, meaning: '凭证初始化成功' }, FAILURE],
-  }, (context) => runAdminCredentialCommand(context, 'init')),
+  }, (context) => runAdminCredentialCommand(context, 'init').then(commandExitResult)),
   defineCommand({
     path: ['admin', 'recovery', 'regenerate'],
     summary: '重新生成管理端恢复码',
     description: '通过 TTY 验证当前密码并原子替换恢复码；新恢复码只在当前终端显示一次。',
     examples: ['ops admin recovery regenerate'],
     exitCodes: [{ code: 0, meaning: '恢复码重新生成成功' }, FAILURE],
-  }, (context) => runAdminCredentialCommand(context, 'recovery-regenerate')),
+  }, (context) => runAdminCredentialCommand(context, 'recovery-regenerate').then(commandExitResult)),
   defineCommand({
     path: ['content', 'repository', 'init'],
     summary: '初始化空 GitHub 内容仓库',
     description: '使用显式 BLOG_CONTENT_REPO 与 BLOG_CONTENT_TOKEN 创建合法空 taxonomy 和 main；不写示例文章或凭证，重复执行会校验并幂等成功。',
     examples: ['BLOG_CONTENT_REPO=owner/repository BLOG_CONTENT_TOKEN=... ops content repository init'],
     exitCodes: [{ code: 0, meaning: '初始化成功或仓库已经是合法空状态' }, FAILURE],
-  }, initializeContentRepository),
+  }, (context) => initializeContentRepository(context).then(commandExitResult)),
   defineCommand({
     path: ['delivery', 'build'],
     summary: '构建前端与 Rust 交付物',
     description: '构建 web/dist 与 Rust Product/Data/Mock 交付 binary；不编译任何 Go 目标，不启动任何服务进程。',
     examples: ['ops delivery build', 'ops delivery build --dry-run', 'ops delivery build --json'],
     exitCodes: [{ code: 0, meaning: '构建成功' }, FAILURE],
-  }, (context) => runDeliveryBuild(runtimePorts(context), { dryRun: context.dryRun, json: context.json })),
+  }, (context) => runDeliveryBuild(runtimePorts(context), { dryRun: context.dryRun, json: context.json }).then(commandExitResult)),
   defineCommand({
     path: ['delivery', 'package'],
     summary: '构建环境无关的发布包(无秘密)',
@@ -129,14 +135,14 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     examples: ['ops delivery package --target x86_64-unknown-linux-musl', 'ops delivery package --target aarch64-unknown-linux-musl --dry-run'],
     options: [{ name: 'target', description: '目标架构(必须显式选择)', model: { kind: 'enum', values: DEPLOY_TARGETS } }],
     exitCodes: [{ code: 0, meaning: '发布包生成成功' }, FAILURE],
-  }, (context, args) => runDeployPackage(args.target, deployPorts(context), { dryRun: context.dryRun })),
+  }, (context, args) => runDeployPackage(args.target, deployPorts(context), { dryRun: context.dryRun }).then(commandExitResult)),
   defineCommand({
     path: ['delivery', 'installer'],
     summary: '打包服务器安装器(单文件 mjs)',
     description: '用 esbuild（nix 提供）把 ops 安装器入口打成 deploy/dist/blog-deploy.mjs：init 生成 /etc/blog 骨架，deploy/redeploy 从公开 Release 下载对应架构发布包并幂等安装；构建后自动做 --help 冒烟。',
     examples: ['ops delivery installer', 'ops delivery installer --dry-run'],
     exitCodes: [{ code: 0, meaning: '安装器生成且 --help 冒烟通过' }, FAILURE],
-  }, (context) => runDeployInstaller(deployPorts(context), { dryRun: context.dryRun })),
+  }, (context) => runDeployInstaller(deployPorts(context), { dryRun: context.dryRun }).then(commandExitResult)),
   defineCommand({
     path: ['release'],
     summary: '预检并发布 Script 或 Build tag',
@@ -145,7 +151,7 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     options: [{ name: 'yes', model: { kind: 'switch' }, description: '确认创建并推送 tag' }],
     examples: ['ops release script --dry-run', 'ops release build --yes', 'ops release both --yes'],
     exitCodes: [{ code: 0, meaning: '预检成功或 tag 已推送' }, { code: 10, meaning: '参数或命令用法错误' }, FAILURE],
-  }, (context, args) => runRelease(args.kind, { process: context.process, reporter: context.reporter, root: context.workspace.root }, { dryRun: context.dryRun, confirmed: args.yes })),
+  }, (context, args) => runRelease(args.kind, { process: context.process, reporter: context.reporter, root: context.workspace.root }, { dryRun: context.dryRun, confirmed: args.yes }).then(commandExitResult)),
   defineCommand({
     path: ['runtime', 'dev'],
     summary: '前端开发栈: Vite + Mock Product API',
@@ -157,7 +163,7 @@ export const commandDefinitions: readonly CommandDefinition[] = [
       portOption('mock-port', 'Mock 候选端口'),
     ],
     exitCodes: [{ code: 0, meaning: '--dry-run 打印计划（运行中的模式没有 0 退出路径，正常停止只能是 130/143）' }, FAILURE, SIGINT, SIGTERM],
-  }, (context, args) => runRuntimeMode(planMode({ mode: 'dev', scenario: args.scenario, webPort: args['web-port'], mockPort: args['mock-port'] }), runtimePorts(context), { dryRun: context.dryRun, json: context.json })),
+  }, (context, args) => runRuntimeMode(planMode({ mode: 'dev', scenario: args.scenario, webPort: args['web-port'], mockPort: args['mock-port'] }), runtimePorts(context), { dryRun: context.dryRun, json: context.json }).then(commandExitResult)),
   defineCommand({
     path: ['runtime', 'backend'],
     summary: '后端 API 栈: Product + Data（无页面）',
@@ -171,7 +177,7 @@ export const commandDefinitions: readonly CommandDefinition[] = [
       portOption('data-port', 'Data 候选端口'),
     ],
     exitCodes: [{ code: 0, meaning: '--dry-run 打印计划（运行中的模式没有 0 退出路径，正常停止只能是 130/143）' }, FAILURE, SIGINT, SIGTERM],
-  }, (context, args) => runRuntimeMode(planMode({ mode: 'backend', dataMode: args.data, databasePath: args['database-path'], contentSource: args['content-source'], productPort: args['product-port'], dataPort: args['data-port'] }), runtimePorts(context), { dryRun: context.dryRun, json: context.json })),
+  }, (context, args) => runRuntimeMode(planMode({ mode: 'backend', dataMode: args.data, databasePath: args['database-path'], contentSource: args['content-source'], productPort: args['product-port'], dataPort: args['data-port'] }), runtimePorts(context), { dryRun: context.dryRun, json: context.json }).then(commandExitResult)),
   defineCommand({
     path: ['runtime', 'integration'],
     summary: '集成栈: 先构建前端，Product 挂载 web/dist',
@@ -184,7 +190,7 @@ export const commandDefinitions: readonly CommandDefinition[] = [
       portOption('data-port', 'Data 候选端口'),
     ],
     exitCodes: [{ code: 0, meaning: '--dry-run 打印计划（运行中的模式没有 0 退出路径，正常停止只能是 130/143）' }, FAILURE, SIGINT, SIGTERM],
-  }, (context, args) => runRuntimeMode(planMode({ mode: 'integration', watch: args.watch, contentSource: args['content-source'], productPort: args['product-port'], dataPort: args['data-port'] }), runtimePorts(context), { dryRun: context.dryRun, json: context.json })),
+  }, (context, args) => runRuntimeMode(planMode({ mode: 'integration', watch: args.watch, contentSource: args['content-source'], productPort: args['product-port'], dataPort: args['data-port'] }), runtimePorts(context), { dryRun: context.dryRun, json: context.json }).then(commandExitResult)),
 ];
 
 export const groupDefinitions = [

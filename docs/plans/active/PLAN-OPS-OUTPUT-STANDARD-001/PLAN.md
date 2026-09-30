@@ -108,6 +108,7 @@ Reporter、错误类型、CLI runner 和 Spec 属于共享写集，必须串行�
 
 - `packages/cli-kit` 新增结构化 `Result`、错误码集合、`OpsFailure` 和 `OutputEvent/OutputPort`；`cli-core` 提供终端输出适配器与测试捕获适配器。
 - runner 已归一化旧命令退出码，并输出命令完成结果及 `command.started/finished` 埋点；现有 Reporter 调用通过 OutputPort 输出。
+- `workspace doctor`、`quality check/lint/format` 和 `package check` 已迁移为显式 `Result` 返回，runner 兼容层不再参与这些命令的成败判断。
 - runtime JSON 已追加统一 `schemaVersion`、`event`、`code`、`exitCode`、`message` 字段；runtime 接受 breaking change。
 - 已验证 `pnpm typecheck`、`git diff --check`、CLI 入口测试 17/17、OutputPort 测试 1/1；博客命令测试 91 passed、13 skipped。
 

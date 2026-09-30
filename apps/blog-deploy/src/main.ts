@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import packageInfo from '../package.json' with { type: 'json' };
 import { createCliApp, isEntry, runEntry } from '@fluvient-cli/cli-kit/index.ts';
 import { corePlugin } from '@fluvient-cli/cli-core/plugin.ts';
 import { dryRunPlugin, jsonPlugin, usagePlugin, versionPlugin } from '@fluvient-cli/cli-plugins';

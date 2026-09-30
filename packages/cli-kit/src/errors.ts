@@ -4,7 +4,10 @@ export type OpsErrorCode = 'USAGE' | 'CONFIG_INVALID' | 'DEPENDENCY_MISSING' | '
 export const EXIT_OK = 0;
 export const EXIT_USAGE = 10;
 export const EXIT_FAILURE = 20;
-export const ExitCode = Object.freeze({ Ok: EXIT_OK, Usage: EXIT_USAGE, Failure: EXIT_FAILURE });
+export const EXIT_SIGINT = 130;
+export const EXIT_SIGTERM = 143;
+export const ExitCode = Object.freeze({ Ok: EXIT_OK, Usage: EXIT_USAGE, Failure: EXIT_FAILURE, Sigint: EXIT_SIGINT, Sigterm: EXIT_SIGTERM });
+export type ExitCode = typeof ExitCode[keyof typeof ExitCode];
 
 export interface ErrorDetail { service?: string; port?: number; command?: string; [key: string]: unknown }
 
@@ -54,7 +57,7 @@ export interface ServicesPayload {
   event: 'services_ready';
   ok: true;
   command: string;
-  exitCode: 0;
+  exitCode: typeof EXIT_OK;
   code: 'SERVICES_READY';
   message: string;
   services: readonly ServiceAddress[];
@@ -76,5 +79,5 @@ export function errorPayload(command: string, error: unknown, exitCode = EXIT_FA
 }
 
 export function servicesPayload(command: string, services: readonly ServiceAddress[], entry: string | null): ServicesPayload {
-  return { schemaVersion: 1, event: 'services_ready', ok: true, command, exitCode: 0, code: 'SERVICES_READY', message: 'services ready', services, entry };
+  return { schemaVersion: 1, event: 'services_ready', ok: true, command, exitCode: EXIT_OK, code: 'SERVICES_READY', message: 'services ready', services, entry };
 }

@@ -65,6 +65,9 @@ export function usagePlugin(options: {
           console.log(usageText(event));
           return 0;
         }
+        // Version is a terminal global action. Do not let an empty command path
+        // fall through to the root usage output before versionPlugin handles it.
+        if (event.globals.version === true) return undefined;
         if (event.raw.length === 0 || event.registry.group(event.raw)) {
           console.log(usageText(event, event.raw));
           return noCommandExit;

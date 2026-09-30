@@ -43,6 +43,15 @@ test('root help lists every leaf in a stable group order', async () => {
   assert.doesNotMatch(result.output, /runtime serve|database migrate|database\s{2}/);
 });
 
+test('global version works before or after a command path', async () => {
+  const root = await capture(['--version']);
+  const leaf = await capture(['quality', 'check', '--version']);
+  assert.equal(root.code, 0);
+  assert.equal(leaf.code, 0);
+  assert.match(root.output, /^\d+\.\d+\.\d+$/);
+  assert.equal(leaf.output, root.output);
+});
+
 test('help spellings and direct group navigation are equivalent', async () => {
   const fromHelp = await capture(['help', 'quality']);
   const fromFlag = await capture(['quality', '--help']);

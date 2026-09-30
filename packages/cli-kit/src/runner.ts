@@ -1,4 +1,4 @@
-import { EXIT_FAILURE, EXIT_USAGE, errorFromUnknown, OpsError, type OpsFailure } from './errors.ts';
+import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE, errorFromUnknown, OpsError, type OpsFailure } from './errors.ts';
 import type { CommandArgs, CommandContext, CommandDefinition, GroupDefinition } from './commands.ts';
 import type { ParameterSpec } from './parameters.ts';
 import type { Reporter } from './ports.ts';
@@ -109,8 +109,8 @@ export async function runCli(args: readonly string[], dependencies: RunnerDepend
     const rawResult = await selected.handler(context, parsed.args);
     const result: Result<{ readonly exitCode?: number }, OpsFailure> = isResult(rawResult)
       ? rawResult as Result<{ readonly exitCode?: number }, OpsFailure>
-      : rawResult === 0
-        ? ok({ exitCode: 0 })
+      : rawResult === EXIT_OK
+        ? ok({ exitCode: EXIT_OK })
         : err(errorFromUnknown(new OpsError(rawResult === EXIT_USAGE ? 'USAGE' : 'EXTERNAL_COMMAND_FAILED', `command exited with ${rawResult}`, [], rawResult), rawResult === EXIT_USAGE ? 'USAGE' : 'EXTERNAL_COMMAND_FAILED', rawResult || EXIT_FAILURE));
     const exitCode = result.ok ? (result.value.exitCode ?? 0) : result.error.exitCode;
     const command = selected.meta.path.join(' ');
