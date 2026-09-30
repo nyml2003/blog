@@ -1,6 +1,7 @@
 import { createEffect, createMemo, createSignal, onCleanup } from "solid-js";
 import type { MobileApi, CategoryShelf } from "../../api/mobile";
-import type { DeepReadonly, NavigationPort } from "../../../kernel";
+import { type DeepReadonly } from "@fluvient-loom/common";
+import { type NavigationPort } from "@fluvient-loom/port";
 import type { MobileRouteContext } from "../context";
 import { useMobileResource } from "../resource";
 import {

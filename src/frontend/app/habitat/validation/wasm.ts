@@ -1,5 +1,5 @@
-import { createDataTask } from "../../kernel";
-import type { CancellationSignal } from "../../kernel/ports";
+import { createDataTask } from "@fluvient-loom/query";
+import { type CancellationSignal } from "@fluvient-loom/common";
 import { parseHtmlInspection, type HtmlInspection } from "./article-html";
 
 export type HtmlInspectionFailure =
@@ -8,9 +8,7 @@ export type HtmlInspectionFailure =
 type InspectModule = { inspect_html(source: string): string };
 
 async function loadWasm(): Promise<InspectModule> {
-  const module = await import(
-    "../../infrastructure/browser/validation/generated/article_html_wasm.js"
-  );
+  const module = await import("./generated/article_html_wasm.js");
   await module.default();
   return module;
 }

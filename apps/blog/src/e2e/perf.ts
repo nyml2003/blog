@@ -88,6 +88,11 @@ export interface AggregatedRunNumbers {
   readonly requestCount: number;
   readonly transferredBytes: number;
   readonly cacheHits: number;
+  readonly staticAssets: {
+    readonly decodedBytes: number;
+    readonly reusedDecodedBytes: number;
+    readonly reuseRate: number | undefined;
+  };
 }
 
 export function aggregateNavigationMetrics(raw: RawNavigationMetrics): AggregatedRunNumbers {
@@ -101,10 +106,18 @@ export function aggregateNavigationMetrics(raw: RawNavigationMetrics): Aggregate
   let siteRoutesMs: number | undefined;
   let cacheHits = 0;
   let resourceBytes = 0;
+  let staticDecodedBytes = 0;
+  let staticReusedDecodedBytes = 0;
   for (const resource of raw.resources) {
     resourceBytes += resource.transferBytes;
     if (resource.decodedBytes > 0 && resource.transferBytes === 0) cacheHits += 1;
     const kind = classifyResource(resource.name);
+    if (kind === 'js' || kind === 'css') {
+      staticDecodedBytes += resource.decodedBytes;
+      if (resource.decodedBytes > 0 && resource.transferBytes === 0) {
+        staticReusedDecodedBytes += resource.decodedBytes;
+      }
+    }
     if (kind === 'js') {
       jsRequests += 1;
       jsBytes += resource.transferBytes;
@@ -128,6 +141,11 @@ export function aggregateNavigationMetrics(raw: RawNavigationMetrics): Aggregate
     requestCount: raw.resources.length,
     transferredBytes: resourceBytes + (raw.html?.transferBytes ?? 0),
     cacheHits,
+    staticAssets: {
+      decodedBytes: staticDecodedBytes,
+      reusedDecodedBytes: staticReusedDecodedBytes,
+      reuseRate: staticDecodedBytes === 0 ? undefined : staticReusedDecodedBytes / staticDecodedBytes,
+    },
   };
 }
 
@@ -171,6 +189,8 @@ export interface JourneySummary {
     readonly jsBytes?: Stat;
     readonly cacheHits?: Stat;
     readonly requestCount?: Stat;
+    readonly staticAssetReuseRate?: Stat;
+    readonly staticAssetReusedBytes?: Stat;
   };
 }
 
@@ -188,6 +208,10 @@ export function buildJourneySummary(runs: readonly JourneyRun[]): JourneySummary
       jsBytes: summarizeNumbers(runs.map((sample) => sample.metrics.js.bytes)),
       cacheHits: summarizeNumbers(runs.map((sample) => sample.metrics.cacheHits)),
       requestCount: summarizeNumbers(runs.map((sample) => sample.metrics.requestCount)),
+      staticAssetReuseRate: summarizeNumbers(runs
+        .map((sample) => sample.metrics.staticAssets.reuseRate)
+        .filter(defined)),
+      staticAssetReusedBytes: summarizeNumbers(runs.map((sample) => sample.metrics.staticAssets.reusedDecodedBytes)),
     },
   };
 }
@@ -468,6 +492,8 @@ function printProfileSummary(context: CommandContext, profile: ProfileResult): v
     const transferred = journey.summary.transferredBytes?.median;
     const hits = journey.summary.cacheHits?.median;
     const requests = journey.summary.requestCount?.median;
+    const reuseRate = journey.summary.staticAssetReuseRate?.median;
+    const reusedBytes = journey.summary.staticAssetReusedBytes?.median;
     const fcp = journey.summary.firstContentfulPaintMs?.median;
     const lcp = journey.summary.largestContentfulPaintMs?.median;
     const parts = [
@@ -477,6 +503,7 @@ function printProfileSummary(context: CommandContext, profile: ProfileResult): v
       `LCP 中位 ${formatMs(lcp)}`,
       `传输 ${formatBytes(transferred)}`,
       `缓存命中 ${hits === undefined ? '-' : `${hits}/${requests ?? '-'}`}`,
+      `JS/CSS 复用 ${formatBytes(reusedBytes)}（${reuseRate === undefined ? '-' : `${Math.round(reuseRate * 100)}%`}）`,
     ];
     context.log.info(`[${profile.profile}] ${journey.journey}: ${parts.join(' | ')}`);
   }

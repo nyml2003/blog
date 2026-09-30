@@ -76,7 +76,7 @@ export const commandDefinitions: readonly CommandDefinition[] = [
   defineCommand({
     path: ['perf', 'mobile'],
     summary: '度量移动端页面加载性能',
-    description: '对 Mobile 公开页执行加载性能采样：冷加载与底栏切换两条旅程，按网络档位（unthrottled/slow4g/slow3g）重复采样，输出切换到壳/内容可见耗时、FCP/LCP、静态资源传输与缓存命中到 target/e2e/<run-id>/perf-report.json。--mode integration 自建隔离 integration 栈；--origin 直接度量既有入口（如线上站点）。二者必须显式提供其一。',
+    description: '对 Mobile 公开页执行加载性能采样：冷加载与底栏切换两条旅程，按网络档位（unthrottled/slow4g/slow3g）重复采样，输出切换到壳/内容可见耗时、FCP/LCP、静态资源传输、缓存命中及 JS/CSS 解码体积复用率到 target/e2e/<run-id>/perf-report.json。--mode integration 自建隔离 integration 栈；--origin 直接度量既有入口（如线上站点）。二者必须显式提供其一。',
     examples: [
       'ops perf mobile --mode integration --playwright-module playwright-core/index.mjs --chromium-path /nix/store/.../chromium',
       'ops perf mobile --origin https://blog.example.com --playwright-module playwright-core/index.mjs --chromium-path /nix/store/.../chromium --runs 5 --profile slow4g',

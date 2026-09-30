@@ -2,8 +2,8 @@ import { createEffect, createSignal, onCleanup, onMount, Show } from "solid-js";
 import { useDesktopResource } from "../resource";
 import type { DesktopPageContext } from "../context";
 import { route } from "../context";
-import { createDataResource } from "../../../kernel";
-import type { DeepReadonly } from "../../../kernel";
+import { createDataResource } from "@fluvient-loom/query";
+import { type DeepReadonly } from "@fluvient-loom/common";
 import type { HtmlInspection } from "../../validation/article-html";
 import { inspectHtml } from "../../validation/wasm";
 import {

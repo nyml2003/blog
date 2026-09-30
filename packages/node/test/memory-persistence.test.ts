@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { asAsyncPersistence } from "@fluvient-loom/port";
-import { createMemoryPersistence } from "@fluvient-loom/node";
+import {
+  createMemoryAsyncPersistence,
+  createMemoryPersistence,
+} from "@fluvient-loom/node";
 
 test("memory persistence round-trips synchronously", () => {
   const persistence = createMemoryPersistence();
@@ -15,13 +17,22 @@ test("memory persistence round-trips synchronously", () => {
   assert.deepEqual(persistence.read("theme"), { ok: true, value: undefined });
 });
 
-test("asAsyncPersistence lifts any sync port into its async shape", async () => {
-  const persistence = asAsyncPersistence(createMemoryPersistence());
-  assert.deepEqual(await persistence.write("font", "serif"), {
+test("memory persistence seeds from an initial record", () => {
+  const persistence = createMemoryPersistence({ theme: "dark" });
+  assert.deepEqual(persistence.read("theme"), { ok: true, value: "dark" });
+});
+
+test("memory async persistence composes the sync port", async () => {
+  const persistence = createMemoryAsyncPersistence({ font: "serif" });
+  assert.deepEqual(await persistence.read("font"), {
+    ok: true,
+    value: "serif",
+  });
+  assert.deepEqual(await persistence.write("font", "mono"), {
     ok: true,
     value: undefined,
   });
-  assert.deepEqual(await persistence.read("font"), { ok: true, value: "serif" });
+  assert.deepEqual(await persistence.read("font"), { ok: true, value: "mono" });
   assert.deepEqual(await persistence.remove("font"), {
     ok: true,
     value: undefined,

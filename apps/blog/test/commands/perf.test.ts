@@ -237,6 +237,11 @@ test('aggregateNavigationMetrics counts transfers, cache hits and api durations'
   assert.equal(aggregated.requestCount, 5);
   assert.equal(aggregated.transferredBytes, 800 + 111_424 + 21_364 + 0 + 900 + 5_000);
   assert.equal(aggregated.cacheHits, 1);
+  assert.deepEqual(aggregated.staticAssets, {
+    decodedBytes: 2 * 111_424 + 21_364,
+    reusedDecodedBytes: 111_424,
+    reuseRate: 111_424 / (2 * 111_424 + 21_364),
+  });
 });
 
 test('buildJourneySummary keeps per-run samples and median stats', () => {
@@ -259,4 +264,6 @@ test('buildJourneySummary keeps per-run samples and median stats', () => {
   assert.deepEqual(summary.summary.contentMs, { median: 700, min: 500, max: 900 });
   assert.deepEqual(summary.summary.firstContentfulPaintMs, { median: 80, min: 60, max: 100 });
   assert.equal(summary.summary.largestContentfulPaintMs, undefined);
+  assert.deepEqual(summary.summary.staticAssetReuseRate, { median: 0, min: 0, max: 0 });
+  assert.deepEqual(summary.summary.staticAssetReusedBytes, { median: 0, min: 0, max: 0 });
 });

@@ -1,10 +1,7 @@
 import { createComponent, type Component } from "solid-js";
 import { render } from "solid-js/web";
-import {
-  createBrowserNavigation,
-  createBrowserNetwork,
-} from "../../infrastructure/browser";
-import type { Result } from "../../kernel";
+import { createWebNavigation, createWebNetwork } from "@fluvient-loom/web";
+import { type Result } from "@fluvient-loom/common";
 import {
   createDesktopApi,
   type DesktopApiFailure,
@@ -12,34 +9,17 @@ import {
 import type { DesktopPageContext } from "../../habitat/desktop";
 
 function browserNavigation() {
-  return createBrowserNavigation({
-    read: () => ({
-      pathname: window.location.pathname,
-      search: window.location.search,
-      state: window.history.state,
-    }),
-    push: (href, state) => window.history.pushState(state, "", href),
-    replace: (href, state) => window.history.replaceState(state, "", href),
-    back: () => window.history.back(),
-    addPopStateListener: (listener) => {
-      window.addEventListener("popstate", listener);
-      return {
-        release: () => window.removeEventListener("popstate", listener),
-      };
-    },
-    addPageHideListener: (listener) => {
-      window.addEventListener("pagehide", listener);
-      return {
-        release: () => window.removeEventListener("pagehide", listener),
-      };
-    },
+  return createWebNavigation({
+    history: window.history,
+    location: window.location,
+    events: window,
   });
 }
 
 export async function createBrowserDesktopContext(): Promise<
   Result<DesktopPageContext, DesktopApiFailure>
 > {
-  const network = createBrowserNetwork({
+  const network = createWebNetwork({
     fetcher: window.fetch.bind(window),
     setTimeoutFn: (callback, delayMs) => window.setTimeout(callback, delayMs),
     clearTimeoutFn: (handle) => window.clearTimeout(handle as number),

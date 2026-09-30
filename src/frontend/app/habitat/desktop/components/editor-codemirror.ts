@@ -14,7 +14,7 @@ import {
   keymap,
   lineNumbers,
 } from "@codemirror/view";
-import type { DeepReadonly } from "../../../kernel";
+import { type DeepReadonly } from "@fluvient-loom/common";
 import {
   byteOffsetToSelection,
   type HtmlDiagnostic,

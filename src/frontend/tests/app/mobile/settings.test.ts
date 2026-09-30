@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createMemoryAsyncPersistence } from "../../../app/infrastructure/memory";
+import {
+  createMemoryAsyncPersistence,
+  createMemoryPersistence,
+} from "@fluvient-loom/node";
 import {
   createMobileSettingsCommand,
   createMobileSettingsReadTask,
@@ -8,7 +11,6 @@ import {
   readMobileSettings,
   readMobileSettingsAsync,
 } from "../../../app/habitat/mobile/logic/settings";
-import { createMemoryPersistence } from "../../../app/infrastructure/memory";
 
 test("settings query migrates legacy keys into one snapshot", async () => {
   const persistence = createMemoryAsyncPersistence({

@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createDesktopApi } from "../../../app/habitat/api/desktop";
 import { routeWithQuery } from "../../../app/habitat/desktop/context";
-import { ok } from "../../../app/kernel/result";
-import type { NetworkPort } from "../../../app/kernel/ports";
+import { ok } from "@fluvient-loom/common";
+import { type NetworkPort } from "@fluvient-loom/port";
 
 function body(data: unknown, code = "OK") {
   return { code, message: code === "OK" ? "" : "remote failure", data };

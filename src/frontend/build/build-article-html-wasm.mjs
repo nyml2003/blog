@@ -26,7 +26,7 @@ run("wasm-bindgen", [
   "--target",
   "web",
   "--out-dir",
-  "src/frontend/app/infrastructure/browser/validation/generated",
+  "src/frontend/app/habitat/validation/generated",
   "--out-name",
   "article_html_wasm",
   wasmInput,

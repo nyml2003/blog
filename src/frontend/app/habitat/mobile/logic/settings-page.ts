@@ -1,13 +1,13 @@
 import { createEffect, createSignal, onCleanup, onMount } from "solid-js";
-import { createDesiredStateMutation } from "../../../kernel";
-import type {
-  AsyncPersistencePort,
-  DocumentPort,
-  NavigationPort,
-  OperationIdPort,
-  PersistencePort,
-  SchedulerPort,
-} from "../../../kernel";
+import { createDesiredStateMutation } from "../../../kernel/desired-state";
+import {
+  type AsyncPersistencePort,
+  type DocumentPort,
+  type NavigationPort,
+  type OperationIdPort,
+  type PersistencePort,
+  type SchedulerPort,
+} from "@fluvient-loom/port";
 import type { MobileRouteContext } from "../context";
 import {
   createMobileSettingsCommand,

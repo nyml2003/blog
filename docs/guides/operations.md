@@ -75,7 +75,7 @@ ops release both --yes
 - `--watch`、`--check`、`--help`、`--dry-run`、`--json` 为 switch：出现 true，缺省 false，重复幂等，不接受 `=true`/`=false`。`ops quality format` 写入，`ops quality format --check` 只检查；dry-run 仍须完整参数。
 - `ops e2e` 必须显式选择 `--mode`、`--playwright-module` 和 `--chromium-path`；`integration` 不接受 `--scenario`，`dev` 必须显式选择一个 Mock 场景。浏览器依赖不从环境变量补值；运行环境必须允许启动 Chromium 子进程和临时用户目录。
 - E2E 不属于 `ops quality check`；运行产物写入 `target/e2e/<run-id>/`，包含截图、`report.json` 以及页面 console/pageerror 诊断。`report.json` 会记录模式、场景、入口、最终状态和错误摘要。
-- `ops perf mobile` 与 `ops e2e` 共用 `--playwright-module`/`--chromium-path` 契约，但必须且只能在 `--mode integration`（自建隔离栈）与 `--origin <URL>`（度量既有入口，如线上站点）之间二选一。采样旅程为 Mobile 冷加载与底栏切换，按 `unthrottled`/`slow4g`/`slow3g` 网络档位（`--profile` 可单选，默认全跑）重复 `--runs` 次（默认 3），指标含切换到壳/内容可见耗时、FCP/LCP、静态资源传输字节与缓存命中数。产物写入 `target/e2e/<run-id>/perf-report.json`（`kind: "perf"`）；同一指标建议先记录基线再对比优化，线上验收用 `--origin` 跑真实部署。
+- `ops perf mobile` 与 `ops e2e` 共用 `--playwright-module`/`--chromium-path` 契约，但必须且只能在 `--mode integration`（自建隔离栈）与 `--origin <URL>`（度量既有入口，如线上站点）之间二选一。采样旅程为 Mobile 冷加载与底栏切换，按 `unthrottled`/`slow4g`/`slow3g` 网络档位（`--profile` 可单选，默认全跑）重复 `--runs` 次（默认 3），指标含切换到壳/内容可见耗时、FCP/LCP、静态资源传输字节、缓存命中数，以及 JS/CSS 解码体积的复用字节与复用率。产物写入 `target/e2e/<run-id>/perf-report.json`（`kind: "perf"`）；同一指标建议先记录基线再对比优化，线上验收用 `--origin` 跑真实部署。
 
 - 端口候选必须由对应 `--web-port`/`--product-port`/`--data-port`/`--mock-port`（十进制 int32，`1024`–`65535`）显式提供，无默认值；被占用时从候选值起逐次 +1（最多尝试 10 个端口），实际绑定结果即注入给依赖方的地址。
 - 监听地址固定 `127.0.0.1`，不提供 `--host`/`--listen`；`--scenario` 只接受命名场景，通过 CLI 传入，不读取环境变量。

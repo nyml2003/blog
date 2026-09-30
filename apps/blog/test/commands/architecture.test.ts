@@ -28,17 +28,38 @@ test("rejects page data access and accepts query-layer imports", () => {
 test("enforces the new app foundation boundaries", () => {
   assert.deepEqual(
     check(
-      "/repo/src/frontend/app/kernel/task.ts",
+      "/repo/src/frontend/app/kernel/desired-state.ts",
       'const request = fetch("/api/items");',
     ),
     ["kernel must remain environment and framework independent"],
   );
   assert.deepEqual(
     check(
-      "/repo/src/frontend/app/kernel/ports/index.ts",
-      'export type { DocumentPort } from "./document";',
+      "/repo/src/frontend/app/kernel/desired-state.ts",
+      'import type { SchedulerPort } from "@fluvient-loom/port";',
     ),
     [],
+  );
+  assert.deepEqual(
+    check(
+      "/repo/src/frontend/app/kernel/result.ts",
+      'export { ok } from "@fluvient-loom/common";',
+    ),
+    [],
+  );
+  assert.deepEqual(
+    check(
+      "/repo/src/frontend/app/kernel/desired-state.ts",
+      'export { createDataTask } from "@fluvient-loom/query";',
+    ),
+    [],
+  );
+  assert.deepEqual(
+    check(
+      "/repo/src/frontend/app/kernel/desired-state.ts",
+      'export { createWebNetwork } from "@fluvient-loom/web";',
+    ),
+    ["kernel must remain environment and framework independent"],
   );
   assert.deepEqual(
     check(
@@ -46,37 +67,6 @@ test("enforces the new app foundation boundaries", () => {
       "export const title = document.title;",
     ),
     ["kernel must remain environment and framework independent"],
-  );
-  assert.deepEqual(
-    check(
-      "/repo/src/frontend/app/infrastructure/browser/network.ts",
-      'import { z } from "zod"; const path = "/api/items";',
-    ),
-    ["infrastructure must not depend on business API or UI modules"],
-  );
-  assert.deepEqual(
-    check(
-      "/repo/src/frontend/app/infrastructure/browser/network.ts",
-      'import { helper } from "some-third-party";',
-    ),
-    ["infrastructure must not depend on business API or UI modules"],
-  );
-  assert.deepEqual(
-    check(
-      "/repo/src/frontend/app/infrastructure/browser/network.ts",
-      'import type { NetworkPort } from "../../kernel/ports";',
-    ),
-    [],
-  );
-  assert.deepEqual(
-    check(
-      "/repo/src/frontend/app/infrastructure/browser/network.ts",
-      'import { browserClient } from "../../../common/client";',
-    ),
-    [
-      "new app foundation must not import the legacy frontend runtime",
-      "infrastructure must not depend on business API or UI modules",
-    ],
   );
   assert.deepEqual(
     check(
@@ -105,7 +95,7 @@ test("enforces L2 habitat and L3 bootstrap boundaries", () => {
   assert.deepEqual(
     check(
       "/repo/src/frontend/app/habitat/api/mobile/client.ts",
-      'import { createBrowserNetwork } from "../../../infrastructure/browser";',
+      'import { createWebNetwork } from "@fluvient-loom/web";',
     ),
     ["API habitat must depend on kernel contracts, not adapters or UI"],
   );
@@ -119,14 +109,21 @@ test("enforces L2 habitat and L3 bootstrap boundaries", () => {
   assert.deepEqual(
     check(
       "/repo/src/frontend/app/habitat/mobile/pages/home.tsx",
-      'import { createBrowserPersistence } from "../../../infrastructure/browser";',
+      'import { createWebPersistence } from "@fluvient-loom/web";',
     ),
-    ["mobile habitat must not depend on infrastructure or legacy frontend"],
+    ["habitat must not depend on host adapters or legacy frontend"],
+  );
+  assert.deepEqual(
+    check(
+      "/repo/src/frontend/app/habitat/desktop/pages/home.tsx",
+      'import { createWebScheduler } from "@fluvient-loom/web";',
+    ),
+    ["habitat must not depend on host adapters or legacy frontend"],
   );
   assert.deepEqual(
     check(
       "/repo/src/frontend/app/bootstrap/mobile/home.tsx",
-      'import { createBrowserNetwork } from "../../../infrastructure/browser"; import { createMobileHomePage } from "../../habitat/mobile";',
+      'import { createWebNetwork } from "@fluvient-loom/web"; import { createMobileHomePage } from "../../habitat/mobile";',
     ),
     [],
   );

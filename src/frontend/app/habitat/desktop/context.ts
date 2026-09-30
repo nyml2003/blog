@@ -1,4 +1,4 @@
-import type { NavigationPort } from "../../kernel";
+import { type NavigationPort } from "@fluvient-loom/port";
 import type { DesktopApi, SiteRoutes } from "../api/desktop";
 
 export interface DesktopPageContext {

@@ -1,14 +1,14 @@
-import type {
-  DataResource,
-  AsyncPersistencePort,
-  DocumentPort,
-  NavigationPort,
-  PersistencePort,
-  SchedulerPort,
-  SpaceTimePort,
-  ViewportPort,
-  OperationIdPort,
-} from "../../kernel";
+import {
+  type AsyncPersistencePort,
+  type DocumentPort,
+  type NavigationPort,
+  type PersistencePort,
+  type SchedulerPort,
+  type SpaceTimePort,
+  type ViewportPort,
+  type OperationIdPort,
+} from "@fluvient-loom/port";
+import { type DataResource } from "@fluvient-loom/query";
 import type { MobileApi, SiteRoutes } from "../api/mobile";
 
 export interface MobileRouteContext {

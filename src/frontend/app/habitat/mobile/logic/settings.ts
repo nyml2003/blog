@@ -1,12 +1,13 @@
-import { createDataTask, err, ok } from "../../../kernel";
-import type {
-  AsyncPersistencePort,
-  CommandContext,
-  DataTask,
-  PersistencePort,
-  ReversibleCommand,
-} from "../../../kernel";
-import type { Result } from "../../../kernel/result";
+import { err, ok } from "@fluvient-loom/common";
+import { createDataTask } from "@fluvient-loom/query";
+import {
+  type AsyncPersistencePort,
+  type CommandContext,
+  type DataTask,
+  type PersistencePort,
+  type ReversibleCommand,
+} from "@fluvient-loom/port";
+import { type Result } from "@fluvient-loom/common";
 
 export type MobileTheme = "paper" | "dark" | "sepia";
 export type MobileFont = "sans" | "serif" | "mono";

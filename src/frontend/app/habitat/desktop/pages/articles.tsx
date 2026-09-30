@@ -3,7 +3,7 @@ import type { DesktopPageContext } from "../context";
 import { route, routeWithQuery } from "../context";
 import { useDesktopArticles } from "../logic/articles";
 import type { TShelf } from "../../api/desktop";
-import type { DeepReadonly } from "../../../kernel";
+import { type DeepReadonly } from "@fluvient-loom/common";
 
 function filterId(search: string): string {
   const raw = new URLSearchParams(search).get("type_id");

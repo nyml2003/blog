@@ -1,17 +1,17 @@
 import { createComponent, type Component } from "solid-js";
 import { render } from "solid-js/web";
+import { asAsyncPersistence } from "@fluvient-loom/port";
 import {
-  createBrowserDocument,
-  createBrowserAsyncPersistence,
-  createBrowserNavigation,
-  createBrowserNetwork,
-  createBrowserPersistence,
-  createBrowserScheduler,
-  createBrowserSpaceTime,
-  createBrowserViewport,
-  createBrowserOperationId,
-} from "../../infrastructure/browser";
-import type { Result, ResourceHandle } from "../../kernel";
+  createWebDocument,
+  createWebNavigation,
+  createWebNetwork,
+  createWebOperationId,
+  createWebPersistence,
+  createWebScheduler,
+  createWebSpaceTime,
+  createWebViewport,
+} from "@fluvient-loom/web";
+import { type Result } from "@fluvient-loom/common";
 import {
   createMobileApi,
   siteRoutesSchema,
@@ -23,70 +23,38 @@ import type { MobilePageContext } from "../../habitat/mobile";
 // 有测试守卫同步），直接内嵌进包，避免每次导航阻塞首绘的串行请求。
 import siteRoutesManifest from "../../../site-routes.json";
 
-function eventHandle(
-  add: (listener: EventListener) => void,
-  remove: (listener: EventListener) => void,
-  callback: () => void,
-): ResourceHandle {
-  const listener: EventListener = () => callback();
-  add(listener);
-  let released = false;
-  return {
-    release() {
-      if (released) return;
-      released = true;
-      remove(listener);
-    },
-  };
-}
-
 function browserContextWithoutRoutes(): Omit<MobilePageContext, "routes"> {
-  const network = createBrowserNetwork({
+  const network = createWebNetwork({
     fetcher: window.fetch.bind(window),
     setTimeoutFn: (callback, delayMs) => window.setTimeout(callback, delayMs),
     clearTimeoutFn: (handle) => window.clearTimeout(handle as number),
   });
-  const navigation = createBrowserNavigation({
-    read: () => ({
-      pathname: window.location.pathname,
-      search: window.location.search,
-      state: window.history.state,
-    }),
-    push: (href, state) => window.history.pushState(state, "", href),
-    replace: (href, state) => window.history.replaceState(state, "", href),
-    back: () => window.history.back(),
-    addPopStateListener: (listener) =>
-      eventHandle(
-        (callback) => window.addEventListener("popstate", callback),
-        (callback) => window.removeEventListener("popstate", callback),
-        listener,
-      ),
-    addPageHideListener: (listener) =>
-      eventHandle(
-        (callback) => window.addEventListener("pagehide", callback),
-        (callback) => window.removeEventListener("pagehide", callback),
-        listener,
-      ),
+  const navigation = createWebNavigation({
+    history: window.history,
+    location: window.location,
+    events: window,
+  });
+  const persistence = createWebPersistence({
+    storage: window.localStorage,
   });
   return {
     api: createMobileApi(network),
-    persistence: createBrowserPersistence(window.localStorage),
-    asyncPersistence: createBrowserAsyncPersistence(
-      createBrowserPersistence(window.localStorage),
-    ),
-    operationId: createBrowserOperationId(),
-    scheduler: createBrowserScheduler({
+    persistence,
+    asyncPersistence: asAsyncPersistence(persistence),
+    operationId: createWebOperationId(),
+    scheduler: createWebScheduler({
       queueMicrotaskFn: (callback) => window.queueMicrotask(callback),
       setTimeoutFn: (callback, delayMs) => window.setTimeout(callback, delayMs),
       clearTimeoutFn: (handle) => window.clearTimeout(handle as number),
       requestAnimationFrameFn: (callback) =>
         window.requestAnimationFrame(callback),
-      cancelAnimationFrameFn: (handle) => window.cancelAnimationFrame(handle),
+      cancelAnimationFrameFn: (handle) =>
+        window.cancelAnimationFrame(handle as number),
     }),
-    spaceTime: createBrowserSpaceTime({ now: () => Date.now() }),
+    spaceTime: createWebSpaceTime({ now: () => Date.now() }),
     navigation,
-    document: createBrowserDocument({ root: window.document.documentElement }),
-    viewport: createBrowserViewport({
+    document: createWebDocument({ root: window.document.documentElement }),
+    viewport: createWebViewport({
       readScrollY: () => window.scrollY,
       scrollTo: (scrollY) =>
         window.scrollTo({ top: scrollY, behavior: "auto" }),

@@ -1,6 +1,6 @@
 import { createEffect, createSignal, onCleanup } from "solid-js";
-import { createDataResource } from "../../kernel";
-import type { DataTask } from "../../kernel/ports";
+import { createDataResource } from "@fluvient-loom/query";
+import { type DataTask } from "@fluvient-loom/port";
 
 export function useDesktopResource<T, E>(createTask: () => DataTask<T, E>) {
   const resource = createDataResource(createTask);

@@ -1,11 +1,12 @@
-import { createDataTask, err, ok } from "../../../kernel";
-import { cancellationFailure } from "../../../kernel/cancellation";
-import type {
-  DataTask,
-  NetworkPort,
-  NetworkRequest,
-} from "../../../kernel/ports";
-import type { Result } from "../../../kernel/result";
+import { err, ok } from "@fluvient-loom/common";
+import { createDataTask } from "@fluvient-loom/query";
+import { cancellationFailure } from "@fluvient-loom/common";
+import {
+  type DataTask,
+  type NetworkPort,
+  type NetworkRequest,
+} from "@fluvient-loom/port";
+import { type Result } from "@fluvient-loom/common";
 import { z } from "zod";
 import {
   adminArticleSchema,

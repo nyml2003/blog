@@ -1,13 +1,13 @@
 import { Show, type Component } from "solid-js";
 import type { MobileRouteContext } from "../context";
-import type {
-  AsyncPersistencePort,
-  DocumentPort,
-  NavigationPort,
-  OperationIdPort,
-  PersistencePort,
-  SchedulerPort,
-} from "../../../kernel";
+import {
+  type AsyncPersistencePort,
+  type DocumentPort,
+  type NavigationPort,
+  type OperationIdPort,
+  type PersistencePort,
+  type SchedulerPort,
+} from "@fluvient-loom/port";
 import { mobileNavigationItems } from "../logic/navigation";
 import { mobileSettingsOptions } from "../logic/settings";
 import { useMobileSettings } from "../logic/settings-page";

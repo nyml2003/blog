@@ -57,9 +57,17 @@ function isKernelModule(file: string): boolean {
   return file.includes("/src/frontend/app/kernel/");
 }
 
-function isInfrastructureModule(file: string): boolean {
-  return file.includes("/src/frontend/app/infrastructure/");
-}
+/** Workspace packages allowed inside the kernel compatibility boundary. */
+const KERNEL_PACKAGE_ALLOWLIST = new Set([
+  "@fluvient-loom/common",
+  "@fluvient-loom/port",
+  "@fluvient-loom/query",
+]);
+
+const HOST_ADAPTER_PACKAGES = [
+  "@fluvient-loom/web",
+  "@fluvient-loom/node",
+];
 
 function isHabitatApiModule(file: string): boolean {
   return file.includes("/src/frontend/app/habitat/api/");
@@ -67,6 +75,10 @@ function isHabitatApiModule(file: string): boolean {
 
 function isHabitatMobileModule(file: string): boolean {
   return file.includes("/src/frontend/app/habitat/mobile/");
+}
+
+function isHabitatDesktopModule(file: string): boolean {
+  return file.includes("/src/frontend/app/habitat/desktop/");
 }
 
 function isBootstrapModule(file: string): boolean {
@@ -104,39 +116,20 @@ function checkFrontendFile(file: string, source: string): Violation[] {
   }
 
   if (isKernelModule(file)) {
-    const importsEnvironment = modules.some(
-      (module) =>
+    const importsEnvironment = modules.some((module) => {
+      if (KERNEL_PACKAGE_ALLOWLIST.has(module)) return false;
+      return (
+        HOST_ADAPTER_PACKAGES.includes(module) ||
         module === "solid-js" ||
         module === "solid-js/web" ||
         module.startsWith("node:") ||
-        /(?:^|\/)(?:zod|desktop-ui|mobile-ui|common|solid|desktop|mobile)(?:\/|$)/.test(module),
-    );
+        /(?:^|\/)(?:zod|desktop-ui|mobile-ui|common|solid|desktop|mobile)(?:\/|$)/.test(module)
+      );
+    });
     if (importsEnvironment || /\b(?:fetch|AbortController|window|document|localStorage|sessionStorage|process)\b/.test(withoutImports(source))) {
       violations.push({
         file,
         message: "kernel must remain environment and framework independent",
-      });
-    }
-  }
-
-  if (isInfrastructureModule(file)) {
-    const importsOutsideFoundation = modules.some((module) => {
-      if (module.startsWith("/")) {
-        return !module.includes("/src/frontend/app/kernel/") && !module.includes("/src/frontend/app/infrastructure/");
-      }
-      return true;
-    });
-    const importsForbidden = modules.some(
-      (module) =>
-        module === "zod" ||
-        module === "solid-js" ||
-        module === "solid-js/web" ||
-        isLegacyFrontendModule(module),
-    );
-    if (importsOutsideFoundation || importsForbidden || /\bsceneCode\b|["']\/api\//.test(source)) {
-      violations.push({
-        file,
-        message: "infrastructure must not depend on business API or UI modules",
       });
     }
   }
@@ -146,7 +139,7 @@ function checkFrontendFile(file: string, source: string): Violation[] {
       (module) =>
         module === "solid-js" ||
         module === "solid-js/web" ||
-        module.includes("/src/frontend/app/infrastructure/") ||
+        HOST_ADAPTER_PACKAGES.includes(module) ||
         isLegacyFrontendModule(module),
     );
     if (importsForbidden) {
@@ -157,14 +150,14 @@ function checkFrontendFile(file: string, source: string): Violation[] {
     }
   }
 
-  if (isHabitatMobileModule(file)) {
-    const importsInfrastructure = modules.some((module) =>
-      module.includes("/src/frontend/app/infrastructure/"),
+  if (isHabitatMobileModule(file) || isHabitatDesktopModule(file)) {
+    const importsHostAdapters = modules.some((module) =>
+      HOST_ADAPTER_PACKAGES.includes(module),
     );
-    if (importsInfrastructure || modules.some(isLegacyFrontendModule)) {
+    if (importsHostAdapters || modules.some(isLegacyFrontendModule)) {
       violations.push({
         file,
-        message: "mobile habitat must not depend on infrastructure or legacy frontend",
+        message: "habitat must not depend on host adapters or legacy frontend",
       });
     }
   }

@@ -1,7 +1,7 @@
 ---
 kind: plan
 id: PLAN-SCRIPTS-REMOVAL-001
-status: partial
+status: completed
 owner: project-manager
 created: 2026-09-30
 last_reviewed: 2026-09-30
@@ -128,8 +128,16 @@ last_reviewed: 2026-09-30
 - 迁移后：`pnpm -C src/frontend run test:core` 全绿（含新路径 wasm 构建、parity 287 用例、四套前端测试）；`ops quality check` exit 0（Rust 三件套、ops 契约测试、前端 typecheck/lint/format:check/test:core/build、架构边界全部通过）；`pnpm test` 递归全绿；`ops package check` 中新接线的 package smoke 步骤 OK。
 - 残留扫描：`rg` 检索旧脚本路径与 `pnpm smoke`，仅本计划与归档计划的历史记述命中。
 
-### 未完成与外部阻塞
+### 未完成与外部阻塞（收尾时移交）
 
 - `ops package check` 整体仍 exit 20，两个失败点均为并行工作流的进行中状态、非本计划改动引入：中立性护栏不认识 `@fluvient-cli/*` 新 scope 与 `mobile-h5-solid-atoms` 的 solid-js 依赖（架构整合/基础设施包工作流的欠账）；根 `pnpm typecheck` 因 atoms 包 `.tsx` 缺少根级 JSX 配置失败。恢复条件：上述工作流落地后重跑 `ops package check` 应全绿。
 - `ops e2e` 与 CI `build-release`（`ops delivery package` 走 musl 交叉编译）未在本机运行，需要浏览器环境与交叉工具链；相关代码路径未被本计划修改（e2e/delivery 均经 pnpm scripts 间接使用 wasm 构建）。
-- 未决项 3（历史浏览器脚本的深度 HTML 验收能力）未迁移即删除，缺口记录：管理端编辑器诊断定位与按钮禁用、伪造直发 422、WASM 加载失败降级、网络 503 输入保留、毒化 sessionStorage 缓存拦截。后续如需要，应作为 `ops e2e` 的 scenario 补齐，不再恢复独立脚本。
+- 补充（同日）：`ops e2e` 已在本机用系统 Chrome 完整执行 integration 与 `--mode dev --scenario empty` 两次。入口链路验证通过：两种模式均成功起栈（含新路径 WASM 构建）、Playwright 旅程执行、失败时正确写出 report.json 与 `*-failure.png`、退出码 20 正确传播。两次均失败在同一类产品断言（desktop-articles / desktop-home 横向溢出），当前工作树包含并行前端工作流的大量未提交 UI 改动，该失败归属于彼，本计划未触碰任何 UI 代码；前端 WIP 落地后 e2e 转绿可作为其自身验收。
+- 未决项 3（历史浏览器脚本的深度 HTML 验收能力）已决策（2026-09-30 用户拍板）：五项缺口（管理端编辑器诊断定位与按钮禁用、伪造直发 422、WASM 加载失败降级、网络 503 输入保留、毒化 sessionStorage 缓存拦截）暂不补齐，后续有需要再作为 `ops e2e` scenario 单独立项，不阻塞本计划收尾。
+### 收尾（2026-09-30）
+
+用户验收通过，决定归档。遗留事项均移交：
+
+- `ops package check` 整体转绿依赖两处并行工作流收尾：中立性护栏认 `@fluvient-cli/*` scope 与 atoms 的 solid-js 依赖；`apps/blog` architecture.test 的一条 kernel 断言期望需随端口重构更新。转绿后可作为彼工作流自身验收。
+- CI `build-release` 已手动触发（run 36732758282，main@7d757d9 含本计划迁移），结果未跟踪，按用户验收决策接受。
+- 根 package.json devDependencies 归属清理（`tsx`、`@fluvient-loom/*`）需动 lockfile，留待依赖维护时顺带处理。

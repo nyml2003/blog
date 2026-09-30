@@ -5,6 +5,8 @@ export {
   type JsonRequester,
 } from "./requester";
 export type { SchedulerPort } from "./ports/scheduler";
+export type { SpaceTimePort } from "./ports/space-time";
+export type { ViewportPort } from "./ports/viewport";
 export type {
   NetworkFailure,
   NetworkMethod,

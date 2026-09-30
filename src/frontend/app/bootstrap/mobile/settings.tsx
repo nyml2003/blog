@@ -1,4 +1,4 @@
-import { createBrowserPersistence } from "../../infrastructure/browser";
+import { createWebPersistence } from "@fluvient-loom/web";
 import {
   defaultMobileSettings,
   readMobileSettings,
@@ -6,7 +6,9 @@ import {
 
 let settings = defaultMobileSettings;
 try {
-  settings = readMobileSettings(createBrowserPersistence(window.localStorage));
+  settings = readMobileSettings(
+    createWebPersistence({ storage: window.localStorage }),
+  );
 } catch {
   settings = defaultMobileSettings;
 }

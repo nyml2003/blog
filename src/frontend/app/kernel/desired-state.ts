@@ -3,8 +3,8 @@ import type {
   OperationIdPort,
   ReversibleCommand,
   SchedulerPort,
-} from "./ports";
-import type { Result } from "./result";
+} from "@fluvient-loom/port";
+import type { Result } from "@fluvient-loom/common";
 
 export type DesiredStateMutationStatus =
   | "idle"

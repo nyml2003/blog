@@ -2,7 +2,7 @@ import { ArrowLeft } from "lucide-solid";
 import { For, Show, type Component } from "solid-js";
 import type { MobileRouteContext } from "../context";
 import type { MobileApi } from "../../api/mobile";
-import type { NavigationPort } from "../../../kernel";
+import { type NavigationPort } from "@fluvient-loom/port";
 import { routeWithQuery } from "../context";
 import { useMobileAdminPreview } from "../logic/admin-preview";
 import { ArticleBody } from "../components";

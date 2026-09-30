@@ -3,7 +3,7 @@ import type { DesktopPageContext } from "../context";
 import { route } from "../context";
 import { useDesktopHome } from "../logic/home";
 import type { TShelf } from "../../api/desktop";
-import type { DeepReadonly } from "../../../kernel";
+import { type DeepReadonly } from "@fluvient-loom/common";
 
 function Shelf(props: {
   data: DeepReadonly<TShelf> | undefined;

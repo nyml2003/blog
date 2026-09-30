@@ -1,5 +1,6 @@
-import { createDataResource } from "../../kernel";
-import type { DataResource, DataTask } from "../../kernel";
+import { createDataResource } from "@fluvient-loom/query";
+import { type DataTask } from "@fluvient-loom/port";
+import { type DataResource } from "@fluvient-loom/query";
 import { createSignal, onCleanup } from "solid-js";
 
 export function useMobileResource<T, E>(

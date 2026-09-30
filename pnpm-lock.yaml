@@ -178,9 +178,24 @@ importers:
       '@codemirror/view':
         specifier: 6.36.5
         version: 6.36.5
+      '@fluvient-loom/common':
+        specifier: workspace:*
+        version: link:../../packages/common
       '@fluvient-loom/mobile-h5-solid-atoms':
         specifier: workspace:*
         version: link:../../packages/mobile-h5-solid-atoms
+      '@fluvient-loom/node':
+        specifier: workspace:*
+        version: link:../../packages/node
+      '@fluvient-loom/port':
+        specifier: workspace:*
+        version: link:../../packages/port
+      '@fluvient-loom/query':
+        specifier: workspace:*
+        version: link:../../packages/query
+      '@fluvient-loom/web':
+        specifier: workspace:*
+        version: link:../../packages/web
       lucide-solid:
         specifier: 1.48.0
         version: 1.48.0(solid-js@1.9.15)

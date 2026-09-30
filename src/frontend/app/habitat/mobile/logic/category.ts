@@ -1,5 +1,5 @@
 import type { CategoryShelf } from "../../api/mobile";
-import type { DeepReadonly } from "../../../kernel";
+import { type DeepReadonly } from "@fluvient-loom/common";
 
 export interface CategorySelection {
   readonly rootId: number;

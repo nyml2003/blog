@@ -156,16 +156,16 @@ export interface DesktopApi {
   readonly adminSession: {
     login(
       input: AdminSessionLoginInput,
-    ): import("../../../kernel/ports").DataTask<undefined, DesktopApiFailure>;
+    ): import("@fluvient-loom/port").DataTask<undefined, DesktopApiFailure>;
   };
   readonly content: {
-    listArticles(): import("../../../kernel/ports").DataTask<
+    listArticles(): import("@fluvient-loom/port").DataTask<
       ContentArticleList,
       DesktopApiFailure
     >;
     getArticle(
       id: number,
-    ): import("../../../kernel/ports").DataTask<
+    ): import("@fluvient-loom/port").DataTask<
       ContentArticleDetail,
       DesktopApiFailure
     >;
@@ -179,50 +179,50 @@ export interface DesktopApi {
         readonly tagIds: readonly number[];
         readonly contentHtml: string;
       };
-    }): import("../../../kernel/ports").DataTask<
+    }): import("@fluvient-loom/port").DataTask<
       ContentArticleSaveResult,
       DesktopApiFailure
     >;
     removeArticle(input: {
       readonly expectedVersion: number;
       readonly articleId: number;
-    }): import("../../../kernel/ports").DataTask<undefined, DesktopApiFailure>;
-    workspace(): import("../../../kernel/ports").DataTask<
+    }): import("@fluvient-loom/port").DataTask<undefined, DesktopApiFailure>;
+    workspace(): import("@fluvient-loom/port").DataTask<
       Workspace,
       DesktopApiFailure
     >;
     saveTaxonomy(input: {
       readonly expectedVersion: number;
       readonly taxonomy: Taxonomy;
-    }): import("../../../kernel/ports").DataTask<Workspace, DesktopApiFailure>;
+    }): import("@fluvient-loom/port").DataTask<Workspace, DesktopApiFailure>;
     analyze(input: {
       readonly expectedVersion: number;
       readonly articleIds: readonly number[];
-    }): import("../../../kernel/ports").DataTask<Workspace, DesktopApiFailure>;
+    }): import("@fluvient-loom/port").DataTask<Workspace, DesktopApiFailure>;
     review(input: {
       readonly expectedVersion: number;
-    }): import("../../../kernel/ports").DataTask<Workspace, DesktopApiFailure>;
-    preview(): import("../../../kernel/ports").DataTask<
+    }): import("@fluvient-loom/port").DataTask<Workspace, DesktopApiFailure>;
+    preview(): import("@fluvient-loom/port").DataTask<
       ContentPreview,
       DesktopApiFailure
     >;
     submit(input: {
       readonly expectedVersion: number;
-    }): import("../../../kernel/ports").DataTask<Workspace, DesktopApiFailure>;
+    }): import("@fluvient-loom/port").DataTask<Workspace, DesktopApiFailure>;
     abandon(input: {
       readonly expectedVersion: number;
-    }): import("../../../kernel/ports").DataTask<Workspace, DesktopApiFailure>;
-    sync(): import("../../../kernel/ports").DataTask<
+    }): import("@fluvient-loom/port").DataTask<Workspace, DesktopApiFailure>;
+    sync(): import("@fluvient-loom/port").DataTask<
       SyncStatus,
       DesktopApiFailure
     >;
-    syncStatus(): import("../../../kernel/ports").DataTask<
+    syncStatus(): import("@fluvient-loom/port").DataTask<
       SyncStatus,
       DesktopApiFailure
     >;
   };
   readonly siteRoutes: {
-    get(): import("../../../kernel/ports").DataTask<
+    get(): import("@fluvient-loom/port").DataTask<
       SiteRoutes,
       DesktopApiFailure
     >;
@@ -230,12 +230,12 @@ export interface DesktopApi {
   readonly tShelf: {
     get(
       input: TShelfInput,
-    ): import("../../../kernel/ports").DataTask<TShelf, DesktopApiFailure>;
+    ): import("@fluvient-loom/port").DataTask<TShelf, DesktopApiFailure>;
   };
   readonly article: {
     getPublished(
       id: number,
-    ): import("../../../kernel/ports").DataTask<
+    ): import("@fluvient-loom/port").DataTask<
       DesktopArticle,
       DesktopApiFailure
     >;
@@ -243,9 +243,6 @@ export interface DesktopApi {
   readonly adminArticle: {
     get(
       id: number,
-    ): import("../../../kernel/ports").DataTask<
-      AdminArticle,
-      DesktopApiFailure
-    >;
+    ): import("@fluvient-loom/port").DataTask<AdminArticle, DesktopApiFailure>;
   };
 }

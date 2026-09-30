@@ -113,35 +113,26 @@ export interface MobileApiFailure {
 
 export interface MobileApi {
   readonly siteRoutes: {
-    get(): import("../../../kernel/ports").DataTask<
-      SiteRoutes,
-      MobileApiFailure
-    >;
+    get(): import("@fluvient-loom/port").DataTask<SiteRoutes, MobileApiFailure>;
   };
   readonly tShelf: {
     get(
       input: TShelfInput,
-    ): import("../../../kernel/ports").DataTask<TShelf, MobileApiFailure>;
+    ): import("@fluvient-loom/port").DataTask<TShelf, MobileApiFailure>;
   };
   readonly categoryShelf: {
     get(
       categoryId: number | undefined,
-    ): import("../../../kernel/ports").DataTask<
-      CategoryShelf,
-      MobileApiFailure
-    >;
+    ): import("@fluvient-loom/port").DataTask<CategoryShelf, MobileApiFailure>;
   };
   readonly article: {
     getPublished(
       id: number,
-    ): import("../../../kernel/ports").DataTask<
-      MobileArticle,
-      MobileApiFailure
-    >;
+    ): import("@fluvient-loom/port").DataTask<MobileArticle, MobileApiFailure>;
   };
   readonly adminArticle: {
     get(
       id: number,
-    ): import("../../../kernel/ports").DataTask<AdminArticle, MobileApiFailure>;
+    ): import("@fluvient-loom/port").DataTask<AdminArticle, MobileApiFailure>;
   };
 }

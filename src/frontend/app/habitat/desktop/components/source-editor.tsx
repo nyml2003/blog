@@ -1,5 +1,5 @@
 import { type Accessor, createEffect, createSignal, onCleanup } from "solid-js";
-import type { DeepReadonly } from "../../../kernel";
+import { type DeepReadonly } from "@fluvient-loom/common";
 import {
   byteOffsetToSelection,
   type HtmlDiagnostic,

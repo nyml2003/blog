@@ -8,6 +8,8 @@
     "resolveJsonModule": true,
     "noEmit": true,
     "skipLibCheck": true,
+    "jsx": "preserve",
+    "jsxImportSource": "solid-js",
     "types": ["node"]
   },
   "include": [

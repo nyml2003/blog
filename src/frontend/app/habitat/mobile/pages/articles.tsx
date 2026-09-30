@@ -1,9 +1,9 @@
 import { type Component } from "solid-js";
 import type { MobileRouteContext } from "../context";
 import type { MobileApi } from "../../api/mobile";
-import type { NavigationPort } from "../../../kernel";
+import { type NavigationPort } from "@fluvient-loom/port";
 import type { CategoryShelf } from "../../api/mobile";
-import type { DeepReadonly } from "../../../kernel";
+import { type DeepReadonly } from "@fluvient-loom/common";
 import { useMobileArticles, rootCategoryName } from "../logic/articles";
 import { ArticleCard } from "../components";
 import { Heading, StateMessage, Text } from "../ui";

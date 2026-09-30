@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import {
   initSync,
   inspect_html,
-} from "../../app/infrastructure/browser/validation/generated/article_html_wasm.js";
+} from "../../app/habitat/validation/generated/article_html_wasm.js";
 
 const workspace = fileURLToPath(new URL("../../../../", import.meta.url));
 const fixtures = JSON.parse(
@@ -56,7 +56,7 @@ const expected = JSON.parse(native.stdout);
 initSync({
   module: readFileSync(
     new URL(
-      "../../app/infrastructure/browser/validation/generated/article_html_wasm_bg.wasm",
+      "../../app/habitat/validation/generated/article_html_wasm_bg.wasm",
       import.meta.url,
     ),
   ),

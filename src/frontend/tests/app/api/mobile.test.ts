@@ -5,12 +5,12 @@ import {
   articleIdFromSearch,
   canReturnToSite,
 } from "../../../app/bootstrap/mobile/detail-input";
-import { ok } from "../../../app/kernel/result";
-import type {
-  NetworkPort,
-  NetworkRequest,
-  NetworkResponse,
-} from "../../../app/kernel/ports";
+import { ok } from "@fluvient-loom/common";
+import {
+  type NetworkPort,
+  type NetworkRequest,
+  type NetworkResponse,
+} from "@fluvient-loom/port";
 
 function network(response: NetworkResponse): NetworkPort {
   return {
