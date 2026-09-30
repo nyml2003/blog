@@ -1,6 +1,6 @@
 import type { CliPlugin } from '@fluvient-cli/cli-kit/plugin.ts';
 import type { CommandContext } from '@fluvient-cli/cli-kit/commands.ts';
-import { ConsoleRuntimeLog } from '@fluvient-cli/cli-core/process.ts';
+import { OutputRuntimeLog } from '@fluvient-cli/cli-core/runtime-output.ts';
 import { WorkspaceBinaries } from '@fluvient-cli/cli-core/binaries.ts';
 import { commandDefinitions, groupDefinitions } from './registry.ts';
 import type { OutputPort } from '@fluvient-cli/cli-kit/output.ts';
@@ -28,8 +28,8 @@ export function blogPlugin(): CliPlugin {
         supervisor: container.get('supervisor'),
         fs,
         reporter: container.get('reporter'),
-        output: configureOutput(container.get<OutputPort>('output'), globals.json === true),
-        log: new ConsoleRuntimeLog(globals.json === true),
+        output: container.get<OutputPort>('output'),
+        log: new OutputRuntimeLog(container.get<OutputPort>('output')),
         probe: container.get('probe'),
         readiness: container.get('readiness'),
         binaries: container.get('binaries'),
@@ -40,10 +40,4 @@ export function blogPlugin(): CliPlugin {
       }));
     },
   };
-}
-
-function configureOutput(output: OutputPort, json: boolean): OutputPort {
-  const configurable = output as OutputPort & { setJson?: (value: boolean) => void };
-  configurable.setJson?.(json);
-  return output;
 }

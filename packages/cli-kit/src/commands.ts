@@ -40,7 +40,7 @@ export interface CommandContext {
   dryRun: boolean;
   json: boolean;
 }
-export type CommandOutcome = number | Result<{ readonly exitCode?: number }, import('./errors.ts').OpsFailure>;
+export type CommandOutcome = Result<{ readonly exitCode?: number }, import('./errors.ts').OpsFailure>;
 export type CommandHandler = (context: CommandContext, args: CommandArgs) => Promise<CommandOutcome> | CommandOutcome;
 export interface CommandDefinition { readonly meta: CommandMeta; readonly handler: CommandHandler }
 export interface GroupDefinition { readonly meta: GroupMeta }
@@ -75,7 +75,7 @@ export function defineCommand<const M extends CommandMeta>(meta: M, handler: (co
   return Object.freeze({ meta: Object.freeze({ ...meta, path: Object.freeze([...meta.path]), options: Object.freeze([...(meta.options ?? [])]), positionals: Object.freeze([...(meta.positionals ?? [])]) }), handler: invoke });
 }
 
-export function validateRegistry(definitions: readonly CommandDefinition[], reservedOptions: readonly string[] = []): void {
+export function validateRegistry(definitions: readonly CommandDefinition[], reservedOptions: readonly string[] = ['help', 'version', 'dry-run', 'json']): void {
   const seen = new Set<string>();
   for (const definition of definitions) {
     const { meta } = definition;
@@ -109,7 +109,7 @@ export function defineGroup(meta: GroupMeta): GroupDefinition {
 export function reflectCommandRegistry(
   definitions: readonly CommandDefinition[],
   groups: readonly GroupDefinition[] = [],
-  reservedOptions: readonly string[] = [],
+  reservedOptions: readonly string[] = ['help', 'version', 'dry-run', 'json'],
 ) {
   validateRegistry(definitions, reservedOptions);
   const byPath = new Map(definitions.map((d) => [d.meta.path.join(' '), d]));

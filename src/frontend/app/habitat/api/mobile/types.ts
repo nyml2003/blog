@@ -34,6 +34,16 @@ export const mobileArticleSchema = z
   }));
 export type MobileArticle = z.output<typeof mobileArticleSchema>;
 
+const htmlInspectionSchema = z.object({
+  valid: z.boolean(),
+  profileVersion: z.string(),
+  diagnostics: z.array(z.unknown()),
+});
+export const adminArticleSchema = mobileArticleSchema.and(
+  z.object({ htmlInspection: htmlInspectionSchema }),
+);
+export type AdminArticle = z.output<typeof adminArticleSchema>;
+
 const shelfArticleSchema = z.object({
   id: positiveId,
   href: z.string(),
@@ -128,5 +138,10 @@ export interface MobileApi {
       MobileArticle,
       MobileApiFailure
     >;
+  };
+  readonly adminArticle: {
+    get(
+      id: number,
+    ): import("../../../kernel/ports").DataTask<AdminArticle, MobileApiFailure>;
   };
 }

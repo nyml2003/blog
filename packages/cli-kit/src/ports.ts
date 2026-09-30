@@ -21,7 +21,7 @@ export interface FsPort {
 }
 
 export interface Reporter { section(title: string): void; ok(message: string): void; fail(message: string): void; info(message: string): void }
-export type { OutputChannel, OutputEvent, OutputLevel, OutputLogEvent, OutputPort, OutputResultEvent, OutputTelemetryEvent } from './output.ts';
+export type { OutputChannel, OutputEvent, OutputLevel, OutputLifecycleEvent, OutputLogEvent, OutputPort, OutputResultEvent, OutputTelemetryEvent } from './output.ts';
 export { CaptureOutputPort, NullOutputPort } from './output.ts';
 
 export type ServiceRole = 'web' | 'product' | 'data' | 'mock';
@@ -75,6 +75,6 @@ export interface ReadinessProbe { wait(port: number, options?: ReadinessOptions)
 export interface BinaryResolver { resolve(role: Exclude<ServiceRole, 'web'>): Promise<string | undefined> }
 
 /** Every line emitted by the runtime orchestrator carries the `[ops]` source prefix. */
-export interface RuntimeLog { info(message: string): void; error(message: string): void; log(role: LogSource, message: string): void; json(value: unknown): void }
+export interface RuntimeLog { info(message: string): void; error(message: string): void; log(role: LogSource, message: string, stream?: LogStream): void; json(value: unknown): void }
 
 export interface SignalPort { onSignal(handler: (signal: NodeJS.Signals) => void): () => void }

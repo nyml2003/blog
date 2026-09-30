@@ -596,7 +596,7 @@ test("admin API 401 redirects to login while session and public failures stay lo
 
 test("admin login source does not persist or log credentials", () => {
   const source = readFileSync(
-    new URL("../../../desktop/src/pages/admin/login.tsx", import.meta.url),
+    new URL("../../../app/habitat/desktop/pages/login.tsx", import.meta.url),
     "utf8",
   );
   assert.doesNotMatch(source, /localStorage|sessionStorage|console\./);

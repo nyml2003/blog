@@ -29,4 +29,4 @@ export async function main(argv: readonly string[] = process.argv.slice(2), fetc
   return createApp(fetchImpl).run(argv);
 }
 
-if (isEntry(import.meta.url)) runEntry(main);
+if (isEntry(import.meta.url)) runEntry(main, createApp().container.get('output'));

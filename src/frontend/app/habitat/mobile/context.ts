@@ -36,4 +36,17 @@ export function route(routes: SiteRoutes, id: string): string {
   return value;
 }
 
+export function routeWithQuery(
+  routes: SiteRoutes,
+  id: string,
+  parameters: Readonly<Record<string, string | number>>,
+): string {
+  const pathValue = route(routes, id);
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(parameters))
+    search.set(key, String(value));
+  const query = search.toString();
+  return query === "" ? pathValue : `${pathValue}?${query}`;
+}
+
 export type MobileResource<T, E> = DataResource<T, E>;

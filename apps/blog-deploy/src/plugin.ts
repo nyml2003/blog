@@ -3,7 +3,7 @@ import type { FetchLike } from './installer/release.ts';
 import { installerDefinitions } from './installer/registry.ts';
 import { runInstallerCommand } from './installer/main.ts';
 import { WorkspaceBinaries } from '@fluvient-cli/cli-core/binaries.ts';
-import { ConsoleRuntimeLog } from '@fluvient-cli/cli-core/process.ts';
+import { OutputRuntimeLog } from '@fluvient-cli/cli-core/runtime-output.ts';
 
 export function installerPlugin(fetchImpl: FetchLike): CliPlugin {
   return {
@@ -19,7 +19,8 @@ export function installerPlugin(fetchImpl: FetchLike): CliPlugin {
         supervisor: container.get('supervisor'),
         fs,
         reporter: container.get('reporter'),
-        log: new ConsoleRuntimeLog(globals.json === true),
+        output: container.get('output'),
+        log: new OutputRuntimeLog(container.get('output')),
         probe: container.get('probe'),
         readiness: container.get('readiness'),
         binaries: container.get('binaries'),

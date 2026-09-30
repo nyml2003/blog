@@ -66,6 +66,8 @@ ops release both --yes
 | `ops delivery build` | 无（只构建 `src/frontend/dist` 与 Rust Product/Data/Mock binary，不编译 Go 目标） | — | — |
 | `ops e2e --mode integration` | Ops 启动隔离的 integration 栈并在同一进程内执行 Playwright | fixture + Data(test) | Product 页面与 `/api` 同源 |
 | `ops e2e --mode dev --scenario <NAME>` | Ops 启动隔离的 Vite + Mock 栈并在同一进程内执行 Playwright | Mock 命名场景 | Vite 实际绑定地址 |
+| `ops perf mobile --mode integration` | Ops 启动隔离的 integration 栈并对 Mobile 公开页做 Playwright 性能采样 | fixture + Data(test) | Product 页面与 `/api` 同源 |
+| `ops perf mobile --origin <URL>` | 无（直接度量既有入口，如线上站点） | 被度量站点自身 | `--origin` 提供的 URL |
 
 约定：
 
@@ -73,6 +75,7 @@ ops release both --yes
 - `--watch`、`--check`、`--help`、`--dry-run`、`--json` 为 switch：出现 true，缺省 false，重复幂等，不接受 `=true`/`=false`。`ops quality format` 写入，`ops quality format --check` 只检查；dry-run 仍须完整参数。
 - `ops e2e` 必须显式选择 `--mode`、`--playwright-module` 和 `--chromium-path`；`integration` 不接受 `--scenario`，`dev` 必须显式选择一个 Mock 场景。浏览器依赖不从环境变量补值；运行环境必须允许启动 Chromium 子进程和临时用户目录。
 - E2E 不属于 `ops quality check`；运行产物写入 `target/e2e/<run-id>/`，包含截图、`report.json` 以及页面 console/pageerror 诊断。`report.json` 会记录模式、场景、入口、最终状态和错误摘要。
+- `ops perf mobile` 与 `ops e2e` 共用 `--playwright-module`/`--chromium-path` 契约，但必须且只能在 `--mode integration`（自建隔离栈）与 `--origin <URL>`（度量既有入口，如线上站点）之间二选一。采样旅程为 Mobile 冷加载与底栏切换，按 `unthrottled`/`slow4g`/`slow3g` 网络档位（`--profile` 可单选，默认全跑）重复 `--runs` 次（默认 3），指标含切换到壳/内容可见耗时、FCP/LCP、静态资源传输字节与缓存命中数。产物写入 `target/e2e/<run-id>/perf-report.json`（`kind: "perf"`）；同一指标建议先记录基线再对比优化，线上验收用 `--origin` 跑真实部署。
 
 - 端口候选必须由对应 `--web-port`/`--product-port`/`--data-port`/`--mock-port`（十进制 int32，`1024`–`65535`）显式提供，无默认值；被占用时从候选值起逐次 +1（最多尝试 10 个端口），实际绑定结果即注入给依赖方的地址。
 - 监听地址固定 `127.0.0.1`，不提供 `--host`/`--listen`；`--scenario` 只接受命名场景，通过 CLI 传入，不读取环境变量。
@@ -82,7 +85,7 @@ ops release both --yes
 - GitHub 模式在 Product 启动时尝试一次同步。远端暂时不可用时服务仍使用 Data 中最后一次成功导入的快照；管理写操作保持失败关闭，状态接口记录同步错误。生产 API 地址固定为 GitHub HTTPS，测试用 loopback HTTP 地址没有运行时配置入口。
 - 日志每行带来源前缀 `[web]`/`[product]`/`[data]`/`[mock]`/`[ops]`；`[ops]` 的错误与失败摘要输出到 stderr。
 - 顶层退出码全局统一：`0` 成功、`10` 用法/配置错误、`20` 执行失败（端口耗尽、服务启动失败、构建失败或子进程退出）、`130` SIGINT、`143` SIGTERM。运行中的模式没有 `0` 退出路径：正常停止只能通过信号（130/143）；任一服务子进程在运行态自行退出——含 `exit 0`——都算 `CHILD_EXITED`/`20` 并停止其余服务。Ctrl-C 会传播到所有子进程并等待退出（限期 5s，超限 SIGKILL）。
-- `--dry-run` 只打印将启动的进程、候选端口与构建步骤，无副作用；`--json` 的 stdout 使用 NDJSON（每行一个 JSON 对象）：启动成功先输出地址清单，启动前失败只输出错误对象，运行期失败会在地址清单后追加终止错误对象。机器消费者把最后一个 JSON 对象视为最新生命周期事件；人类进度和子进程日志走 stderr。
+- `--dry-run` 只打印将启动的进程、候选端口与构建步骤，无副作用；`--json` 的 stdout 使用统一 NDJSON 事件（每行一个 JSON 对象），包括帮助、参数错误、服务地址、dry-run、子进程行和最终终止结果。机器消费者把最后一个 JSON 对象视为最终结果，并按 `schemaVersion/event/command/code/exitCode/message` 解析；日志事件额外保留 `source/channel`。人类模式才渲染成文本并分别使用 stdout/stderr。
 - ops 内部命令结果使用结构化 `Result`，输出通过统一事件端口交给终端或 NDJSON 适配器；JSON runtime 事件带 `schemaVersion`、`event`、`code`、`exitCode` 和 `message`。埋点事件默认不进入终端输出，后续可接入独立收集器。
 
 ## 管理端凭证

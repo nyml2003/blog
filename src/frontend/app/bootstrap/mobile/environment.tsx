@@ -12,12 +12,16 @@ import {
   createBrowserOperationId,
 } from "../../infrastructure/browser";
 import type { Result, ResourceHandle } from "../../kernel";
-import type { CancellationFailure, TaskFailure } from "../../kernel/ports";
 import {
   createMobileApi,
+  siteRoutesSchema,
   type MobileApiFailure,
+  type SiteRoutes,
 } from "../../habitat/api/mobile";
 import type { MobilePageContext } from "../../habitat/mobile";
+// 路由清单在构建期由 pages.registry 投影生成（与后端 /api/public/site-routes 同源，
+// 有测试守卫同步），直接内嵌进包，避免每次导航阻塞首绘的串行请求。
+import siteRoutesManifest from "../../../site-routes.json";
 
 function eventHandle(
   add: (listener: EventListener) => void,
@@ -90,36 +94,32 @@ function browserContextWithoutRoutes(): Omit<MobilePageContext, "routes"> {
   };
 }
 
-function startupFailure(
-  error: MobileApiFailure | CancellationFailure | TaskFailure,
-): MobileApiFailure {
-  if (error.kind === "cancelled") {
+function embeddedSiteRoutes(): Result<SiteRoutes, MobileApiFailure> {
+  const parsed = siteRoutesSchema.safeParse(siteRoutesManifest);
+  if (!parsed.success) {
     return {
-      kind: "network",
-      message: "页面初始化被取消",
-      code: undefined,
-      status: undefined,
-      issues: undefined,
+      ok: false,
+      error: {
+        kind: "protocol",
+        message: "内嵌路由清单不符合协议",
+        code: undefined,
+        status: undefined,
+        issues: parsed.error.issues.map(
+          (issue) => issue.path.join(".") || issue.message,
+        ),
+      },
     };
   }
-  if (error.kind === "task") {
-    return {
-      kind: "protocol",
-      message: error.message,
-      code: undefined,
-      status: undefined,
-      issues: undefined,
-    };
-  }
-  return error;
+  return { ok: true, value: parsed.data };
 }
 
-export async function createBrowserMobileContext(): Promise<
-  Result<MobilePageContext, MobileApiFailure>
+export function createBrowserMobileContext(): Result<
+  MobilePageContext,
+  MobileApiFailure
 > {
   const base = browserContextWithoutRoutes();
-  const routes = await base.api.siteRoutes.get().start();
-  if (!routes.ok) return { ok: false, error: startupFailure(routes.error) };
+  const routes = embeddedSiteRoutes();
+  if (!routes.ok) return { ok: false, error: routes.error };
   return { ok: true, value: { ...base, routes: routes.value } };
 }
 
@@ -139,12 +139,11 @@ export function mountMobilePage(
 ): void {
   const mount = document.getElementById("app");
   if (!mount) throw new Error('Page mount element "#app" is missing');
-  void createBrowserMobileContext().then((result) => {
-    if (!result.ok) {
-      render(() => createComponent(StartupError, {}), mount);
-      return;
-    }
-    const Page = createPage(result.value);
-    render(() => createComponent(Page, {}), mount);
-  });
+  const result = createBrowserMobileContext();
+  if (!result.ok) {
+    render(() => createComponent(StartupError, {}), mount);
+    return;
+  }
+  const Page = createPage(result.value);
+  render(() => createComponent(Page, {}), mount);
 }

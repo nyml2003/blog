@@ -1,5 +1,6 @@
 import type { ProcessPort, Reporter } from '@fluvient-cli/cli-kit/ports.ts';
 import type { Workspace } from '@fluvient-cli/cli-kit/workspace.ts';
+import { EXIT_FAILURE, EXIT_OK, EXIT_SIGINT } from '@fluvient-cli/cli-kit/errors.ts';
 
 export interface PlaygroundDevOptions {
   readonly host: boolean;
@@ -33,9 +34,9 @@ export async function runPlaygroundDev(
 
   // Buffered fallback (tests, restricted ports): output surfaces on exit.
   const result = await process.run(command, commandArgs, workspace.root);
-  if (result.code === 0) return 0;
-  if (result.code === null) return 130;
+  if (result.code === EXIT_OK) return EXIT_OK;
+  if (result.code === null) return EXIT_SIGINT;
   reporter.fail(`playground dev 退出码 ${result.code}`);
   reporter.info(result.stderr || result.stdout);
-  return 20;
+  return EXIT_FAILURE;
 }

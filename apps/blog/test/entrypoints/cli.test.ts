@@ -255,5 +255,36 @@ test('global switches retain routing positions without repairing missing argumen
   assert.match(bad.errors, /选项缺少值: --data/);
   const good = await capture(['--dry-run', 'runtime', '--json', 'backend', '--content-source', 'fixture', '--data', 'mock', '--product-port', '8080', '--data-port', '8081']);
   assert.equal(good.code, 0);
-  assert.equal(JSON.parse(good.output).command, 'runtime backend');
+  const events = good.output.split('\n').filter(Boolean).map((line) => JSON.parse(line) as { event: string; command: string; exitCode: number });
+  assert.deepEqual(events.map((event) => event.event), ['dry_run', 'terminated']);
+  assert.equal(events.at(-1)?.command, 'runtime backend');
+  assert.equal(events.at(-1)?.exitCode, 0);
+});
+
+test('JSON usage errors emit parseable events and a final failure result', async () => {
+  const run = await capture(['runtime', 'dev', '--json', '--scenario']);
+  assert.equal(run.code, 10);
+  const events = run.output.split('\n').filter(Boolean).map((line) => JSON.parse(line) as { kind: string; status?: string; code?: string; exitCode?: number });
+  assert.equal((events.at(-1) as { event?: string }).event, 'terminated');
+  assert.equal(events.at(-1)?.status, 'failure');
+  assert.equal(events.at(-1)?.code, 'USAGE');
+  assert.equal(events.at(-1)?.exitCode, 10);
+});
+
+test('JSON help ends with a successful result', async () => {
+  const run = await capture(['--json', '--help']);
+  assert.equal(run.code, 0);
+  const events = run.output.split('\n').filter(Boolean).map((line) => JSON.parse(line) as { event: string; code: string; exitCode: number });
+  assert.equal(events[0]?.event, 'log');
+  assert.deepEqual(events.at(-1), {
+    schemaVersion: 1,
+    event: 'terminated',
+    command: '',
+    ok: true,
+    status: 'success',
+    code: 'OK',
+    exitCode: 0,
+    message: 'OK',
+    data: {},
+  });
 });

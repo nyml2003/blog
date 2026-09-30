@@ -6,7 +6,8 @@ export const EXIT_USAGE = 10;
 export const EXIT_FAILURE = 20;
 export const EXIT_SIGINT = 130;
 export const EXIT_SIGTERM = 143;
-export const ExitCode = Object.freeze({ Ok: EXIT_OK, Usage: EXIT_USAGE, Failure: EXIT_FAILURE, Sigint: EXIT_SIGINT, Sigterm: EXIT_SIGTERM });
+export const EXIT_LOCKED = 30;
+export const ExitCode = Object.freeze({ Ok: EXIT_OK, Usage: EXIT_USAGE, Failure: EXIT_FAILURE, Sigint: EXIT_SIGINT, Sigterm: EXIT_SIGTERM, Locked: EXIT_LOCKED });
 export type ExitCode = typeof ExitCode[keyof typeof ExitCode];
 
 export interface ErrorDetail { service?: string; port?: number; command?: string; [key: string]: unknown }

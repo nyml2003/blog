@@ -129,6 +129,47 @@ test("mobile API retains the server-owned article href", async () => {
   assert.equal(result.value.articles[0]?.href, "/m/articles/detail.html?id=7");
 });
 
+test("mobile admin preview reads the management article contract", async () => {
+  let requestPath = "";
+  const result = await createMobileApi({
+    request(request) {
+      requestPath = request.path;
+      return Promise.resolve(
+        ok({
+          status: 200,
+          headers: {},
+          body: body({
+            id: 7,
+            title: "文章",
+            summary: "摘要",
+            articleTypeId: 2,
+            articleType: undefined,
+            contentHtml: "<p>正文</p>",
+            status: "draft",
+            createdAt: "2026-09-28T00:00:00Z",
+            updatedAt: "2026-09-28T00:00:00Z",
+            publishedAt: undefined,
+            termIds: [],
+            terms: [],
+            htmlInspection: {
+              valid: true,
+              profileVersion: "article-html/v1",
+              diagnostics: [],
+            },
+          }),
+        }),
+      );
+    },
+  })
+    .adminArticle.get(7)
+    .start();
+  assert.equal(result.ok, true);
+  assert.equal(
+    requestPath,
+    "/api/admin/articles?sceneCode=admin.article_detail&id=7",
+  );
+});
+
 test("detail input rejects invalid IDs and only returns into same-site history", () => {
   assert.equal(articleIdFromSearch("?id=7"), 7);
   for (const search of [

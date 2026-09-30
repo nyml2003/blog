@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import type { CommandContext } from '@fluvient-cli/cli-kit/commands.ts';
-import { OpsError } from '@fluvient-cli/cli-kit/errors.ts';
+import { EXIT_FAILURE, EXIT_OK, OpsError } from '@fluvient-cli/cli-kit/errors.ts';
 import type { FileMetadata, FsPort } from '@fluvient-cli/cli-kit/ports.ts';
 
 export const ADMIN_PASSWORD_HASH_ENV = 'BLOG_ADMIN_PASSWORD_HASH';
@@ -31,12 +31,12 @@ export async function runAdminCredentialCommand(
   );
   if (!stateDirectory) {
     context.reporter.fail('无法确定管理凭证目录：HOME 与 XDG_STATE_HOME 均未设置');
-    return 20;
+    return EXIT_FAILURE;
   }
   if (context.dryRun) {
     context.reporter.info(`将通过 TTY 交互运行 ${HELPER_BINARY} ${operation}`);
     context.reporter.info(`状态目录: ${stateDirectory}`);
-    return 0;
+    return EXIT_OK;
   }
 
   let binary = await resolveHelper(context.fs, context.workspace.root);
@@ -49,13 +49,13 @@ export async function runAdminCredentialCommand(
     if (build.code !== 0) {
       context.reporter.fail('构建管理凭证 helper 失败');
       context.reporter.info(build.stderr || build.stdout);
-      return 20;
+      return EXIT_FAILURE;
     }
     binary = await resolveHelper(context.fs, context.workspace.root);
   }
   if (!binary || !context.process.runInteractive) {
     context.reporter.fail('管理凭证 helper 或交互式进程端口不可用');
-    return 20;
+    return EXIT_FAILURE;
   }
 
   const code = await context.process.runInteractive(
@@ -65,10 +65,10 @@ export async function runAdminCredentialCommand(
   );
   if (code !== 0) {
     context.reporter.fail(`管理凭证操作失败（exit ${code}）`);
-    return 20;
+    return EXIT_FAILURE;
   }
   context.reporter.ok(operation === 'init' ? '管理凭证已初始化' : '恢复码已重新生成');
-  return 0;
+  return EXIT_OK;
 }
 
 export async function loadAdminCredentialEnvironment(

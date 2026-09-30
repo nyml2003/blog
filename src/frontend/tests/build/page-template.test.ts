@@ -11,6 +11,7 @@ import { resolve } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { pageRegistry, pageRoutes } from "../../pages.registry";
+import { siteRoutesSchema } from "../../app/habitat/api/mobile";
 import {
   generatedPagePath,
   generatePageInputs,
@@ -105,6 +106,31 @@ test("site-routes.json manifest stays in sync with the page registry", () => {
     assert.ok(
       aliases.includes(path),
       `manifest route ${id} -> ${path} must be a registered alias`,
+    );
+  }
+});
+
+test("embedded site-routes manifest satisfies the mobile runtime schema", () => {
+  // Mobile bootstrap 在构建期内嵌这份清单，形状必须能通过运行时同一个
+  // zod schema（多余字段被剥离），且覆盖 Mobile 页面实际引用的路由 id。
+  const manifest = JSON.parse(
+    readFileSync(resolve(frontendRoot, "site-routes.json"), "utf8"),
+  );
+  const parsed = siteRoutesSchema.safeParse(manifest);
+  assert.ok(parsed.success, `manifest must satisfy siteRoutesSchema`);
+  const mobileRouteIds = [
+    "mobile-home",
+    "mobile-articles",
+    "mobile-article-list",
+    "mobile-article-detail",
+    "mobile-settings",
+    "mobile-admin-article-preview",
+  ] as const;
+  for (const id of mobileRouteIds) {
+    assert.ok(
+      typeof parsed.data.routes[id] === "string" &&
+        parsed.data.routes[id] !== "",
+      `manifest must provide route: ${id}`,
     );
   }
 });

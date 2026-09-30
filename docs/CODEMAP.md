@@ -112,7 +112,9 @@ pages.registry.ts（页面登记表）
   → site-routes.json（路由投影，测试守卫同步）
   → protocol/site_routes.rs 编译期内嵌
   → GET /api/public/site-routes 下发（Product 与 Mock 同一份）
-  → 旧页面由 definePage、新页面由 bootstrap environment 拉取并存入运行时上下文
+  → 旧页面由 definePage、Desktop 新页面由 bootstrap environment 运行时拉取；
+    Mobile 新页面在构建期内嵌同一份清单（bootstrap/mobile/environment.tsx），
+    首绘不再等待该请求
   → 页面调语义函数（如 mobileArticlesHref()）得到路径 → 渲染 <a href>
 ```
 

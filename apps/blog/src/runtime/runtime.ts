@@ -5,6 +5,8 @@ import {
 } from '../admin/admin-auth.ts';
 import {
   LISTEN_HOST,
+  EXIT_OK,
+  EXIT_FAILURE,
   OpsError,
   errorPayload,
   servicesPayload,
@@ -28,6 +30,7 @@ import type {
   SignalPort,
   SpawnRequest,
 } from '@fluvient-cli/cli-kit/ports.ts';
+import type { OutputPort } from '@fluvient-cli/cli-kit/output.ts';
 import { exitCodeForSignal, INJECTION_ENV, SERVICE_BINARIES, type BuildStep, type ModePlan } from './runtime-plan.ts';
 
 /** Ports handed to the runtime modes; `process.run()` keeps serving builds and checks unchanged. */
@@ -38,6 +41,7 @@ export interface RuntimePorts {
   readiness: ReadinessProbe;
   binaries: BinaryResolver;
   log: RuntimeLog;
+  output?: OutputPort;
   root: string;
   fs?: FsPort;
   signals?: SignalPort;
@@ -67,7 +71,11 @@ export function runtimeCommand(plan: ModePlan): string { return `runtime ${plan.
 
 export async function runRuntimeMode(plan: ModePlan, ports: RuntimePorts, options: RunOptions): Promise<number> {
   const command = runtimeCommand(plan);
-  if (options.dryRun) { printPlan(ports, options, command, plan); return 0; }
+  if (options.dryRun) {
+    printPlan(ports, options, command, plan);
+    if (options.json) ports.output?.result({ status: 'success', command, exitCode: EXIT_OK, code: 'OK', data: { dryRun: true } });
+    return EXIT_OK;
+  }
 
   const group = ports.supervisor.createGroup();
   // Signals are handled only once services are being brought up: during a blocking build the
@@ -78,15 +86,24 @@ export async function runRuntimeMode(plan: ModePlan, ports: RuntimePorts, option
     signals = subscribeSignals(ports);
     const watcher = await startWatchBuild(plan, ports, group);
     const addresses = await startServices(plan, ports, group, options);
-    reportAddresses(ports, options, command, plan, addresses);
-    return await waitModeEnd(plan, ports, group, options, signals.promise);
+    reportAddresses(ports, options, command, plan, addresses, group);
+    const exitCode = await waitModeEnd(plan, ports, group, options, signals.promise);
+    if (exitCode === 130 || exitCode === 143) await cleanupTempDatabase(plan, ports);
+    if (options.json) ports.output?.result({ status: 'failure', command, exitCode, code: 'CANCELLED' });
+    return exitCode;
   } catch (error) {
     await group.stopAll('SIGTERM', options.graceMs ?? SHUTDOWN_GRACE_MS);
     reportFailure(ports, options, command, error);
-    return error instanceof OpsError ? error.exitCode : 20;
+    return error instanceof OpsError ? error.exitCode : EXIT_FAILURE;
   } finally {
     signals.unsubscribe();
   }
+}
+
+async function cleanupTempDatabase(plan: ModePlan, ports: RuntimePorts): Promise<void> {
+  if (plan.dataMode !== 'test') return;
+  const database = join(ports.root, ...TEST_DB_DIR, `${process.pid}.db`);
+  await ports.process.run('rm', ['-f', database, `${database}-shm`, `${database}-wal`], ports.root);
 }
 
 /** Builds `web/dist` and, when the Cargo workspace is present, the Rust delivery binaries. */
@@ -94,15 +111,24 @@ export async function runDeliveryBuild(ports: RuntimePorts, options: RunOptions)
   const command = 'delivery build';
   const steps = await deliverySteps(ports);
   const plan: ModePlan = { mode: 'dev', services: [], candidates: {}, builds: steps, entry: null, dataMode: null, databasePath: null, scenario: null, watch: false, contentSource: 'fixture' };
-  if (options.dryRun) { printPlan(ports, options, command, plan); return 0; }
+  if (options.dryRun) {
+    printPlan(ports, options, command, plan);
+    if (options.json) ports.output?.result({ status: 'success', command, exitCode: EXIT_OK, code: 'OK', data: { dryRun: true } });
+    return EXIT_OK;
+  }
   try {
     for (const step of steps) await executeStep(step, ports);
-    if (options.json) ports.log.json(servicesPayload(command, [], null));
+    if (options.json) {
+      const payload = servicesPayload(command, [], null);
+      ports.output?.lifecycle({ event: 'services_ready', command, data: { services: payload.services, entry: payload.entry } });
+      if (!ports.output) ports.log.json(payload);
+      ports.output?.result({ status: 'success', command, exitCode: EXIT_OK, code: 'OK' });
+    }
     else ports.log.info('构建完成: web/dist 与 Rust 交付 binary');
-    return 0;
+    return EXIT_OK;
   } catch (error) {
     reportFailure(ports, options, command, error);
-    return error instanceof OpsError ? error.exitCode : 20;
+    return error instanceof OpsError ? error.exitCode : EXIT_FAILURE;
   }
 }
 
@@ -210,11 +236,12 @@ function startDetails(process: ManagedProcess, exit: ProcessExit): ErrorDetail[]
 }
 
 function forwardLines(ports: RuntimePorts, process: ManagedProcess): void {
-  process.onLine((line) => ports.log.log(line.role, line.text));
+  process.onLine((line) => ports.log.log(line.role, line.text, line.stream));
 }
 
 function emitCaptured(log: RuntimeLog, role: LogSource, stdout: string, stderr: string): void {
-  for (const line of [...splitLines(stdout), ...splitLines(stderr)]) log.log(role, line);
+  for (const line of splitLines(stdout)) log.log(role, line, 'stdout');
+  for (const line of splitLines(stderr)) log.log(role, line, 'stderr');
 }
 
 function splitLines(text: string): string[] {
@@ -298,15 +325,21 @@ async function testDatabasePath(ports: RuntimePorts): Promise<string> {
   return join(dir, `${process.pid}.db`);
 }
 
-function reportAddresses(ports: RuntimePorts, options: RunOptions, command: string, plan: ModePlan, addresses: ServiceAddress[]): void {
+function reportAddresses(ports: RuntimePorts, options: RunOptions, command: string, plan: ModePlan, addresses: ServiceAddress[], group: ProcessGroupPort): void {
   const entry = plan.entry ? addresses.find((address) => address.service === plan.entry)?.url ?? null : null;
-  if (options.json) { ports.log.json(servicesPayload(command, addresses, entry)); return; }
+  if (options.json) {
+    const payload = servicesPayload(command, addresses, entry);
+    const servicePids: Record<string, number> = {};
+    for (const member of group.members) if (member.pid !== undefined) servicePids[member.role] = member.pid;
+    ports.output?.lifecycle({ event: 'services_ready', command, data: { services: payload.services, entry: payload.entry, servicePids } });
+    if (!ports.output) ports.log.json(payload);
+    return;
+  }
   for (const address of addresses) ports.log.info(`${address.service} 就绪: ${address.url}`);
   if (entry) ports.log.info(`访问入口: ${entry}`);
 }
 
 function reportFailure(ports: RuntimePorts, options: RunOptions, command: string, error: unknown): void {
-  if (options.json) ports.log.json(errorPayload(command, error));
   ports.log.error(error instanceof Error ? error.message : String(error));
   const details = error instanceof OpsError ? error.details : [];
   for (const detail of details) {
@@ -314,13 +347,21 @@ function reportFailure(ports: RuntimePorts, options: RunOptions, command: string
     if (!source || !Array.isArray(detail.logs)) continue;
     for (const line of detail.logs as string[]) ports.log.log(source, `| ${line}`);
   }
+  if (options.json && ports.output) {
+    const payload = errorPayload(command, error);
+    ports.output.result({ status: 'failure', command, exitCode: payload.exitCode, code: payload.code, data: { message: payload.message, error: payload.error } });
+  } else if (options.json) {
+    ports.log.json(errorPayload(command, error));
+  }
 }
 
 /** Dry run only describes intent: processes, candidate ports and build steps, with no side effects. */
 function printPlan(ports: RuntimePorts, options: RunOptions, command: string, plan: ModePlan): void {
   const entry = plan.entry ? `http://${LISTEN_HOST}:${plan.candidates[plan.entry]}` : null;
   if (options.json) {
-    ports.log.json({ schemaVersion: 1, event: 'dry_run', ok: true, command, exitCode: 0, code: 'DRY_RUN', message: 'dry run', dryRun: true, services: plan.services.map((role) => serviceAddress(role, requiredPort(plan.candidates[role], role))), entry, builds: plan.builds.map((step) => step.label) });
+    const payload = { dryRun: true, services: plan.services.map((role) => serviceAddress(role, requiredPort(plan.candidates[role], role))), entry, builds: plan.builds.map((step) => step.label) };
+    ports.output?.lifecycle({ event: 'dry_run', command, data: payload });
+    if (!ports.output) ports.log.json({ schemaVersion: 1, event: 'dry_run', ok: true, command, exitCode: EXIT_OK, code: 'DRY_RUN', message: 'dry run', ...payload });
     return;
   }
   ports.log.info(`dry-run: ${command}（不启动进程、不绑定端口、不写文件）`);

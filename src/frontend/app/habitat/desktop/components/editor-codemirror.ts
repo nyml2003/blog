@@ -14,12 +14,12 @@ import {
   keymap,
   lineNumbers,
 } from "@codemirror/view";
-import type { QueryReadonly as DeepReadonly } from "../../../../solid/queries";
+import type { DeepReadonly } from "../../../kernel";
 import {
   byteOffsetToSelection,
   type HtmlDiagnostic,
   type HtmlInspection,
-} from "../../../../common/validation/article-html";
+} from "../../validation/article-html";
 
 export type CodeMirrorDiagnostic = Diagnostic & {
   diagnostic: DeepReadonly<HtmlDiagnostic>;

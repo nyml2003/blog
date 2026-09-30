@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import type { ProcessPort, FsPort, Reporter } from '@fluvient-cli/cli-kit/ports.ts';
+import { EXIT_FAILURE, EXIT_OK } from '@fluvient-cli/cli-kit/errors.ts';
 import {
   RELEASE_BINARIES,
   RELEASE_NGINX,
@@ -28,14 +29,14 @@ function requireFilePorts(fs: FsPort): Required<Pick<FsPort, 'write' | 'copy' | 
 
 async function runStep(step: PackageStep, ports: DeployPorts): Promise<number> {
   const result = await ports.process.run(step.command, [...step.args], step.cwd);
-  if (result.code === 0) {
+  if (result.code === EXIT_OK) {
     ports.reporter.ok(step.label);
-    return 0;
+    return EXIT_OK;
   }
   ports.reporter.fail(`${step.label}(exit ${result.code})`);
   const detail = (result.stderr || result.stdout).trim();
   if (detail) ports.reporter.info(detail.slice(-2000));
-  return 20;
+  return EXIT_FAILURE;
 }
 
 function sha256(content: Buffer): string {
@@ -58,7 +59,7 @@ export async function runDeployPackage(target: DeployTarget, ports: DeployPorts,
   if (options.dryRun) {
     ports.reporter.info(`发布包将写入 ${archive}`);
     for (const step of steps) ports.reporter.info(`- ${step.label}`);
-    return 0;
+    return EXIT_OK;
   }
   const fs = requireFilePorts(ports.fs);
   for (const step of steps.slice(0, 2)) {
@@ -103,9 +104,9 @@ export async function runDeployPackage(target: DeployTarget, ports: DeployPorts,
     if (code !== 0) return code;
     await ports.process.run('rm', ['-rf', staging], ports.root);
     ports.reporter.info(`发布包:${archive}`);
-    return 0;
+    return EXIT_OK;
   } catch (error) {
     ports.reporter.fail(`组装发布包失败:${error instanceof Error ? error.message : String(error)}`);
-    return 20;
+    return EXIT_FAILURE;
   }
 }

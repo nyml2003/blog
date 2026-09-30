@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import type { CommandContext } from '@fluvient-cli/cli-kit/commands.ts';
-import { EXIT_USAGE, OpsError } from '@fluvient-cli/cli-kit/errors.ts';
+import { EXIT_OK, EXIT_USAGE, OpsError } from '@fluvient-cli/cli-kit/errors.ts';
 import { allocatePort, PORT_MAX, PORT_MIN } from '@fluvient-cli/cli-kit/port-allocation.ts';
 import type { ManagedProcess } from '@fluvient-cli/cli-kit/ports.ts';
 
@@ -9,7 +9,7 @@ export type E2eMode = (typeof E2E_MODES)[number];
 export const E2E_SCENARIOS = ['empty', 'slow', 'server-error', 'malformed-response'] as const;
 export type E2eScenario = (typeof E2E_SCENARIOS)[number];
 
-interface E2ePorts {
+export interface E2ePorts {
   readonly product?: number;
   readonly data?: number;
   readonly web?: number;
@@ -90,7 +90,7 @@ export async function runE2e(
     context.log.info(`dry-run: ${command}（不启动进程、不绑定端口、不写文件）`);
     context.log.info(`产物目录: ${artifactDir}`);
     context.log.info('端口: 运行时自动分配隔离候选端口');
-    return 0;
+    return EXIT_OK;
   }
 
   const ports = await allocateE2ePorts(context, args.mode);
@@ -116,7 +116,7 @@ export async function runE2e(
       status: 'passed',
     });
     context.log.info(`E2E 通过，产物目录: ${artifactDir}`);
-    return 0;
+    return EXIT_OK;
   } catch (error) {
     await writeE2eReport(context, artifactDir, {
       version: 1,
@@ -147,7 +147,7 @@ function validateE2eArgs(args: { readonly mode: E2eMode; readonly scenario?: E2e
   }
 }
 
-async function allocateE2ePorts(context: CommandContext, mode: E2eMode): Promise<E2ePorts> {
+export async function allocateE2ePorts(context: CommandContext, mode: E2eMode): Promise<E2ePorts> {
   const base = Math.min(PORT_MAX - 20, Math.max(PORT_MIN, PORT_MIN + 10_000 + (process.pid % 20_000)));
   if (mode === 'integration') {
     const data = await allocatePort({ service: 'data', candidate: base, probe: context.probe });
@@ -159,7 +159,7 @@ async function allocateE2ePorts(context: CommandContext, mode: E2eMode): Promise
   return { mock: mock.port, web: web.port };
 }
 
-function startStack(
+export function startStack(
   context: CommandContext,
   args: { readonly mode: E2eMode; readonly scenario?: E2eScenario },
   ports: E2ePorts,
@@ -175,7 +175,7 @@ function startStack(
   });
 }
 
-async function waitForStack(
+export async function waitForStack(
   stack: ManagedProcess,
   context: CommandContext,
   args: { readonly mode: E2eMode },

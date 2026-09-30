@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { defineCommand, reflectCommandRegistry, validateRegistry } from '../src/commands.ts';
+import { ok } from '../src/result.ts';
 
-const handler = () => 0;
+const handler = () => ok({ exitCode: 0 });
 
 test('registry reflects command metadata into detailed help', () => {
   const command = defineCommand({ path: ['quality', 'check'], summary: 'Run checks', options: [{ name: 'report', model: { kind: 'switch' }, description: 'JSON output' }], examples: ['ops quality check --json'] }, handler);
@@ -36,7 +37,7 @@ test('declarations are immutable and dispatch rejects incomplete or untyped argu
     const verbose: boolean = args.verbose;
     assert.equal(mode, 'first');
     assert.equal(verbose, false);
-    return count;
+    return ok({ exitCode: count });
   });
   const model = command.meta.options?.[1].model;
   assert.ok(model?.kind === 'enum');
@@ -46,7 +47,7 @@ test('declarations are immutable and dispatch rejects incomplete or untyped argu
   assert.throws(() => Reflect.apply(command.handler, undefined, [{}, {}]), /invalid parsed arguments/);
   assert.throws(() => Reflect.apply(command.handler, undefined, [{}, { count: '1', mode: 'first', verbose: false }]), /invalid parsed arguments/);
   assert.throws(() => Reflect.apply(command.handler, undefined, [{}, { count: 1, mode: 'other', verbose: false }]), /invalid parsed arguments/);
-  assert.equal(Reflect.apply(command.handler, undefined, [{}, { count: 1, mode: 'first', verbose: false }]), 1);
+  assert.deepEqual(Reflect.apply(command.handler, undefined, [{}, { count: 1, mode: 'first', verbose: false }]), ok({ exitCode: 1 }));
 });
 
 test('local fields cannot override global switches', () => {
@@ -64,10 +65,10 @@ test('optional value fields stay absent-aware at dispatch and positionals cannot
   }, (_context, args) => {
     const data: 'mock' | 'test' | 'prod' = args.data;
     const path: string | undefined = args['database-path'];
-    return data === 'prod' && path !== undefined ? 1 : 0;
+    return ok({ exitCode: data === 'prod' && path !== undefined ? 1 : 0 });
   });
-  assert.equal(Reflect.apply(command.handler, undefined, [{}, { data: 'prod' }]), 0);
-  assert.equal(Reflect.apply(command.handler, undefined, [{}, { data: 'prod', 'database-path': '/tmp/x.db' }]), 1);
+  assert.deepEqual(Reflect.apply(command.handler, undefined, [{}, { data: 'prod' }]), ok({ exitCode: 0 }));
+  assert.deepEqual(Reflect.apply(command.handler, undefined, [{}, { data: 'prod', 'database-path': '/tmp/x.db' }]), ok({ exitCode: 1 }));
   assert.throws(
     () => Reflect.apply(command.handler, undefined, [{}, { data: 'prod', 'database-path': '' }]),
     /invalid parsed arguments/,

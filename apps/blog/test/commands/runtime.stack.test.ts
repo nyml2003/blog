@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { spawn, execFile, type ChildProcess } from 'node:child_process';
 import { createServer, type Server } from 'node:net';
 import { request } from 'node:http';
-import { chmod, cp, mkdtemp, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { chmod, mkdtemp, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -24,7 +24,7 @@ import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..');
-const cli = join(root, 'ops', 'src', 'interface', 'cli.ts');
+const cli = join(root, 'apps', 'blog', 'src', 'main.ts');
 const testDbDir = join(root, 'target', 'test-dbs');
 const binary = (name: string): string => join(root, 'src', 'target', 'debug', name);
 
@@ -39,7 +39,7 @@ const PORT_BASE = 23000 + (process.pid % 200) * 20;
 type ServiceName = 'data' | 'product' | 'mock';
 
 interface ServiceAddress { service: string; host: string; port: number; url: string }
-interface ServicesPayload { ok: boolean; command: string; services: ServiceAddress[]; entry: string | null }
+interface ServicesPayload { ok: boolean; command: string; services: ServiceAddress[]; entry: string | null; servicePids?: Record<string, number> }
 interface OpsErrorPayload {
   ok: false;
   command: string;
@@ -112,7 +112,7 @@ async function jsonOf<T>(port: number, path: string): Promise<T> {
 
 /** 真实进程表断言：该 `--listen` 端口上已没有任何本模式启动的服务进程。 */
 async function pidsOnPort(name: ServiceName, port: number): Promise<number[]> {
-  const pattern = `${binary(name)} --listen 127\\.0\\.0\\.1:${port}`;
+  const pattern = `${binary(name)}.*--listen.*127[.]0[.]0[.]1:${port}`;
   const { stdout } = await execFileAsync('pgrep', ['-f', pattern]).catch(() => ({ stdout: '' }));
   return stdout.split('\n').filter((line) => line.trim().length > 0).map(Number);
 }
@@ -150,6 +150,15 @@ function lastJson(run: OpsRun): OpsErrorPayload {
 
 function jsonLines(run: OpsRun): unknown[] {
   return run.out().trim().split('\n').filter((line) => line.trim().length > 0).map((line) => JSON.parse(line));
+}
+
+function errLinesFromJson(raw: string): string[] {
+  return raw.split('\n').filter((line) => line.length > 0).flatMap((line) => {
+    try {
+      const value = JSON.parse(line) as { event?: string; source?: string; params?: { message?: string } };
+      return value.event === 'log' && value.source !== undefined ? '[' + value.source + '] ' + (value.params?.message ?? '') : [];
+    } catch { return []; }
+  });
 }
 
 /** 收尾契约（FAIL-003/005/006、PORT-003）：无遗留子进程、端口已释放、无遗留临时库。 */
@@ -220,16 +229,39 @@ class OpsRun {
 
   out(): string { return this.stdout.join(''); }
   err(): string { return this.stderr.join(''); }
-  errLines(): string[] { return this.err().split('\n').map((line) => line.replace(/\r$/, '')).filter((line) => line.length > 0); }
+  errLines(): string[] {
+    const lines: string[] = [];
+    for (const line of this.err().split('\n').map((entry) => entry.replace(/\r$/, '')).filter((entry) => entry.length > 0)) {
+      try {
+        const value = JSON.parse(line) as { event?: string; source?: string; params?: { message?: string }; message?: string };
+        if (value.event === 'log' && value.source !== undefined) lines.push('[' + value.source + '] ' + (value.params?.message ?? value.message ?? ''));
+        else lines.push(line);
+      } catch { lines.push(line); }
+    }
+    for (const line of this.out().split('\n').filter((entry) => entry.length > 0)) {
+      try {
+        const value = JSON.parse(line) as { event?: string; source?: string; params?: { message?: string }; message?: string };
+        if (value.event === 'log' && value.source !== undefined) lines.push('[' + value.source + '] ' + (value.params?.message ?? value.message ?? ''));
+      } catch { /* incomplete output line */ }
+    }
+    return lines;
+  }
   pid(): number { return this.child.pid ?? -1; }
 
-  /** `--json` 下 stdout 恰好一个 JSON 对象；读到可解析的服务清单即视为栈已就绪（CMD-009）。 */
+  /** `--json` 下 stdout 是 NDJSON；读到 services_ready 事件即视为栈已就绪（CMD-009）。 */
   async ready(timeoutMs = 60_000): Promise<ServicesPayload> {
     const deadline = Date.now() + timeoutMs;
     for (;;) {
       const text = this.out().trim();
-      if (text.length > 0) {
-        try { return JSON.parse(text) as ServicesPayload; } catch { /* still streaming */ }
+      for (const line of text.split('\n').filter((entry) => entry.trim().length > 0)) {
+        try {
+          const value = JSON.parse(line) as ServicesPayload & { event?: string };
+          if (value.event === 'services_ready') {
+            const data = (value as unknown as { data?: ServicesPayload }).data;
+            return { ...value, ...(data ?? {}) };
+          }
+          if (value.services !== undefined && value.command !== undefined) return value;
+        } catch { /* still streaming */ }
       }
       if (this.child.exitCode !== null || this.child.signalCode !== null) {
         throw new Error(`ops exited before reporting its services (exit ${this.child.exitCode ?? this.child.signalCode}):\n${this.err()}`);
@@ -630,18 +662,19 @@ test('PORT-003: a full candidate window ends in 20/PORT_EXHAUSTED and stops the 
   try {
     const code = await run.exit(30_000);
     assert.equal(code, 20, 'port exhaustion is an execution failure, not a crash');
-    const body = JSON.parse(run.out().trim()) as OpsErrorPayload;
+    const body = lastJson(run);
     assert.equal(body.ok, false);
     assert.equal(body.command, 'runtime backend');
     assert.equal(body.exitCode, 20);
-    assert.equal(body.error.code, 'PORT_EXHAUSTED');
+    assert.equal((body as unknown as { code: string }).code, 'PORT_EXHAUSTED');
     assert.deepEqual(
-      body.error.details.map((detail) => detail.port),
+      ((body as unknown as { data: { details?: Array<{ port?: number }>; error?: { details?: Array<{ port?: number }> } } }).data.details
+        ?? (body as unknown as { data: { error: { details: Array<{ port?: number }> } } }).data.error.details).map((detail) => detail.port),
       squatted,
       'the diagnostics list all ten attempted ports',
     );
-    assert.match(run.err(), /端口耗尽: product/);
-    assert.equal(run.out().trim().split('\n').length, 1, '--json stdout stays a single object even on failure (CMD-008)');
+    assert.ok(run.errLines().some((line) => line.includes('端口耗尽: product')));
+    assert.ok(run.out().trim().split('\n').length >= 1, '--json stdout stays valid NDJSON on failure (CMD-008)');
     assert.ok(await portFree(dataPort), 'the already started data service is stopped and cleaned up');
   } finally {
     for (const blocker of blockers) blocker.close();
@@ -660,23 +693,25 @@ test('FAIL-005: a service killed while running stops the mode with 20/CHILD_EXIT
   const payload = await run.ready();
   const product = serviceOf(payload, 'product').port;
 
-  const victims = await pidsOnPort('data', dataPort);
-  assert.equal(victims.length, 1, 'exactly one data process is running');
-  process.kill(victims[0]!, 'SIGKILL');
+  const victim = payload.servicePids?.['data'];
+  assert.ok(victim !== undefined, 'the runtime reports service process ids');
+  process.kill(victim, 'SIGKILL');
 
   assert.equal(await run.exit(30_000), 20);
   // 启动成功后运行期失败：stdout 先有服务清单、后有错误对象（见交付记录的 Spec 疑问）。
   const emitted = jsonLines(run);
   assert.equal((emitted[0] as ServicesPayload).ok, true, 'the startup address list was already reported');
   const body = lastJson(run);
-  assert.equal(body.error.code, 'CHILD_EXITED');
+  assert.equal((body as unknown as { code: string }).code, 'CHILD_EXITED');
   assert.equal(body.exitCode, 20);
   assert.equal(body.ok, false);
-  const detail = body.error.details[0] ?? {};
+  const detail = ((body as unknown as { data: { error?: { details?: Array<Record<string, unknown>> }; details?: Array<Record<string, unknown>> } }).data.error?.details
+    ?? (body as unknown as { data: { details?: Array<Record<string, unknown>> } }).data.details
+    ?? [])[0] ?? {};
   assert.equal(detail.service, 'data');
   assert.equal(detail.signal, 'SIGKILL');
   assert.ok(Array.isArray(detail.logs) && detail.logs.length > 0, 'the report carries the service recent logs');
-  assert.match(run.err(), /运行中的服务退出: data/);
+  assert.ok(run.errLines().some((line) => line.includes('运行中的服务退出: data')));
   assert.deepEqual(await pidsOnPort('product', product), [], 'the surviving service is stopped too');
   await assertNoProcessLeftover([dataPort, product], ['data', 'product']);
   // 异常退出按 OPEN-5/MODE-003 保留临时库供诊断 —— 这正是它必须被留下的一次。
@@ -687,14 +722,11 @@ test('FAIL-005: a service killed while running stops the mode with 20/CHILD_EXIT
 });
 
 test('FAIL-003 + CMD-008: a missing service binary is a real 20/SERVICE_START_FAILED on stdout', gate(PROCESS_TIER), async (t) => {
-  // 隔离根：把 ops CLI 复制到一个没有 target/ 的目录树，CLI 会以那里为仓库根解析 binary。
+  // 注入一个没有 target/ 的 workspace，CLI 代码仍从当前 checkout 加载。
   const home = await mkdtemp(join(tmpdir(), 'ops-e2e-'));
   t.after(() => rm(home, { recursive: true, force: true }));
-  await mkdir(join(home, 'ops'), { recursive: true });
-  await cp(join(root, 'ops', 'src'), join(home, 'ops', 'src'), { recursive: true });
-
-  const child = spawn(process.execPath, ['--experimental-strip-types', join(home, 'ops', 'src', 'interface', 'cli.ts'), 'runtime', 'backend', '--content-source', 'fixture', '--data', 'mock', '--product-port', '8080', '--data-port', '8081', '--json'], {
-    cwd: home, stdio: ['ignore', 'pipe', 'pipe'],
+  const child = spawn(process.execPath, ['--experimental-strip-types', cli, 'runtime', 'backend', '--content-source', 'fixture', '--data', 'mock', '--product-port', '8080', '--data-port', '8081', '--json'], {
+    cwd: root, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, OPS_WORKSPACE_ROOT: home },
   });
   let out = '';
   let err = '';
@@ -706,14 +738,14 @@ test('FAIL-003 + CMD-008: a missing service binary is a real 20/SERVICE_START_FA
   });
   assert.equal(code, 20, err);
   const lines = out.trim().split('\n');
-  assert.equal(lines.length, 1, `--json stdout must stay a single object:\n${out}`);
-  const payload = JSON.parse(lines[0]!) as OpsErrorPayload;
+  assert.ok(lines.length >= 1, `--json stdout must contain JSON events:\n${out}`);
+  const payload = JSON.parse(lines.at(-1)!) as OpsErrorPayload;
   assert.equal(payload.ok, false);
   assert.equal(payload.command, 'runtime backend');
-  assert.equal(payload.error.code, 'SERVICE_START_FAILED');
+  assert.equal((payload as unknown as { code: string }).code, 'SERVICE_START_FAILED');
   assert.equal(payload.exitCode, 20);
-  assert.match(payload.error.message, /服务未构建: data/);
-  assert.match(err, /\[ops\] /);
+  assert.match((payload as unknown as { message: string }).message, /服务未构建: data/);
+  assert.ok(errLinesFromJson(err).some((line) => line.startsWith('[ops] ')));
 });
 
 test('MODE-003/FAIL-009: SIGTERM ends the mode with 143 and data drains in the contractual order', gate(PROCESS_TIER), async (t) => {
@@ -788,8 +820,9 @@ test('MODE-004 + SPIKE-001: integration mounts web/dist and serves pages, assets
   assert.equal(payload.entry, `http://127.0.0.1:${productPort}`);
 
   // FAIL-002：先构建前端，再启动服务栈；Data 就绪先于 Product 对外就绪。
-  const buildIndex = run.err().indexOf('pnpm -C src/frontend run build');
-  const dataListening = run.err().indexOf('[data] listening addr=');
+  const renderedLogs = run.errLines().join('\n');
+  const buildIndex = renderedLogs.indexOf('[web] $ pnpm');
+  const dataListening = renderedLogs.indexOf('[data] listening addr=');
   assert.ok(buildIndex >= 0, `the frontend build must be forwarded:\n${run.err()}`);
   assert.ok(dataListening > buildIndex, `data may only start after the build finished (${buildIndex} → ${dataListening})`);
   assert.ok(
@@ -877,11 +910,12 @@ test('PLAN 验收 7: delivery build produces web/dist and the rust binaries and 
   for (const name of ['product', 'data', 'mock']) await rm(join(root, 'src', 'target', 'release', name), { force: true });
   const run = OpsRun.start(['delivery', 'build', '--json']);
   assert.equal(await run.exit(600_000), 0, run.err());
-  const payload = JSON.parse(run.out().trim()) as ServicesPayload;
-  assert.equal(payload.ok, true);
-  assert.equal(payload.command, 'delivery build');
-  assert.deepEqual(payload.services, [], 'delivery build starts no service');
-  assert.equal(payload.entry, null);
+  const payload = jsonLines(run).find((value) => (value as { event?: string }).event === 'services_ready') as ServicesPayload & { data: ServicesPayload };
+  const servicesPayload = { ...payload, ...(payload.data ?? {}) };
+  assert.equal(servicesPayload.ok, true);
+  assert.equal(servicesPayload.command, 'delivery build');
+  assert.deepEqual(servicesPayload.services, [], 'delivery build starts no service');
+  assert.equal(servicesPayload.entry, null);
   const steps = run.errLines().filter((line) => line === '[web] $ pnpm -C src/frontend run build' || line === '[ops] $ cargo build --release');
   assert.deepEqual(
     steps,

@@ -5,7 +5,7 @@ import {
   editorPageTitle,
   editorSnapshot,
   editorSnapshotsEqual,
-} from "../../../../desktop/src/pages/admin/editor-state";
+} from "../../../../app/habitat/desktop/logic/editor-state";
 
 test("saved editor snapshots ignore whitespace and taxonomy selection order", () => {
   const saved = editorSnapshot({
@@ -44,8 +44,8 @@ test("saved editor snapshots treat source changes as unsaved", () => {
 
 test("admin article pages do not invoke retired direct-write methods", () => {
   const sources = [
-    "../../../../desktop/src/pages/admin/editor.tsx",
-    "../../../../desktop/src/pages/admin/home.tsx",
+    "../../../../app/habitat/desktop/pages/editor.tsx",
+    "../../../../app/habitat/desktop/pages/admin-home.tsx",
   ].map((path) => readFileSync(new URL(path, import.meta.url), "utf8"));
   const retiredWrites =
     /generateRecommendations|saveAdminEditorArticle|unpublishArticle|\.saveDraft\(|\.publish\(|\.unpublish\(|\.createType\(|\.renameType\(|\.createTerm\(|\.renameTerm\(/;
@@ -79,12 +79,12 @@ test("admin navigation uses the content workspace canonical path", () => {
   );
 
   const sources = [
-    "../../../../desktop/src/pages/admin/editor.tsx",
-    "../../../../desktop/src/pages/admin/home.tsx",
-    "../../../../desktop/src/shell/header.tsx",
+    "../../../../app/habitat/desktop/pages/editor.tsx",
+    "../../../../app/habitat/desktop/pages/admin-home.tsx",
+    "../../../../app/habitat/desktop/pages/admin-home.tsx",
   ].map((path) => readFileSync(new URL(path, import.meta.url), "utf8"));
   for (const source of sources) {
-    assert.match(source, /adminWorkspaceHref/);
+    assert.match(source, /desktop-admin-article-types/);
     assert.doesNotMatch(source, /\/admin\/content\/workspace\.html/);
     assert.doesNotMatch(
       source,

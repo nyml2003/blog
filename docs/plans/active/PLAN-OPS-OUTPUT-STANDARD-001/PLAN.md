@@ -18,7 +18,7 @@ last_reviewed: 2026-09-30
 ## 当前基线
 
 - `SPEC-OPS-RUNTIME-001` 已规定运行栈日志前缀、stdout/stderr 分工、`--json` NDJSON、终止事件和退出码；这是当前契约基线。本计划可以经明确更新 Spec 后整体替换旧契约，不能留下同名参数的双重语义。
-- `packages/cli-core/src/reporter.ts` 提供 `section/ok/fail/info` 的人类输出；`apps/blog` 多个命令通过 reporter 输出，但部分入口、错误处理和子命令仍直接使用 `console.log/error`。
+- `packages/cli-core/src/reporter.ts` 提供 `section/ok/fail/info` 的人类输出；CLI 生产路径通过 OutputPort 适配终端、NDJSON 与测试捕获，旧 Runtime Spec 和运维指南已指向统一输出协议。
 - runtime 子进程日志已有 `[web]`、`[product]`、`[data]`、`[mock]`、`[ops]` 前缀及运行期事件；delivery、quality、admin、content、release、e2e、help、参数错误等输出尚未使用一套完整协议。
 - `--json` 当前主要服务 runtime 生命周期，尚未形成所有入口和命令通用的事件模型；同一错误可能同时出现在 reporter 文本、异常摘要和进程日志中。
 - E2E/Release runner 和测试已有对当前 JSON 形状及退出行为的直接依赖，切换新协议时必须一起迁移。
@@ -69,7 +69,8 @@ last_reviewed: 2026-09-30
 
 ## 约束与依据
 
-- `docs/specs/SPEC-OPS-RUNTIME-001.md`：现有日志前缀、stdout/stderr、NDJSON 生命周期和退出码契约。
+- `docs/specs/SPEC-OPS-OUTPUT-001.md`：Result、OutputPort、事件联合、NDJSON 和 breaking change 边界。
+- `docs/specs/SPEC-OPS-RUNTIME-001.md`：运行时服务日志、生命周期和退出码语义。
 - `docs/specs/SPEC-OPS-PARAMETERS-001.md`：参数错误退出 10、帮助输出和无副作用快速失败。
 - `docs/guides/operations.md`：当前 CLI 使用方式、`--json` 约定和发布/E2E 命令消费说明。
 - `packages/cli-kit/src/ports.ts`、`packages/cli-core/src/reporter.ts`、`apps/blog/src/**`：现有 reporter、process 和命令输出实现。
@@ -79,11 +80,11 @@ last_reviewed: 2026-09-30
 
 | 工作流 | Owner | 依赖 | Write set | 状态 |
 | --- | --- | --- | --- | --- |
-| 输出契约与事件模型 | qa+pm | - | 本计划、必要的 ops Spec 与指南 | ready |
-| Reporter/错误模型基础设施 | infra | 契约与事件模型 | `packages/cli-kit/**`、`packages/cli-core/**`、公共测试 | ready |
-| 全量命令与入口迁移 | infra | 基础设施 | `apps/blog/src/**`、命令测试、入口测试 | ready |
-| 消费者同步切换 | qa+release | 新协议冻结、全量命令迁移 | E2E/Release runner、CI、脚本、指南、协议测试 | ready |
-| 集成验收 | qa+pm | 上述工作流 | 质量报告、输出样例、计划结果 | ready |
+| 输出契约与事件模型 | qa+pm | - | 本计划、必要的 ops Spec 与指南 | completed |
+| Reporter/错误模型基础设施 | infra | 契约与事件模型 | `packages/cli-kit/**`、`packages/cli-core/**`、公共测试 | completed |
+| 全量命令与入口迁移 | infra | 基础设施 | `apps/blog/src/**`、命令测试、入口测试 | partial |
+| 消费者同步切换 | qa+release | 新协议冻结、全量命令迁移 | E2E/Release runner、CI、脚本、指南、协议测试 | partial |
+| 集成验收 | qa+pm | 上述工作流 | 质量报告、输出样例、计划结果 | partial |
 
 Reporter、错误类型、CLI runner 和 Spec 属于共享写集，必须串行修改。迁移可按命令组实施，但只有全量命令和仓库内消费者同时切换后才算完成；中间状态不得作为可发布兼容版本。
 
@@ -107,13 +108,13 @@ Reporter、错误类型、CLI runner 和 Spec 属于共享写集，必须串行�
 ## 实施结果（2026-09-30）
 
 - `packages/cli-kit` 新增结构化 `Result`、错误码集合、`OpsFailure` 和 `OutputEvent/OutputPort`；`cli-core` 提供终端输出适配器与测试捕获适配器。
-- runner 已归一化旧命令退出码，并输出命令完成结果及 `command.started/finished` 埋点；现有 Reporter 调用通过 OutputPort 输出。
+- runner 已归一化命令结果，并输出命令完成结果及 `command.started/finished` 埋点；现有 Reporter 调用通过 OutputPort 输出。
 - `workspace doctor`、`quality check/lint/format` 和 `package check` 已迁移为显式 `Result` 返回，runner 兼容层不再参与这些命令的成败判断。
-- runtime JSON 已追加统一 `schemaVersion`、`event`、`code`、`exitCode`、`message` 字段；runtime 接受 breaking change。
-- 已验证 `pnpm typecheck`、`git diff --check`、CLI 入口测试 17/17、OutputPort 测试 1/1；博客命令测试 91 passed、13 skipped。
+- runtime JSON 已追加统一 `schemaVersion`、`event`、`code`、`exitCode`、`message` 字段；日志保留来源和 stdout/stderr 流；runtime 接受 breaking change。
+- 已验证 `pnpm typecheck`、`git diff --check`、`ops quality check`、CLI 入口测试 19/19、OutputPort 测试 2/2；博客命令测试 95 passed、13 skipped；blog-deploy 测试 8/8。
 
-## 尚未交付
+## 收尾说明
 
-- 各命令实现尚未全部改成显式 `Result<Success, OpsFailure>`，当前由 runner 兼容归一化裸退出码。
-- `ErrorDetail` 仍有旧的开放字段，尚未收敛成完整封闭联合。
-- 脱敏、长日志截断和真实埋点消费者未实现；当前只提供结构化事件边界、空行为和测试收集器。
+- 底层外部进程仍以操作系统数字退出码交互，命令入口映射为 `Result`；部分领域 helper 尚未完成全链路 `Result` 化。
+- `ErrorDetail` 仍允许开放字段；目前只有字段名和有限文本模式脱敏，尚不足以证明任意子进程输出不泄露秘密。
+- 埋点当前只提供可注入事件端口和空适配器。真实 runtime、E2E、Release 的输出契约验收尚未完成。

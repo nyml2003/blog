@@ -12,18 +12,27 @@ function run(command, args) {
 run("cargo", [
   "build",
   "--locked",
-  "--release", "--manifest-path", "src/Cargo.toml",
+  "--release",
+  "--manifest-path",
+  "src/Cargo.toml",
   "--target",
   "wasm32-unknown-unknown",
   "-p",
   "article-html-wasm",
 ]);
-run("wasm-bindgen", [
-  "--target",
-  "web",
-  "--out-dir",
+const wasmInput =
+  "src/target/wasm32-unknown-unknown/release/article_html_wasm.wasm";
+for (const outputDirectory of [
   "src/frontend/common/validation/generated",
-  "--out-name",
-  "article_html_wasm",
-  "src/target/wasm32-unknown-unknown/release/article_html_wasm.wasm",
-]);
+  "src/frontend/app/infrastructure/browser/validation/generated",
+]) {
+  run("wasm-bindgen", [
+    "--target",
+    "web",
+    "--out-dir",
+    outputDirectory,
+    "--out-name",
+    "article_html_wasm",
+    wasmInput,
+  ]);
+}

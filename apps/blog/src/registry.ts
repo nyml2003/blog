@@ -13,6 +13,7 @@ import { DEPLOY_TARGETS } from './delivery/deploy-plan.ts';
 import { RELEASE_KINDS, runRelease } from './release/release.ts';
 import { PORT_MIN, PORT_MAX } from '@fluvient-cli/cli-kit/port-allocation.ts';
 import { E2E_MODES, E2E_SCENARIOS, runE2e } from './e2e/e2e.ts';
+import { E2E_PERF_PROFILES, runE2ePerf } from './e2e/perf.ts';
 import { err, ok, type Result } from '@fluvient-cli/cli-kit/result.ts';
 import { EXIT_FAILURE, EXIT_OK, EXIT_SIGINT, EXIT_SIGTERM, EXIT_USAGE, type OpsFailure, type OpsErrorCode } from '@fluvient-cli/cli-kit/errors.ts';
 
@@ -37,6 +38,7 @@ function runtimePorts(context: CommandContext): RuntimePorts {
     readiness: context.readiness,
     binaries: context.binaries,
     log: context.log,
+    output: context.output,
     fs: context.fs,
     signals: context.signals,
     root: context.workspace.root,
@@ -71,6 +73,24 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     ],
     exitCodes: [{ code: 0, meaning: '浏览器场景通过或 --dry-run 成功' }, { code: 10, meaning: '参数或命令用法错误' }, FAILURE],
   }, (context, args) => runE2e(context, args).then(commandExitResult)),
+  defineCommand({
+    path: ['perf', 'mobile'],
+    summary: '度量移动端页面加载性能',
+    description: '对 Mobile 公开页执行加载性能采样：冷加载与底栏切换两条旅程，按网络档位（unthrottled/slow4g/slow3g）重复采样，输出切换到壳/内容可见耗时、FCP/LCP、静态资源传输与缓存命中到 target/e2e/<run-id>/perf-report.json。--mode integration 自建隔离 integration 栈；--origin 直接度量既有入口（如线上站点）。二者必须显式提供其一。',
+    examples: [
+      'ops perf mobile --mode integration --playwright-module playwright-core/index.mjs --chromium-path /nix/store/.../chromium',
+      'ops perf mobile --origin https://blog.example.com --playwright-module playwright-core/index.mjs --chromium-path /nix/store/.../chromium --runs 5 --profile slow4g',
+    ],
+    options: [
+      { name: 'mode', description: '自建隔离 integration 栈进行度量（当前仅支持 integration）', model: { kind: 'enum', values: ['integration'] }, optional: true },
+      { name: 'origin', description: '直接度量既有页面入口 URL（http:// 或 https:// 开头），与 --mode 互斥', model: { kind: 'path' }, optional: true },
+      { name: 'runs', description: '每档位重复采样次数（默认 3）', model: { kind: 'int32', min: 1, max: 20 }, optional: true },
+      { name: 'profile', description: '只跑单个网络档位（默认三个档位都跑）', model: { kind: 'enum', values: E2E_PERF_PROFILES }, optional: true },
+      { name: 'playwright-module', description: 'Playwright 模块路径或模块名（必须显式提供）', model: { kind: 'path' } },
+      { name: 'chromium-path', description: 'Chromium 可执行文件路径（必须显式提供）', model: { kind: 'path' } },
+    ],
+    exitCodes: [{ code: 0, meaning: '采样完成或 --dry-run 成功' }, { code: 10, meaning: '参数或命令用法错误' }, FAILURE],
+  }, (context, args) => runE2ePerf(context, args).then(commandExitResult)),
   defineCommand({ path: ['workspace', 'doctor'], summary: '检查本地开发依赖', description: '验证 Node、pnpm、Rust 和 Cargo 是否可用。', examples: ['ops workspace doctor'], exitCodes: [{ code: 0, meaning: '依赖齐全' }, { code: 20, meaning: '缺少依赖' }] }, async ({ process: p, workspace, reporter, dryRun }) => { let passed = true; reporter.section(dryRun ? 'workspace doctor dry-run' : 'workspace doctor'); for (const name of ['node', 'pnpm', 'rustc', 'cargo']) { if (dryRun) { reporter.info(`检查命令: ${name}`); continue; } const r = await p.run('sh', ['-c', `command -v ${name}`], workspace.root); if (r.code) { passed = false; reporter.fail(`${name} missing`); } else reporter.ok(`${name} available`); } return commandResult(passed); }),
   defineCommand({ path: ['quality', 'check'], summary: '执行项目质量检查', description: '运行 Rust 三件套（cargo fmt --all --check、cargo clippy -D warnings、cargo test --workspace）、ops 契约测试、前端 typecheck/lint/format/test/build 和前后端架构边界检查。', examples: ['ops quality check'], exitCodes: [{ code: 0, meaning: '检查通过' }, { code: 20, meaning: '检查失败' }] }, ({ workspace, process, fs, reporter, dryRun }) => { if (dryRun) { reporter.section('quality check dry-run'); reporter.info('将执行 cargo fmt --all --check、cargo clippy --workspace --all-targets -- -D warnings、cargo test --workspace、ops 契约测试、pnpm typecheck/lint/format:check/test:core/build 和前后端架构边界检查'); return commandResult(true); } return runCheck(workspace, process, fs, reporter).then((passed) => commandResult(passed)); }),
   defineCommand({ path: ['quality', 'lint'], summary: '运行前端 Oxlint', description: '使用 pnpm 执行 blog-web 的 lint 脚本，并将 warning 视为失败。', examples: ['ops quality lint'], exitCodes: [{ code: 0, meaning: 'lint 通过' }, { code: 20, meaning: 'lint 失败' }] }, ({ workspace, process, reporter, dryRun }) => { if (dryRun) { reporter.section('quality lint dry-run'); reporter.info('pnpm -C src/frontend run lint'); return commandResult(true); } return runWebQuality(workspace, process, reporter, 'lint').then((passed) => commandResult(passed)); }),
@@ -199,6 +219,7 @@ export const groupDefinitions = [
   defineGroup({ path: ['package'], summary: '内核包', description: '@fluvient-loom workspace 包门禁：平台中立护栏 + typecheck/test/smoke，独立于 quality 全量检查。', order: 25, workflow: '内核包开发期验证' }),
   defineGroup({ path: ['playground'], summary: '演示页', description: '启动 apps/playground 移动端三页 demo（Vite dev），--host 供手机经局域网访问。', order: 26, workflow: '内核包演示与验收' }),
   defineGroup({ path: ['e2e'], summary: '浏览器验收', description: '通过隔离运行栈执行显式的 Playwright 浏览器回归测试，不并入快速质量门禁。', order: 28, workflow: '浏览器回归验收' }),
+  defineGroup({ path: ['perf'], summary: '性能度量', description: '对页面加载做可重复的 Playwright 性能采样（冷加载/底栏切换 × 网络档位），输出耗时、传输与缓存命中指标，支撑体验优化的基线对比。', order: 29, workflow: '体验优化度量' }),
   defineGroup({
     path: ['runtime'],
     summary: '运行模式',

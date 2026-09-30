@@ -15,6 +15,7 @@ import type {
   SpawnRequest,
 } from '@fluvient-cli/cli-kit/ports.ts';
 import { withLogPrefix } from '@fluvient-cli/cli-kit/service-contract.ts';
+import { EXIT_FAILURE } from '@fluvient-cli/cli-kit/errors.ts';
 
 const RECENT_LOG_LIMIT = 50;
 
@@ -35,7 +36,7 @@ export class NodeProcess implements ProcessPort {
     return new Promise((resolve, reject) => {
       const child = spawn(command, args, { cwd, env: childEnvironment(env), stdio: 'inherit' });
       child.on('error', reject);
-      child.on('close', (code) => resolve(code ?? 20));
+      child.on('close', (code) => resolve(code ?? EXIT_FAILURE));
     });
   }
 }
@@ -87,7 +88,10 @@ export class ManagedChildProcess implements ManagedProcess {
 
   async kill(signal: NodeJS.Signals = 'SIGTERM'): Promise<void> {
     if (this.exited || this.child.signalCode !== null) return;
-    try { this.child.kill(signal); } catch { /* already gone */ }
+    try {
+      if (this.pid !== undefined) process.kill(-this.pid, signal);
+      else this.child.kill(signal);
+    } catch { /* already gone */ }
     await this.exitPromise;
   }
 
@@ -178,6 +182,7 @@ export class NodeProcessSupervisor implements ProcessSupervisor {
       cwd: request.cwd,
       env: childEnvironment(request.env),
       stdio: ['ignore', 'pipe', 'pipe'],
+      detached: true,
     });
     return new ManagedChildProcess(request.role, child);
   }

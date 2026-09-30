@@ -1,4 +1,5 @@
 import type { ProcessPort, Reporter } from '@fluvient-cli/cli-kit/ports.ts';
+import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from '@fluvient-cli/cli-kit/errors.ts';
 
 export const RELEASE_KINDS = ['script', 'build', 'both'] as const;
 export type ReleaseKind = (typeof RELEASE_KINDS)[number];
@@ -95,7 +96,7 @@ async function buildPlan(kind: ReleaseKind, ports: ReleasePorts): Promise<Releas
     if (existing === undefined) return undefined;
     const tag = nextVersion(existing, prefix);
     const collision = await git(ports, ['rev-parse', '--verify', `refs/tags/${tag}`]);
-    if (collision.code === 0) {
+    if (collision.code === EXIT_OK) {
       ports.reporter.fail(`tag 已存在: ${tag}`);
       return undefined;
     }
@@ -123,31 +124,31 @@ function workflowUrls(remote: string, kind: ReleaseKind): string[] {
 export async function runRelease(kind: ReleaseKind, ports: ReleasePorts, options: ReleaseOptions): Promise<number> {
   ports.reporter.section(options.dryRun ? 'release dry-run' : 'release');
   const plan = await buildPlan(kind, ports);
-  if (!plan) return 20;
+  if (!plan) return EXIT_FAILURE;
 
   ports.reporter.info(`远程仓库: ${plan.remote}`);
   ports.reporter.info(`提交: ${plan.sha}`);
   ports.reporter.info(`将创建 tag: ${plan.tags.join(', ')}`);
-  if (options.dryRun) return 0;
+  if (options.dryRun) return EXIT_OK;
   if (!options.confirmed) {
     ports.reporter.fail('推送前需要显式确认，请重新执行并添加 --yes');
-    return 10;
+    return EXIT_USAGE;
   }
 
   for (const tag of plan.tags) {
     const created = await git(ports, ['tag', tag, plan.sha]);
     if (created.code !== 0) {
       ports.reporter.fail(`创建 tag 失败: ${tag}: ${created.stderr.trim() || `exit ${created.code}`}`);
-      return 20;
+      return EXIT_FAILURE;
     }
   }
   const pushed = await git(ports, ['push', 'origin', ...plan.tags]);
   if (pushed.code !== 0) {
     ports.reporter.fail(`推送 tag 失败: ${pushed.stderr.trim() || `exit ${pushed.code}`}`);
-    return 20;
+    return EXIT_FAILURE;
   }
   ports.reporter.ok(`已推送 ${plan.tags.join(', ')}`);
   for (const url of workflowUrls(plan.remote, plan.kind)) ports.reporter.info(`GitHub Actions: ${url}`);
   ports.reporter.info('远程构建是异步的，请检查 Release 资产和下载结果');
-  return 0;
+  return EXIT_OK;
 }

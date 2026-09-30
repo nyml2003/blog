@@ -146,7 +146,7 @@ ops runtime backend --content-source fixture --data mock --product-port 8080 --d
 
 ## `--json` 输出
 
-`--json` 同时覆盖错误输出与正常启动的地址清单（2026-09-06 PM 裁定，关闭 OPEN-9）。
+`--json` 由 `SPEC-OPS-OUTPUT-001` 统一定义。Runtime 仍保留本 Spec 的服务、端口、信号和生命周期语义，但事件字段、终止结果、子进程行事件和 stdout/stderr 路由以输出 Spec 为准；本计划允许 breaking change。
 
 ### 错误输出
 
@@ -183,7 +183,7 @@ ops runtime backend --content-source fixture --data mock --product-port 8080 --d
 - `services` 只含该模式实际启动的服务（见矩阵），`port` 为**实际绑定端口**（含递增结果）。
 - `entry` 为人类可访问入口（`dev` 取 Vite 地址，`integration` 取 Product 地址）；`backend` 模式无页面入口，`entry` 为 `null`。
 - `delivery build` 无服务，`services` 为空数组。
-- `--json` 下不输出人类可读的横幅/进度行；stdout 使用 NDJSON。启动成功先输出地址清单，启动前失败只输出错误对象，运行期失败在地址清单后追加错误对象；最后一个已发对象表示最新生命周期事件。其余输出（子进程日志、`[ops]` 进度）走 stderr。
+- `--json` 下不输出人类可读的横幅/进度行；每个输出事件均为 NDJSON。服务就绪、dry-run、子进程 stdout/stderr 行和唯一终止结果按 `SPEC-OPS-OUTPUT-001` 的字段输出，最后一个事件是终止结果。日志事件保留来源和原始 stream；退出码与终止事件一致。
 
 ## 场景
 

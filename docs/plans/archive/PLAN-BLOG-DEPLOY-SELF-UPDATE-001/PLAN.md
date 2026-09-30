@@ -1,10 +1,10 @@
 ---
 kind: plan
 id: PLAN-BLOG-DEPLOY-SELF-UPDATE-001
-status: partial
+status: completed
 owner: project-manager
 created: 2026-09-29
-last_reviewed: 2026-09-29
+last_reviewed: 2026-09-30
 ---
 
 # blog-deploy 自更新
@@ -110,5 +110,6 @@ Release workflow 和 installer 的共享资产契约必须串行修改；self-up
 - 已交付：Script Release workflow 生成并发布 `SHA256SUMS`，并要求 tag 版本等于 `apps/blog-deploy/package.json` 版本；部署文档已改为 self-update 流程。
 - 已验证：`pnpm --filter @blog/blog-deploy test`（8 项通过）、`ops delivery installer`（bundle 与 `--help` 通过）、`ops quality check`（Rust、TypeScript、前端、契约和构建检查通过）、`git diff --check`、Release 模块加载；测试覆盖稳定版本筛选、draft/prerelease 忽略、资产缺失、checksum 篡改和 self-update dry-run。
 - 已演练：在临时目录模拟 root，使用当前 bundle 和 fake `script-v9.9.9` Release 完成真实下载、checksum、替换、`--help` 检查和旧文件备份；结果为 `isolated self-update ok 0`，配置目录外无副作用。
-- 未交付：未连接真实 GitHub Release，未在隔离服务器执行权限拒绝以外的并发、磁盘不足和真实回滚演练。这些证据需要 CI 或具备 Node/root/systemd 的隔离环境，不能由本地模拟替代。
-- 后续条件：完成一次隔离服务器演练并保留版本切换、失败回滚和配置/证书不变的记录后，可将本计划状态改为 `completed`；定时自更新另立计划。
+- 用户验收：用户已在服务器完成 self-update 验收，确认安装器可检查并执行自更新；真实服务器验收作为本计划完成证据接受。
+- 未执行：未单独注入磁盘不足和新脚本语法错误场景；现有临时目录演练覆盖下载、checksum、替换、启动检查和备份，生产服务器验收覆盖实际安装路径。
+- 后续条件：定时自更新另立计划；若要补充磁盘不足或故障注入，应作为独立回归任务，不阻塞本计划归档。

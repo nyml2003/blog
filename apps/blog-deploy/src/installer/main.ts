@@ -12,6 +12,7 @@ import packageInfo from '../../package.json' with { type: 'json' };
 import { access, chmod, copyFile, mkdir, readFile, rename, rm, readdir, writeFile } from 'node:fs/promises';
 import { dirname, join, basename } from 'node:path';
 import { apexAlias, configTemplate, parseBlogConfig, seedFromLegacy, type BlogConfig } from './config.ts';
+import { EXIT_FAILURE, EXIT_LOCKED, EXIT_OK, EXIT_USAGE } from '@fluvient-cli/cli-kit/errors.ts';
 import {
   BIN_DIR,
   CONFIG_DIR,
@@ -97,7 +98,7 @@ export async function runInit(options: InstallerOptions): Promise<number> {
   if (await exists(configFile)) {
     if (!options.force) {
       console.error(`blog.json 已存在:${configFile}(要重写请加 --force)`);
-      return 10;
+      return EXIT_USAGE;
     }
   }
   const legacy = await legacySeed(configFile);
@@ -111,7 +112,7 @@ export async function runInit(options: InstallerOptions): Promise<number> {
   const serverName = legacy.seed.serverName ?? '<serverName>';
   console.log(`  2. 放证书:${directory}/${serverName}.pem 与 ${directory}/${serverName}.key(0600)`);
   console.log(`  3. 执行:node ${process.argv[1]} deploy`);
-  return 0;
+  return EXIT_OK;
 }
 
 async function legacySeed(configFile: string): Promise<{ seed: Partial<BlogConfig>; found: string[] }> {
@@ -133,7 +134,7 @@ export async function runDeploy(options: InstallerOptions, fetchImpl: FetchLike)
   const directory = dirname(configFile);
   if (!options.dryRun && typeof process.getuid === 'function' && process.getuid() !== 0) {
     console.error('请以 root 运行(例如 sudo node blog-deploy.mjs deploy)');
-    return 10;
+    return EXIT_USAGE;
   }
   let config: BlogConfig;
   try {
@@ -141,14 +142,14 @@ export async function runDeploy(options: InstallerOptions, fetchImpl: FetchLike)
   } catch (error) {
     console.error(`配置不可用:${error instanceof Error ? error.message : String(error)}`);
     console.error(`请先执行:node ${process.argv[1]} init(或检查 ${configFile})`);
-    return 10;
+    return EXIT_USAGE;
   }
   const target = targetNow();
   const certPem = join(directory, `${config.serverName}.pem`);
   const certKey = join(directory, `${config.serverName}.key`);
   if (!(await exists(certPem)) || !(await exists(certKey))) {
     console.error(`缺少证书:${certPem} / ${certKey}`);
-    return 10;
+    return EXIT_USAGE;
   }
 
   let releaseTag = '(最新稳定 build-v*)';
@@ -173,7 +174,7 @@ export async function runDeploy(options: InstallerOptions, fetchImpl: FetchLike)
   console.log(`  发布包    ${RELEASE_REPO}`);
   if (options.dryRun) {
     console.log('dry-run:未下载、未安装、未重启');
-    return 0;
+    return EXIT_OK;
   }
 
   const release = pickBuildRelease(await fetchReleases(RELEASE_REPO, fetchImpl));
@@ -248,7 +249,7 @@ export async function runDeploy(options: InstallerOptions, fetchImpl: FetchLike)
         try {
           run('systemctl', ['is-active', '--quiet', 'blog-data.service', 'blog-product.service']);
           console.log(`部署完成:https://${config.serverName}`);
-          return 0;
+          return EXIT_OK;
         } catch {
           /* 服务仍在拉起,继续等待 */
         }
@@ -256,7 +257,7 @@ export async function runDeploy(options: InstallerOptions, fetchImpl: FetchLike)
       await new Promise((resolve) => setTimeout(resolve, 500));
     }
     console.error('健康检查超时;排查:journalctl -u blog-product -n 100 --no-pager');
-    return 20;
+    return EXIT_FAILURE;
   } finally {
     await rm(workDir, { recursive: true, force: true }).catch(() => undefined);
   }
@@ -270,25 +271,25 @@ export async function runSelfUpdate(options: InstallerOptions, fetchImpl: FetchL
   const target = await installerPath();
   if (!options.dryRun && typeof process.getuid === 'function' && process.getuid() !== 0) {
     console.error('请以 root 运行 self-update');
-    return 10;
+    return EXIT_USAGE;
   }
   let release;
   try {
     release = pickScriptRelease(await fetchReleases(RELEASE_REPO, fetchImpl));
   } catch (error) {
     console.error(`无法查询 script Release:${error instanceof Error ? error.message : String(error)}`);
-    return 20;
+    return EXIT_FAILURE;
   }
   const current = `script-v${INSTALLER_VERSION}`;
   if (release.tag === current) {
     console.log(`安装器已是最新:${current}`);
-    return 0;
+    return EXIT_OK;
   }
   const script = pickScriptAsset(release);
   const checksum = pickChecksumAsset(release);
   if (options.dryRun) {
     console.log(`self-update:${current} → ${release.tag} (dry-run,未下载、未替换)`);
-    return 0;
+    return EXIT_OK;
   }
   const directory = dirname(target);
   const lock = `${target}.self-update.lock`;
@@ -300,7 +301,7 @@ export async function runSelfUpdate(options: InstallerOptions, fetchImpl: FetchL
     await mkdir(lock, { mode: 0o700 });
   } catch {
     console.error(`已有 self-update 正在运行:${lock}`);
-    return 30;
+    return EXIT_LOCKED;
   }
   try {
     await downloadAsset(script, temp, fetchImpl);
@@ -321,7 +322,7 @@ export async function runSelfUpdate(options: InstallerOptions, fetchImpl: FetchL
     const backups = (await readdir(directory)).filter((name) => name.startsWith(`${basename(target)}.bak-`)).sort();
     await Promise.all(backups.slice(0, -1).map((name) => rm(join(directory, name), { force: true })));
     console.log(`安装器已更新:${current} → ${release.tag}`);
-    return 0;
+    return EXIT_OK;
   } catch (error) {
     let detail = error instanceof Error ? error.message : String(error);
     if (replacementAttempted && backupCreated) {
@@ -333,7 +334,7 @@ export async function runSelfUpdate(options: InstallerOptions, fetchImpl: FetchL
       }
     }
     console.error(`self-update 失败:${detail}`);
-    return 20;
+    return EXIT_FAILURE;
   } finally {
     await rm(temp, { force: true }).catch(() => undefined);
     await rm(`${temp}.sums`, { force: true }).catch(() => undefined);
@@ -346,5 +347,5 @@ export async function runInstallerCommand(command: string, options: InstallerOpt
   if (command === 'deploy' || command === 'redeploy') return runDeploy(options, fetchImpl);
   if (command === 'self-update') return runSelfUpdate(options, fetchImpl);
   console.error(`未知命令:${command}`);
-  return 10;
+  return EXIT_USAGE;
 }

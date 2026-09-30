@@ -8,6 +8,7 @@ import type {
 import type { Result } from "../../../kernel/result";
 import {
   categoryShelfSchema,
+  adminArticleSchema,
   mobileArticleSchema,
   siteRoutesSchema,
   tShelfSchema,
@@ -36,6 +37,10 @@ const route = {
   article: {
     endpoint: "/api/public/articles",
     sceneCode: "public.article_detail",
+  },
+  adminArticle: {
+    endpoint: "/api/admin/articles",
+    sceneCode: "admin.article_detail",
   },
 } as const;
 
@@ -198,10 +203,23 @@ export function createMobileApi(network: NetworkPort): MobileApi {
           mobileArticleSchema,
         ),
     },
+    adminArticle: {
+      get: (id) =>
+        request(
+          network,
+          getRequest(
+            path(route.adminArticle.endpoint, route.adminArticle.sceneCode, {
+              id: String(id),
+            }),
+          ),
+          adminArticleSchema,
+        ),
+    },
   };
 }
 
 export type {
+  AdminArticle,
   CategoryShelf,
   MobileApi,
   MobileApiFailure,

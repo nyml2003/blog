@@ -9,6 +9,10 @@
 //! - 非 GET/HEAD → `405 method not allowed`；
 //! - `/healthz` 在路由表中先于静态兜底命中，因此不会落到这里。
 //!
+//! 缓存契约（2026-09-30 引入）：`/assets/*` 文件名带内容哈希，返回
+//! `Cache-Control: public, max-age=31536000, immutable`；页面 HTML 返回
+//! `Cache-Control: no-cache`，保证发布后下一次导航即拿到新入口。
+//!
 //! SPIKE-001（回退行为观察）见 `WORKSTREAM-OPS-RUNTIME-BACKEND.md` 交付记录。
 
 use std::collections::HashMap;
@@ -20,6 +24,8 @@ use serde::Deserialize;
 
 const ASSETS_PREFIX: &str = "/assets/";
 const PAGE_ROUTES_MANIFEST: &str = "page-routes.json";
+const ASSETS_CACHE_CONTROL: &str = "public, max-age=31536000, immutable";
+const PAGE_CACHE_CONTROL: &str = "no-cache";
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -117,9 +123,17 @@ impl StaticFiles {
         match tokio::fs::read(&path).await {
             Ok(bytes) => {
                 let content_type = content_type_of(relative, is_page);
+                let cache_control = if is_page {
+                    PAGE_CACHE_CONTROL
+                } else {
+                    ASSETS_CACHE_CONTROL
+                };
                 (
                     StatusCode::OK,
-                    [(header::CONTENT_TYPE, content_type)],
+                    [
+                        (header::CONTENT_TYPE, content_type),
+                        (header::CACHE_CONTROL, cache_control),
+                    ],
                     bytes,
                 )
                     .into_response()
@@ -225,21 +239,26 @@ mod tests {
         files: &StaticFiles,
         method: &Method,
         path: &str,
-    ) -> (StatusCode, String, String) {
+    ) -> (StatusCode, String, String, String) {
         let response = files.serve(method, path).await;
         let status = response.status();
-        let content_type = response
-            .headers()
-            .get(header::CONTENT_TYPE)
-            .and_then(|value| value.to_str().ok())
-            .unwrap_or_default()
-            .to_owned();
+        let header_of = |name: &str| {
+            response
+                .headers()
+                .get(name)
+                .and_then(|value| value.to_str().ok())
+                .unwrap_or_default()
+                .to_owned()
+        };
+        let content_type = header_of("content-type");
+        let cache_control = header_of("cache-control");
         let bytes = axum::body::to_bytes(response.into_body(), 1 << 20)
             .await
             .unwrap();
         (
             status,
             content_type,
+            cache_control,
             String::from_utf8_lossy(&bytes).to_string(),
         )
     }
@@ -248,9 +267,10 @@ mod tests {
     async fn serves_mapped_pages_assets_and_404_fallback() {
         let files = static_files();
 
-        let (status, content_type, body) = status_of(&files, &Method::GET, "/").await;
+        let (status, content_type, cache_control, body) = status_of(&files, &Method::GET, "/").await;
         assert_eq!(status, StatusCode::OK);
         assert!(content_type.starts_with("text/html"));
+        assert_eq!(cache_control, "no-cache");
         assert_eq!(body, "<html>desktop/pages/public-home/index.html</html>");
 
         // 无尾斜杠目录路径与显式 index 路径命中同一页面。
@@ -262,12 +282,14 @@ mod tests {
             "/admin/",
             "/admin/index.html",
         ] {
-            let (status, content_type, _) = status_of(&files, &Method::GET, path).await;
+            let (status, content_type, cache_control, _) =
+                status_of(&files, &Method::GET, path).await;
             assert_eq!(status, StatusCode::OK, "path={path}");
             assert!(content_type.starts_with("text/html"), "path={path}");
+            assert_eq!(cache_control, "no-cache", "path={path}");
         }
 
-        let (status, content_type, body) =
+        let (status, content_type, _, body) =
             status_of(&files, &Method::GET, "/admin/editor-guide/index.html").await;
         assert_eq!(status, StatusCode::OK);
         assert!(content_type.starts_with("text/html"));
@@ -290,16 +312,18 @@ mod tests {
                 "mobile/pages/admin-article-preview-content/index.html",
             ),
         ] {
-            let (status, content_type, body) = status_of(&files, &Method::GET, path).await;
+            let (status, content_type, _, body) =
+                status_of(&files, &Method::GET, path).await;
             assert_eq!(status, StatusCode::OK, "path={path}");
             assert!(content_type.starts_with("text/html"), "path={path}");
             assert_eq!(body, format!("<html>{expected}</html>"), "path={path}");
         }
 
-        let (status, content_type, body) =
+        let (status, content_type, cache_control, body) =
             status_of(&files, &Method::GET, "/assets/app-abc123.js").await;
         assert_eq!(status, StatusCode::OK);
         assert!(content_type.starts_with("text/javascript"));
+        assert_eq!(cache_control, "public, max-age=31536000, immutable");
         assert_eq!(body, "console.log(1)");
 
         // 未知路径 / 目录穿越 / 缺失资源 → 404（text/plain，与 Go 参考实现一致）。
@@ -312,14 +336,15 @@ mod tests {
             "/assets/../desktop/pages/public-home/index.html",
             "/assets/nope.js",
         ] {
-            let (status, content_type, body) = status_of(&files, &Method::GET, path).await;
+            let (status, content_type, _, body) =
+                status_of(&files, &Method::GET, path).await;
             assert_eq!(status, StatusCode::NOT_FOUND, "path={path}");
             assert!(content_type.starts_with("text/plain"), "path={path}");
             assert_eq!(body, "404 page not found\n", "path={path}");
         }
 
         // 非 GET/HEAD → 405。
-        let (status, _, _) = status_of(&files, &Method::POST, "/").await;
+        let (status, _, _, _) = status_of(&files, &Method::POST, "/").await;
         assert_eq!(status, StatusCode::METHOD_NOT_ALLOWED);
 
         let _ = std::fs::remove_dir_all(files.root());
@@ -365,9 +390,9 @@ mod tests {
         std::fs::write(root.join("assets/app.js"), "asset").unwrap();
         let files = StaticFiles::new(root);
 
-        let (status, _, _) = status_of(&files, &Method::GET, "/").await;
+        let (status, _, _, _) = status_of(&files, &Method::GET, "/").await;
         assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
-        let (status, _, body) = status_of(&files, &Method::GET, "/assets/app.js").await;
+        let (status, _, _, body) = status_of(&files, &Method::GET, "/assets/app.js").await;
         assert_eq!(status, StatusCode::OK);
         assert_eq!(body, "asset");
 

@@ -1,6 +1,8 @@
 import { defineCommand, reflectCommandRegistry, type CommandDefinition, type CommandMeta } from '@fluvient-cli/cli-kit/commands.ts';
 import type { FetchLike } from './release.ts';
 import type { InstallerOptions } from './main.ts';
+import { err, ok, type Result } from '@fluvient-cli/cli-kit/result.ts';
+import { EXIT_OK, EXIT_USAGE, type OpsFailure } from '@fluvient-cli/cli-kit/errors.ts';
 
 export const initMeta = {
   path: ['init'],
@@ -11,7 +13,7 @@ export const initMeta = {
     { name: 'force', description: '覆盖已有配置文件', model: { kind: 'switch' as const } },
   ],
   examples: ['node blog-deploy.mjs init', 'node blog-deploy.mjs init --force'],
-  exitCodes: [{ code: 0, meaning: '配置生成成功' }, { code: 10, meaning: '参数或配置错误' }],
+  exitCodes: [{ code: EXIT_OK, meaning: '配置生成成功' }, { code: EXIT_USAGE, meaning: '参数或配置错误' }],
 } satisfies CommandMeta;
 
 export const deployMeta = {
@@ -41,12 +43,18 @@ export const selfUpdateMeta = {
 
 export type InstallerRunner = (command: string, options: InstallerOptions, fetchImpl: FetchLike) => Promise<number>;
 
+function installerResult(run: Promise<number>): Promise<Result<{ readonly exitCode?: number }, OpsFailure>> {
+  return run.then((exitCode) => exitCode === EXIT_OK
+    ? ok({ exitCode })
+    : err({ code: exitCode === EXIT_USAGE ? 'USAGE' : 'EXTERNAL_COMMAND_FAILED', message: 'installer command failed', details: [], exitCode }));
+}
+
 export function installerDefinitions(fetchImpl: FetchLike, run: InstallerRunner): readonly CommandDefinition[] {
   return [
-    defineCommand(initMeta, (context, args) => run('init', { configFile: args.config, dryRun: context.dryRun, force: args.force }, fetchImpl)),
-    defineCommand(deployMeta, (context, args) => run('deploy', { configFile: args.config, dryRun: context.dryRun, force: false }, fetchImpl)),
-    defineCommand(redeployMeta, (context, args) => run('redeploy', { configFile: args.config, dryRun: context.dryRun, force: false }, fetchImpl)),
-    defineCommand(selfUpdateMeta, (context) => run('self-update', { dryRun: context.dryRun, force: false }, fetchImpl)),
+    defineCommand(initMeta, (context, args) => installerResult(run('init', { configFile: args.config, dryRun: context.dryRun, force: args.force }, fetchImpl))),
+    defineCommand(deployMeta, (context, args) => installerResult(run('deploy', { configFile: args.config, dryRun: context.dryRun, force: false }, fetchImpl))),
+    defineCommand(redeployMeta, (context, args) => installerResult(run('redeploy', { configFile: args.config, dryRun: context.dryRun, force: false }, fetchImpl))),
+    defineCommand(selfUpdateMeta, (context) => installerResult(run('self-update', { dryRun: context.dryRun, force: false }, fetchImpl))),
   ];
 }
 

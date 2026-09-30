@@ -4,18 +4,18 @@ import test from "node:test";
 import {
   editorSnapshot,
   valueForCurrentSource,
-} from "../../../../desktop/src/pages/admin/editor-state";
+} from "../../../../app/habitat/desktop/logic/editor-state";
 import {
   takeEditorSessionDraft,
   writeEditorSessionDraft,
   type EditorDraftStorage,
-} from "../../../../desktop/src/pages/admin/editor-session-draft";
+} from "../../../../app/habitat/desktop/logic/editor-session-draft";
 import {
   canAbandonWorkspace,
   canSubmitWorkspace,
   workspaceActionPending,
   workspaceStatusLabel,
-} from "../../../../desktop/src/pages/admin/taxonomy-state";
+} from "../../../../app/habitat/desktop/logic/taxonomy-state";
 
 const memoryStorage = (): EditorDraftStorage => {
   const values = new Map<string, string>();
@@ -76,11 +76,17 @@ test("workspace actions follow the finite server status matrix", () => {
 
 test("editor keeps its form mounted after save and public navigation has no admin entry", () => {
   const editorSource = readFileSync(
-    new URL("../../../../desktop/src/pages/admin/editor.tsx", import.meta.url),
+    new URL(
+      "../../../../app/habitat/desktop/pages/editor.tsx",
+      import.meta.url,
+    ),
     "utf8",
   );
   const headerSource = readFileSync(
-    new URL("../../../../desktop/src/shell/header.tsx", import.meta.url),
+    new URL(
+      "../../../../app/habitat/desktop/pages/admin-home.tsx",
+      import.meta.url,
+    ),
     "utf8",
   );
 
@@ -88,7 +94,7 @@ test("editor keeps its form mounted after save and public navigation has no admi
   // 导航经路由清单取用，源码不出现页面路径字面量；
   // 管理台入口只存在于 admin 分支（public 分支无管理入口文案）。
   assert.doesNotMatch(headerSource, /href="\/(admin|m|articles)\//);
-  assert.match(headerSource, /adminHomeHref\(\)/);
+  assert.match(headerSource, /desktop-admin-home/);
   assert.doesNotMatch(headerSource, />管理</);
   assert.equal(
     editorSnapshot({
