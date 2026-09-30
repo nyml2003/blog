@@ -57,6 +57,7 @@ interface BrowserLocator {
   fill(value: string): Promise<void>;
   press(key: string): Promise<void>;
   pressSequentially(text: string): Promise<void>;
+  hover(): Promise<void>;
   selectOption(value: string): Promise<void>;
   inputValue(): Promise<string>;
   waitFor(): Promise<void>;
@@ -273,6 +274,28 @@ async function runDevJourney(browser: Browser, origin: string, artifactDir: stri
   }, scenario === 'slow' ? 'domcontentloaded' : 'networkidle', scenario === 'empty' ? [] : [500]);
   if (scenario === 'empty') {
     const wide = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    await assertPage(wide, 'dev-desktop-home-wide', `${origin}/`, artifactDir, failures, async (current) => {
+      await current.getByRole('heading', { name: '近期推荐', exact: true }).waitFor();
+      const layout = await current.evaluate(() => {
+        const root = document.querySelector('.desktop-home');
+        const row = document.querySelector('.archive-row');
+        if (!root || !row) throw new Error('desktop home layout nodes are missing');
+        const rootRect = root.getBoundingClientRect();
+        const rowBefore = getComputedStyle(row, '::before').transform;
+        return {
+          rootWidth: rootRect.width,
+          viewportWidth: innerWidth,
+          background: getComputedStyle(document.body).backgroundColor,
+          rowBefore,
+        };
+      });
+      if (layout.rootWidth < layout.viewportWidth - 1) throw new Error(`desktop home does not cover viewport: ${JSON.stringify(layout)}`);
+      if (layout.background === 'rgb(255, 255, 255)') throw new Error(`desktop home background is white: ${JSON.stringify(layout)}`);
+      const row = current.locator('.archive-row').first();
+      await row.hover();
+      const hovered = await current.evaluate(() => getComputedStyle(document.querySelector('.archive-row')!, '::before').transform);
+      if (hovered === 'none' || hovered === 'matrix(1, 0, 0, 1, 0, 0)') throw new Error('desktop archive hover indicator did not activate');
+    });
     await assertPage(wide, 'dev-home-wide', `${origin}/m/`, artifactDir, failures, async (current) => {
       await current.getByRole('heading', { name: '推荐阅读', exact: true }).waitFor();
     });

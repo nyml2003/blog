@@ -1,3 +1,11 @@
+:root,
+html,
+body,
+#app {
+  min-height: 100%;
+  background: #f4f1ea;
+}
+
 .desktop-home {
   width: 100%;
   max-width: none;
