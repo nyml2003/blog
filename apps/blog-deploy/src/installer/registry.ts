@@ -30,6 +30,15 @@ export const redeployMeta = {
   examples: ['node blog-deploy.mjs redeploy', 'node blog-deploy.mjs redeploy --dry-run'],
 } satisfies CommandMeta;
 
+export const selfUpdateMeta = {
+  path: ['self-update'],
+  summary: '更新安装器自身',
+  description: '从最新稳定 script-v* Release 校验并原子替换当前安装器,不会重启业务服务。',
+  options: [],
+  examples: ['node blog-deploy.mjs self-update', 'node blog-deploy.mjs self-update --dry-run'],
+  exitCodes: [{ code: 0, meaning: '已是最新或更新成功' }, { code: 10, meaning: '权限或参数错误' }, { code: 20, meaning: '下载、校验或回滚失败' }, { code: 30, meaning: '已有更新进程运行' }],
+} satisfies CommandMeta;
+
 export type InstallerRunner = (command: string, options: InstallerOptions, fetchImpl: FetchLike) => Promise<number>;
 
 export function installerDefinitions(fetchImpl: FetchLike, run: InstallerRunner): readonly CommandDefinition[] {
@@ -37,6 +46,7 @@ export function installerDefinitions(fetchImpl: FetchLike, run: InstallerRunner)
     defineCommand(initMeta, (context, args) => run('init', { configFile: args.config, dryRun: context.dryRun, force: args.force }, fetchImpl)),
     defineCommand(deployMeta, (context, args) => run('deploy', { configFile: args.config, dryRun: context.dryRun, force: false }, fetchImpl)),
     defineCommand(redeployMeta, (context, args) => run('redeploy', { configFile: args.config, dryRun: context.dryRun, force: false }, fetchImpl)),
+    defineCommand(selfUpdateMeta, (context) => run('self-update', { dryRun: context.dryRun, force: false }, fetchImpl)),
   ];
 }
 

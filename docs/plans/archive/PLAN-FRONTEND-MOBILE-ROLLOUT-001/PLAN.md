@@ -1,7 +1,7 @@
 ---
 kind: plan
 id: PLAN-FRONTEND-MOBILE-ROLLOUT-001
-status: partial
+status: completed
 owner: project-manager
 created: 2026-09-29
 last_reviewed: 2026-09-29
@@ -60,7 +60,7 @@ last_reviewed: 2026-09-29
 | Mobile 首页推荐页 | frontend | 文章库与检索页 | `src/frontend/app/bootstrap/mobile/home.tsx`、对应 page/logic/tests、推荐筛选调用处 | completed |
 | Mobile 设置页 | frontend | 基线清单 | `src/frontend/app/bootstrap/mobile/settings-page.tsx`、对应 page/logic/tests；不得改首绘模块契约 | completed |
 | 详情页回归与共享逻辑收敛 | frontend | 前述页面至少两个完成 | 详情试点相关 logic、共享纯函数和测试；仅保留有真实重复证据的抽取 | completed |
-| 新 Mobile 集成验收与收尾 | frontend+pm | 上述工作流 | 本计划结果、职责矩阵、浏览器证据和必要架构记录 | partial |
+| 新 Mobile 集成验收与收尾 | frontend+pm | 上述工作流 | 本计划结果、职责矩阵、浏览器证据和必要架构记录 | completed |
 
 工作流按依赖串行推进。首页、文章库和文章检索写集可能交叉使用 `ArticleCard` 与 Mobile API 类型，由同一 owner 串行修改。`PLAN-UI-ICON-CONTROLS-001` 若仍在执行，图标依赖和控件写集必须先协调，不重复修改同一文件。
 
@@ -93,6 +93,7 @@ last_reviewed: 2026-09-29
 
 ### 未完成与证据限制
 
-- 未完成 Playwright 窄屏/宽屏浏览器验收。当前环境没有 `playwright-core` 或 Chromium；项目 Flake 获取依赖时仍缺少浏览器模块，因此没有截图、像素或真实交互证据。
-- 现有自动化覆盖 API、参数、设置、资源竞态/取消和源码边界；首页、文章库、设置页的完整渲染级交互仍需浏览器环境补验。
-- 继续推进条件：提供项目要求的 Playwright 模块和 Chromium 可执行文件后，运行 `ops e2e` 的 `dev` 场景及 `integration` 场景，补录至少一个窄屏和一个宽屏结果，再决定是否将本计划改为 `completed`。
+- `ops e2e --mode dev` 已通过 `empty`、`slow`、`server-error`、`malformed-response` 四个场景；`empty` 场景覆盖 375px 文章库和 1440px 首页/设置页，并生成截图，验证无横向溢出。
+- `ops e2e --mode integration` 已通过 Product/Data 栈验收，覆盖 Desktop 文章库/详情、Mobile 窄屏文章库分类选择与浏览器返回、文章检索 alias 和详情；产物目录为 `target/e2e/1790684566754-69168`。
+- 开发栈浏览器产物位于 `target/e2e/1790681378495-63823`、`target/e2e/1790681842179-64554`、`target/e2e/1790681875145-64694`、`target/e2e/1790681908214-64826`；覆盖窄屏、宽屏、空态、慢请求、500 和畸形响应。
+- 本计划未迁移旧 Mobile、Desktop 或管理端页面，也未改变公共 API、wire DTO、文章可见性、首绘设置和页面 alias；这些属于明确的非目标或保持项。

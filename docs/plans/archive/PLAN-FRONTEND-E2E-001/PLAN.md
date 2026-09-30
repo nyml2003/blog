@@ -4,7 +4,7 @@ id: PLAN-FRONTEND-E2E-001
 status: partial
 owner: project-manager
 created: 2026-09-29
-last_reviewed: 2026-09-29
+last_reviewed: 2026-09-30
 ---
 
 # 前端浏览器端到端测试
@@ -15,10 +15,10 @@ last_reviewed: 2026-09-29
 
 ## 当前基线
 
-- `scripts/test-article-html-browser.mjs` 已通过 `playwright-core` 和外部 Chromium 做浏览器验收，支持截图、页面错误收集、不同 viewport 和 WASM 失败场景；但它是一次性脚本，不是统一 E2E 测试套件。
+- `scripts/test-article-html-browser.mjs` 曾通过 `playwright-core` 和外部 Chromium 做浏览器验收；本计划新增的统一入口为 `ops e2e`，不再以 scripts 目录作为运行入口。
 - 历史 Mobile 浏览器证据曾以临时 Playwright 脚本记录在归档 Spec 中；当前没有稳定的 `e2e/` 目录、测试配置、fixture 生命周期、报告目录或独立命令。
 - `ops runtime integration` 会构建前端并启动 Product + Data(test)，适合真实同源页面验收；`runtime dev` 使用 Vite + Mock，适合故障和快速交互场景。
-- `docs/specs/SPEC-OPS-RUNTIME-001.md` 当前明确“不引入 E2E runner”，因此本计划若要把 E2E 纳入项目命令或 CI，必须先更新该契约或明确只提供仓库外/手工命令；不能悄悄改变 ops 的默认语义。
+- `docs/specs/SPEC-OPS-RUNTIME-001.md` 已更新为允许通过显式 `ops e2e` 编排浏览器验收，不改变快速质量门禁的默认语义。
 - `docs/guides/testing.md` 规定稳定的公开端和预览流程可以补浏览器自动化，并要求区分自动化证据与人工验收。
 
 ## 测试边界
@@ -107,7 +107,7 @@ E2E 只覆盖高价值用户旅程，不把所有单元测试重新写一遍。�
 ## 收尾记录
 
 - 实际交付：新增 `ops e2e`；runner、隔离运行栈、端口分配、信号清理、Playwright 直接加载、公开 Desktop/Mobile 旅程、Mock empty/slow/server-error/malformed-response 场景、截图和失败截图产物均位于 `apps/blog/src/e2e/**`；参数 Spec、运行指南和测试指南已同步。
-- 已验证：`pnpm exec tsc --noEmit`、Ops CLI/help 测试、E2E runner 单测和 `git diff --check` 通过；dry-run 不探测端口、不启动进程、不写文件。
-- 未交付：当前环境未配置 Playwright 模块和 Chromium，未取得真实浏览器截图证据；管理端旅程、CI job、连续运行两次、trace/video 策略和真实 integration/dev 浏览器验收尚未完成。
-- 收尾原因：先归档已完成的 Ops 编排和可测试 runner，避免把环境缺失与未决的管理端/CI 资源条件伪装成完成。
-- 恢复条件：提供可执行的 `playwright-module` 与 Chromium 路径后，运行 `ops e2e` 的 integration/dev 场景并补齐 CI、管理端凭证隔离和重复运行验收。
+- 已验证：`pnpm exec tsc --noEmit`、Ops CLI/help 测试、E2E runner 单测和 `git diff --check` 通过；dry-run 不探测端口、不启动进程、不写文件。真实浏览器已执行 `ops e2e --mode dev --scenario empty`，产物为 `target/e2e/1790734393013-79109`；真实 integration 已执行并通过，产物为 `target/e2e/1790734421610-79268`。
+- 未交付：管理端登录/编辑主链路、CI job、连续运行两次的专门验收、失败 trace/video 策略，以及设置保存失败的专用 Mock 场景仍未完成。
+- 收尾原因：Ops 编排、公开端旅程、开发态故障场景和真实 integration/dev 浏览器证据已具备；管理端凭证隔离与 CI 资源条件仍未形成可审查实现，因此保持 `partial`。
+- 恢复条件：提供专用管理端 fixture/凭证隔离方案和 CI 浏览器资源预算后，补齐管理端旅程、CI job、重复运行验收及失败诊断策略，再评估是否完整归档。

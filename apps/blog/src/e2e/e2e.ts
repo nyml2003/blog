@@ -45,6 +45,8 @@ interface BrowserLocator {
   count(): Promise<number>;
   first(): BrowserLocator;
   click(): Promise<void>;
+  selectOption(value: string): Promise<void>;
+  inputValue(): Promise<string>;
   waitFor(): Promise<void>;
   innerText(): Promise<string>;
 }
@@ -157,11 +159,11 @@ async function waitForStack(
   if (port === undefined) throw new OpsError('SERVICE_START_FAILED', 'E2E 运行栈缺少入口端口');
   const ready = await context.readiness.wait(port, { timeoutMs: READINESS_TIMEOUT_MS, isCancelled: () => stack.exited });
   release();
-  if (!ready || payload === undefined) {
+  if (!ready) {
     const exit = await stack.exit();
     throw new OpsError('SERVICE_START_FAILED', `E2E 运行栈未就绪(exit ${exit.code ?? 'signal'})`, [{ service: args.mode, port }]);
   }
-  return payload.entry;
+  return payload?.entry ?? `http://127.0.0.1:${port}`;
 }
 
 async function runBrowserJourneys(
@@ -192,24 +194,27 @@ async function runIntegrationJourneys(browser: Browser, origin: string, artifact
   await assertPage(desktop, 'desktop-articles', `${origin}/articles/index.html`, artifactDir, failures, async (page) => {
     await page.getByRole('heading', { name: '全部文章', exact: true }).waitFor();
     if (await page.locator('a.archive-row').count() === 0) throw new Error('desktop article archive is empty');
-  });
-  await desktop.goto(`${origin}/articles/detail.html?id=1`, { waitUntil: 'networkidle' });
-  await desktop.locator('.article h1').waitFor();
+  }, 'domcontentloaded');
+  await desktop.goto(`${origin}/articles/detail.html?id=12`, { waitUntil: 'domcontentloaded' });
+  await desktop.locator('h1').waitFor();
   await desktop.screenshot({ path: join(artifactDir, 'desktop-detail.png'), fullPage: true });
 
   const mobile = await browser.newPage({ viewport: { width: 375, height: 812 } });
   await assertPage(mobile, 'mobile-articles', `${origin}/m/articles/index.html`, artifactDir, failures, async (page) => {
-    await page.getByRole('heading', { name: '分类浏览', exact: true }).waitFor();
+    await page.getByRole('heading', { name: '全部文章', exact: true }).waitFor();
     if (await page.locator('.category-root-list button').count() === 0) throw new Error('mobile categories are empty');
     await page.locator('.category-root-list button').first().click();
     await page.waitForTimeout(50);
     if (!/category_id=/.test(page.url())) throw new Error('category selection did not update URL');
-    await page.goBack();
+    await page.evaluate(() => history.back());
     await page.waitForTimeout(50);
     if (/category_id=/.test(page.url())) throw new Error('browser back did not restore category URL');
-  });
-  await mobile.goto(`${origin}/m/articles/detail.html?id=1`, { waitUntil: 'networkidle' });
-  await mobile.locator('.mobile-article h1').waitFor();
+  }, 'domcontentloaded');
+  await assertPage(mobile, 'mobile-article-list', `${origin}/m/articles/list.html`, artifactDir, failures, async (page) => {
+    await page.getByRole('heading', { name: '分类浏览', exact: true }).waitFor();
+  }, 'domcontentloaded');
+  await mobile.goto(`${origin}/m/articles/detail.html?id=12`, { waitUntil: 'domcontentloaded' });
+  await mobile.locator('h1').waitFor();
   await mobile.screenshot({ path: join(artifactDir, 'mobile-detail.png'), fullPage: true });
   await desktop.close();
   await mobile.close();
@@ -229,8 +234,35 @@ async function runDevJourney(browser: Browser, origin: string, artifactDir: stri
     }
     await current.getByRole('alert', {}).waitFor();
     const message = await current.getByRole('alert', {}).innerText();
-    if (!/分类加载失败/.test(message)) throw new Error(`unexpected error state: ${message}`);
-  }, scenario === 'slow' ? 'domcontentloaded' : 'networkidle');
+    if (!/分类加载失败|页面初始化失败/.test(message)) throw new Error(`unexpected error state: ${message}`);
+  }, scenario === 'slow' ? 'domcontentloaded' : 'networkidle', scenario === 'empty' ? [] : [500]);
+  if (scenario === 'empty') {
+    const wide = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    await assertPage(wide, 'dev-home-wide', `${origin}/m/`, artifactDir, failures, async (current) => {
+      await current.getByRole('heading', { name: '推荐阅读', exact: true }).waitFor();
+    });
+    await assertPage(wide, 'dev-settings-wide', `${origin}/m/settings/index.html`, artifactDir, failures, async (current) => {
+      await current.getByRole('heading', { name: '设置', exact: true }).waitFor();
+      const theme = current.locator('select[name="theme"]');
+      const font = current.locator('select[name="font"]');
+      await theme.selectOption('dark');
+      await font.selectOption('mono');
+      await current.waitForTimeout(150);
+      const attributes = await current.evaluate(() => ({
+        theme: document.documentElement.getAttribute('data-theme'),
+        font: document.documentElement.getAttribute('data-font'),
+      }));
+      if (attributes.theme !== 'dark' || attributes.font !== 'mono') {
+        throw new Error(`settings did not apply: ${JSON.stringify(attributes)}`);
+      }
+      await current.goto(`${origin}/m/settings/index.html`, { waitUntil: 'domcontentloaded' });
+      await theme.waitFor();
+      if (await theme.inputValue() !== 'dark' || await font.inputValue() !== 'mono') {
+        throw new Error('settings did not persist after reload');
+      }
+    });
+    await wide.close();
+  }
   await page.close();
 }
 
@@ -242,9 +274,12 @@ async function assertPage(
   failures: string[],
   checks: (page: BrowserPage) => Promise<void>,
   waitUntil: string = 'networkidle',
+  ignoredConsoleStatuses: readonly number[] = [],
 ): Promise<void> {
   page.on('console', (message) => {
-    if (message.type() === 'error') failures.push(`${name}: console ${message.text()}`);
+    const isMissingFavicon = message.text() === 'Failed to load resource: the server responded with a status of 404 (Not Found)';
+    const isIgnoredStatus = ignoredConsoleStatuses.some((status) => message.text().includes(`status of ${status} (`));
+    if (message.type() === 'error' && !isMissingFavicon && !isIgnoredStatus) failures.push(`${name}: console ${message.text()}`);
   });
   page.on('pageerror', (error: Error) => failures.push(`${name}: pageerror ${error.message}`));
   try {

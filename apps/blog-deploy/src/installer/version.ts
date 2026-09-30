@@ -1,11 +1,22 @@
 export type BuildVersion = readonly [bigint, bigint, bigint];
 
 const BUILD_TAG = /^build-v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/;
+const SCRIPT_TAG = /^script-v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/;
 
 export function parseBuildVersion(tag: string): BuildVersion | undefined {
   const match = BUILD_TAG.exec(tag);
   if (!match) return undefined;
   return [BigInt(match[1]), BigInt(match[2]), BigInt(match[3])];
+}
+
+export function parseScriptVersion(tag: string): BuildVersion | undefined {
+  const match = SCRIPT_TAG.exec(tag);
+  if (!match) return undefined;
+  return [BigInt(match[1]), BigInt(match[2]), BigInt(match[3])];
+}
+
+export function serializeScriptVersion(version: BuildVersion): string {
+  return `script-v${version[0]}.${version[1]}.${version[2]}`;
 }
 
 export function serializeBuildVersion(version: BuildVersion): string {

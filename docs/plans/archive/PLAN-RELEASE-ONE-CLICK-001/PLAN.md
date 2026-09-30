@@ -1,7 +1,7 @@
 ---
 kind: plan
 id: PLAN-RELEASE-ONE-CLICK-001
-status: ready
+status: completed
 owner: project-manager
 created: 2026-09-29
 last_reviewed: 2026-09-29
@@ -85,10 +85,10 @@ last_reviewed: 2026-09-29
 
 | 工作流 | Owner | 依赖 | Write set | 状态 |
 | --- | --- | --- | --- | --- |
-| 发布现状与版本契约盘点 | release+pm | - | 本计划、workflow/README 对照、版本规则记录 | ready |
-| 预检与一键入口 | release | 现状盘点 | `ops release`、相关测试、必要的 CLI registry | ready |
-| CI 资产与重复发布护栏 | release+ci | 现状盘点 | `.github/workflows/**`、CI 测试/文档 | ready |
-| 发布后验收与指南 | release+deploy | 预检与 CI 护栏 | `deploy/README.md`、`docs/guides/operations.md`、演练记录 | ready |
+| 发布现状与版本契约盘点 | release+pm | - | 本计划、workflow/README 对照、版本规则记录 | completed |
+| 预检与一键入口 | release | 现状盘点 | `ops release`、相关测试、必要的 CLI registry | completed |
+| CI 资产与重复发布护栏 | release+ci | 现状盘点 | `.github/workflows/**`、CI 测试/文档 | completed |
+| 发布后验收与指南 | release+deploy | 预检与 CI 护栏 | `deploy/README.md`、`docs/guides/operations.md`、演练记录 | completed |
 
 workflow、tag 预检、CLI registry 和锁文件属于共享写集，必须串行修改。若判断“只需打 tag”，仍需完成现状盘点和一次演练，不以口头判断替代证据。
 

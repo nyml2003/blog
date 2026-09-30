@@ -26,7 +26,10 @@ git tag build-v0.1.1  && git push origin build-v0.1.1    # 二进制/页面有�
 # 服务器更新(幂等,自动取最新 build-v*)
 node /etc/blog/blog-deploy.mjs redeploy
 # --dry-run 只看计划;版本策略由 blog.json 的 buildTag=latest 控制
-# 安装器自身更新:重下 script-v* 的 mjs 覆盖 /etc/blog/blog-deploy.mjs
+# 安装器自身更新(只替换安装器,不重启业务服务)
+node /etc/blog/blog-deploy.mjs self-update --dry-run
+node /etc/blog/blog-deploy.mjs self-update
+# script-v* Release 必须同时提供 blog-deploy.mjs 与 SHA256SUMS;失败会自动恢复备份
 ```
 
 ## 目录与权限

@@ -22,12 +22,19 @@ jobs:
         run: |
           test -s deploy/dist/blog-deploy.mjs
           node deploy/dist/blog-deploy.mjs --help >/dev/null
+          printf '%s  %s\n' "$(sha256sum deploy/dist/blog-deploy.mjs | cut -d' ' -f1)" blog-deploy.mjs > SHA256SUMS
+          test "${GITHUB_REF_NAME#script-v}" = "$(node -p "require('./apps/blog-deploy/package.json').version")"
+          test "${GITHUB_REF_NAME#script-v}" = "$(sed -n "s/.*INSTALLER_VERSION = '\([^']*\)'.*/\1/p" apps/blog-deploy/src/installer/main.ts)"
       - uses: actions/upload-artifact@v4
         with:
           name: blog-deploy-mjs
-          path: deploy/dist/blog-deploy.mjs
+          path: |
+            deploy/dist/blog-deploy.mjs
+            SHA256SUMS
       - name: Publish release asset
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: deploy/dist/blog-deploy.mjs
+          files: |
+            deploy/dist/blog-deploy.mjs
+            SHA256SUMS

@@ -2,7 +2,7 @@
 import { createHash } from 'node:crypto';
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { compareBuildVersion, parseBuildVersion } from './version.ts';
+import { compareBuildVersion, parseBuildVersion, parseScriptVersion, type BuildVersion } from './version.ts';
 
 export interface ReleaseAsset {
   readonly name: string;
@@ -14,6 +14,7 @@ export interface BuildRelease {
   readonly draft?: boolean;
   readonly prerelease?: boolean;
 }
+export type ScriptRelease = BuildRelease;
 export type FetchLike = (input: string, init?: { headers?: Record<string, string> }) => Promise<{
   ok: boolean;
   status: number;
@@ -37,6 +38,30 @@ export function pickBuildRelease(releases: readonly BuildRelease[]): BuildReleas
     const nextVersion = parseBuildVersion(next.tag)!;
     return compareBuildVersion(nextVersion, bestVersion) > 0 ? next : best;
   });
+}
+
+export function pickScriptRelease(releases: readonly ScriptRelease[]): ScriptRelease {
+  const candidates = releases
+    .filter((release) => !release.draft && !release.prerelease)
+    .filter((release) => parseScriptVersion(release.tag) !== undefined);
+  if (candidates.length === 0) throw new Error('仓库里还没有 script-v* Release');
+  return candidates.reduce((best, next) => {
+    const bestVersion = parseScriptVersion(best.tag) as BuildVersion;
+    const nextVersion = parseScriptVersion(next.tag) as BuildVersion;
+    return compareBuildVersion(nextVersion, bestVersion) > 0 ? next : best;
+  });
+}
+
+export function pickScriptAsset(release: ScriptRelease): ReleaseAsset {
+  const asset = release.assets.find((entry) => entry.name === 'blog-deploy.mjs');
+  if (!asset) throw new Error(`Release ${release.tag} 缺少 blog-deploy.mjs 资产`);
+  return asset;
+}
+
+export function pickChecksumAsset(release: ScriptRelease): ReleaseAsset {
+  const asset = release.assets.find((entry) => entry.name === 'SHA256SUMS');
+  if (!asset) throw new Error(`Release ${release.tag} 缺少 SHA256SUMS 资产`);
+  return asset;
 }
 
 export function pickAsset(release: BuildRelease, target: string): ReleaseAsset {
@@ -86,7 +111,16 @@ export async function verifyChecksums(directory: string, checksumFile: string): 
   for (const line of lines) {
     const [hash, path] = line.trim().split(/\s+/);
     if (!hash || !path) throw new Error(`SHA256SUMS 格式错误:${line}`);
+    if (!/^[a-f0-9]{64}$/.test(hash) || path.startsWith('/') || path.split('/').includes('..')) throw new Error(`SHA256SUMS 路径或摘要非法:${line}`);
     const actual = createHash('sha256').update(await readFile(join(directory, path))).digest('hex');
     if (actual !== hash) throw new Error(`校验失败:${path}`);
   }
+}
+
+export async function verifyAssetChecksum(file: string, checksumFile: string, assetName: string): Promise<void> {
+  const lines = (await readFile(checksumFile, 'utf8')).trim().split('\n');
+  const entry = lines.map((line) => line.trim().split(/\s+/)).find((parts) => parts[1] === assetName);
+  if (!entry || !entry[0] || !/^[a-f0-9]{64}$/.test(entry[0])) throw new Error(`SHA256SUMS 缺少 ${assetName} 或格式非法`);
+  const actual = createHash('sha256').update(await readFile(file)).digest('hex');
+  if (actual !== entry[0]) throw new Error(`校验失败:${assetName}`);
 }

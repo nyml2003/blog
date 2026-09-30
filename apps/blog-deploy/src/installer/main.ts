@@ -8,8 +8,8 @@
  * 秘密只存在于 blog.json 与其派生的 /var/lib/blog/product.env;命令参数只有路径。
  */
 import { spawnSync } from 'node:child_process';
-import { access, chmod, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { access, chmod, copyFile, mkdir, readFile, rename, rm, readdir, writeFile } from 'node:fs/promises';
+import { dirname, join, basename } from 'node:path';
 import { apexAlias, configTemplate, parseBlogConfig, seedFromLegacy, type BlogConfig } from './config.ts';
 import {
   BIN_DIR,
@@ -35,6 +35,10 @@ import {
   pickBuildRelease,
   targetForArch,
   verifyChecksums,
+  verifyAssetChecksum,
+  pickChecksumAsset,
+  pickScriptAsset,
+  pickScriptRelease,
   type FetchLike,
 } from './release.ts';
 import { RELEASE_BINARIES, RELEASE_NGINX, RELEASE_UNITS } from '../deploy-plan.ts';
@@ -44,6 +48,7 @@ export interface InstallerOptions {
   readonly dryRun: boolean;
   readonly force: boolean;
 }
+export const INSTALLER_VERSION = '0.1.0';
 class RunError extends Error {}
 
 function configPath(options: InstallerOptions): string {
@@ -252,9 +257,89 @@ export async function runDeploy(options: InstallerOptions, fetchImpl: FetchLike)
   }
 }
 
+async function installerPath(): Promise<string> {
+  return process.env.BLOG_DEPLOY_INSTALLER_PATH ?? process.argv[1] ?? '/etc/blog/blog-deploy.mjs';
+}
+
+export async function runSelfUpdate(options: InstallerOptions, fetchImpl: FetchLike): Promise<number> {
+  const target = await installerPath();
+  if (!options.dryRun && typeof process.getuid === 'function' && process.getuid() !== 0) {
+    console.error('请以 root 运行 self-update');
+    return 10;
+  }
+  let release;
+  try {
+    release = pickScriptRelease(await fetchReleases(RELEASE_REPO, fetchImpl));
+  } catch (error) {
+    console.error(`无法查询 script Release:${error instanceof Error ? error.message : String(error)}`);
+    return 20;
+  }
+  const current = `script-v${INSTALLER_VERSION}`;
+  if (release.tag === current) {
+    console.log(`安装器已是最新:${current}`);
+    return 0;
+  }
+  const script = pickScriptAsset(release);
+  const checksum = pickChecksumAsset(release);
+  if (options.dryRun) {
+    console.log(`self-update:${current} → ${release.tag} (dry-run,未下载、未替换)`);
+    return 0;
+  }
+  const directory = dirname(target);
+  const lock = `${target}.self-update.lock`;
+  const temp = join(directory, `.${basename(target)}.${process.pid}.tmp`);
+  const backup = join(directory, `${basename(target)}.bak-${INSTALLER_VERSION}-${Date.now()}`);
+  let replacementAttempted = false;
+  let backupCreated = false;
+  try {
+    await mkdir(lock, { mode: 0o700 });
+  } catch {
+    console.error(`已有 self-update 正在运行:${lock}`);
+    return 30;
+  }
+  try {
+    await downloadAsset(script, temp, fetchImpl);
+    const checksumTemp = `${temp}.sums`;
+    await downloadAsset(checksum, checksumTemp, fetchImpl);
+    await verifyAssetChecksum(temp, checksumTemp, 'blog-deploy.mjs');
+    const downloaded = await readFile(temp, 'utf8');
+    if (!downloaded.startsWith('#!') || !downloaded.includes('blog-deploy')) throw new Error('安装器资产格式非法');
+    await copyFile(target, backup);
+    backupCreated = true;
+    await chmod(backup, 0o600);
+    replacementAttempted = true;
+    await rename(temp, target);
+    const check = spawnSync(process.execPath, [target, '--help'], { encoding: 'utf8' });
+    if (check.status !== 0) {
+      throw new Error(`新安装器 --help 失败:${(check.stderr || check.stdout || '').trim().slice(-500)}`);
+    }
+    const backups = (await readdir(directory)).filter((name) => name.startsWith(`${basename(target)}.bak-`)).sort();
+    await Promise.all(backups.slice(0, -1).map((name) => rm(join(directory, name), { force: true })));
+    console.log(`安装器已更新:${current} → ${release.tag}`);
+    return 0;
+  } catch (error) {
+    let detail = error instanceof Error ? error.message : String(error);
+    if (replacementAttempted && backupCreated) {
+      try {
+        await rename(backup, target);
+        detail += `;已恢复旧安装器(备份:${backup})`;
+      } catch (restoreError) {
+        detail += `;恢复失败，人工恢复备份:${backup};${restoreError instanceof Error ? restoreError.message : String(restoreError)}`;
+      }
+    }
+    console.error(`self-update 失败:${detail}`);
+    return 20;
+  } finally {
+    await rm(temp, { force: true }).catch(() => undefined);
+    await rm(`${temp}.sums`, { force: true }).catch(() => undefined);
+    await rm(lock, { recursive: true, force: true }).catch(() => undefined);
+  }
+}
+
 export async function runInstallerCommand(command: string, options: InstallerOptions, fetchImpl: FetchLike): Promise<number> {
   if (command === 'init') return runInit(options);
   if (command === 'deploy' || command === 'redeploy') return runDeploy(options, fetchImpl);
+  if (command === 'self-update') return runSelfUpdate(options, fetchImpl);
   console.error(`未知命令:${command}`);
   return 10;
 }

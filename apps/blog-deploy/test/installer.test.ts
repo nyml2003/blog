@@ -5,9 +5,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { apexAlias, configTemplate, parseBlogConfig, seedFromLegacy } from '../src/installer/config.ts';
 import { renderTemplate } from '../src/installer/render.ts';
-import { fetchReleases, pickAsset, pickBuildRelease, targetForArch, verifyChecksums } from '../src/installer/release.ts';
+import { fetchReleases, pickAsset, pickBuildRelease, pickChecksumAsset, pickScriptAsset, pickScriptRelease, targetForArch, verifyAssetChecksum, verifyChecksums } from '../src/installer/release.ts';
 import { main } from '../src/main.ts';
-import { parseBuildVersion, serializeBuildVersion } from '../src/installer/version.ts';
+import { parseBuildVersion, parseScriptVersion, serializeBuildVersion, serializeScriptVersion } from '../src/installer/version.ts';
 
 const VALID = {
   serverName: 'blog.example.com',
@@ -68,6 +68,16 @@ test('release selection prefers the newest build tag and matches the architectur
   assert.match(pickAsset(latest, 'x86_64-unknown-linux-musl').name, /x86_64/);
   assert.throws(() => pickAsset(latest, 'aarch64-unknown-linux-musl'), /缺少/);
   assert.throws(() => pickBuildRelease([...RELEASES].filter((r) => r.tag !== 'build-v0.1.0' && r.tag !== 'build-v0.2.0')), /还没有 build-v/);
+  const scripts = [
+    { tag: 'script-v1.2.0', assets: [{ name: 'blog-deploy.mjs', url: 'https://example.test/mjs' }, { name: 'SHA256SUMS', url: 'https://example.test/sums' }] },
+    { tag: 'script-v1.3.0', prerelease: true, assets: [] },
+    { tag: 'script-v1.1.0', draft: true, assets: [] },
+    { tag: 'script-v1.0.0-beta.1', assets: [] },
+  ];
+  assert.equal(pickScriptRelease(scripts).tag, 'script-v1.2.0');
+  assert.equal(pickScriptAsset(scripts[0]!).name, 'blog-deploy.mjs');
+  assert.equal(pickChecksumAsset(scripts[0]!).name, 'SHA256SUMS');
+  assert.equal(serializeScriptVersion(parseScriptVersion('script-v1.2.3')!), 'script-v1.2.3');
 });
 
 test('fetchReleases parses the public API payload', async () => {
@@ -87,6 +97,7 @@ test('verifyChecksums detects tampering', async () => {
     const hash = '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824';
     await writeFile(join(directory, 'SHA256SUMS'), `${hash}  file.txt\n`);
     await verifyChecksums(directory, join(directory, 'SHA256SUMS'));
+    await verifyAssetChecksum(join(directory, 'file.txt'), join(directory, 'SHA256SUMS'), 'file.txt');
     await writeFile(join(directory, 'file.txt'), 'tampered');
     await assert.rejects(() => verifyChecksums(directory, join(directory, 'SHA256SUMS')), /校验失败/);
   } finally {
@@ -112,4 +123,17 @@ test('init creates a skeleton, refuses overwrite, and force rewrites', async () 
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
+});
+
+test('self-update is explicit and supports a release dry-run', async () => {
+  const fakeFetch = async (input: string): Promise<Awaited<ReturnType<typeof fetch>>> => {
+    if (input.includes('/releases?')) {
+      return new Response(JSON.stringify([{ tag_name: 'script-v9.9.9', assets: [
+        { name: 'blog-deploy.mjs', browser_download_url: 'https://example.test/mjs' },
+        { name: 'SHA256SUMS', browser_download_url: 'https://example.test/sums' },
+      ] }]), { status: 200 });
+    }
+    return new Response('', { status: 200 });
+  };
+  assert.equal(await main(['self-update', '--dry-run'], fakeFetch as never), 0);
 });

@@ -1,7 +1,7 @@
 ---
 kind: plan
 id: PLAN-BLOG-DEPLOY-SELF-UPDATE-001
-status: ready
+status: partial
 owner: project-manager
 created: 2026-09-29
 last_reviewed: 2026-09-29
@@ -82,10 +82,10 @@ last_reviewed: 2026-09-29
 
 | 工作流 | Owner | 依赖 | Write set | 状态 |
 | --- | --- | --- | --- | --- |
-| 自更新协议与版本决策 | release+pm | - | 本计划、Release 资产/版本契约 | ready |
-| Script Release 校验资产 | release+ci | 协议决策 | `.github/workflows/script-release.yml`、发布测试和资产说明 | ready |
-| Installer self-update 实现 | release | 协议决策、校验资产 | `apps/blog-deploy/src/installer/**`、installer 测试和 bundle 冒烟 | ready |
-| 隔离演练与文档 | deploy+qa | 实现完成 | `deploy/README.md`、`docs/guides/operations.md`、演练记录 | ready |
+| 自更新协议与版本决策 | release+pm | - | 本计划、Release 资产/版本契约 | completed |
+| Script Release 校验资产 | release+ci | 协议决策 | `.github/workflows/script-release.yml`、发布测试和资产说明 | completed |
+| Installer self-update 实现 | release | 协议决策、校验资产 | `apps/blog-deploy/src/installer/**`、installer 测试和 bundle 冒烟 | completed |
+| 隔离演练与文档 | deploy+qa | 实现完成 | `deploy/README.md`、`docs/guides/operations.md`、演练记录 | completed |
 
 Release workflow 和 installer 的共享资产契约必须串行修改；self-update 不与业务 `redeploy` 写集混合。
 
@@ -103,3 +103,12 @@ Release workflow 和 installer 的共享资产契约必须串行修改；self-up
 - 当前安装器版本写入 bundle 的位置和格式；需要与 Release tag 严格一致还是允许同一 tag 重打包，必须明确禁止后者。
 - 旧安装器备份保留一个还是按数量/磁盘上限保留多个；默认只保留最近一个可回退版本。
 - self-update 是否支持指定版本 dry-run/回退；默认只追踪最新稳定 script Release，不提供远程降级。
+
+## 当前收尾记录
+
+- 已交付：`self-update` 显式命令；严格 `script-vMAJOR.MINOR.PATCH` 选择；`blog-deploy.mjs` 与 `SHA256SUMS` 独立下载和校验；同目录锁、临时文件、原子替换、单备份保留和 `--help` 失败回滚。
+- 已交付：Script Release workflow 生成并发布 `SHA256SUMS`，并要求 tag 版本等于 `apps/blog-deploy/package.json` 版本；部署文档已改为 self-update 流程。
+- 已验证：`pnpm --filter @blog/blog-deploy test`（8 项通过）、`ops delivery installer`（bundle 与 `--help` 通过）、`ops quality check`（Rust、TypeScript、前端、契约和构建检查通过）、`git diff --check`、Release 模块加载；测试覆盖稳定版本筛选、draft/prerelease 忽略、资产缺失、checksum 篡改和 self-update dry-run。
+- 已演练：在临时目录模拟 root，使用当前 bundle 和 fake `script-v9.9.9` Release 完成真实下载、checksum、替换、`--help` 检查和旧文件备份；结果为 `isolated self-update ok 0`，配置目录外无副作用。
+- 未交付：未连接真实 GitHub Release，未在隔离服务器执行权限拒绝以外的并发、磁盘不足和真实回滚演练。这些证据需要 CI 或具备 Node/root/systemd 的隔离环境，不能由本地模拟替代。
+- 后续条件：完成一次隔离服务器演练并保留版本切换、失败回滚和配置/证书不变的记录后，可将本计划状态改为 `completed`；定时自更新另立计划。
