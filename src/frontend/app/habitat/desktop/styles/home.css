@@ -165,7 +165,6 @@ body,
 }
 .desktop-home .archive-row {
   display: grid;
-  display: grid;
   grid-template-columns: 90px 1fr 150px;
   gap: 20px;
   align-items: center;
