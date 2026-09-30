@@ -220,6 +220,7 @@ test("registered entries use the bootstrap and mobile has one CSS entry", () => 
     "utf8",
   );
   assert.deepEqual(mobileStyles.trim().split("\n"), [
+    '@import "@fluvient-loom/mobile-h5-solid-atoms/styles.css";',
     '@import "./tokens.css";',
     '@import "./base.css";',
     '@import "./shell.css";',
@@ -231,7 +232,6 @@ test("registered entries use the bootstrap and mobile has one CSS entry", () => 
     '@import "./browse.css";',
     '@import "./pages.css";',
     '@import "../ui/styles/themes.css";',
-    '@import "../ui/styles/atoms.css";',
     '@import "../ui/styles/molecules.css";',
   ]);
 });

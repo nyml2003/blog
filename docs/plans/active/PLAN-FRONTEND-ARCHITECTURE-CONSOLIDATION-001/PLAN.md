@@ -175,8 +175,8 @@ Desktop 与 Mobile 只在 UI、布局、交互密度和平台专属状态上不�
 
 迁移和清理主体已完成：全部 17 个注册页面已接入新 bootstrap，旧 Desktop/Mobile 页面、`solid`、旧 `common` 运行链和 `mobile-ui` 已删除。HTML 校验 schema 与 WASM 宿主适配保留在新 runtime 明确边界内。
 
-已验证：前端 typecheck、lint、format check、41 项新 runtime 测试、WASM parity 287 cases、Vite build、`git diff --check`；此前真实 runtime/browser 验收产物保存在 `target/e2e/1790738049813-89671/`。当前环境缺少 `playwright-core` 与 Chromium，清理后的浏览器 E2E 无法重新执行。
+已验证：前端 typecheck、lint、format check、41 项新 runtime 测试、WASM parity 287 cases、Vite build、删除后 HTTP smoke（Desktop `/`、Mobile `/m/`、Mock API 均返回 200）、`git diff --check`；此前真实 runtime/browser 验收产物保存在 `target/e2e/1790738049813-89671/`。当前环境缺少 `playwright-core` 与 Chromium，清理后的浏览器 E2E 无法重新执行。
 
-未完成：在具备浏览器依赖的环境补跑 `ops e2e --mode dev --scenario empty`；仓库级 `ops quality check` 的 Rust fmt 仍受既有 `src/backend/product/src/static_files.rs` 格式漂移影响，该问题与本次前端清理无关。
+未完成：在具备浏览器依赖的环境补跑 `ops e2e --mode dev --scenario empty`；仓库级 `ops quality check` 的 Rust fmt 仍受既有 `src/backend/product/src/static_files.rs` 格式漂移影响，该问题与本次前端清理无关。另已修正 Vite 明确绑定 `127.0.0.1`，避免本地探活误判。
 
 Plan 可以以 `completed`、`partial` 或 `parked` 收尾。收尾必须记录已迁移页面、已删除模块、保留模块及理由、测试和浏览器证据、未完成范围，以及继续清理所需条件。未完成的页面不会自动成为下一轮任务，必须重新明确纳入。

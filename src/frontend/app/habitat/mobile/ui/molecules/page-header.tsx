@@ -1,4 +1,4 @@
-import { Heading, Link, Text } from "../atoms";
+import { Heading, Link, Text } from "@fluvient-loom/mobile-h5-solid-atoms";
 
 export interface PageHeaderProps {
   readonly title: string;

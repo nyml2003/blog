@@ -18,11 +18,12 @@
   },
   "dependencies": {
     "@codemirror/commands": "6.8.1",
-    "@codemirror/language": "6.12.4",
     "@codemirror/lang-html": "6.4.9",
+    "@codemirror/language": "6.12.4",
     "@codemirror/lint": "6.8.5",
     "@codemirror/state": "6.5.2",
     "@codemirror/view": "6.36.5",
+    "@fluvient-loom/mobile-h5-solid-atoms": "workspace:*",
     "lucide-solid": "1.48.0",
     "solid-js": "1.9.15",
     "zod": "^4.5.4"
@@ -31,6 +32,8 @@
     "@biomejs/biome": "2.5.12",
     "@types/node": "26.4.1",
     "oxlint": "1.81.0",
+    "playwright": "^1.63.0",
+    "playwright-core": "^1.63.0",
     "tsx": "^4.23.13",
     "typescript": "7.0.2",
     "vite": "8.2.2",

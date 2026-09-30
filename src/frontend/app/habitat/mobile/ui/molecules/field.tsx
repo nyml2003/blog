@@ -1,6 +1,6 @@
 import { createUniqueId, type JSX } from "solid-js";
-import { Label } from "../atoms";
-import { FieldControlContext } from "../atoms/field-context";
+import { Label } from "@fluvient-loom/mobile-h5-solid-atoms";
+import { FieldControlContext } from "@fluvient-loom/mobile-h5-solid-atoms/field-context";
 
 export interface FieldProps {
   readonly label: string;

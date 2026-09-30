@@ -1,6 +1,6 @@
 import { CircleAlert, CircleDashed, Inbox } from "lucide-solid";
 import { Show } from "solid-js";
-import { Button, Text } from "../atoms";
+import { Button, Text } from "@fluvient-loom/mobile-h5-solid-atoms";
 
 export type StateMessageKind = "loading" | "empty" | "error";
 export interface StateMessageProps {

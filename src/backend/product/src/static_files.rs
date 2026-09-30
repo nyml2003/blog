@@ -267,7 +267,8 @@ mod tests {
     async fn serves_mapped_pages_assets_and_404_fallback() {
         let files = static_files();
 
-        let (status, content_type, cache_control, body) = status_of(&files, &Method::GET, "/").await;
+        let (status, content_type, cache_control, body) =
+            status_of(&files, &Method::GET, "/").await;
         assert_eq!(status, StatusCode::OK);
         assert!(content_type.starts_with("text/html"));
         assert_eq!(cache_control, "no-cache");
@@ -312,8 +313,7 @@ mod tests {
                 "mobile/pages/admin-article-preview-content/index.html",
             ),
         ] {
-            let (status, content_type, _, body) =
-                status_of(&files, &Method::GET, path).await;
+            let (status, content_type, _, body) = status_of(&files, &Method::GET, path).await;
             assert_eq!(status, StatusCode::OK, "path={path}");
             assert!(content_type.starts_with("text/html"), "path={path}");
             assert_eq!(body, format!("<html>{expected}</html>"), "path={path}");
@@ -336,8 +336,7 @@ mod tests {
             "/assets/../desktop/pages/public-home/index.html",
             "/assets/nope.js",
         ] {
-            let (status, content_type, _, body) =
-                status_of(&files, &Method::GET, path).await;
+            let (status, content_type, _, body) = status_of(&files, &Method::GET, path).await;
             assert_eq!(status, StatusCode::NOT_FOUND, "path={path}");
             assert!(content_type.starts_with("text/plain"), "path={path}");
             assert_eq!(body, "404 page not found\n", "path={path}");

@@ -1,6 +1,6 @@
 import { House, LibraryBig, Settings2 } from "lucide-solid";
 import { For } from "solid-js";
-import { Link } from "../atoms";
+import { Link } from "@fluvient-loom/mobile-h5-solid-atoms";
 import type { NavigationItem } from "../../logic/navigation";
 
 export interface BottomNavProps {

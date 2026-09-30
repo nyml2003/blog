@@ -10,12 +10,15 @@ Plan 面向一个跨职能、可验收的产品结果，不面向单个文件或
 
 当前 active：
 
-- [PLAN-MOBILE-H5-SOLID-ATOMS-001](./active/PLAN-MOBILE-H5-SOLID-ATOMS-001/PLAN.md)：将新 Mobile H5 Solid UI 原子组件抽取为 `@fluvient-loom/mobile-h5-solid-atoms` workspace/npm 包，先完成包边界、样式和博客消费验收。2026-09-30 立项，状态 ready。
+- [PLAN-SCRIPTS-REMOVAL-001](./active/PLAN-SCRIPTS-REMOVAL-001/PLAN.md)：移除根目录 `scripts/`，将 WASM 构建、package smoke、浏览器专项和工具配置迁入 `ops`、前端测试/构建、CI 或 Nix 的明确归属。2026-09-30 立项，状态 ready。
+- [PLAN-FRONTEND-INFRASTRUCTURE-PACKAGES-001](./active/PLAN-FRONTEND-INFRASTRUCTURE-PACKAGES-001/PLAN.md)：收敛 `app/infrastructure` 的通用浏览器/内存适配器到 `@fluvient-loom/web`、`@fluvient-loom/node` 和共享协议包，先完成 workspace 消费与重复实现清理。2026-09-30 立项，状态 ready。
 - [PLAN-CONTAINER-DEPLOYMENT-001](./active/PLAN-CONTAINER-DEPLOYMENT-001/PLAN.md)：低资源单机容器部署——结合现有 Product/Data、SQLite、nginx、systemd 和 Release，设计 2 核 2 GB 服务器上的可靠容器运行、备份、升级与回滚方案。2026-09-29 立项，状态 ready。
 - [PLAN-FRONTEND-ARCHITECTURE-CONSOLIDATION-001](./active/PLAN-FRONTEND-ARCHITECTURE-CONSOLIDATION-001/PLAN.md)：Frontend 新基线与旧架构清理——为 Desktop/Mobile 统一页面生命周期和依赖装配，迁移全部旧页面链路后删除 `solid`、旧 Mobile 页面和无消费者的旧 UI 层。2026-09-30 立项，状态 ready。
 - [PLAN-DEPLOY-DOWNLOAD-PREFLIGHT-001](./active/PLAN-DEPLOY-DOWNLOAD-PREFLIGHT-001/PLAN.md)：部署预检与产物下载可观测性——在部署下载前检查网络可达性，统一阶段提示、进度、重试、错误诊断和机器输出。2026-09-30 立项，状态 ready。
 
 已归档：
+
+- [PLAN-MOBILE-H5-SOLID-ATOMS-001](./archive/PLAN-MOBILE-H5-SOLID-ATOMS-001/PLAN.md)：将新 Mobile H5 Solid UI 原子组件抽取为 `@fluvient-loom/mobile-h5-solid-atoms` workspace 包，完成包边界、样式和博客消费验收。2026-09-30 立项并完成，状态 completed。
 
 - [PLAN-OPS-FRAMEWORK-001](./archive/PLAN-OPS-FRAMEWORK-001/PLAN.md)：ops 框架解耦与 installer 插件化。2026-09-27 立项，2026-09-29 以 `partial` 收尾；本地实现、测试和 bundle 验证完成，CI 发布与真实服务器验收未执行。
 - [PLAN-FRONTEND-PAGE-COMPOSITION-001](./archive/PLAN-FRONTEND-PAGE-COMPOSITION-001/PLAN.md)：详情页职责边界与新 Mobile 文章详情试点。2026-09-28 立项，2026-09-29 以 `partial` 收尾。

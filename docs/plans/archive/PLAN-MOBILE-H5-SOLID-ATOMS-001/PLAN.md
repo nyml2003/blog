@@ -1,7 +1,7 @@
 ---
 kind: plan
 id: PLAN-MOBILE-H5-SOLID-ATOMS-001
-status: ready
+status: completed
 owner: project-manager
 created: 2026-09-30
 last_reviewed: 2026-09-30
@@ -88,10 +88,27 @@ last_reviewed: 2026-09-30
 5. 对照迁移前后的关键页面截图和交互；发现视觉差异时区分组件包变化与页面迁移变化并记录。
 6. 运行前端相关质量检查；浏览器或真实 runtime 受环境限制时，明确记录未完成项，不以构建通过替代浏览器验收。
 
-## 未决项
+## 已决事项
 
-- 包名是否最终使用 `@fluvient-loom/mobile-h5-solid-atoms`，还是在 API 评审中缩短为 `@fluvient-loom/mobile-atoms-solid`。
-- `lucide-solid` 是 peer dependency，还是将 `IconButton` 改为完全由调用方传入 icon。
-- CSS 是提供单一 `styles.css`，还是拆分 `atoms.css` 与 `themes.css` 子路径。
-- 包采用独立版本，还是与其他 `@fluvient-loom` 包统一版本；首发版本暂不自动决定。
-- 首轮完成后是否发布 npm；发布前需确认 npm scope、仓库元数据、license、CI provenance 和变更日志规则。
+- 包名固定为 `@fluvient-loom/mobile-h5-solid-atoms`，版本暂定 `0.1.0`。
+- `solid-js` 使用 peer dependency；现有组件不绑定 `lucide-solid`。
+- CSS 对外提供单一 `styles.css` 入口，内部保留可维护的 `styles/atoms.css`。
+- 首轮继续 workspace-only，不发布 npm；发布准备另行评审。
+
+## 结果
+
+- 已创建 `packages/mobile-h5-solid-atoms` workspace 包，包名固定为
+  `@fluvient-loom/mobile-h5-solid-atoms`，版本暂定 `0.1.0`。
+- 已迁移首批 12 个 atoms、公开类型、`defineAtom` 及 field context；博客 Mobile 分子组件改为从包根入口和明确的 `field-context` 子路径消费。
+- 已将原子 CSS 放入包并提供 `styles.css` 单一入口，入口包含可独立使用的默认主题变量；博客页面仍可通过自身 token 和主题 CSS 覆盖变量。
+- `solid-js` 声明为 peer dependency；现有 atoms 不再绑定 `lucide-solid`。
+- 已删除博客内原子组件和原子 CSS 副本，Vite 构建只解析 workspace 包实现。
+- 发布结论：继续 workspace-only；npm 发布留待后续单独评审。
+
+验证证据：
+
+- `pnpm --filter @fluvient-loom/mobile-h5-solid-atoms typecheck` 通过；包 `build` 通过 CSS 入口和组件规则检查。
+- `pnpm --filter blog-web typecheck`、`lint`、`format:check`、`test:core`、`test:frontend` 和 `build` 通过。
+- `git diff --check` 通过；前端构建产物生成单一 Mobile CSS 入口。
+
+未完成：未进行真实浏览器截图或 npm 发布验收；计划范围内的 workspace 包交付已完成。

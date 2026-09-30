@@ -1,5 +1,5 @@
 import { For } from "solid-js";
-import { Tab } from "../atoms";
+import { Tab } from "@fluvient-loom/mobile-h5-solid-atoms";
 
 export interface TabItem {
   readonly id: string;
