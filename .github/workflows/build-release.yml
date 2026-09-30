@@ -11,6 +11,8 @@ permissions:
 jobs:
   package:
     runs-on: ubuntu-latest
+    env:
+      OPS_RUNTIME_E2E: ''
     steps:
       - uses: actions/checkout@v4
       - uses: cachix/install-nix-action@v27

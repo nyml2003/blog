@@ -8,6 +8,7 @@
  * 秘密只存在于 blog.json 与其派生的 /var/lib/blog/product.env;命令参数只有路径。
  */
 import { spawnSync } from 'node:child_process';
+import packageInfo from '../../package.json' with { type: 'json' };
 import { access, chmod, copyFile, mkdir, readFile, rename, rm, readdir, writeFile } from 'node:fs/promises';
 import { dirname, join, basename } from 'node:path';
 import { apexAlias, configTemplate, parseBlogConfig, seedFromLegacy, type BlogConfig } from './config.ts';
@@ -48,7 +49,8 @@ export interface InstallerOptions {
   readonly dryRun: boolean;
   readonly force: boolean;
 }
-export const INSTALLER_VERSION = '0.1.0';
+/** The package version is the single source of truth for script-v* releases. */
+export const INSTALLER_VERSION = packageInfo.version;
 class RunError extends Error {}
 
 function configPath(options: InstallerOptions): string {

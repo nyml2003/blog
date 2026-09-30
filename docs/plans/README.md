@@ -15,6 +15,7 @@ Plan 面向一个跨职能、可验收的产品结果，不面向单个文件或
 - [PLAN-CONTAINER-DEPLOYMENT-001](./active/PLAN-CONTAINER-DEPLOYMENT-001/PLAN.md)：低资源单机容器部署——结合现有 Product/Data、SQLite、nginx、systemd 和 Release，设计 2 核 2 GB 服务器上的可靠容器运行、备份、升级与回滚方案。2026-09-29 立项，状态 ready。
 - [PLAN-BLOG-DEPLOY-SELF-UPDATE-001](./active/PLAN-BLOG-DEPLOY-SELF-UPDATE-001/PLAN.md)：`blog-deploy` 自更新——从稳定 `script-v*` Release 校验并原子替换安装器，失败可回退，不自动重启业务服务。2026-09-29 立项，状态 ready。
 - [PLAN-OPS-OUTPUT-STANDARD-001](./active/PLAN-OPS-OUTPUT-STANDARD-001/PLAN.md)：ops 输出标准化——统一人类输出、stdout/stderr、JSON/NDJSON 事件、错误码、诊断和敏感信息脱敏。2026-09-29 立项，状态 ready。
+- [PLAN-FRONTEND-ARCHITECTURE-CONSOLIDATION-001](./active/PLAN-FRONTEND-ARCHITECTURE-CONSOLIDATION-001/PLAN.md)：Frontend 新基线与旧架构清理——为 Desktop/Mobile 统一页面生命周期和依赖装配，迁移全部旧页面链路后删除 `solid`、旧 Mobile 页面和无消费者的旧 UI 层。2026-09-30 立项，状态 ready。
 
 已归档：
 

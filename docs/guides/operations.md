@@ -71,8 +71,8 @@ ops release both --yes
 
 - 参数契约见 [SPEC-OPS-PARAMETERS-001](../specs/SPEC-OPS-PARAMETERS-001.md)。有值参数必填且不得重复，禁止环境变量补值；帮助列出全部枚举与范围。`default` 只是需要显式选择的场景名称。
 - `--watch`、`--check`、`--help`、`--dry-run`、`--json` 为 switch：出现 true，缺省 false，重复幂等，不接受 `=true`/`=false`。`ops quality format` 写入，`ops quality format --check` 只检查；dry-run 仍须完整参数。
-- `ops e2e` 必须显式选择 `--mode`、`--playwright-module` 和 `--chromium-path`；`integration` 不接受 `--scenario`，`dev` 必须显式选择一个 Mock 场景。浏览器依赖不从环境变量补值。
-- E2E 不属于 `ops quality check`；失败产物写入 `target/e2e/<run-id>/`，包含截图以及页面 console/pageerror 诊断。
+- `ops e2e` 必须显式选择 `--mode`、`--playwright-module` 和 `--chromium-path`；`integration` 不接受 `--scenario`，`dev` 必须显式选择一个 Mock 场景。浏览器依赖不从环境变量补值；运行环境必须允许启动 Chromium 子进程和临时用户目录。
+- E2E 不属于 `ops quality check`；运行产物写入 `target/e2e/<run-id>/`，包含截图、`report.json` 以及页面 console/pageerror 诊断。`report.json` 会记录模式、场景、入口、最终状态和错误摘要。
 
 - 端口候选必须由对应 `--web-port`/`--product-port`/`--data-port`/`--mock-port`（十进制 int32，`1024`–`65535`）显式提供，无默认值；被占用时从候选值起逐次 +1（最多尝试 10 个端口），实际绑定结果即注入给依赖方的地址。
 - 监听地址固定 `127.0.0.1`，不提供 `--host`/`--listen`；`--scenario` 只接受命名场景，通过 CLI 传入，不读取环境变量。

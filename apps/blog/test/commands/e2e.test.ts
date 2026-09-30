@@ -117,10 +117,18 @@ test('e2e dry-run does not probe ports, create artifacts, or start processes', a
 test('e2e stops the runtime group when Playwright loading fails', async () => {
   const group = new FakeGroup();
   const process = new FakeProcess();
+  const reports = new Map<string, string>();
   const base = context({
     supervisor: {
       spawn: () => process,
       createGroup: () => group,
+    },
+    fs: {
+      read: async () => '',
+      exists: async () => false,
+      files: async () => [],
+      mkdir: async () => undefined,
+      write: async (path, content) => { reports.set(path, content); },
     },
   });
   await assert.rejects(
@@ -129,4 +137,7 @@ test('e2e stops the runtime group when Playwright loading fails', async () => {
   );
   assert.equal(group.stopCount, 1);
   assert.equal(process.killed, true);
+  assert.equal(reports.size, 1);
+  assert.match([...reports.values()][0] ?? '', /"status": "failed"/);
+  assert.match([...reports.values()][0] ?? '', /missing-playwright-module/);
 });

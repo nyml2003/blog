@@ -21,6 +21,15 @@ interface E2ePayload {
   readonly entry: string;
 }
 
+interface E2eReport {
+  readonly version: 1;
+  readonly mode: E2eMode;
+  readonly scenario: string;
+  readonly origin: string;
+  readonly status: 'passed' | 'failed';
+  readonly error?: string;
+}
+
 interface BrowserPage {
   goto(url: string, options?: { waitUntil?: string }): Promise<unknown>;
   getByRole(role: string, options?: { name?: string; exact?: boolean }): BrowserLocator;
@@ -45,6 +54,9 @@ interface BrowserLocator {
   count(): Promise<number>;
   first(): BrowserLocator;
   click(): Promise<void>;
+  fill(value: string): Promise<void>;
+  press(key: string): Promise<void>;
+  pressSequentially(text: string): Promise<void>;
   selectOption(value: string): Promise<void>;
   inputValue(): Promise<string>;
   waitFor(): Promise<void>;
@@ -90,17 +102,40 @@ export async function runE2e(
   const signalRelease = context.signals?.onSignal((signal) => {
     void group.stopAll(signal === 'SIGINT' ? 'SIGINT' : 'SIGTERM');
   });
+  let origin = 'unavailable';
   try {
     const stack = group.add(startStack(context, args, ports));
-    const origin = await waitForStack(stack, context, args, ports);
+    origin = await waitForStack(stack, context, args, ports);
     context.log.info(`E2E 栈就绪: ${origin}`);
     await runBrowserJourneys(playwrightModule, chromiumPath, origin, artifactDir, args.mode, args.scenario ?? 'default');
+    await writeE2eReport(context, artifactDir, {
+      version: 1,
+      mode: args.mode,
+      scenario: args.scenario ?? 'default',
+      origin,
+      status: 'passed',
+    });
     context.log.info(`E2E 通过，产物目录: ${artifactDir}`);
     return 0;
+  } catch (error) {
+    await writeE2eReport(context, artifactDir, {
+      version: 1,
+      mode: args.mode,
+      scenario: args.scenario ?? 'default',
+      origin,
+      status: 'failed',
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
   } finally {
     signalRelease?.();
     await group.stopAll('SIGTERM');
   }
+}
+
+async function writeE2eReport(context: CommandContext, artifactDir: string, report: E2eReport): Promise<void> {
+  if (!context.fs.write) return;
+  await context.fs.write(join(artifactDir, 'report.json'), `${JSON.stringify(report, null, 2)}\n`);
 }
 
 function validateE2eArgs(args: { readonly mode: E2eMode; readonly scenario?: E2eScenario }): void {
@@ -260,6 +295,31 @@ async function runDevJourney(browser: Browser, origin: string, artifactDir: stri
       if (await theme.inputValue() !== 'dark' || await font.inputValue() !== 'mono') {
         throw new Error('settings did not persist after reload');
       }
+    });
+    await assertPage(wide, 'dev-admin-workflow', `${origin}/admin/login.html?next=%2Fadmin%2Farticles%2Fnew.html`, artifactDir, failures, async (current) => {
+      await current.getByRole('heading', { name: '管理台登录', exact: true }).waitFor();
+      await current.locator('#admin-password').fill('e2e-password');
+      await current.locator('#admin-verification-code').fill('000000');
+      await current.getByRole('button', { name: '登录', exact: true }).click();
+      await current.getByRole('heading', { name: '新建文章', exact: true }).waitFor();
+
+      await current.locator('#title').fill('E2E 管理端草稿');
+      await current.locator('#summary').fill('E2E 管理端保存链路');
+      const editor = current.locator('.cm-content');
+      await editor.click();
+      await editor.pressSequentially('<script>alert(1)</script>');
+      await current.getByRole('button', { name: '保存到待提交批次', exact: true }).click();
+      await current.getByRole('alert', {}).waitFor();
+      const validationMessage = await current.getByRole('alert', {}).innerText();
+      if (!/HTML|危险|校验/.test(validationMessage)) throw new Error(`unexpected validation state: ${validationMessage}`);
+
+      await editor.click();
+      await editor.press('Meta+A');
+      await editor.press('Backspace');
+      await editor.pressSequentially('<p>E2E 管理端正文</p>');
+      await current.waitForTimeout(500);
+      await current.getByRole('button', { name: '保存到待提交批次', exact: true }).click();
+      await current.getByText('已保存到待提交批次。请前往发布工作台预览并提交。', { exact: true }).waitFor();
     });
     await wide.close();
   }
