@@ -10,7 +10,7 @@ last_reviewed: 2026-09-29
 
 ## 分层策略
 
-- Rust 领域、存储、API（`src/core` 与 `src/backend`）和 `src/frontend/common`：严格 red-green-refactor；
+- Rust 领域、存储、API（`src/core` 与 `src/backend`）和 `src/frontend/app`：严格 red-green-refactor；
 - Desktop/Mobile UI 早期：使用稳定、可重复的人工验收场景；
 - 推荐、预览、发布和公开可见性稳定后，再补浏览器自动化测试。
 
@@ -41,11 +41,11 @@ pnpm -C src/frontend run build
 
 `ops quality check` 还扫描前端 TypeScript/TSX 与 Rust 源码，执行 `SPEC-ARCH-BOUNDARY-001` 的长期边界规则：
 
-- Desktop 与 Mobile 不互相导入 UI；`common` 不依赖平台 UI 或 Solid UI；
-- 旧 Desktop/Mobile 页面只从 `solid/queries` 取得业务数据，不直接导入 `common/client`、`common/data` 或 `solid/data`；
+- Desktop 与 Mobile 不互相导入 UI；平台 UI 不依赖网络、存储或其他平台；
+- 页面只从 `app/habitat` 注入的 API、resource 和 ports 取得业务数据，不直接装配网络、存储或 wire DTO；
 - 新 `app/` 运行时遵守 `kernel → infrastructure/habitat → bootstrap` 边界：kernel 不依赖宿主或框架，habitat 通过注入的 API/ports 取数，bootstrap 不反向导入旧页面层；
 - UI 组件不直接导入 client/data 或 infrastructure，旧查询层和新 habitat API/resource 都不反向导入页面；
-- `common/client` 保持框架无关；
+- `app/kernel` 保持框架和宿主无关；
 - protocol 不承载货架编排，Product 不直接访问 SQLite，Data 不解析 HTML 或访问 GitHub。
 
 规则的正负样例位于 `apps/blog/test/commands/quality/architecture.test.ts`。违规会让 `ops quality check` 返回 `20`，报告包含文件路径与对应边界说明。

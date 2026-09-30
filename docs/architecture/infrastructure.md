@@ -18,7 +18,7 @@ last_reviewed: 2026-09-26
 - `ops` 是项目本地开发与质量入口；
 - 前端使用 pnpm 安装、类型检查、构建和格式检查；
 - 后端使用 Cargo workspace（`src/core` 与 `src/backend`，workspace 根在 `src/Cargo.toml`）测试和构建。
-- 前端 `dev`/`build` 先编译 `article-html-wasm` 的 `wasm32-unknown-unknown` release 产物，再通过 wasm-bindgen 生成 `src/frontend/common/validation/generated/`。生成文件不手工修改、不纳入 git 跟踪、不纳入手写 TS 格式检查；Rust crate 与 Flake CLI 版本必须同步。
+- 前端 `dev`/`build` 先编译 `article-html-wasm` 的 `wasm32-unknown-unknown` release 产物，再通过 wasm-bindgen 生成 `src/frontend/app/infrastructure/browser/validation/generated/`。生成文件不手工修改、不纳入 git 跟踪、不纳入手写 TS 格式检查；Rust crate 与 Flake CLI 版本必须同步。
 
 ## 运行与交付
 

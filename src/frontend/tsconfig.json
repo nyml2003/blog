@@ -12,16 +12,5 @@
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true
   },
-  "include": [
-    "desktop",
-    "desktop-ui",
-    "mobile",
-    "mobile-ui",
-    "common",
-    "solid",
-    "app",
-    "tests",
-    "vite-env.d.ts",
-    "vite.config.ts"
-  ]
+  "include": ["desktop-ui", "app", "tests", "vite-env.d.ts", "vite.config.ts"]
 }

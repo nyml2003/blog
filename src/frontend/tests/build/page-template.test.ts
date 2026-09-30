@@ -180,7 +180,7 @@ test("the generator writes one input per page without source HTML", () => {
   }
 });
 
-test("registered entries use definePage and mobile has one CSS entry", () => {
+test("registered entries use the bootstrap and mobile has one CSS entry", () => {
   const entryFiles = new Set(pageRegistry.map((page) => page.entry));
   for (const entry of entryFiles) {
     const source = readFileSync(resolve(frontendRoot, entry.slice(1)), "utf8");
@@ -188,8 +188,6 @@ test("registered entries use definePage and mobile has one CSS entry", () => {
       assert.match(source, /mountMobilePage\([^;]+\);/);
     } else if (entry.startsWith("/app/bootstrap/desktop/")) {
       assert.match(source, /mountDesktopPage\([^;]+\);/);
-    } else {
-      assert.match(source, /definePage\([A-Za-z]+\);/);
     }
     assert.doesNotMatch(source, /getElementById\("app"\)/);
     assert.doesNotMatch(source, /from "solid-js\/web"/);
@@ -218,7 +216,7 @@ test("registered entries use definePage and mobile has one CSS entry", () => {
   }
 
   const mobileStyles = readFileSync(
-    resolve(frontendRoot, "mobile/styles/app.css"),
+    resolve(frontendRoot, "app/habitat/mobile/styles/app.css"),
     "utf8",
   );
   assert.deepEqual(mobileStyles.trim().split("\n"), [
@@ -232,8 +230,8 @@ test("registered entries use definePage and mobile has one CSS entry", () => {
     '@import "./article-body.css";',
     '@import "./browse.css";',
     '@import "./pages.css";',
-    '@import "../../mobile-ui/styles/themes.css";',
-    '@import "../../mobile-ui/styles/atoms.css";',
-    '@import "../../mobile-ui/styles/molecules.css";',
+    '@import "../ui/styles/themes.css";',
+    '@import "../ui/styles/atoms.css";',
+    '@import "../ui/styles/molecules.css";',
   ]);
 });

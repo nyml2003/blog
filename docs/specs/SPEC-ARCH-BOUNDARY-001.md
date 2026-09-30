@@ -24,7 +24,7 @@ last_reviewed: 2026-09-19
 旧页面链路：
 
 ```text
-页面入口 / 页面 → solid/queries → common/client → common/data + solid/data
+页面入口 / 页面 → bootstrap → habitat API/resource → infrastructure/kernel ports
 ```
 
 新 `app/` 运行时：
@@ -40,11 +40,11 @@ bootstrap（组合根）
 
 | 层 | 禁止 |
 | --- | --- |
-| 旧页面 | import `common/client`、`solid/data`、`common/data`（明确的组合根例外只做 transport 装配） |
-| 旧业务组件 / 分子 / 原子 | import `common/client`、`common/data` |
-| `solid/queries` | import 任何 UI / 页面 / 组件模块 |
-| `common/client` | import Solid / DOM |
-| 任一 `app/` 模块 | import 旧 `common`、`solid`、`desktop`、`mobile`、`desktop-ui` 或 `mobile-ui` 运行时 |
+| 页面 | import API、resource、storage、transport 或 wire DTO |
+| UI 组件 | import API、storage、transport、路由实现或另一平台 UI |
+| habitat API | import infrastructure、页面或 UI |
+| kernel | import Solid、DOM、网络、存储或 Node 宿主 |
+| 任一 `app/` 模块 | import 已删除的旧前端运行时或跨平台 UI |
 | `app/kernel` | import Solid、DOM、Node、schema/UI 库，或直接使用 fetch、window、document、storage、process 等宿主能力 |
 | `app/infrastructure` | import 业务 API、sceneCode、UI 或 kernel/infrastructure 之外的项目模块 |
 | `app/habitat/api` | import Solid、infrastructure、旧运行时或 UI |
@@ -93,7 +93,7 @@ backend/data      Data Server HTTP 适配 + 类型化事务操作：store/domain
 
 Given 门禁生效且豁免清零
 
-When 旧页面代码 import `common/client`、`common/data` 或 `solid/data`
+When 页面代码直接装配网络、存储或 wire DTO
 
 Then 质量门禁失败
 
@@ -103,7 +103,7 @@ Given 旧页面或新 `app/` 页面需要业务数据或宿主能力
 
 When 页面发起读取、写入或访问浏览器能力
 
-Then 旧页面通过 `solid/queries`，新页面通过 habitat API/resource 和注入的 kernel ports；页面不直接装配 transport、存储或 wire DTO
+Then 页面通过 habitat API/resource 和注入的 kernel ports；页面不直接装配 transport、存储或 wire DTO
 
 ### SPEC-ARCH-BOUNDARY-001-003
 
@@ -147,7 +147,7 @@ Then 架构门禁失败并报告具体文件与边界规则
 
 ## 边界与失败
 
-- 旧页面查询层固定在 `solid/queries`；新运行时的数据用例位于 habitat，宿主实现位于 infrastructure，抽象能力位于 kernel；
+- 新运行时的数据用例位于 habitat，宿主实现位于 infrastructure，抽象能力位于 kernel；
 - 与其他当前工作的写集冲突（`http.rs`、`wire.rs`、`client.ts`、各页面文件）：先完成契约和写集协调，再串行执行整改；
 - 治理中发现“边界正确但实现腐化”的项：登记问题并另行明确范围，不在本 Spec 中隐式扩大改动；
 - 门禁豁免清单是唯一合法的暂存违规形式，禁止新增未登记豁免。

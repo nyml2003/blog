@@ -1,8 +1,7 @@
 /* C Mobile token module.
    Sole owner of the custom properties consumed by the Mobile style modules.
    No component selector, no page rhythm, no domain colour logic lives here.
-   Palette names are frozen: src/frontend/mobile-ui/styles/atoms.css already
-   consumes them and stays untouched during this migration. */
+   Palette names are frozen for the current Mobile UI. */
 :root {
   /* Palette (frozen names) */
   --paper: #f4f1ea;

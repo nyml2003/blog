@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import {
   initSync,
   inspect_html,
-} from "../src/frontend/common/validation/generated/article_html_wasm.js";
+} from "../src/frontend/app/infrastructure/browser/validation/generated/article_html_wasm.js";
 
 const workspace = fileURLToPath(new URL("../", import.meta.url));
 const fixtures = JSON.parse(
@@ -56,7 +56,7 @@ const expected = JSON.parse(native.stdout);
 initSync({
   module: readFileSync(
     new URL(
-      "../src/frontend/common/validation/generated/article_html_wasm_bg.wasm",
+      "../src/frontend/app/infrastructure/browser/validation/generated/article_html_wasm_bg.wasm",
       import.meta.url,
     ),
   ),

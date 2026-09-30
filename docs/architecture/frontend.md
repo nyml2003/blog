@@ -21,44 +21,31 @@ last_reviewed: 2026-09-19
 ```text
 src/frontend/
 ├── app/          # 新运行时：kernel / infrastructure / habitat / bootstrap
-├── common/       # 无 UI 的契约和逻辑
-├── desktop/      # C Desktop + B Desktop
-├── desktop-ui/   # Desktop 独立基础组件库（尚未接入页面）
-├── mobile/       # C Mobile 页面与适配
-├── mobile-ui/    # Mobile 独立原子、组合组件与页面容器
-└── solid/        # Solid 资源适配与页面查询层
+├── desktop-ui/   # Desktop 独立基础组件库
+├── build/        # Vite 页面生成插件
+└── pages.registry.ts # 页面登记表
 ```
-
-`src/frontend/common` 不得依赖 JSX、CSS、Desktop 或 Mobile。Desktop 与 Mobile 不互相导入 UI。
 
 `app/kernel` 保持平台中立，提供 ports、Result、Task、Resource 和可逆状态原语；
 `app/infrastructure` 提供 browser、memory 等宿主适配器；`app/habitat` 负责 API、页面逻辑和
-Mobile UI 的组合；`app/bootstrap` 只负责页面入口与首绘装配。新运行时层不反向依赖旧的
-`common`、`solid`、`desktop` 或 `mobile` 页面层。
+Mobile UI 的组合；`app/bootstrap` 只负责页面入口与首绘装配。
 
-当前公开 Mobile 的首页、文章库、平铺页、详情和设置页使用 `app/bootstrap/mobile/`；Mobile
-管理预览及部分旧页面仍使用 `mobile/src/`。两套实现并存期间，以页面注册表、源码和测试的
-实际接线为准，不把“已存在新层”理解成全量迁移完成。
+所有注册页面均使用 `app/bootstrap/`，Desktop 与 Mobile 的业务逻辑和 UI 分别位于
+`app/habitat/desktop/` 与 `app/habitat/mobile/`。
 
-`desktop-ui` 与 `mobile-ui` 是平台隔离的同级组件库，不互相导入。`desktop-ui` 当前只包含
+`desktop-ui` 当前只包含
 根据既有 Desktop 高频范式准入的 Button、ActionLink、Field 和 StateMessage；它不访问
 Client、Data、query、路由、业务组件或页面。第一批组件仅完成内部类型、SSR、边界与独立
-showcase 构建测试，现有 Desktop 页面与 shell 尚未消费该库；后续接入必须单独迁移和验收。
+showcase 构建测试，页面只通过新 runtime 的 UI 边界消费组件。
 
-旧页面的 `src/frontend/solid/queries` 是数据入口：它组合 `browserClient` 与
-`useDataResource`，负责请求参数、DTO 到页面模型的映射、错误归一和异步竞态控制。新运行时
-在 `app/habitat` 通过注入的 API、资源和 ports 完成相同职责。两种入口都不让页面直接拼
-API 请求或直接映射 wire DTO；它们只共享数据语义，不共享界面实现。
-
-旧的 `mobile-ui/atoms`、`molecules` 和 `containers` 提供独立控件；新运行时对应能力位于
-`app/habitat/mobile/ui/`。两套组件都不访问 Client、存储或业务路由状态，页面提供已归一化
-的数据和命令；Desktop 与 Mobile 组件库继续保持隔离。
+`app/habitat` 通过注入的 API、资源和 ports 负责请求参数、DTO 映射、错误归一和异步竞态；
+页面不直接拼 API 请求或映射 wire DTO，Desktop 与 Mobile 只共享数据语义，不共享界面实现。
 
 ## 页面入口
 
 - Desktop 首页、文章列表、详情和 Admin 页面使用独立 HTML 入口；
 - Mobile 推荐、文章列表、详情和设置使用独立 HTML 入口，并由 `app/bootstrap/mobile/` 装配；
-- Mobile 管理预览仍使用旧页面入口；
+- Mobile 管理预览也使用 `app/bootstrap/mobile/` 入口；
 - URL 使用静态页面入口和 query 参数，不依赖动态路由库。
 
 ## 状态
@@ -94,8 +81,8 @@ T 型货架首次请求同时取得筛选项和首个筛选项对应的文章；
 
 ## 正文校验
 
-`src/frontend/common/validation` 装配共享 Rust core 的 WASM 并验证诊断 schema；页面通过 `client.draftEditor.inspectHtml` 使用，不维护 TS allowlist。B Desktop 预览只能消费当前源码的成功校验结果；session preview 重新验证存储内容。WASM 加载失败、过期结果或无效正文均不注入 `innerHTML`，也不能绕过服务端保存校验。公开正文由 Product 的原生同源规则保证，见 `SPEC-ARTICLE-HTML-VALIDATION-001`。
+`app/habitat/validation` 定义诊断 schema，`app/infrastructure/browser/validation` 装配共享 Rust core 的 WASM；页面通过注入的编辑器 API 使用，不维护 TS allowlist。B Desktop 预览只能消费当前源码的成功校验结果；session preview 重新验证存储内容。WASM 加载失败、过期结果或无效正文均不注入 `innerHTML`，也不能绕过服务端保存校验。公开正文由 Product 的原生同源规则保证，见 `SPEC-ARTICLE-HTML-VALIDATION-001`。
 
 ## Client 注入与拦截器
 
-`src/frontend/common/data` 的 `createJsonTransport` 支持创建时注入请求拦截器；composition root（`src/frontend/common/client/browser.ts`）装配调试拦截器：URL 查询参数 `mock-session` 存在时为请求附加 `X-Blog-Mock-Session` 头（Mock 会话隔离），无参数时零副作用。Mock 专用类型与常量只存在于注入层，不泄漏到页面和领域模型。
+`app/infrastructure/browser` 提供网络、存储和导航适配器；Mock 会话拦截器在 bootstrap composition root 装配，Mock 专用类型与常量不泄漏到页面和领域模型。

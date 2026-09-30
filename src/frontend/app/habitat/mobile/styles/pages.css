@@ -60,7 +60,7 @@
   overflow-wrap: anywhere;
 }
 /* `.subtle` is the page summary text. `.meta` has no Mobile consumer (Desktop
-   owns its own `.meta` in desktop/src/styles.css); the rule is kept as a
+   owns its own `.meta` in the Desktop stylesheet); the rule is kept as a
    recorded orphan, not deleted, pending the deletion decision. */
 .subtle,
 .meta {

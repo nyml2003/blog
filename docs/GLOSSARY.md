@@ -48,12 +48,12 @@ last_reviewed: 2026-09-19
 | 术语 | 人话 | 落点 |
 | --- | --- | --- |
 | **页面注册表** | 17 个页面的登记表：路径别名、入口文件、标题。加页面只改这里 | `src/frontend/pages.registry.ts` |
-| **查询层（queries）** | 旧页面与 API 之间的数据获取层；新 `app/` 运行时用 habitat API/resource 承担对应职责 | `src/frontend/solid/queries/`、`src/frontend/app/habitat/` |
-| **definePage** | 旧页面的统一入口：先拉路由清单，再渲染页面组件；新 Mobile 由 bootstrap environment 完成引导 | `src/frontend/solid/page.tsx`、`src/frontend/app/bootstrap/mobile/environment.tsx` |
+| **页面数据层** | 页面通过 habitat API、resource 和 ports 获取数据并处理异步状态 | `src/frontend/app/habitat/` |
+| **bootstrap** | 页面入口的组合根：装配环境、路由清单、依赖和挂载 | `src/frontend/app/bootstrap/` |
 | **app runtime** | 新前端运行时：kernel 定义端口，infrastructure 接宿主，habitat 组合业务和 UI，bootstrap 负责入口 | `src/frontend/app/` |
-| **T 型货架** | 公开页的文章陈列：顶部一排类型筛选 + 下面一列文章 | `desktop/src/shell/t-shelf.tsx` 的 `TShelf` |
+| **T 型货架** | 公开页的文章陈列：顶部一排类型筛选 + 下面一列文章 | `src/frontend/app/habitat/desktop/pages/home.tsx` |
 | **F 型货架** | Mobile 分类浏览布局：左一级分类、右二级 tabs、下文章卡片 | `src/frontend/app/habitat/mobile/pages/articles.tsx` |
-| **原子/分子（atoms/molecules）** | 最小 UI 积木 / 由积木拼的小组件。Desktop 与 Mobile 各自实现，不跨端导入；新旧 Mobile UI 暂时并存 | `src/frontend/desktop-ui/`、`src/frontend/mobile-ui/`、`src/frontend/app/habitat/mobile/ui/` |
+| **原子/分子（atoms/molecules）** | 最小 UI 积木 / 由积木拼的小组件。Desktop 与 Mobile 各自实现，不跨端导入 | `src/frontend/desktop-ui/`、`src/frontend/app/habitat/mobile/ui/` |
 | **WASM 校验器** | 正文 HTML 规则检查器编译成的浏览器版本。编辑器实时报错和后端保存校验是同一套规则 | `src/core/article-html-wasm/` |
 
 ## ops 与质量
@@ -62,7 +62,7 @@ last_reviewed: 2026-09-19
 | --- | --- | --- |
 | **门禁（quality gate）** | `ops quality check`：Rust 三件套 + ops 契约测试 + 前端五件套 + 架构边界扫描，任一红即失败 | `apps/blog/src/quality/quality-check.ts` |
 | **架构边界扫描** | 用规则检查"谁不许 import 谁"（页面不许碰数据层、Data 不许解析 HTML 等），违规即红 | `apps/blog/src/quality/architecture.ts` |
-| **golden 测试** | 把契约写成"标准答案文件"（如 `docs/api/routes.json`），测试对照文件与代码完全一致，防止两边漂移 | `src/backend/product/tests/api_routes.rs`、`src/frontend/tests/common/client/client.test.ts` |
+| **golden 测试** | 把契约写成"标准答案文件"（如 `docs/api/routes.json`），测试对照文件与代码完全一致，防止两边漂移 | `src/backend/product/tests/api_routes.rs`、`src/frontend/tests/app/api/desktop.test.ts` |
 | **数据语义（mock/test/prod）** | Data 进程的三种启动姿势：mock=内存无磁盘；test=临时库用完即删；prod=显式路径（ops 目前只放行前两种） | `src/backend/data/src/semantics.rs` |
 | **fail-closed** | 出问题时宁可拒绝服务也不放行/降级。登录、凭证读取、启动检查都遵循 | `src/backend/product/src/auth/`、`apps/blog/src/admin/admin-auth.ts` |
 | **端口（port）/适配器（adapter）** | 六角形架构词汇：port=抽象接口，adapter=具体实现（如文件系统、进程、网络的真实现）。好处是规则可脱离环境测试 | `packages/cli-kit/src/`、`packages/cli-core/src/` |

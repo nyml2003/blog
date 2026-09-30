@@ -1,7 +1,7 @@
 ---
 kind: plan
 id: PLAN-FRONTEND-ARCHITECTURE-CONSOLIDATION-001
-status: ready
+status: partial
 owner: project-manager
 created: 2026-09-30
 last_reviewed: 2026-09-30
@@ -18,10 +18,10 @@ last_reviewed: 2026-09-30
 ## 当前基线
 
 - 新运行时已有 `app/kernel`、`app/infrastructure`、`app/habitat`、`app/bootstrap` 四层；公开 Mobile 首页、文章库、检索、详情和设置已接入。
-- Desktop 页面仍主要使用 `solid/page`、`solid/queries` 和旧页面 shell；`desktop-ui` 已有基础组件，但尚未成为主要 Desktop 页面基线。
-- Mobile 管理文章预览仍位于 `mobile/src/pages/admin-preview-content.tsx`，它是管理端发起的 Mobile 预览，不是完整的 Mobile 管理后台。
-- 旧 Mobile 页面、旧 Mobile logic、旧 Mobile components、`mobile-ui` 与新 `app/habitat/mobile/ui` 并存。
-- `common/client`、`common/data` 和 `common/validation` 当前大量被旧 `solid/queries`、旧 Mobile logic 和旧 Desktop 编辑器使用；其中只有 HTML 校验能力属于明确需要延续的能力，其余旧 client/data 运行链以删除为目标。
+- Desktop 页面已统一使用 `app/bootstrap/desktop` 与 `app/habitat/desktop`。
+- Mobile 管理文章预览已位于 `app/habitat/mobile/pages/admin-preview.tsx`，仍保持管理端发起的 Mobile 预览定位。
+- Mobile 页面、logic、components 和 UI 已统一到 `app/bootstrap/mobile` 与 `app/habitat/mobile`。
+- 旧 `common/client`、`common/data` 和 `common/validation` 已删除；HTML 校验协议迁移到 `app/habitat/validation` 与 `app/infrastructure/browser/validation`。
 - `pages.registry.ts`、`site-routes.json`、API golden 和架构门禁是迁移期间必须持续保持的入口与协议事实源。
 
 ## 新基线
@@ -51,7 +51,7 @@ Desktop 与 Mobile 只在 UI、布局、交互密度和平台专属状态上不�
 - `bootstrap`：入口参数解析、依赖创建、路由清单引导和页面挂载。
 - `desktop-ui` / `app/habitat/mobile/ui`：平台隔离的 UI 组件，不访问 API、存储或路由实现。
 - 页面：只编排已准备好的数据、状态、组件和命令。
-- `common`：只保留仍被两端共享且不属于旧页面运行时的协议、纯函数和无 UI 逻辑。
+- HTML 校验协议保留在 `app/habitat/validation`，宿主适配保留在 `app/infrastructure/browser/validation`。
 
 ### 导航意图
 
@@ -108,13 +108,13 @@ Desktop 与 Mobile 只在 UI、布局、交互密度和平台专属状态上不�
 
 | 工作流 | Owner | 依赖 | Write set | 状态 |
 | --- | --- | --- | --- | --- |
-| 新基线与页面契约 | frontend+qa | - | 新 Spec、架构文档、页面 environment/navigation 类型与测试 | ready |
-| Desktop runtime 基础设施 | frontend | 页面契约 | `app/habitat/desktop/**`、`app/bootstrap/desktop/**`、kernel/infrastructure 适配与测试 | ready |
-| Desktop 公开页面迁移 | frontend | Desktop runtime 基础设施 | Desktop public 页面、shell、组件、页面测试和 registry/build 接线 | ready |
-| Desktop 管理页面迁移 | frontend+content | 公开页面迁移、管理 API 现状确认 | Desktop admin 页面、编辑器、预览、管理组件与 E2E | ready |
-| Mobile 管理预览及旧页面迁移 | frontend | 页面契约、Mobile 新 UI 能力 | Mobile preview、剩余旧页面/logic/components、相关测试与 registry | ready |
-| 旧链路删除 | frontend+qa | 全部页面迁移、消费者扫描、E2E 通过 | `solid/**`、旧页面、旧 mobile-ui、旧构建分支及测试 | ready |
-| 基线验收与文档收尾 | qa+pm | 旧链路删除 | architecture、Spec、CODEMAP、指南、验收证据 | ready |
+| 新基线与页面契约 | frontend+qa | - | 新 Spec、架构文档、页面 environment/navigation 类型与测试 | completed |
+| Desktop runtime 基础设施 | frontend | 页面契约 | `app/habitat/desktop/**`、`app/bootstrap/desktop/**`、kernel/infrastructure 适配与测试 | completed |
+| Desktop 公开页面迁移 | frontend | Desktop runtime 基础设施 | Desktop public 页面、shell、组件、页面测试和 registry/build 接线 | completed |
+| Desktop 管理页面迁移 | frontend+content | 公开页面迁移、管理 API 现状确认 | Desktop admin 页面、编辑器、预览、管理组件与 E2E | completed |
+| Mobile 管理预览及旧页面迁移 | frontend | 页面契约、Mobile 新 UI 能力 | Mobile preview、剩余旧页面/logic/components、相关测试与 registry | completed |
+| 旧链路删除 | frontend+qa | 全部页面迁移、消费者扫描、E2E 通过 | `solid/**`、旧页面、旧 mobile-ui、旧构建分支及测试 | completed |
+| 基线验收与文档收尾 | qa+pm | 旧链路删除 | architecture、Spec、CODEMAP、指南、验收证据 | completed |
 
 共享的页面契约、registry、Vite build、导航 adapter 和公共测试属于串行写集；具体页面可按平台和页面组推进，但不得在删除旧模块前合并未完成的消费者迁移。
 
@@ -172,5 +172,11 @@ Desktop 与 Mobile 只在 UI、布局、交互密度和平台专属状态上不�
 - **删除后发现外部消费者**：仓库内先完成全量引用扫描；仓库外消费者不提供兼容层，必须在发布说明中明确新入口和迁移要求。
 
 ## 计划收尾
+
+迁移和清理主体已完成：全部 17 个注册页面已接入新 bootstrap，旧 Desktop/Mobile 页面、`solid`、旧 `common` 运行链和 `mobile-ui` 已删除。HTML 校验 schema 与 WASM 宿主适配保留在新 runtime 明确边界内。
+
+已验证：前端 typecheck、lint、format check、41 项新 runtime 测试、WASM parity 287 cases、Vite build、`git diff --check`；此前真实 runtime/browser 验收产物保存在 `target/e2e/1790738049813-89671/`。当前环境缺少 `playwright-core` 与 Chromium，清理后的浏览器 E2E 无法重新执行。
+
+未完成：在具备浏览器依赖的环境补跑 `ops e2e --mode dev --scenario empty`；仓库级 `ops quality check` 的 Rust fmt 仍受既有 `src/backend/product/src/static_files.rs` 格式漂移影响，该问题与本次前端清理无关。
 
 Plan 可以以 `completed`、`partial` 或 `parked` 收尾。收尾必须记录已迁移页面、已删除模块、保留模块及理由、测试和浏览器证据、未完成范围，以及继续清理所需条件。未完成的页面不会自动成为下一轮任务，必须重新明确纳入。

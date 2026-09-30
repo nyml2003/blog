@@ -1,8 +1,8 @@
 /* C Mobile shared business components: ArticleRow and StateMessage.
    Depends on tokens.css, base.css, shell.css, layout.css.
    No Shelf, Filter, page orchestration or article-body theme rules live here.
-   StateMessage and retry controls are owned by mobile-ui/molecules; this file
-   keeps only the ArticleRow business layout during the migration. */
+   StateMessage and retry controls are owned by the Mobile UI layer; this file
+   keeps only the ArticleRow business layout. */
 .article-row {
   position: relative;
   display: grid;

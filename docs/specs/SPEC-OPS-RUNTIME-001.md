@@ -30,7 +30,7 @@ last_reviewed: 2026-09-29
 | `docs/specs/archive/SPEC-OPS-USABILITY-001.md` 系列 | 帮助等价入口、未知命令/选项/非法值的可观察行为（SPEC-OPS-USABILITY-004）、工作区未激活快速失败（SPEC-OPS-USABILITY-006） |
 | `docs/guides/operations.md` | 运行模式、场景选择和本地服务入口 |
 | `docs/content-repo/CONTRACT.md` | fixture/GitHub 内容来源、仓库结构与同步边界 |
-| `src/frontend/common/client` | Client/Data 注入点与 `BLOG_API_ORIGIN` 接缝 |
+| `src/frontend/app/habitat/api` | Client/Data 注入点与 `BLOG_API_ORIGIN` 接缝 |
 | `src/frontend/vite.config.ts:12` | `BLOG_API_ORIGIN` 既有接缝，缺省 `http://127.0.0.1:8080`，仅代理 `/api` |
 | `docs/FACTS.md` FACT-RUNTIME-001 | 2 核 / 2 GB / 40 GB 目标资源约束 |
 

@@ -22,17 +22,12 @@ run("cargo", [
 ]);
 const wasmInput =
   "src/target/wasm32-unknown-unknown/release/article_html_wasm.wasm";
-for (const outputDirectory of [
-  "src/frontend/common/validation/generated",
+run("wasm-bindgen", [
+  "--target",
+  "web",
+  "--out-dir",
   "src/frontend/app/infrastructure/browser/validation/generated",
-]) {
-  run("wasm-bindgen", [
-    "--target",
-    "web",
-    "--out-dir",
-    outputDirectory,
-    "--out-name",
-    "article_html_wasm",
-    wasmInput,
-  ]);
-}
+  "--out-name",
+  "article_html_wasm",
+  wasmInput,
+]);
