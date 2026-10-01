@@ -17,7 +17,7 @@ import {
   generatePageInputs,
   renderPageHtml,
   serializePageRoutes,
-} from "../../build/page-template";
+} from "../../vite-plugins/page-template";
 
 const frontendRoot = fileURLToPath(new URL("../../", import.meta.url));
 

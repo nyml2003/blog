@@ -9,14 +9,14 @@
 - 后端：Rust + SQLite，Cargo workspace 位于 `src/Cargo.toml`；包含共享 core、Product API、Data Server 和 Mock Product API。
 - 前端：Solid.js + TypeScript + Vite，位于 `src/frontend/`；Desktop 与 Mobile UI 独立实现，共享无界面协议和逻辑。
 - 运行与质量入口：项目本地 `ops`，由 `nix/` 中的 Flake 提供开发环境。
-- 配套包：`packages/` 中的 `@fluvient-loom/*` 包及 `apps/playground/` 演示应用；它们与博客应用同仓库维护，使用根目录 pnpm workspace 独立开发和验证。
+- 配套包：`packages/` 中的 `@fluvient-loom/*`（前端能力）与 `@fluvient-cli/cli-*`（ops CLI 框架）包；它们与博客应用同仓库维护，使用根目录 pnpm workspace 独立开发和验证。
 
 ## 五分钟启动
 
 需要已启用 Flake 的 Nix；推荐同时使用 `direnv`。首次进入仓库：
 
 ```sh
-cd /home/nyml/projects/blog
+cd <仓库路径>            # 本机检出位置，如 ~/monorepo/blog
 direnv allow
 ops workspace doctor
 ```
@@ -58,10 +58,11 @@ src/
   backend/         Product、Data 与 Mock 服务
   frontend/        Solid.js 应用、Desktop/Mobile UI 与构建入口
 packages/          @fluvient-loom 平台中立与宿主适配包
-apps/playground/   包能力的独立演示应用
-ops/               项目本地开发、质量与运行命令
+apps/blog/         ops 命令实现（开发、质量与运行）
+apps/blog-deploy/  部署器与安装器
+deploy/            部署配置（nginx、systemd）
 docs/              事实、架构快照、Spec 与指南
-nix/               可复现开发环境
+nix/               ops 命令入口与可复现开发环境
 ```
 
 需要按功能定位源码时，从 [CODEMAP](docs/CODEMAP.md) 开始；目录内容变化后，以源码和 workspace 配置为准。

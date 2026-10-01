@@ -51,7 +51,8 @@ blog/
 │       ├── pages.registry.ts ← 全部 17 个页面的登记表（单一事实源）
 │       ├── site-routes.json  ← 页面路由清单（后端经 /api/public/site-routes 下发）
 │       ├── app/habitat/validation/ ← HTML 诊断契约与 WASM 浏览器产物（generated/）
-│       └── build/           ← Vite 插件：按注册表生成各页 HTML 入口
+│       ├── vite-plugins/   ← Vite 插件（页面模板生成、bootstrap 注入、dev 路由重写、Mobile prefetch SW）
+│       └── build/          ← 非 Vite 构建工具（article HTML 的 wasm 构建）
 ├── packages/               ← @fluvient-loom 可复用包（ports/query/command/web/gesture 等）
 │   └── cli-kit / cli-core / cli-plugins ← ops CLI 的框架能力（参数/输出/进程/端口分配）
 ├── apps/blog/              ← ops 命令实现（src/registry.ts 是命令登记表）
@@ -144,11 +145,11 @@ pages.registry.ts（页面登记表）
 
 ### apps/blog —— ops 命令实现
 
-`apps/blog/src/registry.ts` 是命令登记表（命令面以 `ops help` 为准）；各命令域模块位于 `admin/`、`content/`、`delivery/`、`e2e/`、`playground/`、`quality/`、`release/`、`runtime/`。质量门禁的全部规则在 `quality/architecture.ts`。`apps/blog-deploy/` 提供部署器与安装器。
+`apps/blog/src/registry.ts` 是命令登记表（命令面以 `ops help` 为准）；各命令域模块位于 `admin/`、`content/`、`delivery/`、`e2e/`、`quality/`、`release/`、`runtime/`。质量门禁的全部规则在 `quality/architecture.ts`。`apps/blog-deploy/` 提供部署器与安装器。
 
 ## 当前布局状态
 
 - `app/` 是唯一页面运行时：`kernel` 只保留应用层状态原语，协议与宿主适配统一来自 `@fluvient-loom` workspace 包，`habitat` 负责应用组合，`bootstrap` 负责页面入口与适配器装配。
-- 全部 17 个注册页面均已接入 `app/bootstrap/`，旧页面、旧查询层和旧 Mobile UI 已删除；`desktop-ui/` 是旧 Desktop 基础组件库，应用侧已无消费者（仍保留自身测试与门禁，待清理决策）。
+- 全部 17 个注册页面均已接入 `app/bootstrap/`，旧页面、旧查询层、旧 Mobile UI 与旧 `desktop-ui/` 组件库已删除。
 - Desktop UI 组件位于 `app/habitat/desktop/components/`，Mobile UI 位于 `app/habitat/mobile/ui/`，两端互不导入。
 - 计划目录当前不作为代码地图的一部分。后续计划重新建立后，应只登记仍然有效的工作范围，不回填旧索引。

@@ -1,7 +1,7 @@
 ---
 kind: plan
 id: PLAN-FRONTEND-VITE-PLUGINS-DIRECTORY-001
-status: ready
+status: completed
 owner: project-manager
 created: 2026-10-01
 last_reviewed: 2026-10-01
@@ -38,7 +38,7 @@ last_reviewed: 2026-10-01
 
 | 工作流 | Owner | 依赖 | Write set | 状态 |
 | --- | --- | --- | --- | --- |
-| 插件目录迁移 | frontend | 二期未提交改动落定 | `src/frontend/build/` 插件文件 → 新目录、`vite.config.ts`、`tests/build/` 相关测试、CODEMAP | blocked by 写集 |
+| 插件目录迁移 | frontend | 二期未提交改动落定 | `src/frontend/build/` 插件文件 → 新目录、`vite.config.ts`、`tests/build/` 相关测试、CODEMAP | done（2026-10-01，经用户授权在二期未提交工作树上串行实施） |
 
 单工作流，无需拆分。
 
@@ -50,5 +50,27 @@ last_reviewed: 2026-10-01
 
 ## 未决项
 
-- 新目录的名称与位置（如 `src/frontend/vite-plugins/`、`build/plugins/` 等）：实施时与产品一句确认即可，不构成阻塞。
-- `tests/build/` 是否随新目录改名对齐。
+- ~~新目录的名称与位置~~：已决策 `src/frontend/vite-plugins/`（与 `vite.config.ts` 平级；目录名自表达"只有 Vite 插件"，避免 `build/` 与构建产物语义混淆）。
+- ~~`tests/build/` 是否随新目录改名对齐~~：已决策改名 `tests/vite-plugins/`，`package.json` 的 `test:frontend` 路径同步更新。
+- 补充决策：`vite.config.ts` 内联的 `mvp-page-routes` dev 路由重写插件一并抽出为 `vite-plugins/page-routes.ts`，使"全部 Vite 插件同目录"标准完整；插件逻辑与名称零改动。
+
+## 执行记录（2026-10-01）
+
+### 已交付
+
+- `page-template.ts`、`page-bootstrap.ts`（git mv）、`mobile-prefetch.ts`（二期未跟踪文件，mv）迁入 `src/frontend/vite-plugins/`；`build/` 仅剩 `build-article-html-wasm.mjs`。
+- 内联 `mvp-page-routes` 抽出为 `vite-plugins/page-routes.ts`（`pageRoutesPlugin(routes)`），纯代码搬移，插件名不变。
+- `vite.config.ts` 引用更新；`tests/build/` 改名 `tests/vite-plugins/`，两个测试 import 更新；`package.json` `test:frontend` 路径更新、`lint` 路径列表加入 `vite-plugins`（保留 `build`，wasm 脚本仍需 lint）。
+- 文档同步：`docs/CODEMAP.md` 目录地图（`vite-plugins/` 与 `build/` 分列）、`SPEC-MOBILE-THEME-SETTINGS-001`、`SPEC-SITE-ROUTES-001` 路径引用。
+
+### 验证证据
+
+- 迁移前基线：`pnpm build` 通过，`dist` 47 个文件清单留存。
+- 迁移后：`pnpm typecheck`、`pnpm lint`、`pnpm test:frontend`（41 用例全绿）、`pnpm build` 通过；`dist` 文件清单与基线逐项 diff 完全一致。
+- 残留扫描：`rg "build/page-|build/mobile-prefetch|tests/build|\./build/"` 仅本计划历史记述命中，代码与文档消费者为零。
+
+### 未完成与说明
+
+- 实施时二期改动仍未提交：`mobile-prefetch.ts` 以未跟踪状态迁至新路径，`vite.config.ts` 基于含二期改动的最新工作树内容编辑，未回退任何改动；二期提交时将自然携带新路径。
+- `tsconfig.json` include 未加 `vite-plugins`（沿用原 `build/` 的处理：经 `vite.config.ts` 与测试的 import 图纳入 typecheck）。
+- 归档待用户验收。

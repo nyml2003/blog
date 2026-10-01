@@ -7,7 +7,6 @@ import { runDeliveryBuild, runRuntimeMode, type RuntimePorts } from './runtime/r
 import { runDeployPackage, type DeployPorts } from './delivery/deploy-package.ts';
 import { runDeployInstaller } from './delivery/deploy-installer.ts';
 import { runPackageCheck } from './quality/package-check.ts';
-import { runPlaygroundDev } from './playground/playground.ts';
 import { planMode, MOCK_SCENARIOS, DATA_MODES, CONTENT_SOURCES } from './runtime/runtime-plan.ts';
 import { DEPLOY_TARGETS } from './delivery/deploy-plan.ts';
 import { RELEASE_KINDS, runRelease } from './release/release.ts';
@@ -96,30 +95,6 @@ export const commandDefinitions: readonly CommandDefinition[] = [
   defineCommand({ path: ['quality', 'lint'], summary: '运行前端 Oxlint', description: '使用 pnpm 执行 blog-web 的 lint 脚本，并将 warning 视为失败。', examples: ['ops quality lint'], exitCodes: [{ code: 0, meaning: 'lint 通过' }, { code: 20, meaning: 'lint 失败' }] }, ({ workspace, process, reporter, dryRun }) => { if (dryRun) { reporter.section('quality lint dry-run'); reporter.info('pnpm -C src/frontend run lint'); return commandResult(true); } return runWebQuality(workspace, process, reporter, 'lint').then((passed) => commandResult(passed)); }),
   defineCommand({ path: ['quality', 'format'], summary: '格式化前端源文件', description: '不带 --check 时写入 Biome 格式化结果；带 --check 时只检查、不修改文件。', examples: ['ops quality format --check'], options: [{ name: 'check', model: { kind: 'switch' }, description: '只检查格式，不写入文件' }], exitCodes: [{ code: 0, meaning: '格式化通过' }, { code: 20, meaning: '格式化失败或存在未格式化文件' }] }, ({ workspace, process, reporter, dryRun }, args) => { const check = args.check === true; if (dryRun) { reporter.section('quality format dry-run'); reporter.info(`pnpm -C src/frontend run ${check ? 'format:check' : 'format'}`); return commandResult(true); } return runWebQuality(workspace, process, reporter, check ? 'format:check' : 'format').then((passed) => commandResult(passed)); }),
   defineCommand({ path: ['package', 'check'], summary: '执行 @fluvient-loom 包门禁', description: '平台中立护栏（packages/*/src 零 node/web/solid 依赖）+ package smoke + workspace typecheck/test；独立于 ops quality check。', examples: ['ops package check'], exitCodes: [{ code: 0, meaning: '检查通过' }, FAILURE] }, ({ workspace, process, fs, reporter, dryRun }) => { if (dryRun) { reporter.section('package check dry-run'); reporter.info('将执行平台中立护栏扫描、package smoke（tsx apps/blog/test/packages/package-smoke.ts）与 pnpm run check（typecheck + test）'); return commandResult(true); } return runPackageCheck(workspace, process, fs, reporter).then((passed) => commandResult(passed)); }),
-  defineCommand({
-    path: ['playground', 'dev'],
-    summary: '启动 @fluvient-loom 演示页（Vite）',
-    description: '前台运行 apps/playground 的移动端三页 demo。--host 监听 0.0.0.0 供手机经局域网访问（访问地址形如 http://<本机IP>:<port>）；--port 必填，--strictPort 占用即失败。Ctrl-C 以 130 退出。',
-    examples: ['ops playground dev --port 5174', 'ops playground dev --host --port 5174'],
-    options: [
-      { name: 'host', model: { kind: 'switch' }, description: '监听 0.0.0.0，手机经局域网 IP 访问' },
-      portOption('port', 'Vite 端口'),
-    ],
-    exitCodes: [
-      { code: 0, meaning: '正常退出' },
-      { code: 130, meaning: 'SIGINT（Ctrl-C）触发的清理退出' },
-      FAILURE,
-    ],
-  }, ({ workspace, process, reporter, dryRun }, args) => {
-    const host = args.host === true;
-    const port = args.port as number;
-    if (dryRun) {
-      reporter.section('playground dev dry-run');
-      reporter.info(`pnpm -C apps/playground exec vite --port ${port} --strictPort${host ? ' --host' : ''}`);
-      return commandResult(true);
-    }
-    return runPlaygroundDev(workspace, process, reporter, { host, port }).then(commandExitResult);
-  }),
   defineCommand({
     path: ['admin', 'credentials', 'init'],
     summary: '初始化管理端密码、TOTP 与恢复码',
@@ -217,7 +192,6 @@ export const groupDefinitions = [
   defineGroup({ path: ['workspace'], summary: '检查', description: '确认本地开发依赖是否齐全。', order: 10, workflow: '首次进入仓库' }),
   defineGroup({ path: ['quality'], summary: '质量', description: '运行格式、静态检查、测试和前端质量任务。', order: 20, workflow: '提交前验证' }),
   defineGroup({ path: ['package'], summary: '内核包', description: '@fluvient-loom workspace 包门禁：平台中立护栏 + typecheck/test/smoke，独立于 quality 全量检查。', order: 25, workflow: '内核包开发期验证' }),
-  defineGroup({ path: ['playground'], summary: '演示页', description: '启动 apps/playground 移动端三页 demo（Vite dev），--host 供手机经局域网访问。', order: 26, workflow: '内核包演示与验收' }),
   defineGroup({ path: ['e2e'], summary: '浏览器验收', description: '通过隔离运行栈执行显式的 Playwright 浏览器回归测试，不并入快速质量门禁。', order: 28, workflow: '浏览器回归验收' }),
   defineGroup({ path: ['perf'], summary: '性能度量', description: '对页面加载做可重复的 Playwright 性能采样（冷加载/底栏切换 × 网络档位），输出耗时、传输与缓存命中指标，支撑体验优化的基线对比。', order: 29, workflow: '体验优化度量' }),
   defineGroup({

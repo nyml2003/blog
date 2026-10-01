@@ -131,6 +131,6 @@ Then 页面恢复上一次稳定设置，显示保存失败与重试入口；刷
 
 ## 测试/验收证据
 
-- 当前实现落点：`app/habitat/mobile/logic/settings.ts`、`app/habitat/mobile/pages/settings.tsx`、`app/bootstrap/mobile/settings.tsx` 与 `build/page-bootstrap.ts`；
+- 当前实现落点：`app/habitat/mobile/logic/settings.ts`、`app/habitat/mobile/pages/settings.tsx`、`app/bootstrap/mobile/settings.tsx` 与 `vite-plugins/page-bootstrap.ts`；
 - 自动化应覆盖默认值、规范快照、旧 key 迁移、非法值、写入失败补偿、最后一次选择、首绘注入和架构依赖；
 - 历史交付曾通过前端门禁和浏览器走查，但已删除的计划证据不作为当前复核结果。当前改动仍应运行现有 typecheck、lint、format、核心测试和 build，并在代表性 Mobile 视口检查三主题与三字体。

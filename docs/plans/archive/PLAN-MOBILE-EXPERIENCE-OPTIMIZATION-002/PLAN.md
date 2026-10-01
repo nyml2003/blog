@@ -1,10 +1,10 @@
 ---
 kind: plan
 id: PLAN-MOBILE-EXPERIENCE-OPTIMIZATION-002
-status: ready
+status: partial
 owner: project-manager
 created: 2026-09-30
-last_reviewed: 2026-09-30
+last_reviewed: 2026-10-01
 ---
 
 # Mobile 体验优化二期：端到端体验与性能
@@ -130,9 +130,10 @@ last_reviewed: 2026-09-30
 - Desktop 与 Mobile 不共享 JSX、CSS、DOM 或组件内部状态；页面不直接访问 transport、storage、wire DTO 或具体 URL。
 - 不默认引入新 UI 框架、状态管理器、图标库或性能监控平台。
 - **写集协调（实施前必须核对）**：
-  - `PLAN-FRONTEND-INFRASTRUCTURE-PACKAGES-001`：正在将 `app/infrastructure` 收敛到 `@fluvient-loom/web`/`node`，与本计划可能改动的 mobile API client、网络层重叠；当前工作树已有其未提交改动，动同一批文件前先确认最新状态。
-  - `PLAN-FRONTEND-ARCHITECTURE-CONSOLIDATION-001`：与页面生命周期、导航意图写集可能重叠；该计划主体迁移已完成但未收尾，实施前协调串行。
-  - `PLAN-SCRIPTS-REMOVAL-001`：wasm 构建脚本归属迁移中（`scripts/` → `src/frontend/build/`）；涉及 wasm chunk 的改动等其落定。
+  - `PLAN-FRONTEND-INFRASTRUCTURE-PACKAGES-001`（已归档，2026-09-30 completed）：`app/infrastructure` 已收敛到 `@fluvient-loom/web`/`node`；本计划改 mobile API client、网络层时以当前 workspace 包形态为准。
+  - `PLAN-FRONTEND-ARCHITECTURE-CONSOLIDATION-001`（已归档，2026-10-01 completed）：页面生命周期与导航意图已收敛到 `app/bootstrap`；本计划不再与其写集冲突，以新运行时结构为准。
+  - `PLAN-SCRIPTS-REMOVAL-001`（已归档，2026-09-30 completed）：wasm 构建脚本已迁入 `src/frontend/build/`。
+  - `PLAN-FRONTEND-VITE-PLUGINS-DIRECTORY-001`（completed，2026-10-01 实施）：Vite 插件已迁入 `src/frontend/vite-plugins/`；本计划未提交的 `mobile-prefetch.ts` 已随迁至新路径，提交时以新路径为准。
 
 ## 工作流
 
@@ -162,3 +163,30 @@ last_reviewed: 2026-09-30
 - 白屏窗口问题是否纳入本轮（依赖真机效果判断与写集协调）。
 - 产品决策题：详情页返回策略、横屏、F 型分类结构、底栏规则、管理预览范围。
 - 最低设备/浏览器基线与性能预算是否需要固化为 Spec。
+
+## 收尾记录（2026-10-01）
+
+### 实际交付
+
+- 新增 `@fluvient-loom/mobile-prefetch` workspace 包，提供页面注册、空闲预取、Service Worker 缓存、TTL、串行预取和 in-flight 去重。
+- Mobile 首页接入全部分类预取；与现有 `@fluvient-loom/query` 组合使用，不修改业务 API 契约。
+- Vite 产出 `mobile-prefetch-sw.js`；开发服务器和 Product 静态服务器均可访问该脚本。
+- integration fixture 使用 `45` 篇文章和 `6` 个分类完成浏览器验证。
+
+### 指标证据
+
+- slow3g、390×844、同一 integration 栈、3 次采样：nav-switch content `1694ms → 51ms`（-97.0%）。
+- nav-switch FCP/LCP `872ms → 48ms`（-94.5%）。
+- 总传输 `15.9KB → 4.5KB`，分类 API `10.9KB → 0B`，缓存命中 `8/8`，预取完成 `6` 个分类。
+- cold-load content 约 `5156ms`，相对本轮基线未劣化。
+- 发布后用户确认运行正常。
+
+### 未交付与移交
+
+- 九项端到端体验审计未纳入本次实现，保留为后续 Mobile 体验专项输入。
+- `ops perf mobile --origin <部署域名>` 线上数字未在本次收尾中留档。
+- 预取浪费率、数据新鲜度、TTL 调优和 HTML 缓存仍需真实流量数据后再决策。
+
+### 收尾结论
+
+本计划以 `partial` 归档：非首次访问预取与响应复用目标已实现并部署；未纳入的体验审计和线上长期观测不作为本次发布阻塞项。

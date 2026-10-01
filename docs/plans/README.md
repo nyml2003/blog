@@ -10,12 +10,13 @@ Plan 面向一个跨职能、可验收的产品结果，不面向单个文件或
 
 当前 active：
 
-- [PLAN-FRONTEND-VITE-PLUGINS-DIRECTORY-001](./active/PLAN-FRONTEND-VITE-PLUGINS-DIRECTORY-001/PLAN.md)：将 `src/frontend/build/` 中的 Vite 插件收敛到单独目录，与 wasm 构建脚本等非插件工具分离；纯位置调整，不改插件行为。2026-10-01 立项，状态 ready（blocked by 二期未提交改动落定）。
-- [PLAN-MOBILE-EXPERIENCE-OPTIMIZATION-002](./active/PLAN-MOBILE-EXPERIENCE-OPTIMIZATION-002/PLAN.md)：Mobile 体验优化二期——接手一期移交项，对冷加载传输、切换链路重复传输与线上数字缺口建立量化归因，完成一期移出的 9 项端到端体验审计，方案与范围经决策闸门确认后实施。2026-09-30 立项，状态 ready。
+- [PLAN-FRONTEND-VITE-PLUGINS-DIRECTORY-001](./active/PLAN-FRONTEND-VITE-PLUGINS-DIRECTORY-001/PLAN.md)：将 Vite 插件从 `src/frontend/build/` 收敛到 `src/frontend/vite-plugins/`，与 wasm 构建脚本等非插件工具分离；纯位置调整，不改插件行为。2026-10-01 立项并完成实施，状态 completed（待归档）。
 - [PLAN-CONTAINER-DEPLOYMENT-001](./active/PLAN-CONTAINER-DEPLOYMENT-001/PLAN.md)：低资源单机容器部署——结合现有 Product/Data、SQLite、nginx、systemd 和 Release，设计 2 核 2 GB 服务器上的可靠容器运行、备份、升级与回滚方案。2026-09-29 立项，状态 ready。
 - [PLAN-DEPLOY-DOWNLOAD-PREFLIGHT-001](./active/PLAN-DEPLOY-DOWNLOAD-PREFLIGHT-001/PLAN.md)：部署预检与产物下载可观测性——在部署下载前检查网络可达性，统一阶段提示、进度、重试、错误诊断和机器输出。2026-09-30 立项，状态 ready。
 
 已归档：
+
+- [PLAN-MOBILE-EXPERIENCE-OPTIMIZATION-002](./archive/PLAN-MOBILE-EXPERIENCE-OPTIMIZATION-002/PLAN.md)：Mobile 非首次访问预取与响应复用。2026-09-30 立项，2026-10-01 以 `partial` 收尾；预取包、Service Worker 接入和部署验收完成，端到端体验审计及线上长期观测移交后续专项。
 
 - [PLAN-FRONTEND-ARCHITECTURE-CONSOLIDATION-001](./archive/PLAN-FRONTEND-ARCHITECTURE-CONSOLIDATION-001/PLAN.md)：Frontend 新基线与旧架构清理——为 Desktop/Mobile 统一页面生命周期和依赖装配，全部 17 个页面接入 `app/bootstrap`，删除 `solid`、旧 `common` 运行链、旧 Mobile UI 与无消费者的旧 UI 层。2026-09-30 立项，2026-10-01 以 `completed` 收尾；`ops quality check`、构建、删除后 HTTP smoke 与真实浏览器 E2E 验收通过。
 

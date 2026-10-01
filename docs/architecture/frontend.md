@@ -3,7 +3,7 @@ kind: architecture
 id: ARCH-FRONTEND
 status: current
 owner: frontend
-last_reviewed: 2026-09-30
+last_reviewed: 2026-10-01
 ---
 
 # Frontend 架构
@@ -20,10 +20,12 @@ last_reviewed: 2026-09-30
 
 ```text
 src/frontend/
-├── app/          # 新运行时：kernel / habitat / bootstrap
-├── desktop-ui/   # Desktop 独立基础组件库
-├── build/        # Vite 页面生成插件
-└── pages.registry.ts # 页面登记表
+├── app/          # 唯一运行时：kernel / habitat / bootstrap
+├── build/        # WASM 构建脚本等非插件工具
+├── vite-plugins/ # Vite 页面生成插件
+├── sw/           # Service Worker（Mobile 预取）
+├── pages.registry.ts # 页面登记表
+└── site-routes.json  # 路由清单投影
 ```
 
 协议与宿主适配的唯一来源是 workspace 包：`@fluvient-loom/port`（宿主无关 ports）、
@@ -35,12 +37,8 @@ src/frontend/
 habitat 与页面不直接导入 `@fluvient-loom/web`/`node`。
 
 所有注册页面均使用 `app/bootstrap/`，Desktop 与 Mobile 的业务逻辑和 UI 分别位于
-`app/habitat/desktop/` 与 `app/habitat/mobile/`。
-
-`desktop-ui` 当前只包含
-根据既有 Desktop 高频范式准入的 Button、ActionLink、Field 和 StateMessage；它不访问
-Client、Data、query、路由、业务组件或页面。第一批组件仅完成内部类型、SSR、边界与独立
-showcase 构建测试，页面只通过新 runtime 的 UI 边界消费组件。
+`app/habitat/desktop/` 与 `app/habitat/mobile/`。Desktop 基础组件位于
+`app/habitat/desktop/components/`，Mobile UI 位于 `app/habitat/mobile/ui/`，两端互不导入。
 
 `app/habitat` 通过注入的 API、资源和 ports 负责请求参数、DTO 映射、错误归一和异步竞态；
 页面不直接拼 API 请求或映射 wire DTO，Desktop 与 Mobile 只共享数据语义，不共享界面实现。

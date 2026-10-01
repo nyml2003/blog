@@ -9,4 +9,4 @@
 - [spec-driven.md](./spec-driven.md)：Spec 生命周期与测试映射；
 - [collaboration.md](./collaboration.md)：项目经理、workstream 和 subagent；
 - [operations.md](./operations.md)：开发、构建、迁移和运行；
-- [mobile-web-gestures.md](./mobile-web-gestures.md)：移动 Web 手感开发的行为矩阵与坑位图（touch-action/overscroll/popover/View Transitions/历史栈，playground 真机实证）。
+- [mobile-web-gestures.md](./mobile-web-gestures.md)：移动 Web 手感开发的行为矩阵与坑位图（touch-action/overscroll/popover/View Transitions/历史栈，真机实证）。

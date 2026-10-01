@@ -37,7 +37,7 @@ last_reviewed: 2026-09-19
 
 | 术语 | 人话 | 落点 |
 | --- | --- | --- |
-| **内容真源** | 文章内容的唯一权威存放处：GitHub 私有仓库。数据库只是它的投影，可随时重建 | `nyml2003/blog-content-e2e`，契约见 `docs/content-repo/CONTRACT.md` |
+| **内容真源** | 文章内容的唯一权威存放处：GitHub 私有仓库。数据库只是它的投影，可随时重建 | 仓库经 `BLOG_CONTENT_REPO` 运行时配置，契约见 `docs/content-repo/CONTRACT.md` |
 | **工作区（workspace）** | 编辑中的草稿状态机：保存→（可选）模型分析→复核→提交 PR。带版本号乐观并发 | `src/backend/product/src/content_workspace/` |
 | **模型复核（model review）** | 大模型出的分类变更 JSON，后端校验分配 ID 后，**至多一次**人工确认，防止来回改糊 | `src/backend/product/src/model_review.rs` |
 | **同步（sync）** | 把 GitHub 上已合入的内容拉回来替换公开快照。同一时刻只允许一次在跑（single-flight） | `src/backend/product/src/content_sync/` |
@@ -53,7 +53,7 @@ last_reviewed: 2026-09-19
 | **app runtime** | 唯一前端运行时：kernel 保留状态原语，ports 与宿主适配来自 `@fluvient-loom` 包，habitat 组合业务和 UI，bootstrap 负责入口装配 | `src/frontend/app/` |
 | **T 型货架** | 公开页的文章陈列：顶部一排类型筛选 + 下面一列文章 | `src/frontend/app/habitat/desktop/pages/home.tsx` |
 | **F 型货架** | Mobile 分类浏览布局：左一级分类、右二级 tabs、下文章卡片 | `src/frontend/app/habitat/mobile/pages/articles.tsx` |
-| **原子/分子（atoms/molecules）** | 最小 UI 积木 / 由积木拼的小组件。Desktop 与 Mobile 各自实现，不跨端导入 | `src/frontend/app/habitat/desktop/components/`、`src/frontend/app/habitat/mobile/ui/`（旧 `desktop-ui/` 已无应用侧消费者） |
+| **原子/分子（atoms/molecules）** | 最小 UI 积木 / 由积木拼的小组件。Desktop 与 Mobile 各自实现，不跨端导入 | `src/frontend/app/habitat/desktop/components/`、`src/frontend/app/habitat/mobile/ui/` |
 | **WASM 校验器** | 正文 HTML 规则检查器编译成的浏览器版本。编辑器实时报错和后端保存校验是同一套规则 | `src/core/article-html-wasm/` |
 
 ## ops 与质量

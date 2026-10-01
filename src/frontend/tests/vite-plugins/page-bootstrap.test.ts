@@ -2,8 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { pageRegistry } from "../../pages.registry";
-import { pageBootstrap } from "../../build/page-bootstrap";
-import { generatedPagePath, renderPageHtml } from "../../build/page-template";
+import { pageBootstrap } from "../../vite-plugins/page-bootstrap";
+import {
+  generatedPagePath,
+  renderPageHtml,
+} from "../../vite-plugins/page-template";
 
 const frontendRoot = fileURLToPath(new URL("../../", import.meta.url));
 

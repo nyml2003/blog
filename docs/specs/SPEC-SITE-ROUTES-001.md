@@ -16,7 +16,7 @@ created: 2026-09-09
 
 - 端点：`GET /api/public/site-routes`，sceneCode `public.site_routes`；Product 与 Mock 引用 protocol 内嵌的同一份清单，两侧保证一致。
 - 响应 `data`：`{ "routes": { "<page id>": "<path>" } }`；`page id` 与 `src/frontend/pages.registry.ts` 的页面 id 一致，`path` 必须是该页面已注册的 alias。
-- 清单源文件：`src/frontend/site-routes.json`（受 git 跟踪），protocol 以 `include_str!` 编译期内嵌；与 `pages.registry.ts` 的同步由 `src/frontend/tests/build/page-template.test.ts` 守卫。
+- 清单源文件：`src/frontend/site-routes.json`（受 git 跟踪），protocol 以 `include_str!` 编译期内嵌；与 `pages.registry.ts` 的同步由 `src/frontend/tests/vite-plugins/page-template.test.ts` 守卫。
 - 无会话依赖：登录前可获取（登录页与 401 重定向依赖它）。
 
 ## 前端消费规则
