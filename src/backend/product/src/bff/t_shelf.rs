@@ -78,7 +78,7 @@ pub fn assemble(
             Ok(TShelfData {
                 filters: wire::to_t_shelf_filters(types),
                 selected_filter_id: plan.selected_filter_id.clone(),
-                articles: wire::to_shelf_cards(&page.items)
+                articles: wire::to_shelf_cards(&page.items, wire::ArticleCardSurface::Desktop)
                     .into_iter()
                     .take(T_SHELF_LIMIT)
                     .collect(),
@@ -105,10 +105,13 @@ pub fn assemble(
             Ok(TShelfData {
                 filters: wire::to_t_shelf_filters(types),
                 selected_filter_id: plan.selected_filter_id.clone(),
-                articles: wire::to_shelf_cards_from_details(&matching)
-                    .into_iter()
-                    .take(T_SHELF_LIMIT)
-                    .collect(),
+                articles: wire::to_shelf_cards_from_details(
+                    &matching,
+                    wire::ArticleCardSurface::Desktop,
+                )
+                .into_iter()
+                .take(T_SHELF_LIMIT)
+                .collect(),
                 total,
             })
         }

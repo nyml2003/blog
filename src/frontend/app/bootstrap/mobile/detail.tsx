@@ -14,23 +14,21 @@ const createDetailPage: Parameters<typeof mountMobilePage>[0] = (context) =>
     id: articleIdFromSearch(context.navigation.current().search),
     api: context.api,
     articleListHref: route(context.routes, "mobile-articles"),
-    onBack(event) {
+    onBack() {
       if (
-        event.button !== 0 ||
-        event.metaKey ||
-        event.ctrlKey ||
-        event.shiftKey ||
-        event.altKey ||
-        !canReturnToSite(
+        canReturnToSite(
           document.referrer,
           window.location.origin,
           window.history.length,
         )
       ) {
+        context.navigation.back();
         return;
       }
-      event.preventDefault();
-      context.navigation.back();
+      context.navigation.push(
+        route(context.routes, "mobile-articles"),
+        undefined,
+      );
     },
   });
 

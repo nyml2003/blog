@@ -53,7 +53,7 @@ last_reviewed: 2026-10-01
 
 ## 约束与依据
 
-- **写集协调**：与 `PLAN-FRONTEND-BOUNDARY-NORMALIZATION-001`（active）在 mobile `pages/` 文件可能重叠——本计划写 `components/`、`ui/`、`styles/`，对方写 `api/`、`logic/`，页面文件两边都可能触碰；两计划实施前相互核对最新状态，页面文件串行修改。
+- **写集协调**：与 `PLAN-FRONTEND-FSD-RESTRUCTURE-001`（active）重叠——本计划写 `components/`、`ui/`、`styles/`，正是其逐片迁移对象；实施前互核最新状态并定先后顺序，重叠文件串行修改。`PLAN-FRONTEND-BOUNDARY-NORMALIZATION-001` 已 completed 归档（2026-10-01 复核），不再是串行对象。
 - Desktop 与 Mobile UI 隔离不变；组件不访问 API、存储或路由实现。
 - 历史稳定约束沿用：正文 HTML 由系统主题包裹，不引入文章自定义 CSS。
 

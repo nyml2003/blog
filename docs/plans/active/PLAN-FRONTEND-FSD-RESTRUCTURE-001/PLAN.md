@@ -25,6 +25,7 @@ src/frontend/
 │   ├── widgets/<slice>/ui.tsx + ui.css + model.ts
 │   ├── features/<slice>/model.ts + persistence.ts
 │   └── foundation/{styles,ui}/          # 端内基础层（替代歧义的 shared）
+├── kernel/                              # 纯机制层（desired-state），禁副作用（闸门 6 已决）
 ├── domain/<entity>/model.ts             # 跨端业务实体（对齐"领域"词汇）
 ├── protocol/                            # 与 src/core/protocol 同名对称
 └── validation/
@@ -35,9 +36,9 @@ src/frontend/
 ## 当前基线（2026-10-01 现场核实）
 
 - 现结构：`app/{kernel,habitat/{api,desktop,mobile,validation},bootstrap}`；`SPEC-ARCH-BOUNDARY-001`（accepted，今日复核）将此分层成文——**本计划必须修订该 Spec**，属公共契约变更，需明确决策。
-- 门禁现状：`source-layout.test.ts` 仅 40 行 6 断言（pages 不碰 `context.api|navigation|persistence`、部分目录禁 zod/solid import）——重组后需重写为层序检查，规则数会显著增加。
-- 既有资产映射：`desktop-ui/` ↔ `desktop/foundation/ui`；`ui/molecules` ↔ `mobile/foundation/ui`；`styles/` 全局三件（tokens/base/app）↔ `foundation/styles`，域样式（shelf/detail/browse）随 slice 走；`@fluvient-loom/mobile-h5-solid-atoms` 是跨消费包（blog+playground），**不并入**。
-- 冲突面：三个 active 计划写 mobile 文件——组件体验（mobile-nav、壳样式）、NAV-ACTIONS（mobile-nav、molecules）、SEARCH（pages.registry、搜索面）。
+- 门禁现状：`tests/app/architecture/source-layout.test.ts` 仅 40 行 6 断言（pages 不碰 `context.api|navigation|persistence`、部分目录禁 zod/solid import）——重组后需重写为层序检查，规则数会显著增加；另有同名测试 `tests/source-layout.test.ts` 管测试代码归位，重写时其规则保留。
+- 既有资产映射（2026-10-01 复核修正）：`desktop-ui/` 已删除，无并入对象；`habitat/mobile/ui/molecules` ↔ `mobile/foundation/ui`；`habitat/mobile/styles/` 现存 11 个 CSS（全局 tokens/base/app + 壳与域样式 shell/shelf/detail/browse/article-body/components/layout/pages），全局三件进 `foundation/styles`，其余随 slice 走；`@fluvient-loom/mobile-h5-solid-atoms` 是跨消费包（blog+playground），**不并入**。
+- 冲突面（2026-10-01 复核修正）：NAV-ACTIONS 已同日 completed 归档，其产出（mobile-nav 结构、页面 BFF 接入）是本计划的迁移对象而非冲突方；现 active 冲突方为——APP-SHELL（`pages.registry.ts`、`vite-plugins/page-template.ts`、Mobile shell 模板、bootstrap/mobile、样式、e2e，与本计划每一片迁移重叠，串行第一对象）、组件体验（`styles/shell.css`、组件结构）、SEARCH（`pages.registry.ts`、搜索面）。
 - `pages.registry.ts` 的 entry/outputPath、`vite-plugins/` 页面模板、e2e 断言中的选择器无关但产物路径有关。
 
 ## 迁移策略（吸收 CONSOLIDATION 计划教训）
@@ -49,20 +50,20 @@ src/frontend/
 
 ## 决策闸门（实现前确认）
 
-1. **时机**：先重构后功能（三个功能计划在新结构上写，避免 mobile-nav 等文件二次搬家）vs 先功能后重构（本计划等 NAV-ACTIONS/SEARCH/组件体验落地）——PM 权衡后定，这是本计划第一题。
-2. widgets 层初期是否裁剪（article-card 等直接进 pages segment，等复杂度长出来再立层）。
-3. `desktop-ui/` 是否顺势并入 `desktop/foundation/ui`，还是保留独立目录形态。
-4. `SPEC-ARCH-BOUNDARY-001` 修订范围与新措辞（分层图、例外条款、门禁清单）。
-5. 命名终稿确认（foundation/domain/protocol/persistence 及 segment 名）。
-6. `app/kernel`（desired-state）在新结构中的位置（protocol 旁 or domain 旁 or 保留 app/ 壳）。
+1. **时机**：**已决（2026-10-01，PM）**——先重构后功能：本计划最优先执行，APP-SHELL/SEARCH/组件体验由 PM 调度压后，在新结构上写。
+2. **widgets 层**：**已决（2026-10-01，PM）**——保留完整四层（pages/widgets/features/foundation），article-card 等先归 widgets。
+3. **desktop-ui 归宿**：**问题失效（2026-10-01 现场核实）**——`desktop-ui/` 已在早期整合中删除（CODEMAP 已记录），现存引用只有 `apps/blog/src/quality/architecture.ts` 与 layout 测试里的墓碑正则；迁移对象是 `app/habitat/desktop/{components,logic,pages,styles}`，墓碑禁令并入新层序门禁统一承载。
+4. **Spec 修订节奏**：**已决（2026-10-01，PM）**——与 mobile 迁移并行起草修订草案，两端完成、门禁全量生效时定稿 accepted；修订范围与新措辞由草案承载。
+5. **命名终稿**：**已决**——按设计输入执行（foundation/domain/protocol/persistence、segment 名 ui/model/page、文件名 `persistence.ts`）。
+6. **kernel 位置**：**已决（2026-10-01，PM）**——升为 `src/frontend/kernel/`，与 domain/protocol/validation 同层的纯机制位；现有纯度门禁（kernel 禁 fetch/window/localStorage 等）原样映射。
 
 ## 工作流
 
 | 工作流 | Owner | 依赖 | Write set | 状态 |
 | --- | --- | --- | --- | --- |
-| 结构设计定稿与 Spec 修订草案 | frontend+pm | - | 本目录设计记录、SPEC 修订草案 | ready |
-| 决策闸门 | 产品+pm | 设计草案 | 本 PLAN.md、Spec 修订立项 | blocked |
-| 新层序门禁落地 | frontend | 闸门 | `source-layout.test.ts` 重写、相关测试 | blocked by 闸门 |
+| 结构设计定稿与 Spec 修订草案 | frontend+pm | - | 本目录设计记录、SPEC 修订草案 | in_progress（设计已定稿，草案并行起草） |
+| 决策闸门 | 产品+pm | 设计草案 | 本 PLAN.md、Spec 修订立项 | completed（2026-10-01 六题全决） |
+| 新层序门禁落地 | frontend | 闸门 | `source-layout.test.ts` 重写、相关测试 | ready |
 | mobile 侧逐片迁移 | frontend | 门禁先行 | `mobile/`、`bootstrap/mobile/`、registry、vite 模板、测试 | blocked |
 | desktop 侧迁移 | frontend | mobile 侧完成 | `desktop/`、`desktop-ui/`（按闸门 3）、registry、模板 | blocked |
 | 旧壳删除与文档收尾 | frontend+pm | 两端完成 | 删 `app/habitat` 旧结构、CODEMAP、architecture、RESULT.md | blocked |
@@ -84,7 +85,7 @@ src/frontend/
 
 ## 约束与依据
 
-- **写集串行（硬约束）**：与组件体验、NAV-ACTIONS、SEARCH 三个 active 计划在 mobile 文件上全面重叠——闸门第 1 题未定前，任何一方不得先动共享文件；两两实施前互核最新状态。
+- **写集串行（硬约束）**：与 APP-SHELL（registry、vite 模板、bootstrap/mobile、样式、e2e，逐片重叠）、组件体验（壳样式）、SEARCH（registry、搜索面）三个 active 计划在 mobile 文件上重叠，四方写集协调段已互认——闸门第 1 题未定前，任何一方不得先动共享文件；两两实施前互核最新状态。
 - `pages.registry.ts`、`site-routes.json`、路由 golden 是迁移期间必须持续一致的单一事实源；每片迁移后三处同步。
 - 依据：AGENTS 稳定边界（端隔离、共享范围）、`SPEC-ARCH-BOUNDARY-001`（修订对象）、风格指南文件形态条款（segment 名为位置槽位的辩护已记录）。
 
@@ -96,6 +97,4 @@ src/frontend/
 
 ## 未决项
 
-- 时机（闸门第一题）。
-- widgets 层裁剪与否、desktop-ui 归宿、kernel 位置。
-- Spec 修订措辞与新门禁规则清单。
+- Spec 修订措辞与新门禁规则清单——随草案与门禁落地产出；闸门六题已于 2026-10-01 全部关闭。

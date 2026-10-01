@@ -808,7 +808,7 @@ async fn mobile_page(
         let articles: Vec<_> = shelf
             .articles
             .iter()
-            .map(|article| article_card_json(article))
+            .map(|article| mobile_article_card_json(article))
             .collect();
         modules.push(serde_json::json!({
             "moduleKey": "mobile.category-shelf",
@@ -1560,7 +1560,7 @@ async fn mobile_category_shelf(
     let articles: Vec<_> = shelf
         .articles
         .iter()
-        .map(|article| article_card_json(article))
+        .map(|article| mobile_article_card_json(article))
         .collect();
     let payload = serde_json::json!({ "taxonomy": taxonomy_json(&snapshot.taxonomy), "selectedCategoryId": shelf.selected_category_id, "articles": articles, "total": articles.len() });
     envelope(&Envelope::ok(payload), StatusCode::OK)
@@ -2042,8 +2042,11 @@ async fn admin_content_sync(
 fn taxonomy_json(value: &TaxonomyFile) -> serde_json::Value {
     serde_json::json!({ "version": value.version, "nextCategoryId": value.next_category_id, "nextTagId": value.next_tag_id, "categories": value.categories.iter().map(|v| serde_json::json!({"id":v.id,"name":v.name,"parentId":v.parent_id,"position":v.position})).collect::<Vec<_>>(), "tags": value.tags.iter().map(|v| serde_json::json!({"id":v.id,"name":v.name})).collect::<Vec<_>>() })
 }
-fn article_card_json(value: &protocol::ContentSnapshotArticle) -> serde_json::Value {
-    serde_json::json!({ "id": value.meta.id, "href": protocol::site_routes::public_article_detail_href(value.meta.id), "title": value.meta.title, "summary": value.meta.summary, "categoryIds": value.meta.category_ids, "tagIds": value.meta.tag_ids, "updatedAt": value.meta.updated_at })
+fn mobile_article_card_json(value: &protocol::ContentSnapshotArticle) -> serde_json::Value {
+    serde_json::json!({ "id": value.meta.id, "href": protocol::site_routes::mobile_article_detail_href(value.meta.id), "title": value.meta.title, "summary": value.meta.summary, "categoryIds": value.meta.category_ids, "tagIds": value.meta.tag_ids, "updatedAt": value.meta.updated_at })
+}
+fn desktop_article_card_json(value: &protocol::ContentSnapshotArticle) -> serde_json::Value {
+    serde_json::json!({ "id": value.meta.id, "href": protocol::site_routes::desktop_article_detail_href(value.meta.id), "title": value.meta.title, "summary": value.meta.summary, "categoryIds": value.meta.category_ids, "tagIds": value.meta.tag_ids, "updatedAt": value.meta.updated_at })
 }
 fn content_article_json(value: &protocol::ContentSnapshotArticle) -> serde_json::Value {
     serde_json::json!({
@@ -2068,7 +2071,7 @@ fn workspace_json(value: &WorkspaceView) -> serde_json::Value {
         WorkspaceStatus::SubmittedWithChanges => "submitted_with_changes",
         WorkspaceStatus::Failed => "failed",
     };
-    serde_json::json!({ "version": value.version, "status": status, "taxonomy": taxonomy_json(&value.snapshot.taxonomy), "articles": value.snapshot.articles.iter().map(article_card_json).collect::<Vec<_>>(), "pullRequest": value.remote_batch.as_ref().map(|batch| serde_json::json!({"number":batch.pull_request,"branch":batch.branch,"commit":batch.commit})), "lastError": value.last_error })
+    serde_json::json!({ "version": value.version, "status": status, "taxonomy": taxonomy_json(&value.snapshot.taxonomy), "articles": value.snapshot.articles.iter().map(desktop_article_card_json).collect::<Vec<_>>(), "pullRequest": value.remote_batch.as_ref().map(|batch| serde_json::json!({"number":batch.pull_request,"branch":batch.branch,"commit":batch.commit})), "lastError": value.last_error })
 }
 fn preview_json(
     version: u64,

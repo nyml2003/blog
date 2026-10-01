@@ -14,7 +14,10 @@ export function createMobileDetailPage(input: MobileDetailInput): Component {
         href={detail.articleListHref}
         aria-label="返回上一页"
         title="返回上一页"
-        onClick={detail.onBack}
+        onClick={(event) => {
+          event.preventDefault();
+          detail.onBack();
+        }}
       >
         <ArrowLeft size={20} aria-hidden="true" />
       </a>
@@ -44,11 +47,8 @@ export function createMobileDetailPage(input: MobileDetailInput): Component {
           document={input.document}
           share={input.share}
           favoriteKey={article()?.id.toString()}
+          onBack={detail.onBack}
         />
-        <header class="reading-bar">
-          {backLink}
-          <span>阅读</span>
-        </header>
         <main id="main" class="mobile-main detail-main">
           <Show
             when={detail.state().status !== "loading"}

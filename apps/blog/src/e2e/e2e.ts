@@ -408,7 +408,7 @@ const shellSafeAreaTargets: readonly SafeAreaTarget[] = [
 ];
 
 const detailSafeAreaTargets: readonly SafeAreaTarget[] = [
-  { selector: '.reading-bar', property: 'paddingTop', cssVar: '--safe-area-top', injected: '44px', expected: 44 },
+  { selector: '.mobile-header', property: 'paddingTop', cssVar: '--safe-area-top', injected: '44px', expected: 44 },
 ];
 
 async function assertStickyDocked(page: BrowserPage, name: string, selector: string, topOffsetVar?: string): Promise<void> {

@@ -44,7 +44,7 @@ fn taxonomy_routes_expose_seeded_tree_and_complete_admin_flow() {
     for article in shelf["articles"].as_array().unwrap() {
         assert_eq!(
             article["href"],
-            protocol::site_routes::public_article_detail_href(article["id"].as_i64().unwrap())
+            protocol::site_routes::mobile_article_detail_href(article["id"].as_i64().unwrap())
         );
     }
     assert_eq!(
@@ -196,7 +196,7 @@ fn t_shelf_returns_filters_and_refetches_inside_each_surface() {
     let first_article = &archive["articles"][0];
     assert_eq!(
         first_article["href"],
-        protocol::site_routes::public_article_detail_href(first_article["id"].as_i64().unwrap())
+        protocol::site_routes::desktop_article_detail_href(first_article["id"].as_i64().unwrap())
     );
     assert!(archive["articles"][0].get("contentHtml").is_none());
 

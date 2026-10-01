@@ -61,9 +61,10 @@ last_reviewed: 2026-10-01
 - 移交输入：`PLAN-MOBILE-EXPERIENCE-OPTIMIZATION-001/002` 的白屏窗口与骨架暂缓记录。
 - 业界参照（按名检索即可）：App Shell 模型（web.dev PWA 章节）、NN/g 骨架屏研究（闪烁伤感知）、CLS 治理实践、React Query `keepPreviousData`/SWR 的旧数据顶住模式。
 - **写集协调（实施前必须互核，不得并行修改）**：
-  - `PLAN-NAV-ACTIONS-001`（active，工作树有未提交改动）：其"Mobile 页面接入"工作流拥有 Mobile bootstrap、页面壳与导航组件，顶栏将升级为五类入口，与本计划 shell 的顶栏部分直接重叠；其页面级 BFF 聚合也会改变数据到达形态（影响删壳时机绑定的状态源）。顶栏 shell 以其冻结后的结构为准，先后顺序是闸门必答题。
+  - `PLAN-NAV-ACTIONS-001`（已 completed 归档，2026-10-01 复核）：顶栏五类入口与页面级 BFF 聚合（`modules[]`/`moduleKey` 分发）已落地，成为本计划基线；顶栏 shell 以当前已落地结构为准，闸门无需再等其冻结，但删壳时机绑定的状态源已变为页面聚合数据。
   - `PLAN-MOBILE-COMPONENT-EXPERIENCE-001`（active）：管 `styles/shell.css` 与组件结构（吸顶修复）。shell.css 在其写集内，本计划试点涉及同名/同目录样式时必须先协调。
   - `PLAN-SEARCH-001`（active）：新增搜索页按 registry `shell` 字段自然跟进，无直接写集冲突。
+  - `PLAN-FRONTEND-FSD-RESTRUCTURE-001`（active）：前端目录重组，逐片改写 `pages.registry.ts`、`vite-plugins/` 模板、bootstrap 与样式/e2e 路径，与本计划试点写集逐文件重叠；先 shell 后重构还是先重构后 shell 是双方闸门必答题，未定前不得并行修改共享文件。
 
 ## 工作流
 
@@ -75,7 +76,7 @@ last_reviewed: 2026-10-01
 | Desktop 公共页推广 | frontend | 试点验收 + 闸门确认纳入 | Desktop 对应 shell 模板（新）、bootstrap、样式、e2e | blocked |
 | 验收与收尾 | qa+pm | 推广完成 | 验收证据、RESULT.md | pending |
 
-试点与 Desktop 推广共享前端构建/模板写集，不得并行修改；与 NAV-ACTIONS、COMPONENT-EXPERIENCE 的 Mobile UI 写集重叠部分按"约束与依据"逐项互核。
+试点与 Desktop 推广共享前端构建/模板写集，不得并行修改；与 FSD-RESTRUCTURE、COMPONENT-EXPERIENCE 的 Mobile UI 写集重叠部分按"约束与依据"逐项互核。
 
 ## 集成验收
 

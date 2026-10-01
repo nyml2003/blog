@@ -64,7 +64,7 @@ last_reviewed: 2026-10-01
 
 - `SPEC-ARTICLE-HTML-VALIDATION-001`：文内高亮方案不得绕过正文校验器；白名单变更是公共契约变更，须闸门明确决策并同步 Spec 与 WASM 校验器。
 - `content_sync` 单事务快照替换：索引更新与快照同事务，验收含"合入后立即可搜到"的一致性检查。
-- 写集协调：`PLAN-NAV-ACTIONS-001`（入口接线，页面与 registry 可能相邻改动）；`PLAN-MOBILE-COMPONENT-EXPERIENCE-001` 若同期改 mobile 样式需互核。
+- 写集协调：`PLAN-FRONTEND-FSD-RESTRUCTURE-001`（active，逐片改写 registry 与页面路径，与新增搜索面直接相邻，需串行并互核最新状态）；`PLAN-MOBILE-COMPONENT-EXPERIENCE-001` 若同期改 mobile 样式需互核；`PLAN-NAV-ACTIONS-001` 已 completed 归档，导航入口以已落地结构为准。
 - 导航计划此前"搜索仅入口链接"的基线判断已被推翻，以本计划为准。
 
 ## 集成验收

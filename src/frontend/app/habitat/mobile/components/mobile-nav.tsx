@@ -30,6 +30,7 @@ export interface MobileNavProps {
   readonly persistence: PersistencePort;
   readonly document: DocumentPort;
   readonly share: (url: string) => Promise<void>;
+  readonly onBack?: () => void;
 }
 
 export function MobileNav(props: MobileNavProps) {
@@ -90,7 +91,8 @@ export function MobileNav(props: MobileNavProps) {
     if (name === "favorite") return toggleFavorite;
     if (name === "share") return () => void share();
     if (name === "more") return () => setMoreOpen((value) => !value);
-    if (name === "back") return () => props.browserNavigation.back();
+    if (name === "back")
+      return props.onBack ?? (() => props.browserNavigation.back());
     if (name === "search")
       return () => {
         props.browserNavigation.push(

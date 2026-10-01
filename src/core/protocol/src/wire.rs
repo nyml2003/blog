@@ -301,10 +301,24 @@ pub fn to_details(items: &[InternalArticleDetail]) -> Vec<ArticleDetail> {
     items.iter().map(to_detail).collect()
 }
 
-fn shelf_card(item: &InternalArticleListItem) -> ShelfCard {
+/// 货架卡片的消费端。href 由消费端对应的站点路由生成，调用方必须显式声明。
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ArticleCardSurface {
+    Desktop,
+    Mobile,
+}
+
+fn article_detail_href(surface: ArticleCardSurface, id: i64) -> String {
+    match surface {
+        ArticleCardSurface::Desktop => crate::site_routes::desktop_article_detail_href(id),
+        ArticleCardSurface::Mobile => crate::site_routes::mobile_article_detail_href(id),
+    }
+}
+
+fn shelf_card(item: &InternalArticleListItem, surface: ArticleCardSurface) -> ShelfCard {
     ShelfCard {
         id: item.id,
-        href: crate::site_routes::public_article_detail_href(item.id),
+        href: article_detail_href(surface, item.id),
         title: item.title.clone(),
         summary: item.summary.clone(),
         updated_at: item.updated_at.clone(),
@@ -313,17 +327,23 @@ fn shelf_card(item: &InternalArticleListItem) -> ShelfCard {
 }
 
 /// 列表条目 → 货架卡片的纯形状投影。
-pub fn to_shelf_cards(items: &[InternalArticleListItem]) -> Vec<ShelfCard> {
-    items.iter().map(shelf_card).collect()
+pub fn to_shelf_cards(
+    items: &[InternalArticleListItem],
+    surface: ArticleCardSurface,
+) -> Vec<ShelfCard> {
+    items.iter().map(|item| shelf_card(item, surface)).collect()
 }
 
 /// 详情条目 → 货架卡片的纯形状投影。
-pub fn to_shelf_cards_from_details(items: &[InternalArticleDetail]) -> Vec<ShelfCard> {
+pub fn to_shelf_cards_from_details(
+    items: &[InternalArticleDetail],
+    surface: ArticleCardSurface,
+) -> Vec<ShelfCard> {
     items
         .iter()
         .map(|item| ShelfCard {
             id: item.id,
-            href: crate::site_routes::public_article_detail_href(item.id),
+            href: article_detail_href(surface, item.id),
             title: item.title.clone(),
             summary: item.summary.clone(),
             updated_at: item.updated_at.clone(),

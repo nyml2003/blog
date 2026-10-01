@@ -59,7 +59,7 @@ pub fn load(domain: &DomainState, request: &TShelfRequest) -> Result<TShelfData,
                 .collect();
             let total = matching.len();
             (
-                wire::to_shelf_cards_from_details(&matching)
+                wire::to_shelf_cards_from_details(&matching, wire::ArticleCardSurface::Desktop)
                     .into_iter()
                     .take(T_SHELF_LIMIT)
                     .collect(),
@@ -77,7 +77,7 @@ pub fn load(domain: &DomainState, request: &TShelfRequest) -> Result<TShelfData,
             let total = usize::try_from(page.total)
                 .map_err(|_| internal("archive shelf returned a negative total"))?;
             (
-                wire::to_shelf_cards(&page.items)
+                wire::to_shelf_cards(&page.items, wire::ArticleCardSurface::Desktop)
                     .into_iter()
                     .take(T_SHELF_LIMIT)
                     .collect(),

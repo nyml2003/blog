@@ -1495,7 +1495,7 @@ fn content_article_json(value: &protocol::ContentSnapshotArticle) -> Value {
     serde_json::json!({"id":value.meta.id,"title":value.meta.title,"summary":value.meta.summary,"updatedAt":value.meta.updated_at,"createdAt":value.meta.created_at,"publishedAt":value.meta.published_at,"categoryIds":value.meta.category_ids,"tagIds":value.meta.tag_ids,"contentHtml":value.content_html})
 }
 fn mobile_article_card_json(value: &protocol::ContentSnapshotArticle) -> Value {
-    serde_json::json!({"id":value.meta.id,"href":protocol::site_routes::public_article_detail_href(value.meta.id),"title":value.meta.title,"summary":value.meta.summary,"updatedAt":value.meta.updated_at,"categoryIds":value.meta.category_ids,"tagIds":value.meta.tag_ids})
+    serde_json::json!({"id":value.meta.id,"href":protocol::site_routes::mobile_article_detail_href(value.meta.id),"title":value.meta.title,"summary":value.meta.summary,"updatedAt":value.meta.updated_at,"categoryIds":value.meta.category_ids,"tagIds":value.meta.tag_ids})
 }
 fn workspace_json(domain: &crate::domain::DomainState) -> Value {
     let (version, snapshot, pull) = domain.content_workspace();

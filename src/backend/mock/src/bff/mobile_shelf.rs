@@ -39,7 +39,7 @@ pub fn load(domain: &DomainState, request: MobileShelfRequest) -> ShelfData {
 fn assemble(data: &ArticleShelfData, has_filters: bool) -> ShelfData {
     let mut sections = Vec::new();
     if !has_filters && !data.recommendation.is_empty() {
-        let articles = wire::to_shelf_cards(&data.recommendation);
+        let articles = wire::to_shelf_cards(&data.recommendation, wire::ArticleCardSurface::Mobile);
         sections.push(ShelfSection {
             id: "recommendation".to_owned(),
             title: "推荐".to_owned(),
@@ -99,7 +99,7 @@ fn type_section(type_id: i64, title: String, items: Vec<&ArticleListItem>) -> Sh
     ShelfSection {
         id: format!("type-{type_id}"),
         title,
-        articles: wire::to_shelf_cards(&owned)
+        articles: wire::to_shelf_cards(&owned, wire::ArticleCardSurface::Mobile)
             .into_iter()
             .take(SHELF_SECTION_LIMIT)
             .collect(),

@@ -63,10 +63,17 @@ pub fn site_routes_payload() -> Result<SiteRoutesPayload, String> {
         .clone()
 }
 
-/// 生成公开文章详情链接。路由路径始终来自内嵌的站点路由清单。
-pub fn public_article_detail_href(id: i64) -> String {
+/// 生成 Mobile 端公开文章详情链接。路由路径始终来自内嵌的站点路由清单。
+pub fn mobile_article_detail_href(id: i64) -> String {
     let payload = site_routes_payload().expect("embedded site routes manifest must parse");
     let path = payload.routes["mobile-article-detail"].as_str();
+    format!("{path}?id={id}")
+}
+
+/// 生成 Desktop 端公开文章详情链接。调用方必须按消费端选择变体，不得混用。
+pub fn desktop_article_detail_href(id: i64) -> String {
+    let payload = site_routes_payload().expect("embedded site routes manifest must parse");
+    let path = payload.routes["desktop-public-detail"].as_str();
     format!("{path}?id={id}")
 }
 
@@ -90,8 +97,12 @@ mod tests {
     fn article_href_uses_embedded_route_and_article_id() {
         let routes = site_routes_payload().expect("embedded manifest must parse");
         assert_eq!(
-            public_article_detail_href(42),
+            mobile_article_detail_href(42),
             format!("{}?id=42", routes.routes["mobile-article-detail"])
+        );
+        assert_eq!(
+            desktop_article_detail_href(42),
+            format!("{}?id=42", routes.routes["desktop-public-detail"])
         );
     }
 

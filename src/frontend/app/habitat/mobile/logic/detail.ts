@@ -24,7 +24,7 @@ export interface MobileDetailInput {
   readonly id: number | undefined;
   readonly api: Pick<MobileApi, "page">;
   readonly articleListHref: string;
-  readonly onBack: (event: MouseEvent) => void;
+  readonly onBack: () => void;
   readonly context: MobileRouteContext;
   readonly navigation: NavigationPort;
   readonly persistence: PersistencePort;
