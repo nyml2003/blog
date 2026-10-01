@@ -8,19 +8,23 @@ const PLATFORM_GLOBAL_PATTERN =
 
 const PACKAGE_SRC_PATTERN = /\/packages\/([^/]+)\/src\/.*\.ts$/;
 
-/**
- * Host adapter packages exist to touch platform globals (that is their job);
- * they stay under the import allowlist (no node:*, no bare third-party) but
- * are exempt from the platform-global member-access rule. Kernel packages
- * remain fully neutral.
- */
-const HOST_ADAPTER_PACKAGES = new Set(['web', 'gesture-web']);
+/** Packages owned by the separate Node-based ops CLI, rather than Loom. */
+const CLI_PACKAGES = new Set(['cli-core', 'cli-kit', 'cli-plugins']);
 
-function isAllowed(specifier: string): boolean {
+/** Host adapters are allowed to reference the platform they adapt. */
+const HOST_ADAPTER_PACKAGES = new Set(['web', 'gesture-web', 'mobile-prefetch']);
+
+/** UI packages may depend on their rendering framework by design. */
+const PACKAGE_IMPORT_ALLOWLIST = new Map([
+  ['mobile-h5-solid-atoms', new Set(['solid-js'])],
+]);
+
+function isAllowed(packageName: string, specifier: string): boolean {
   return (
     specifier.startsWith('./') ||
     specifier.startsWith('../') ||
-    specifier.startsWith('@fluvient-loom/')
+    specifier.startsWith('@fluvient-loom/') ||
+    PACKAGE_IMPORT_ALLOWLIST.get(packageName)?.has(specifier) === true
   );
 }
 
@@ -39,11 +43,13 @@ export function checkPackageNeutrality(
     const normalized = file.replaceAll('\\', '/');
     const match = PACKAGE_SRC_PATTERN.exec(normalized);
     if (!match) continue;
-    const hostAdapter = HOST_ADAPTER_PACKAGES.has(match[1]);
+    const packageName = match[1];
+    if (CLI_PACKAGES.has(packageName)) continue;
+    const hostAdapter = HOST_ADAPTER_PACKAGES.has(packageName);
     const source = readSource(file);
     for (const importMatch of source.matchAll(IMPORT_PATTERN)) {
       const specifier = importMatch[1] ?? importMatch[2];
-      if (specifier !== undefined && !isAllowed(specifier)) {
+      if (specifier !== undefined && !isAllowed(packageName, specifier)) {
         violations.push({
           file,
           message: `非中立依赖 "${specifier}"：包 src/ 只允许相对导入与 @fluvient-loom/* 内部导入`,

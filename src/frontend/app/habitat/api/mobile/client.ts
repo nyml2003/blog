@@ -11,6 +11,7 @@ import {
   categoryShelfSchema,
   adminArticleSchema,
   mobileArticleSchema,
+  mobilePageSchema,
   siteRoutesSchema,
   tShelfSchema,
   type MobileApi,
@@ -42,6 +43,10 @@ const route = {
   adminArticle: {
     endpoint: "/api/admin/articles",
     sceneCode: "admin.article_detail",
+  },
+  page: {
+    endpoint: "/api/public/mobile/page",
+    sceneCode: "public.mobile_page",
   },
 } as const;
 
@@ -157,6 +162,19 @@ const getRequest = (pathValue: string): Omit<NetworkRequest, "signal"> => ({
 
 export function createMobileApi(network: NetworkPort): MobileApi {
   return {
+    page: {
+      get: (page, parameters = {}) =>
+        request(
+          network,
+          getRequest(
+            path(route.page.endpoint, route.page.sceneCode, {
+              page,
+              ...parameters,
+            }),
+          ),
+          mobilePageSchema,
+        ),
+    },
     siteRoutes: {
       get: () =>
         request(
@@ -225,6 +243,10 @@ export type {
   MobileApi,
   MobileApiFailure,
   MobileArticle,
+  MobileModule,
+  MobileNavigation,
+  MobileNavigationIcon,
+  MobilePage,
   SiteRoutes,
   TShelf,
   TShelfInput,

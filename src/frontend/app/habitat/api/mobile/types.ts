@@ -103,6 +103,115 @@ export const siteRoutesSchema = z.object({
 });
 export type SiteRoutes = z.output<typeof siteRoutesSchema>;
 
+export const mobileNavigationIconSchema = z.enum([
+  "back",
+  "search",
+  "favorite",
+  "share",
+  "more",
+]);
+export type MobileNavigationIcon = z.output<typeof mobileNavigationIconSchema>;
+
+export const mobileNavigationSchema = z.object({
+  leftIcons: z.array(z.string()),
+  rightIcons: z.array(z.string()),
+  shareUrl: z.string().min(1).optional(),
+});
+export interface MobileNavigation {
+  readonly leftIcons: readonly MobileNavigationIcon[];
+  readonly rightIcons: readonly MobileNavigationIcon[];
+  readonly shareUrl?: string;
+}
+
+export const mobileModuleSchema = z.object({
+  moduleKey: z.string().min(1),
+  data: z.unknown(),
+});
+export type MobileModule = z.output<typeof mobileModuleSchema>;
+
+export const mobilePageSchema = z.object({
+  modules: z.array(mobileModuleSchema),
+});
+export type MobilePage = z.output<typeof mobilePageSchema>;
+
+export function supportedNavigationIcons(
+  values: readonly string[],
+): MobileNavigationIcon[] {
+  return values.filter(
+    (value): value is MobileNavigationIcon =>
+      mobileNavigationIconSchema.safeParse(value).success,
+  );
+}
+
+export function navigationFromModule(
+  module: MobileModule | undefined,
+): MobileNavigation | undefined {
+  if (module?.moduleKey !== "mobile.navigation") return undefined;
+  const parsed = mobileNavigationSchema.safeParse(module.data);
+  if (!parsed.success) return undefined;
+  return {
+    ...parsed.data,
+    leftIcons: supportedNavigationIcons(parsed.data.leftIcons),
+    rightIcons: supportedNavigationIcons(parsed.data.rightIcons),
+  };
+}
+
+export function navigationFromPage(page: {
+  readonly modules: readonly {
+    readonly moduleKey: string;
+    readonly data: unknown;
+  }[];
+}): MobileNavigation | undefined {
+  return navigationFromModule(moduleByKey(page, "mobile.navigation"));
+}
+
+export function tShelfFromPageModule(page: {
+  readonly modules: readonly {
+    readonly moduleKey: string;
+    readonly data: unknown;
+  }[];
+}): TShelf | undefined {
+  const parsed = tShelfSchema.safeParse(
+    moduleByKey(page, "mobile.t-shelf")?.data,
+  );
+  return parsed.success ? parsed.data : undefined;
+}
+
+export function categoryShelfFromPageModule(page: {
+  readonly modules: readonly {
+    readonly moduleKey: string;
+    readonly data: unknown;
+  }[];
+}): CategoryShelf | undefined {
+  const parsed = categoryShelfSchema.safeParse(
+    moduleByKey(page, "mobile.category-shelf")?.data,
+  );
+  return parsed.success ? parsed.data : undefined;
+}
+
+export function moduleByKey(
+  page: {
+    readonly modules: readonly {
+      readonly moduleKey: string;
+      readonly data: unknown;
+    }[];
+  },
+  moduleKey: string,
+): MobileModule | undefined {
+  return page.modules.find((module) => module.moduleKey === moduleKey);
+}
+
+export function articleFromPageModule(page: {
+  readonly modules: readonly {
+    readonly moduleKey: string;
+    readonly data: unknown;
+  }[];
+}): MobileArticle | undefined {
+  const module = moduleByKey(page, "mobile.article-detail");
+  const parsed = mobileArticleSchema.safeParse(module?.data);
+  return parsed.success ? parsed.data : undefined;
+}
+
 export interface MobileApiFailure {
   readonly kind: "network" | "timeout" | "protocol" | "remote";
   readonly message: string;
@@ -112,6 +221,12 @@ export interface MobileApiFailure {
 }
 
 export interface MobileApi {
+  readonly page: {
+    get(
+      page: string,
+      parameters?: Readonly<Record<string, string | undefined>>,
+    ): import("@fluvient-loom/port").DataTask<MobilePage, MobileApiFailure>;
+  };
   readonly siteRoutes: {
     get(): import("@fluvient-loom/port").DataTask<SiteRoutes, MobileApiFailure>;
   };

@@ -10,6 +10,7 @@
   { "method": "GET", "endpoint": "/api/public/taxonomy", "sceneCode": "public.taxonomy_tree" },
   { "method": "GET", "endpoint": "/api/public/mobile/category-shelf", "sceneCode": "public.mobile_category_shelf" },
   { "method": "GET", "endpoint": "/api/public/site-routes", "sceneCode": "public.site_routes" },
+  { "method": "GET", "endpoint": "/api/public/mobile/page", "sceneCode": "public.mobile_page" },
   { "method": "POST", "endpoint": "/api/admin/session", "sceneCode": "admin.session.create" },
   { "method": "DELETE", "endpoint": "/api/admin/session", "sceneCode": "admin.session.delete" },
   { "method": "GET", "endpoint": "/api/admin/articles", "sceneCode": "admin.article_list" },

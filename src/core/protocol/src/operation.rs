@@ -299,6 +299,8 @@ pub enum DataOperation {
     ContentWorkflowWrite(Box<crate::taxonomy::ContentWorkflowWrite>),
     /// Recover Product's complete workspace and pending-review state at startup.
     ContentWorkflowGet,
+    /// 记录分享归因并清理过期明细。
+    ShareAttributionRecord(ShareAttributionRecord),
 }
 
 impl DataOperation {
@@ -330,6 +332,7 @@ impl DataOperation {
             DataOperation::ContentSnapshotGet => "content_snapshot_get",
             DataOperation::ContentWorkflowWrite(_) => "content_workflow_write",
             DataOperation::ContentWorkflowGet => "content_workflow_get",
+            DataOperation::ShareAttributionRecord(_) => "share_attribution_record",
         }
     }
 
@@ -358,6 +361,7 @@ impl DataOperation {
                 | DataOperation::RecommendationGenerate
                 | DataOperation::ContentSnapshotReplace(_)
                 | DataOperation::ContentWorkflowWrite(_)
+                | DataOperation::ShareAttributionRecord(_)
         )
     }
 
@@ -385,6 +389,7 @@ impl DataOperation {
             | DataOperation::ContentSnapshotReplace(_)
             | DataOperation::ContentWorkflowGet
             | DataOperation::ContentWorkflowWrite(_) => 1,
+            DataOperation::ShareAttributionRecord(_) => 1,
             _ => 0,
         }
     }
@@ -418,6 +423,7 @@ pub const OPERATION_NAMES: &[&str] = &[
     "content_snapshot_get",
     "content_workflow_write",
     "content_workflow_get",
+    "share_attribution_record",
 ];
 
 /// 列表投影：列表调用不返回正文 HTML（ARCH-DATA-API mobile shelf 同一取舍）。
@@ -534,6 +540,15 @@ pub struct ArticleShelfData {
     pub total: i64,
     /// 当前生效推荐（≤ [`RECOMMENDATION_LIMIT`]，只含已发布文章）。是否展示由 BFF 决定。
     pub recommendation: Vec<ArticleListItem>,
+}
+
+/// 分享访问归因明细；Product 只提交已校验的 token。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub struct ShareAttributionRecord {
+    pub token: String,
+    pub article_id: i64,
+    pub created_at_epoch: i64,
 }
 
 /// 无载荷成功（对应 Go 参考实现的 `data: null`）。

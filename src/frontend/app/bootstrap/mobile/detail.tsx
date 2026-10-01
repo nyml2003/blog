@@ -6,6 +6,11 @@ import { articleIdFromSearch, canReturnToSite } from "./detail-input";
 
 const createDetailPage: Parameters<typeof mountMobilePage>[0] = (context) =>
   createMobileDetailPage({
+    context,
+    navigation: context.navigation,
+    persistence: context.persistence,
+    document: context.document,
+    share: context.share,
     id: articleIdFromSearch(context.navigation.current().search),
     api: context.api,
     articleListHref: route(context.routes, "mobile-articles"),

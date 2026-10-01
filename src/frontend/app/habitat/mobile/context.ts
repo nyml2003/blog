@@ -26,6 +26,7 @@ export interface MobilePageContext {
   readonly navigation: NavigationPort;
   readonly document: DocumentPort;
   readonly viewport: ViewportPort;
+  readonly share: (url: string) => Promise<void>;
 }
 
 export function route(routes: SiteRoutes, id: string): string {

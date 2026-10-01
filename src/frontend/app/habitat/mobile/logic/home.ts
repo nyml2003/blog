@@ -1,9 +1,24 @@
 import { createEffect, createSignal } from "solid-js";
-import type { MobileApi, TShelfInput } from "../../api/mobile";
+import { err } from "@fluvient-loom/common";
+import { createDataTask } from "@fluvient-loom/query";
+import {
+  tShelfFromPageModule,
+  navigationFromPage,
+  type MobileApi,
+  type MobileApiFailure,
+  type MobileNavigation,
+  type TShelf,
+  type TShelfInput,
+} from "../../api/mobile";
+import type { TaskFailure } from "@fluvient-loom/port";
 import { useMobileResource } from "../resource";
 
 export interface MobileHomeLogicInput {
-  readonly api: Pick<MobileApi, "tShelf">;
+  readonly api: Pick<MobileApi, "page">;
+}
+interface MobileHomePayload {
+  readonly data: TShelf;
+  readonly navigation: MobileNavigation | undefined;
 }
 
 export function useMobileHome(input: MobileHomeLogicInput) {
@@ -11,7 +26,48 @@ export function useMobileHome(input: MobileHomeLogicInput) {
     surface: "recommendation",
     filterId: "all",
   });
-  const resource = useMobileResource(() => input.api.tShelf.get(selection()));
+  const resource = useMobileResource(() =>
+    createDataTask<MobileHomePayload, MobileApiFailure | TaskFailure>({
+      async execute() {
+        const result = await input.api.page
+          .get("home", {
+            surface: selection().surface,
+            filter_id: selection().filterId,
+          })
+          .start();
+        if (!result.ok)
+          return err({
+            kind: "network" as const,
+            message: "请求执行失败",
+            code: undefined,
+            status: undefined,
+            issues: undefined,
+          });
+        const data = tShelfFromPageModule(result.value);
+        if (data === undefined)
+          return err({
+            kind: "protocol" as const,
+            message: "推荐模块缺失或不符合协议",
+            code: undefined,
+            status: undefined,
+            issues: ["modules.mobile.t-shelf"],
+          });
+        return {
+          ok: true as const,
+          value: { data, navigation: navigationFromPage(result.value) },
+        };
+      },
+      mapRejected() {
+        return {
+          kind: "network" as const,
+          message: "请求执行失败",
+          code: undefined,
+          status: undefined,
+          issues: undefined,
+        };
+      },
+    }),
+  );
   let started = false;
 
   createEffect(() => {
@@ -30,7 +86,11 @@ export function useMobileHome(input: MobileHomeLogicInput) {
       setSelection({ surface: "recommendation", filterId });
     },
     resource,
-    snapshot: () => resource.state().snapshot ?? resource.state().latest,
+    snapshot: () =>
+      resource.state().snapshot?.data ?? resource.state().latest?.data,
+    navigation: () =>
+      resource.state().snapshot?.navigation ??
+      resource.state().latest?.navigation,
     retry: () => void resource.refetch(),
   };
 }

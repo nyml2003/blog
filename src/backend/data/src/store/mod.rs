@@ -103,6 +103,13 @@ pub trait DataStore: Send + Sync + 'static {
             "content workflow persistence is unavailable",
         ))
     }
+    fn share_attribution_record(
+        &self,
+        _record: &protocol::ShareAttributionRecord,
+        _ctx: &OpCtx<'_>,
+    ) -> Result<(), OperationFailure> {
+        Ok(())
+    }
     fn article_list(
         &self,
         query: &ArticleListQuery,
@@ -273,6 +280,9 @@ pub fn dispatch(store: &dyn DataStore, operation: &DataOperation, ctx: &OpCtx<'_
         DataOperation::ContentWorkflowGet => store
             .content_workflow_get(ctx)
             .map(DataOutcome::ContentWorkflow),
+        DataOperation::ShareAttributionRecord(record) => store
+            .share_attribution_record(record, ctx)
+            .map(|_| DataOutcome::Unit(Unit)),
     }
 }
 

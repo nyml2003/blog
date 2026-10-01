@@ -33,7 +33,8 @@ interface E2eReport {
 interface BrowserPage {
   goto(url: string, options?: { waitUntil?: string }): Promise<unknown>;
   getByRole(role: string, options?: { name?: string; exact?: boolean }): BrowserLocator;
-  getByText(text: string, options: { exact?: boolean }): BrowserLocator;
+  getByLabel(text: string | RegExp, options?: { exact?: boolean }): BrowserLocator;
+  getByText(text: string | RegExp, options?: { exact?: boolean }): BrowserLocator;
   locator(selector: string): BrowserLocator;
   evaluate<T>(callback: () => T): Promise<T>;
   evaluate<T, Arg>(callback: (arg: Arg) => T, arg: Arg): Promise<T>;

@@ -10,9 +10,11 @@ use data::executor::{Executor, JobResult};
 use data::semantics::{PersistentDb, TempDb};
 use data::store::Store;
 use protocol::envelope::codes;
-use protocol::{ArticleGetQuery, ArticleListQuery, DataOperation, DataOutcome, Lane};
-use sqlx::Connection;
+use protocol::{
+    ArticleGetQuery, ArticleListQuery, DataOperation, DataOutcome, Lane, ShareAttributionRecord,
+};
 use sqlx::sqlite::{SqliteConnectOptions, SqliteConnection};
+use sqlx::{Connection, Row};
 
 fn runtime() -> tokio::runtime::Runtime {
     tokio::runtime::Builder::new_current_thread()
@@ -131,6 +133,57 @@ fn sqlite_store_keeps_query_count_fixed_while_item_count_grows() {
     runtime.block_on(store.shutdown());
     store.remove_storage();
     assert!(!temp.path().exists(), "clean shutdown removes the temp db");
+}
+
+#[test]
+fn share_attribution_is_persistent_and_expires_after_ninety_days() {
+    let runtime = runtime();
+    let temp = unique_db_path("share-attribution");
+    let db_path = temp.path().to_path_buf();
+    let store = runtime
+        .block_on(Store::open_test(temp.clone()))
+        .expect("test store opens");
+    let executor = Executor::start(store.handle());
+    let now = 2_000_000_000_i64;
+    let old = DataOperation::ShareAttributionRecord(ShareAttributionRecord {
+        token: "article-old".to_owned(),
+        article_id: 1,
+        created_at_epoch: now - 90 * 24 * 60 * 60 - 1,
+    });
+    let current = DataOperation::ShareAttributionRecord(ShareAttributionRecord {
+        token: "article-current".to_owned(),
+        article_id: 2,
+        created_at_epoch: now,
+    });
+    assert!(call(&executor, &runtime, "share-old", old).outcome.is_ok());
+    assert!(
+        call(&executor, &runtime, "share-current", current)
+            .outcome
+            .is_ok()
+    );
+    drop(executor);
+    runtime.block_on(store.shutdown());
+
+    let mut connection = runtime
+        .block_on(SqliteConnection::connect_with(
+            &SqliteConnectOptions::new().filename(&db_path),
+        ))
+        .expect("database reopens");
+    let rows = runtime
+        .block_on(
+            sqlx::query("SELECT token FROM share_attribution ORDER BY token")
+                .fetch_all(&mut connection),
+        )
+        .expect("attribution rows load");
+    let tokens: Vec<String> = rows
+        .iter()
+        .map(|row| row.try_get::<String, _>("token").expect("token column"))
+        .collect();
+    assert_eq!(tokens, vec!["article-current"]);
+    runtime
+        .block_on(connection.close())
+        .expect("database closes");
+    store.remove_storage();
 }
 
 #[test]
@@ -320,7 +373,7 @@ fn test_semantics_seeds_are_stable_across_runs() {
     let diagnostics = first
         .describe()
         .expect("sqlite semantics exposes diagnostics");
-    assert_eq!(diagnostics.applied_migrations, vec![1, 2, 3, 4, 5]);
+    assert_eq!(diagnostics.applied_migrations, vec![1, 2, 3, 4, 5, 6]);
     assert!(diagnostics.seeded);
     runtime.block_on(first.shutdown());
     runtime.block_on(second.shutdown());

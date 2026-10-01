@@ -12,7 +12,7 @@
 use std::collections::HashMap;
 use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use axum::Router;
 use axum::body::Body;
@@ -50,6 +50,39 @@ use protocol::{
 
 /// 入口绝对 deadline；Data 收到的是剩余预算（deadline 沿链路传播）。
 pub const ENTRY_BUDGET: Duration = Duration::from_secs(5);
+async fn record_share_attribution(
+    state: &AppState,
+    article_id: i64,
+    token: &str,
+    budget: Duration,
+) {
+    if token != format!("article-{article_id}") {
+        crate::product_error!("share attribution rejected article_id={article_id}");
+        return;
+    }
+    let Ok(created_at_epoch) = SystemTime::now().duration_since(UNIX_EPOCH) else {
+        crate::product_error!("share attribution clock is before unix epoch");
+        return;
+    };
+    let result = state
+        .data
+        .call(
+            "mobile-share-attribution",
+            &DataOperation::ShareAttributionRecord(protocol::ShareAttributionRecord {
+                token: token.to_owned(),
+                article_id,
+                created_at_epoch: created_at_epoch.as_secs() as i64,
+            }),
+            budget,
+        )
+        .await;
+    match result {
+        Ok(_) => crate::product_info!("share attribution recorded article_id={article_id}"),
+        Err(error) => crate::product_error!(
+            "share attribution persistence failed article_id={article_id} error={error:?}"
+        ),
+    }
+}
 
 pub struct AppState {
     pub data: DataClient,
@@ -87,6 +120,7 @@ pub fn router(state: Arc<AppState>) -> Router {
             any(mobile_category_shelf),
         )
         .route(scene::PUBLIC_SITE_ROUTES_ENDPOINT, any(public_site_routes))
+        .route(scene::MOBILE_PAGE_ENDPOINT, any(mobile_page))
         // 管理
         .route(
             scene::ADMIN_SESSION_ENDPOINT,
@@ -634,6 +668,164 @@ async fn public_articles(
         }
         _ => unknown_scene_code(),
     }
+}
+
+/// 页面级 Mobile BFF：一次请求聚合导航模块和页面模块。
+async fn mobile_page(
+    State(state): State<Arc<AppState>>,
+    method: Method,
+    Query(params): Query<HashMap<String, String>>,
+) -> Response {
+    if !scene::supports(
+        method.as_str(),
+        scene::MOBILE_PAGE_ENDPOINT,
+        params
+            .get("sceneCode")
+            .map(String::as_str)
+            .unwrap_or_default(),
+    ) {
+        return unknown_scene_code();
+    }
+    let page = params.get("page").map(String::as_str).unwrap_or_default();
+    let started = Instant::now();
+    let article_id = parse_i64(params.get("id"));
+    if let (Some(id), Some(token)) = (article_id, params.get("share")) {
+        record_share_attribution(
+            &state,
+            id,
+            token,
+            ENTRY_BUDGET.saturating_sub(started.elapsed()),
+        )
+        .await;
+    }
+    let mut modules = vec![serde_json::json!({
+        "moduleKey": "mobile.navigation",
+        "data": {
+            "leftIcons": if page == "article-detail" { vec!["back"] } else { Vec::<&str>::new() },
+            "rightIcons": if page == "article-detail" {
+                vec!["favorite", "share", "more"]
+            } else {
+                vec!["search", "more"]
+            },
+            "shareUrl": article_id.map(|id| format!("/m/articles/detail.html?id={id}&share=article-{id}")),
+        }
+    })];
+    if page == "article-detail" {
+        let Some(id) = article_id else {
+            return invalid_id();
+        };
+        let result = state
+            .data
+            .call(
+                &request_id("mobile-page-article"),
+                &DataOperation::ArticleGet(ArticleGetQuery {
+                    id,
+                    published_only: true,
+                }),
+                ENTRY_BUDGET,
+            )
+            .await;
+        match result {
+            Ok(trace) => match trace.outcome {
+                protocol::DataOutcome::ArticleDetail(detail) => modules.push(serde_json::json!({
+                    "moduleKey": "mobile.article-detail",
+                    "data": wire::to_detail(&detail),
+                })),
+                _ => crate::product_error!(
+                    "mobile page module omitted page=article-detail reason=unexpected_payload"
+                ),
+            },
+            Err(error) => crate::product_error!(
+                "mobile page module omitted page=article-detail error={error:?}"
+            ),
+        }
+    } else if page == "home" {
+        let plan = match bff::t_shelf::plan(
+            params.get("surface").map(String::as_str),
+            params.get("filter_id").map(String::as_str),
+        ) {
+            Ok(plan) => plan,
+            Err(failure) => return data_failure(&DataCallError::Failure(failure), "mobile_page"),
+        };
+        let mut outcomes = Vec::with_capacity(plan.operations.len());
+        for (index, operation) in plan.operations.iter().enumerate() {
+            let remaining = ENTRY_BUDGET.saturating_sub(started.elapsed());
+            let result = state
+                .data
+                .call(
+                    &request_id(&format!("mobile-page-home-{index}")),
+                    operation,
+                    remaining,
+                )
+                .await;
+            match result {
+                Ok(trace) => outcomes.push(trace.outcome),
+                Err(error) => {
+                    crate::product_error!("mobile page module omitted page=home error={error:?}");
+                    outcomes.clear();
+                    break;
+                }
+            }
+        }
+        match bff::t_shelf::assemble(&plan, outcomes) {
+            Ok(value) => {
+                modules.push(serde_json::json!({ "moduleKey": "mobile.t-shelf", "data": value }))
+            }
+            Err(failure) => {
+                crate::product_error!("mobile page module omitted page=home error={failure:?}")
+            }
+        }
+    } else if page == "articles" || page == "article-list" {
+        let snapshot = match loaded_content_snapshot(&state, scene::MOBILE_PAGE).await {
+            Ok(value) => value,
+            Err(_response) => {
+                crate::product_error!(
+                    "mobile page module omitted page={page} reason=content_snapshot"
+                );
+                return envelope(
+                    &Envelope::ok(serde_json::json!({ "modules": modules })),
+                    StatusCode::OK,
+                );
+            }
+        };
+        let selected = match params.get("category_id") {
+            Some(value) => match value.parse::<i64>() {
+                Ok(id) if id > 0 => Some(id),
+                _ => return invalid_payload("category_id must be a positive integer".into()),
+            },
+            None => None,
+        };
+        let shelf = match bff::category_shelf::assemble(&snapshot, selected) {
+            Ok(value) => value,
+            Err(error) => {
+                crate::product_error!("mobile page module omitted page={page} error={error}");
+                return envelope(
+                    &Envelope::ok(serde_json::json!({ "modules": modules })),
+                    StatusCode::OK,
+                );
+            }
+        };
+        let articles: Vec<_> = shelf
+            .articles
+            .iter()
+            .map(|article| article_card_json(article))
+            .collect();
+        modules.push(serde_json::json!({
+            "moduleKey": "mobile.category-shelf",
+            "data": {
+                "taxonomy": taxonomy_json(&snapshot.taxonomy),
+                "selectedCategoryId": shelf.selected_category_id,
+                "articles": articles,
+                "total": articles.len()
+            }
+        }));
+    } else if page == "settings" {
+        modules.push(serde_json::json!({ "moduleKey": "mobile.settings", "data": {} }));
+    }
+    envelope(
+        &Envelope::ok(serde_json::json!({ "modules": modules })),
+        StatusCode::OK,
+    )
 }
 
 async fn public_article_types(

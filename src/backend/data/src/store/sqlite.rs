@@ -33,6 +33,8 @@ use protocol::dates::exclusive_date_end;
 const MAX_CONNECTIONS: u32 = 4;
 const ACQUIRE_TIMEOUT: Duration = Duration::from_secs(5);
 const CLOSE_TIMEOUT: Duration = Duration::from_millis(1500);
+const SHARE_ATTRIBUTION_TTL_SECONDS: i64 = 90 * 24 * 60 * 60;
+const SHARE_ATTRIBUTION_LIMIT: i64 = 10_000;
 
 /// 单个 SQL 参数（运行期绑定；`sqlx::query` 不做编译期类型检查）。
 #[derive(Debug, Clone)]
@@ -691,6 +693,47 @@ fn not_found(kind: &str, id: i64) -> OperationFailure {
 }
 
 impl DataStore for SqliteStore {
+    fn share_attribution_record(
+        &self,
+        record: &protocol::ShareAttributionRecord,
+        ctx: &OpCtx<'_>,
+    ) -> Result<(), OperationFailure> {
+        let cutoff = record
+            .created_at_epoch
+            .saturating_sub(SHARE_ATTRIBUTION_TTL_SECONDS);
+        let mut tx = self.begin()?;
+        self.execute(
+            &mut tx.tx,
+            "DELETE FROM share_attribution WHERE created_at_epoch < ?",
+            &[Bind::Int(cutoff)],
+            ctx,
+        )?;
+        self.execute(
+            &mut tx.tx,
+            "INSERT INTO share_attribution (token, article_id, created_at_epoch) VALUES (?, ?, ?) ON CONFLICT(token) DO UPDATE SET article_id = excluded.article_id, created_at_epoch = excluded.created_at_epoch",
+            &[
+                Bind::Text(record.token.clone()),
+                Bind::Int(record.article_id),
+                Bind::Int(record.created_at_epoch),
+            ],
+            ctx,
+        )?;
+        self.execute(
+            &mut tx.tx,
+            "DELETE FROM share_attribution WHERE token IN (SELECT token FROM share_attribution ORDER BY created_at_epoch ASC, token ASC LIMIT -1 OFFSET ?)",
+            &[Bind::Int(SHARE_ATTRIBUTION_LIMIT)],
+            ctx,
+        )?;
+        self.block(async {
+            tx.tx
+                .commit()
+                .await
+                .map_err(|error| internal("commit share attribution", &error))
+        })?;
+        ctx.meter.record(3);
+        Ok(())
+    }
+
     fn content_workflow_write(
         &self,
         request: &protocol::ContentWorkflowWrite,

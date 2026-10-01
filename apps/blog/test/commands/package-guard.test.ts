@@ -56,3 +56,15 @@ test('host adapter packages may touch platform globals but not node imports', ()
   assert.equal(violations.length, 2);
   assert.ok(violations.every((v) => v.message.includes('非中立依赖')));
 });
+
+test('non-kernel packages use their explicit platform/framework exceptions', () => {
+  const violations = guard({
+    '/ws/packages/cli-core/src/process.ts': 'import { spawn } from "node:child_process";',
+    '/ws/packages/cli-kit/src/workspace.ts': 'import { join } from "node:path";',
+    '/ws/packages/mobile-prefetch/src/client.ts':
+      'const binding = typeof navigator === "undefined" ? undefined : navigator.serviceWorker;',
+    '/ws/packages/mobile-h5-solid-atoms/src/define.ts':
+      'import { mergeProps } from "solid-js";',
+  });
+  assert.deepEqual(violations, []);
+});

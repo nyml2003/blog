@@ -38,8 +38,8 @@ pub use operation::{
     ArticleType, ArticleTypeListQuery, ArticleTypeName, ArticleTypeRef, ArticleTypeRename,
     ArticleWrite, DataOperation, DataOutcome, DiagnosticDigest, DiagnosticDigestResult,
     DiagnosticEcho, DiagnosticEchoResult, DiagnosticSlow, DiagnosticSlowResult, Lane,
-    MAX_SUMMARY_CHARS, OPERATION_NAMES, RECOMMENDATION_LIMIT, TERM_KIND_TAG, TERM_KIND_TOPIC, Term,
-    TermListQuery, TermRef, TermRename, TermWrite, Unit,
+    MAX_SUMMARY_CHARS, OPERATION_NAMES, RECOMMENDATION_LIMIT, ShareAttributionRecord,
+    TERM_KIND_TAG, TERM_KIND_TOPIC, Term, TermListQuery, TermRef, TermRename, TermWrite, Unit,
 };
 pub use paging::{has_more, normalize_page, normalize_page_size};
 pub use taxonomy::{

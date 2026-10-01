@@ -354,7 +354,7 @@ fn endpoints_envelope_backpressure_cancellation_and_shutdown() {
     );
     assert_eq!(
         diagnostics["database"]["applied_migrations"],
-        serde_json::json!([1, 2, 3, 4, 5])
+        serde_json::json!([1, 2, 3, 4, 5, 6])
     );
     assert_eq!(diagnostics["database"]["seeded"], true);
 

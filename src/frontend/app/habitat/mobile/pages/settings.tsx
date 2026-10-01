@@ -1,4 +1,4 @@
-import { Show, type Component } from "solid-js";
+import { Show, onMount, type Component } from "solid-js";
 import type { MobileRouteContext } from "../context";
 import {
   type AsyncPersistencePort,
@@ -13,14 +13,26 @@ import { mobileSettingsOptions } from "../logic/settings";
 import { useMobileSettings } from "../logic/settings-page";
 import { MobileNav } from "../components";
 import { BottomNav, Field, Heading, Select, Text } from "../ui";
+import { createDataTask } from "@fluvient-loom/query";
+import { err } from "@fluvient-loom/common";
+import {
+  navigationFromPage,
+  type MobileApi,
+  type MobileApiFailure,
+} from "../../api/mobile";
+import type { MobileNavigation } from "../../api/mobile";
+import type { TaskFailure } from "@fluvient-loom/port";
+import { useMobileResource } from "../resource";
 
 export interface MobileSettingsPageInput extends MobileRouteContext {
+  readonly api: Pick<MobileApi, "page">;
   readonly persistence: PersistencePort;
   readonly asyncPersistence: AsyncPersistencePort;
   readonly operationId: OperationIdPort;
   readonly scheduler: SchedulerPort;
   readonly navigation: NavigationPort;
   readonly document: DocumentPort;
+  readonly share: (url: string) => Promise<void>;
 }
 
 export function createMobileSettingsPage(
@@ -28,9 +40,45 @@ export function createMobileSettingsPage(
 ): Component {
   return function MobileSettingsPage() {
     const settingsPage = useMobileSettings(input);
+    const page = useMobileResource(() =>
+      createDataTask<
+        MobileNavigation | undefined,
+        MobileApiFailure | TaskFailure
+      >({
+        async execute() {
+          const result = await input.api.page.get("settings").start();
+          if (!result.ok)
+            return err({
+              kind: "network" as const,
+              message: "请求执行失败",
+              code: undefined,
+              status: undefined,
+              issues: undefined,
+            });
+          return { ok: true as const, value: navigationFromPage(result.value) };
+        },
+        mapRejected(cause) {
+          return {
+            kind: "network" as const,
+            message: cause instanceof Error ? cause.message : "请求执行失败",
+            code: undefined,
+            status: undefined,
+            issues: undefined,
+          } satisfies MobileApiFailure;
+        },
+      }),
+    );
+    onMount(() => void page.start());
     return (
       <div class="mobile-shell">
-        <MobileNav context={input} />
+        <MobileNav
+          context={input}
+          navigation={page.state()?.snapshot}
+          browserNavigation={input.navigation}
+          persistence={input.persistence}
+          document={input.document}
+          share={input.share}
+        />
         <main id="main" class="mobile-main">
           <header class="page-heading">
             <Heading content="设置" options={{ as: "h1", size: "page" }} />

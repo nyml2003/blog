@@ -1,7 +1,11 @@
 import { type Component } from "solid-js";
 import type { MobileRouteContext } from "../context";
 import type { MobileApi } from "../../api/mobile";
-import { type NavigationPort } from "@fluvient-loom/port";
+import {
+  type DocumentPort,
+  type NavigationPort,
+  type PersistencePort,
+} from "@fluvient-loom/port";
 import type { CategoryShelf } from "../../api/mobile";
 import { type DeepReadonly } from "@fluvient-loom/common";
 import { useMobileArticles, rootCategoryName } from "../logic/articles";
@@ -11,8 +15,11 @@ import { MobileShell } from "./shared";
 import type { CategorySelection } from "../logic/category";
 
 export interface MobileArticlesPageInput extends MobileRouteContext {
-  readonly api: Pick<MobileApi, "categoryShelf">;
+  readonly api: Pick<MobileApi, "page">;
   readonly navigation: NavigationPort;
+  readonly persistence: PersistencePort;
+  readonly document: DocumentPort;
+  readonly share: (url: string) => Promise<void>;
 }
 
 export function createMobileArticlesPage(
@@ -22,7 +29,15 @@ export function createMobileArticlesPage(
   return function MobileArticlesPage() {
     const articles = useMobileArticles(input);
     return (
-      <MobileShell context={input} activeId="articles">
+      <MobileShell
+        context={input}
+        activeId="articles"
+        navigation={articles.navigation()}
+        browserNavigation={input.navigation}
+        persistence={input.persistence}
+        document={input.document}
+        share={input.share}
+      >
         <header class="page-heading">
           <Text content="文章库" options={{ tone: "accent", size: "meta" }} />
           <Heading content={title} options={{ as: "h1", size: "page" }} />

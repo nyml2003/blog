@@ -4,6 +4,7 @@ import { createMobileSettingsPage } from "../../habitat/mobile";
 
 mountMobilePage((context) =>
   createMobileSettingsPage({
+    api: context.api,
     routes: context.routes,
     persistence: context.persistence,
     asyncPersistence: context.asyncPersistence,
@@ -11,5 +12,6 @@ mountMobilePage((context) =>
     scheduler: context.scheduler,
     navigation: context.navigation,
     document: context.document,
+    share: context.share,
   }),
 );

@@ -2,6 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createMobileApi } from "../../../app/habitat/api/mobile";
 import {
+  navigationFromModule,
+  supportedNavigationIcons,
+} from "../../../app/habitat/api/mobile";
+import {
   articleIdFromSearch,
   canReturnToSite,
 } from "../../../app/bootstrap/mobile/detail-input";
@@ -98,6 +102,72 @@ test("mobile API rejects invalid Zod payloads as protocol failures", async () =>
   if (result.ok) return;
   assert.equal(result.error.kind, "protocol");
   assert.ok(result.error.issues?.some((issue) => issue.includes("articles")));
+});
+
+test("mobile navigation filters unknown icons without adding defaults", () => {
+  assert.deepEqual(supportedNavigationIcons(["back", "unknown", "share"]), [
+    "back",
+    "share",
+  ]);
+  assert.deepEqual(
+    navigationFromModule({
+      moduleKey: "mobile.navigation",
+      data: {
+        leftIcons: ["back", "unknown"],
+        rightIcons: ["search", "future-action"],
+        shareUrl: "https://example.test/share",
+      },
+    }),
+    {
+      leftIcons: ["back"],
+      rightIcons: ["search"],
+      shareUrl: "https://example.test/share",
+    },
+  );
+});
+
+test("mobile page API aggregates modules in one request", async () => {
+  let requestPath = "";
+  const result = await createMobileApi({
+    request(request) {
+      requestPath = request.path;
+      return Promise.resolve(
+        ok({
+          status: 200,
+          headers: {},
+          body: body({
+            modules: [
+              {
+                moduleKey: "mobile.navigation",
+                data: { leftIcons: ["back"], rightIcons: ["more"] },
+              },
+            ],
+          }),
+        }),
+      );
+    },
+  })
+    .page.get("article-detail", { id: "7" })
+    .start();
+  assert.equal(result.ok, true);
+  assert.equal(
+    requestPath,
+    "/api/public/mobile/page?sceneCode=public.mobile_page&page=article-detail&id=7",
+  );
+});
+
+test("mobile navigation accepts same-origin relative share URLs", () => {
+  assert.deepEqual(
+    navigationFromModule({
+      moduleKey: "mobile.navigation",
+      data: {
+        leftIcons: [],
+        rightIcons: ["share"],
+        shareUrl: "/m/articles/detail.html?id=7&share=article-7",
+      },
+    })?.shareUrl,
+    "/m/articles/detail.html?id=7&share=article-7",
+  );
 });
 
 test("mobile API retains the server-owned article href", async () => {

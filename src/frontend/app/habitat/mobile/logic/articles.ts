@@ -1,5 +1,15 @@
 import { createEffect, createMemo, createSignal, onCleanup } from "solid-js";
-import type { MobileApi, CategoryShelf } from "../../api/mobile";
+import { err } from "@fluvient-loom/common";
+import { createDataTask } from "@fluvient-loom/query";
+import type { TaskFailure } from "@fluvient-loom/port";
+import {
+  categoryShelfFromPageModule,
+  navigationFromPage,
+  type MobileApi,
+  type CategoryShelf,
+  type MobileApiFailure,
+  type MobileNavigation,
+} from "../../api/mobile";
 import { type DeepReadonly } from "@fluvient-loom/common";
 import { type NavigationPort } from "@fluvient-loom/port";
 import type { MobileRouteContext } from "../context";
@@ -13,8 +23,13 @@ import {
 } from "./category";
 
 export interface MobileArticlesLogicInput extends MobileRouteContext {
-  readonly api: Pick<MobileApi, "categoryShelf">;
+  readonly api: Pick<MobileApi, "page">;
   readonly navigation: NavigationPort;
+}
+
+interface MobileArticlesPayload {
+  readonly data: CategoryShelf;
+  readonly navigation: MobileNavigation | undefined;
 }
 
 function navigateToCategory(
@@ -34,7 +49,49 @@ export function useMobileArticles(input: MobileArticlesLogicInput) {
     categoryIdFromSearch(input.navigation.current().search),
   );
   const resource = useMobileResource(() =>
-    input.api.categoryShelf.get(requestedId()),
+    createDataTask<MobileArticlesPayload, MobileApiFailure | TaskFailure>({
+      async execute() {
+        const categoryId = requestedId();
+        const result = await input.api.page
+          .get(
+            "article-list",
+            categoryId === undefined
+              ? {}
+              : { category_id: categoryId.toString() },
+          )
+          .start();
+        if (!result.ok)
+          return err({
+            kind: "network" as const,
+            message: "请求执行失败",
+            code: undefined,
+            status: undefined,
+            issues: undefined,
+          });
+        const data = categoryShelfFromPageModule(result.value);
+        if (data === undefined)
+          return err({
+            kind: "protocol" as const,
+            message: "分类模块缺失或不符合协议",
+            code: undefined,
+            status: undefined,
+            issues: ["modules.mobile.category-shelf"],
+          });
+        return {
+          ok: true as const,
+          value: { data, navigation: navigationFromPage(result.value) },
+        };
+      },
+      mapRejected() {
+        return {
+          kind: "network" as const,
+          message: "请求执行失败",
+          code: undefined,
+          status: undefined,
+          issues: undefined,
+        };
+      },
+    }),
   );
   let started = false;
 
@@ -49,7 +106,7 @@ export function useMobileArticles(input: MobileArticlesLogicInput) {
   });
 
   const current = createMemo(
-    () => resource.state().snapshot ?? resource.state().latest,
+    () => resource.state().snapshot?.data ?? resource.state().latest?.data,
   );
   const selection = createMemo(() => {
     const model = current();
@@ -72,6 +129,9 @@ export function useMobileArticles(input: MobileArticlesLogicInput) {
       navigateToCategory(input, next);
     },
     retry: () => void resource.refetch(),
+    navigation: () =>
+      resource.state().snapshot?.navigation ??
+      resource.state().latest?.navigation,
   };
 }
 

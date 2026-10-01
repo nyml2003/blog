@@ -38,6 +38,13 @@ function browserContextWithoutRoutes(): Omit<MobilePageContext, "routes"> {
   const persistence = createWebPersistence({
     storage: window.localStorage,
   });
+  const share = async (url: string): Promise<void> => {
+    if (navigator.share) {
+      await navigator.share({ url }).catch(() => undefined);
+      return;
+    }
+    await navigator.clipboard?.writeText(url);
+  };
   return {
     api: createMobileApi(network),
     persistence,
@@ -60,6 +67,7 @@ function browserContextWithoutRoutes(): Omit<MobilePageContext, "routes"> {
       scrollTo: (scrollY) =>
         window.scrollTo({ top: scrollY, behavior: "auto" }),
     }),
+    share,
   };
 }
 

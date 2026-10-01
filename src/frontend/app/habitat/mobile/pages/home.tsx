@@ -2,6 +2,11 @@ import { ArrowRight } from "lucide-solid";
 import { For, Show } from "solid-js";
 import type { Component } from "solid-js";
 import type { MobileRouteContext } from "../context";
+import type {
+  DocumentPort,
+  NavigationPort,
+  PersistencePort,
+} from "@fluvient-loom/port";
 import type { MobileApi } from "../../api/mobile";
 import { route } from "../context";
 import { useMobileHome } from "../logic/home";
@@ -10,7 +15,11 @@ import { Heading, Link, StateMessage, TabGroup, Text } from "../ui";
 import { MobileShell } from "./shared";
 
 export interface MobileHomePageInput extends MobileRouteContext {
-  readonly api: Pick<MobileApi, "tShelf">;
+  readonly api: Pick<MobileApi, "page">;
+  readonly navigation: NavigationPort;
+  readonly persistence: PersistencePort;
+  readonly document: DocumentPort;
+  readonly share: (url: string) => Promise<void>;
 }
 
 export function createMobileHomePage(input: MobileHomePageInput): Component {
@@ -18,7 +27,15 @@ export function createMobileHomePage(input: MobileHomePageInput): Component {
     const home = useMobileHome(input);
     const snapshot = home.snapshot;
     return (
-      <MobileShell context={input} activeId="home">
+      <MobileShell
+        context={input}
+        activeId="home"
+        navigation={home.navigation()}
+        browserNavigation={input.navigation}
+        persistence={input.persistence}
+        document={input.document}
+        share={input.share}
+      >
         <header class="page-heading">
           <Text
             content="技术知识库"

@@ -1,7 +1,7 @@
 import { ArrowLeft } from "lucide-solid";
 import { For, Show, type Component } from "solid-js";
 import { useMobileDetail, type MobileDetailInput } from "../logic/detail";
-import { ArticleBody } from "../components";
+import { ArticleBody, MobileNav } from "../components";
 import { Heading, StateMessage, Tag, Text } from "../ui";
 import { displayDate } from "../../route-input";
 
@@ -32,9 +32,19 @@ export function createMobileDetailPage(input: MobileDetailInput): Component {
         </div>
       );
     }
-    const article = () => detail.state().snapshot;
+    const payload = () => detail.state().snapshot;
+    const article = () => payload()?.article;
     return (
       <div class="mobile-shell">
+        <MobileNav
+          context={input.context}
+          navigation={payload()?.navigation}
+          browserNavigation={input.navigation}
+          persistence={input.persistence}
+          document={input.document}
+          share={input.share}
+          favoriteKey={article()?.id.toString()}
+        />
         <header class="reading-bar">
           {backLink}
           <span>阅读</span>
