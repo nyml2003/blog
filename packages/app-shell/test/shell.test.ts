@@ -38,15 +38,12 @@ test("renders deterministic shell HTML and geometry CSS", () => {
     rendered.criticalCss,
     /\.loom-app-shell \+ #app\{visibility:hidden;\}/,
   );
-  assert.match(
-    rendered.criticalCss,
-    /@media \(prefers-reduced-motion:reduce\)/,
-  );
+  assert.doesNotMatch(rendered.criticalCss, /animation|@keyframes/);
   assert.equal(
     rendered.criticalCss.slice(
       rendered.criticalCss.indexOf(".loom-app-shell--mobile"),
     ),
-    '.loom-app-shell--mobile{--loom-shell-shimmer-delay:240ms;}.loom-app-shell--mobile [data-loom-shell-region-index="0"]{min-block-size:68px;}.loom-app-shell--mobile [data-loom-shell-region-index="1"]{min-block-size:480px;}.loom-app-shell--mobile [data-loom-shell-placeholder="1-0"]{block-size:180px;aspect-ratio:1.7777777777777777;}.loom-app-shell--mobile [data-loom-shell-placeholder="1-1"]{block-size:22px;inline-size:86%;}',
+    '.loom-app-shell--mobile [data-loom-shell-region-index="0"]{min-block-size:68px;}.loom-app-shell--mobile [data-loom-shell-region-index="1"]{min-block-size:480px;}.loom-app-shell--mobile [data-loom-shell-placeholder="1-0"]{block-size:180px;aspect-ratio:1.7777777777777777;}.loom-app-shell--mobile [data-loom-shell-placeholder="1-1"]{block-size:22px;inline-size:86%;}',
   );
 });
 
@@ -88,16 +85,11 @@ test("rejects invalid geometry and duplicate region identifiers", () => {
   );
 });
 
-test("static styles delay shimmer and honor reduced motion", () => {
+test("static styles keep placeholders motionless", () => {
   const styles = readFileSync(
     new URL("../styles.css", import.meta.url),
     "utf8",
   );
 
-  assert.match(
-    styles,
-    /animation-delay: var\(--loom-shell-shimmer-delay, 200ms\)/,
-  );
-  assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
-  assert.match(styles, /animation: none/);
+  assert.doesNotMatch(styles, /animation|@keyframes/);
 });

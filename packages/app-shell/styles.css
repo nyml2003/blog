@@ -32,35 +32,21 @@
 
 .loom-app-shell__region {
   display: block;
-  padding: var(--loom-shell-region-padding, 0px);
+  padding: var(--loom-shell-region-padding, 16px 18px);
+}
+
+.loom-app-shell__placeholder + .loom-app-shell__placeholder {
+  margin-block-start: var(--loom-shell-gap, 12px);
 }
 
 .loom-app-shell__placeholder {
   display: block;
   max-inline-size: 100%;
-  border-radius: var(--loom-shell-radius, 8px);
+  border-radius: var(--loom-shell-radius, 4px);
   background: var(--loom-shell-skeleton, var(--border, #e2e4e8));
-  animation: loom-app-shell-shimmer 1.4s linear infinite;
-  animation-delay: var(--loom-shell-shimmer-delay, 200ms);
+  opacity: 0.72;
 }
 
 .loom-app-shell__placeholder--media {
   overflow: hidden;
-}
-
-@keyframes loom-app-shell-shimmer {
-  0%,
-  100% {
-    opacity: 0.72;
-  }
-
-  50% {
-    opacity: 1;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .loom-app-shell__placeholder {
-    animation: none;
-  }
 }

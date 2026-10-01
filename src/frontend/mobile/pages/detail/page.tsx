@@ -1,18 +1,26 @@
 import { ArrowLeft } from "lucide-solid";
-import { For, Show, type Component } from "solid-js";
+import { type Component, createEffect, For, Show } from "solid-js";
+import { displayDate } from "../../../validation/route-input";
 import {
-  useMobileDetail,
   type MobileDetailInput,
+  useMobileDetail,
 } from "../../features/detail/model";
+import { searchQuery } from "../../features/search/model";
+import { Heading, StateMessage, Tag, Text } from "../../foundation/ui";
 import { ArticleBody } from "../../widgets/article-body/ui";
 import { MobileNav } from "../../widgets/shell/mobile-nav";
-import { Heading, StateMessage, Tag, Text } from "../../foundation/ui";
-import { displayDate } from "../../../validation/route-input";
-import { searchQuery } from "../../features/search/model";
 
 export function createMobileDetailPage(input: MobileDetailInput): Component {
   return function MobileDetailPage() {
     const detail = useMobileDetail(input);
+    createEffect(() => {
+      if (detail.kind === "invalid") {
+        input.onAppShellReady();
+        return;
+      }
+      const status = detail.state().status;
+      if (status !== "idle" && status !== "loading") input.onAppShellReady();
+    });
     const query = searchQuery(input.navigation.current().search);
     const backLink = (
       <a

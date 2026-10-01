@@ -8,6 +8,13 @@ html[data-theme="paper"] .loom-app-shell {
   color-scheme: light;
 }
 
+html:not([data-theme]) .loom-app-shell,
+html[data-theme="paper"] .loom-app-shell {
+  --loom-shell-surface: var(--paper, #f4f1ea);
+  --loom-shell-skeleton: #e7e2d9;
+  --loom-shell-ink: var(--ink, #262522);
+}
+
 html[data-theme="dark"] .m-page-container,
 html[data-theme="dark"] .mobile-shell {
   --paper: #202124;
@@ -28,7 +35,7 @@ html[data-theme="dark"] .mobile-shell {
 
 html[data-theme="dark"] .loom-app-shell {
   --loom-shell-surface: #202124;
-  --loom-shell-skeleton: #777d86;
+  --loom-shell-skeleton: #35383e;
   --loom-shell-ink: #f1f3f4;
 }
 
@@ -52,7 +59,7 @@ html[data-theme="sepia"] .mobile-shell {
 
 html[data-theme="sepia"] .loom-app-shell {
   --loom-shell-surface: #f1e6cf;
-  --loom-shell-skeleton: #98856b;
+  --loom-shell-skeleton: #ddceb4;
   --loom-shell-ink: #352d23;
 }
 

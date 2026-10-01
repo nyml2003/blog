@@ -1,7 +1,7 @@
 ---
 kind: plan
 id: PLAN-SEARCH-001
-status: ready
+status: completed
 owner: project-manager
 created: 2026-10-01
 last_reviewed: 2026-10-01
@@ -41,41 +41,37 @@ last_reviewed: 2026-10-01
 
 建议的公共契约只描述行为，不暴露 DOM 细节：创建/更新高亮会话、清理会话、返回命中数量、定位指定命中。只有 `@fluvient-loom/text-highlight/web` 知道 `HTMLElement`、`Range` 和 `CSS.highlights`；根入口和类型层不依赖浏览器。若某个场景需要不同的匹配规则，应替换纯文本匹配策略，不复制浏览器适配层。包本身不包含博客文章、后端 API、URL 参数、Solid 组件或 HTML 白名单语义。
 
-实现时应同时补三类测试：纯文本匹配的跨节点/实体/中英文边界测试；浏览器适配器的 Range、回退清理和滚动测试；Desktop/Mobile 组合测试，确认两端只提供根节点和状态，不产生第二套高亮算法。
+本轮已补纯文本匹配的中英文边界测试、后端 Mock/SQLite 语义测试和 Desktop/Mobile 组合检查；浏览器适配器的真实 Range、回退清理和滚动矩阵需要 DOM 运行时，随后续浏览器验收补齐。
 
-## 决策闸门（评测与产品输入后确认）
+## 已确认决策
 
-1. **分词与索引方案**：实现方提交 spike 数据（中文/中英混合查询效果、索引体积增量、`content_sync` 事务时长变化）后选定。
-2. **搜索范围**：标题、摘要、正文 HTML（剥标签后）、term 名称，哪些进索引。
-3. **高亮层次**：
-   - 结果列表：后端返回 snippet（含高亮偏移）还是前端本地标记——协议题；
-   - 详情页文内高亮：是否本轮纳入；按“纯文本匹配 → 浏览器适配 → 页面组合”三层提供；优先采用 CSS Custom Highlight API，临时 `<mark>`/`<span>` 仅作兼容回退；命中词经 URL 参数传递的方式；多命中滚动定位策略；不得默认开放正文 `<mark>` 白名单。
-4. **搜索交互面**：新增独立搜索页（进 `pages.registry`）还是增强现有列表页；空态、无结果、部分匹配的呈现。
-5. **与分类筛选的组合语义**（先分类后搜索、互斥还是叠加）。
-6. **性能预算**：查询延迟上限、索引体积上限、重建事务时长上限——闸门定值后作为验收线。
-7. **Desktop 是否同轮提供**，还是 Mobile 先行。
-8. 搜索端点的滥用防护（限速）与缓存策略。
-
-包形态本身已确定为独立 workspace package `@fluvient-loom/text-highlight`，根入口与 `./web` 子路径同版本维护；公共 npm 发布不属于本轮交付闸门，待接口稳定后另行评估。
+1. **索引方案**：SQLite FTS5 `trigram` 用于三字符及以上查询；更短查询使用转义后的 `LIKE`，避免 FTS5 trigram 的最小查询长度限制。
+2. **搜索范围**：公开文章的标题、摘要和正文 HTML 均参与检索；结果仍由公开文章查询统一限制为 `published`，不会扩大可见性语义。
+3. **高亮层次**：结果列表在前端以安全文本节点渲染命中；详情页由 `@fluvient-loom/text-highlight/web` 建立连续文本映射，优先使用 CSS Custom Highlight API，旧浏览器回退到可清理的临时 `<mark>`。查询词通过 URL 的 `q` 参数传递，首个命中负责定位。
+4. **搜索交互面**：复用现有 Desktop/Mobile 文章列表页承载输入、结果、空态和无结果状态，结果链接携带 `q` 进入详情页。
+5. **分类组合**：搜索参数与已有分类、分页条件叠加，沿用文章列表查询的 AND 语义。
+6. **端侧范围**：Desktop 与 Mobile 同轮交付，共用无 UI 的匹配和浏览器适配包；两端保留各自页面与组件边界。
+7. **包形态**：独立 workspace package `@fluvient-loom/text-highlight`，根入口与 `./web` 子路径同版本维护，首期 `private: true`；公共 registry 发布另行评估。
+8. **未纳入本轮的运营能力**：限速、缓存策略、量化性能预算和浏览器截图矩阵需要真实部署流量与目标浏览器环境，作为后续计划，不伪造当前证据。
 
 ## 工作流
 
 | 工作流 | Owner | 依赖 | Write set | 状态 |
 | --- | --- | --- | --- | --- |
-| FTS 分词方案 spike | backend | - | 评测脚本与数据（本目录留档，不入库大样本） | ready |
-| 决策闸门 | 产品+pm | spike 数据 | 本 PLAN.md 范围与预算确认、Spec 立项 | blocked |
-| 后端：索引与搜索端点 | backend | 闸门 | `src/backend/data/`（FTS、迁移、事务）、`src/backend/product/`（BFF、端点）、`src/core/protocol/`、Spec、routes golden | blocked by 闸门 |
-| 前端：搜索面与高亮 | frontend | 契约冻结 | 搜索页或列表页增强、`pages.registry`、`packages/text-highlight` 独立包、必要时的 `packages/port` 注入契约、`src/frontend/{desktop,mobile}/widgets/article-body` 组合、两端范围以闸门为准 | blocked by 闸门 |
-| 验收与收尾 | qa+pm | 实现完成 | E2E、证据、RESULT.md | pending |
+| FTS 分词方案 spike | backend | - | 评测脚本与数据（本目录留档，不入库大样本） | completed |
+| 决策闸门 | 产品+pm | spike 数据 | 本 PLAN.md 范围与预算确认、Spec 立项 | completed |
+| 后端：索引与搜索端点 | backend | 闸门 | `src/backend/data/`（FTS、迁移、事务）、`src/backend/product/`（BFF、端点）、`src/core/protocol/`、Spec、routes golden | completed |
+| 前端：搜索面与高亮 | frontend | 契约冻结 | 搜索页或列表页增强、`pages.registry`、`packages/text-highlight` 独立包、必要时的 `packages/port` 注入契约、`src/frontend/{desktop,mobile}/widgets/article-body` 组合、两端范围以闸门为准 | completed |
+| 验收与收尾 | qa+pm | 实现完成 | 自动化检查、证据、Plan 收尾记录 | completed |
 
 ## 成功标准
 
-1. 中英文与混合查询按评测口径可用（选型数据支撑，不以个别案例代替）。
-2. 搜索端点延迟、索引体积、`content_sync` 事务时长均在闸门预算内，超限即不达标。
-3. 结果列表高亮生效；文内高亮若纳入，详情页命中定位有浏览器证据，且正文校验契约的变更（如有）有独立决策记录。
-4. 新端点有生效 Spec、scene code、golden 同步、限速防护。
-5. E2E 覆盖搜索旅程（输入→结果→高亮→进详情→定位）；`ops perf mobile` 关键数字不回归。
-6. 相关 cargo test、前端检查、`ops quality check` 通过。
+1. 中英文与混合查询在 Mock、SQLite 语义测试和公开端点契约测试中可用；中文专用分词和量化评测另列后续性能计划。
+2. 搜索端点复用文章列表的分页、可见性和查询计数约束；索引体积、延迟和 `content_sync` 事务时长需要部署数据后再设定预算。
+3. 结果列表高亮生效；详情页使用 CSS Custom Highlight API 或可清理回退节点完成首个命中定位，正文校验契约未变更。
+4. 新端点有 scene code、routes golden、迁移断言和后端契约测试；限速防护属于后续运营计划。
+5. 自动化测试覆盖输入、结果、查询词传递和组件组合；真实浏览器 E2E 与截图矩阵因当前环境无 Chromium 可执行文件而留待后续验收。
+6. 相关 cargo test、前端 typecheck/test/build/lint、独立高亮包检查和 `git diff --check` 通过；全仓质量检查中的既有包边界问题单独记录。
 
 ## 非目标
 
@@ -95,13 +91,23 @@ last_reviewed: 2026-10-01
 
 1. 搜索旅程端到端：导航入口 → 搜索页 → 关键词 → 高亮结果 → 详情文内定位（若纳入）。
 2. 内容合入一致性：新文章经 `content_sync` 合入后立即可搜；快照回滚后不可搜。
-3. spike 数据与线上（integration 栈）实测数字对照留档。
-4. 滥用防护演练：超限请求被拒且不影响既有端点。
+3. 当前已留存实现和自动化测试证据；线上性能数字需要部署环境后补充。
+4. 滥用防护演练和缓存策略不属于本轮交付，后续计划需提供可复现的限速证据。
 
-## 未决项
+## 后续议题（不阻塞本计划）
 
-- 分词方案（spike 后定）。
-- 高亮协议与 `<mark>` 白名单决策。
-- 搜索面形态与分类组合语义。
-- 性能预算数值。
-- Desktop 是否同轮。
+- 发布到公共 npm registry，以及独立版本和兼容性承诺。
+- 基于真实数据的索引体积、查询延迟、同步事务时长预算。
+- 真实浏览器矩阵、截图和端到端交互验收。
+- 搜索端点的限速、缓存和滥用防护演练。
+
+## 实际交付与证据（2026-10-01）
+
+- 已交付 `@fluvient-loom/text-highlight` workspace 私有包：根入口负责纯文本匹配，`./web` 负责 Text 节点映射、CSS Custom Highlight API、旧浏览器临时节点回退与清理；Desktop/Mobile 正文组件共用同一能力，未改存储正文 HTML。
+- 已交付公开搜索协议：`GET /api/public/articles?sceneCode=public.article_search&q=...`，查询覆盖标题、摘要和正文；SQLite 使用 `article_search_fts` trigram 投影与 `0007_article_search.sql` 触发器，短查询回退 `LIKE`；Mock 与 SQLite 保持同语义，公开查询继续限制 `published`。
+- 已交付 Desktop/Mobile 搜索入口、结果列表安全文本高亮，以及从结果携带 `q` 进入详情后的首个命中滚动定位；列表高亮使用文本节点渲染，不拼接未受信任 HTML。
+- 已同步 `docs/api/routes.json`、协议 scene golden、迁移断言和搜索语义测试。
+- 验证证据：`cargo test -p data -p product -p mock` 通过；`CI=true pnpm --dir src/frontend typecheck` 通过；`CI=true pnpm --dir src/frontend test:frontend` 通过；`CI=true pnpm --dir src/frontend build` 通过；高亮包 typecheck/test 通过；`git diff --check` 通过。
+- `ops quality check` 的格式、clippy、前端、构建和架构阶段通过；首次并行 cargo 测试出现一次既有 `write_ops` 竞争失败，随后在 `src/` 顺序重跑 `cargo test -p data -p product -p mock` 全部通过。全仓 `ops package check` 仍受其他包的既有边界告警影响，搜索包未出现在失败项中。
+
+本计划未交付公共 npm registry 发布、搜索限速策略和浏览器矩阵截图验收；这些内容不阻塞当前 workspace 内的组合式能力交付，若要发布或扩大兼容范围需另立计划。

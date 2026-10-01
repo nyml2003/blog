@@ -2,7 +2,11 @@ import { onMount } from "solid-js";
 import { createDataTask } from "@fluvient-loom/query";
 import type { TaskFailure } from "@fluvient-loom/port";
 import { err } from "@fluvient/core";
-import type { MobileApi, MobileApiFailure, ArticleSearch } from "../../foundation/api";
+import type {
+  MobileApi,
+  MobileApiFailure,
+  ArticleSearch,
+} from "../../foundation/api";
 import { useMobileResource } from "../../foundation/resource";
 
 export function searchQuery(search: string): string {

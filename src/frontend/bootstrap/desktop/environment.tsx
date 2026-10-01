@@ -1,8 +1,8 @@
-import { createComponent, type Component } from "solid-js";
-import { render } from "solid-js/web";
-import { createWebNavigation } from "@fluvient-loom/web";
-import { createFetchNetwork } from "@fluvient-loom/net";
 import { type Result } from "@fluvient/core";
+import { createFetchNetwork } from "@fluvient-loom/net";
+import { createWebNavigation } from "@fluvient-loom/web";
+import { type Component, createComponent } from "solid-js";
+import { render } from "solid-js/web";
 import {
   createDesktopApi,
   type DesktopApiFailure,
@@ -31,7 +31,11 @@ export async function createBrowserDesktopContext(): Promise<
     return { ok: false, error: routes.error as DesktopApiFailure };
   return {
     ok: true,
-    value: { api, routes: routes.value, navigation: browserNavigation() },
+    value: {
+      api,
+      routes: routes.value,
+      navigation: browserNavigation(),
+    },
   };
 }
 

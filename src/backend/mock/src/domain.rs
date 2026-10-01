@@ -804,6 +804,15 @@ impl DomainState {
 
 /// 列表筛选语义（与 Data 的 `ArticleFilter` 相同：不同维度 AND，同一维度 OR）。
 fn matches_query(query: &ArticleListQuery, article: &ArticleDetail) -> bool {
+    if let Some(search) = query.search.as_deref() {
+        let search = search.to_lowercase();
+        let matches = article.title.to_lowercase().contains(&search)
+            || article.summary.to_lowercase().contains(&search)
+            || article.content_html.to_lowercase().contains(&search);
+        if !matches {
+            return false;
+        }
+    }
     if let Some(type_id) = query.article_type_id {
         if article.article_type_id != type_id {
             return false;
@@ -1084,6 +1093,21 @@ mod tests {
             })
             .unwrap();
         assert_eq!(admin_detail.status, "draft");
+    }
+
+    #[test]
+    fn article_search_matches_title_summary_and_body() {
+        let state = full();
+        let page = state
+            .article_list(&ArticleListQuery {
+                published_only: true,
+                page_size: Some(100),
+                search: Some("sqlite".to_owned()),
+                ..ArticleListQuery::default()
+            })
+            .unwrap();
+        assert_eq!(page.total, 1);
+        assert_eq!(page.items[0].id, 10);
     }
 
     #[test]

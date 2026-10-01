@@ -1076,11 +1076,8 @@ impl DataStore for SqliteStore {
         let page = normalize_page(query.page);
         let page_size = normalize_page_size(query.page_size);
         let filter = ArticleFilter::from_query(query);
-        let (where_sql, args) = build_article_where(
-            query.published_only,
-            &filter,
-            query.search.as_deref(),
-        );
+        let (where_sql, args) =
+            build_article_where(query.published_only, &filter, query.search.as_deref());
         let mut conn = self.connect()?;
 
         // 1/3 count（与 Go 参考实现一致：JOIN article_types 过滤无类型文章）。

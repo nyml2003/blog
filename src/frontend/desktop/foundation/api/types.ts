@@ -266,10 +266,7 @@ export interface DesktopApi {
     get(
       query: string,
       page?: number,
-    ): import("@fluvient-loom/port").DataTask<
-      ArticleSearch,
-      DesktopApiFailure
-    >;
+    ): import("@fluvient-loom/port").DataTask<ArticleSearch, DesktopApiFailure>;
   };
   readonly adminArticle: {
     get(

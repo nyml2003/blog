@@ -18,7 +18,7 @@ last_reviewed: 2026-10-01
 **第二阶段再接入博客应用**：让页面在**没有数据、JS 未挂载**时即可渲染完整页面框架（App Shell 模式）：HTML 模板自带页头/底栏/内容区骨架与内联关键 CSS，首帧不等外链资源与 JS；JS 启动后按"删壳契约"填充数据。同时建立"不抖"的三条纪律：
 
 1. **几何一致**：骨架与真实内容同高（`aspect-ratio` 图片位、`line-clamp` 标题行数、同一套间距/字号 CSS 变量），替换时 layout-shift 为 0；
-2. **迟到流光**：慢加载的 shimmer 用纯 CSS `animation-delay` 实现，前约 200ms 骨架静止，零 JS 参与 hold-back；
+2. **静态低干扰**：默认骨架使用低对比度静态占位，不闪烁、不做周期性透明度变化；如未来确有场景需要流光，必须显式 opt-in 并遵守 `prefers-reduced-motion`；
 3. **刷新不闪骨架**：换筛选/重取时用 `@fluvient-loom/query` loading 态保留的 `latest` 渲染旧内容（降不透明度），不重画骨架。
 
 第二阶段直接承接 `PLAN-MOBILE-EXPERIENCE-OPTIMIZATION-001` 暂缓的"底栏静态骨架"与二期移交的"白屏窗口"问题，与已交付的 SW 预取互补：预取压缩"数据等待"，App Shell 压缩"JS 挂载前的框架空白"。
@@ -37,7 +37,7 @@ last_reviewed: 2026-10-01
 ## 核心设计契约（候选，闸门确认后授权实现）
 
 - **包边界（第一阶段）**：`@fluvient-loom/app-shell` 只提供纯类型、纯函数和可显式导入的 CSS 资源；运行时不访问 `window`/`document`/`navigator`，不依赖 Solid、Vite、路由或博客 API。包输出必须具备明确的 `exports`、`files`、README、类型检查、测试和 pack smoke。
-- **包契约（第一阶段）**：shell 描述至少表达平台、稳定区域、骨架几何约束、无障碍属性和 shimmer 规则；HTML/CSS 生成结果可做 golden 校验。包不决定页面内容，也不负责删除 shell。
+- **包契约（第一阶段）**：shell 描述至少表达平台、稳定区域、骨架几何约束、无障碍属性和可选 motion 规则；默认生成静态 CSS，HTML/CSS 生成结果可做 golden 校验。包不决定页面内容，也不负责删除 shell。
 - **注入通道（第二阶段）**：`pages.registry.ts` 每页新增可选 `shell` 字段；`page-template` 插件只负责调用包并注入到 `renderPageHtml`，不拥有内容。
 - **端隔离归属**：Mobile shell 模板由 `app/habitat/mobile` 拥有，Desktop 由 `app/habitat/desktop` 拥有；共享的只有 CSS 设计令牌与纯逻辑。
 - **删壳契约（第二阶段）**：shell 是 `#app` 的兄弟节点（如 `#app-shell`，`aria-hidden="true"`，含视觉隐藏的"正在加载"文本）；bootstrap 在**第一个确定状态提交时**移除——数据成功则内容淡入后删，错误/空态换成现有 `StateMessage`；**JS 内永不重画骨架**，杜绝"HTML 骨架闪一下又被 JS 骨架替换"。
@@ -93,9 +93,9 @@ last_reviewed: 2026-10-01
 | --- | --- | --- | --- | --- |
 | App Shell 包设计与契约 | frontend | - | `packages/app-shell/package.json`、公开入口、类型/纯函数、README、包测试 | completed |
 | App Shell 包验证与 pack smoke | frontend | 包设计与契约 | `packages/app-shell/test/**`、golden、package smoke/门禁补充 | completed |
-| 阶段闸门与应用接入决策 | 产品+pm | 包契约验收 | 本 PLAN.md 阶段状态、接入范围、阈值与顺序 | completed for home pilot |
-| Mobile 公共页 shell 试点（home/articles/detail） | frontend | 闸门 + 写集互核 | `pages.registry.ts`、`vite-plugins/page-template.ts`、Mobile shell 模板（新）、Mobile bootstrap 删壳逻辑、Mobile 样式、相关 e2e | partial: home |
-| Desktop 公共页推广 | frontend | 试点验收 + 闸门确认纳入 | Desktop 对应 shell 模板（新）、bootstrap、样式、e2e | blocked |
+| 阶段闸门与应用接入决策 | 产品+pm | 包契约验收 | 本 PLAN.md 阶段状态、接入范围、阈值与顺序 | completed for mobile detail pilot |
+| Mobile 文章详情 shell 试点 | frontend | 闸门 + 写集互核 | `pages.registry.ts`、`vite-plugins/page-template.ts`、Mobile detail bootstrap、Mobile 样式、相关 e2e | partial: detail only |
+| 其他公共页推广 | frontend | 详情试点验收 + 重新确认范围 | Desktop 与 Mobile 首页/列表对应 shell、bootstrap、样式、e2e | parked: visual feedback |
 | 第二阶段验收与收尾 | qa+pm | 推广完成 | 性能/浏览器证据、RESULT.md | pending |
 
 第一阶段包开发与第二阶段应用接入在写集上隔离，可以先完成包；阶段闸门通过后才允许修改共享前端模板和 bootstrap。试点与 Desktop 推广共享前端构建/模板写集，不得并行修改；与 FSD-RESTRUCTURE、COMPONENT-EXPERIENCE 的 Mobile UI 写集重叠部分按"约束与依据"逐项互核。
@@ -103,7 +103,7 @@ last_reviewed: 2026-10-01
 ## 第一阶段验收
 
 1. `pnpm --filter @fluvient-loom/app-shell run typecheck`、测试和包 smoke 通过；若包沿用当前 workspace 源码导出模式，则至少补充 `pnpm pack --dry-run` 文件清单检查。
-2. 公开入口、类型、HTML/CSS golden、无障碍属性和 `prefers-reduced-motion` 行为有测试覆盖。
+2. 公开入口、类型、HTML/CSS golden、无障碍属性和默认静态行为有测试覆盖；启用 motion 时必须遵守 `prefers-reduced-motion`。
 3. `ops package check` 通过；不要求运行博客应用，不要求浏览器截图或性能基线变化。
 
 ### 第一阶段执行记录（2026-10-01）
@@ -111,15 +111,15 @@ last_reviewed: 2026-10-01
 - 已交付 `packages/app-shell/` workspace 包：结构化 shell 描述、确定性 HTML/关键 CSS 生成器、静态基础样式、README、类型检查与 4 项单元测试；未修改 `src/frontend` 应用接入代码。
 - 已通过：`tsc --noEmit -p packages/app-shell/tsconfig.json`、`tsx --test packages/app-shell/test/*.test.ts`、包 smoke，以及 `NPM_CONFIG_CACHE=/tmp/blog-app-shell-npm-cache npm pack --dry-run --json`。pack 清单只包含 README、package.json、源码和 CSS。
 - `ops package check` 的平台中立性检查触达新包且未报告新包违规；统一门禁随后被当前工作树既有的 `@fluvient/core` 迁移/锁文件漂移阻断（`package.json` 与 `pnpm-lock.yaml` 的 workspace 依赖不一致），未能取得全工作区门禁通过证据。
-- 第一阶段不发布公共 npm，不接入博客页面；第二阶段仍需阶段闸门、写集互核和应用验收证据后再启动。
+- 第一阶段不发布公共 npm；第二阶段目前只保留移动端文章详情试点，仍需浏览器与性能证据后收尾。
 
-### 移动端首页接入记录（2026-10-01）
+### 第二阶段移动端文章详情接入记录（2026-10-01）
 
-- 已在 `mobile-home` registry 条目接入 `@fluvient-loom/app-shell`：构建期模板在 `#app` 前注入 shell HTML 与关键 CSS，壳存在时隐藏应用挂载点，避免首帧出现两套加载态。
-- 已在首页 bootstrap 接入删壳回调：推荐请求首次进入成功、错误或空结果等确定状态后移除 shell；启动失败也会移除 shell 并显示现有错误态。
-- 首页刷新筛选时继续消费 query resource 的 `latest`，已有内容保持可见并标记 `aria-busy`，首次加载仍使用现有 `StateMessage`。
-- 主题样式为 shell 提供 paper/dark/sepia 与字体变量映射；articles/detail/Desktop 尚未接入。
-- 已通过：app-shell 4 项测试、page-template/page-bootstrap 8 项测试、定向 TypeScript 检查和改动文件格式检查。全量前端类型检查仍被工作树既有的 `mobile/features/search/model.ts` 可变/只读数组类型错误阻断。
+- 目前只有 `mobile-article-detail` 在构建期模板中注入 `@fluvient-loom/app-shell`；shell 位于 `#app` 前并在 JS 确定文章状态后删除。
+- 骨架改为静态低对比度布局：标题、元信息、正文线和媒体位分开表达，默认不使用 shimmer，避免首帧闪烁和大块灰色覆盖。
+- Mobile 首页、文章库、检索页及 Desktop 公共页已移除 shell 注册和删壳回调；管理端、Mobile settings/admin preview 继续不接入。
+- 集成 e2e 的禁用 JavaScript 检查改为移动端文章详情页，并保留正常挂载后的壳移除检查；`ops e2e` 与 `ops perf mobile` 的参数 dry-run 通过，但当前环境没有可用 Chromium，尚未执行浏览器运行证据。
+- 已通过：app-shell 单元测试、前端相关测试、完整前端 typecheck 与 Vite build（本轮修改后需重新执行）。`ops package check` 仍受工作树既有包迁移依赖违规影响。
 
 ## 集成验收
 

@@ -28,6 +28,7 @@ export interface AppShellSpec {
   readonly platform: AppShellPlatform;
   readonly loadingLabel: string;
   readonly regions: readonly AppShellRegion[];
+  readonly shimmer?: boolean;
   readonly shimmerDelayMs?: number;
 }
 
@@ -155,6 +156,7 @@ function renderHtml(spec: AppShellSpec): string {
 }
 
 function renderCriticalCss(spec: AppShellSpec): string {
+  const shimmer = spec.shimmer === true;
   const delayMs = spec.shimmerDelayMs ?? DEFAULT_SHIMMER_DELAY_MS;
   const regionRules = spec.regions
     .map(
@@ -184,14 +186,17 @@ function renderCriticalCss(spec: AppShellSpec): string {
 
   const baseRules = [
     ".loom-app-shell{box-sizing:border-box;color:var(--loom-shell-ink,inherit);contain:layout paint;display:block;font-family:var(--loom-shell-font,inherit);min-block-size:100%;overflow:hidden;padding-block-end:var(--loom-shell-bottom-space,0px);background:var(--loom-shell-surface,var(--paper,#f4f1ea));}",
+    ".loom-app-shell *,.loom-app-shell *::before,.loom-app-shell *::after{box-sizing:inherit;}",
     ".loom-app-shell + #app{visibility:hidden;}",
     ".loom-app-shell__status{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;clip-path:inset(50%);}",
-    ".loom-app-shell__region{display:block;padding:var(--loom-shell-region-padding,0px);}",
-    ".loom-app-shell__placeholder{display:block;max-inline-size:100%;border-radius:var(--loom-shell-radius,8px);background:var(--loom-shell-skeleton,var(--border,#d8d2c7));animation:loom-app-shell-shimmer 1.4s linear infinite;animation-delay:var(--loom-shell-shimmer-delay,200ms);}",
-    "@keyframes loom-app-shell-shimmer{0%,100%{opacity:.72;}50%{opacity:1;}}",
-    "@media (prefers-reduced-motion:reduce){.loom-app-shell__placeholder{animation:none;}}",
+    ".loom-app-shell__region{display:block;padding:var(--loom-shell-region-padding,16px 18px);}",
+    ".loom-app-shell__placeholder + .loom-app-shell__placeholder{margin-block-start:var(--loom-shell-gap,12px);}",
+    ".loom-app-shell__placeholder{display:block;max-inline-size:100%;border-radius:var(--loom-shell-radius,4px);background:var(--loom-shell-skeleton,var(--border,#e2e4e8));opacity:.72;}",
   ].join("");
-  return `${baseRules}.loom-app-shell--${spec.platform}{--loom-shell-shimmer-delay:${delayMs}ms;}${regionRules}${placeholderRules}`;
+  const motionRules = shimmer
+    ? `.loom-app-shell--${spec.platform}{--loom-shell-shimmer-delay:${delayMs}ms;}.loom-app-shell__placeholder{animation:loom-app-shell-shimmer 1.4s linear infinite;animation-delay:var(--loom-shell-shimmer-delay,200ms);}@keyframes loom-app-shell-shimmer{0%,100%{opacity:.62;}50%{opacity:.82;}}@media (prefers-reduced-motion:reduce){.loom-app-shell__placeholder{animation:none;}}`
+    : "";
+  return `${baseRules}${motionRules}${regionRules}${placeholderRules}`;
 }
 
 export function renderAppShell(spec: AppShellSpec): RenderedAppShell {

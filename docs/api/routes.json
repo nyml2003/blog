@@ -1,5 +1,6 @@
 [
   { "method": "GET", "endpoint": "/api/public/articles", "sceneCode": "public.article_list" },
+  { "method": "GET", "endpoint": "/api/public/articles", "sceneCode": "public.article_search" },
   { "method": "GET", "endpoint": "/api/public/articles", "sceneCode": "public.article_browse" },
   { "method": "GET", "endpoint": "/api/public/articles", "sceneCode": "public.article_detail" },
   { "method": "GET", "endpoint": "/api/public/article-types", "sceneCode": "public.article_type_list" },

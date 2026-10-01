@@ -272,10 +272,7 @@ export interface MobileApi {
     get(
       query: string,
       page?: number,
-    ): import("@fluvient-loom/port").DataTask<
-      ArticleSearch,
-      MobileApiFailure
-    >;
+    ): import("@fluvient-loom/port").DataTask<ArticleSearch, MobileApiFailure>;
   };
   readonly adminArticle: {
     get(

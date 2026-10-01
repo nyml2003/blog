@@ -1,11 +1,11 @@
 import { ArrowLeft } from "lucide-solid";
-import { For, Show, type Component } from "solid-js";
+import { type Component, For, Show } from "solid-js";
+import { positiveIdFromSearch } from "../../../validation/route-input";
+import { useDesktopArticle } from "../../features/detail/model";
+import { searchQuery } from "../../features/search/model";
 import type { DesktopPageContext } from "../../foundation/context";
 import { route } from "../../foundation/context";
-import { useDesktopArticle } from "../../features/detail/model";
 import { ArticleBody } from "../../widgets/article-body/ui";
-import { positiveIdFromSearch } from "../../../validation/route-input";
-import { searchQuery } from "../../features/search/model";
 
 export function createDesktopDetailPage(input: DesktopPageContext): Component {
   return function DesktopDetailPage() {

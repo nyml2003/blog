@@ -60,6 +60,7 @@ pub fn router(state: Arc<AppState>) -> Router {
             scene::MOBILE_CATEGORY_SHELF_ENDPOINT,
             any(mobile_category_shelf),
         )
+        .route(scene::MOBILE_PAGE_ENDPOINT, any(mobile_page))
         .route(scene::PUBLIC_SITE_ROUTES_ENDPOINT, any(public_site_routes))
         // 管理
         .route(
@@ -286,7 +287,9 @@ async fn public_articles(
         return method_not_allowed(&state, label);
     }
     match params.get("sceneCode").map(String::as_str) {
-        Some(scene::ARTICLE_LIST) => article_list(&state, label, &scope, &params, true, started),
+        Some(scene::ARTICLE_LIST) | Some(scene::ARTICLE_SEARCH) => {
+            article_list(&state, label, &scope, &params, true, started)
+        }
         Some(scene::ARTICLE_BROWSE) => article_browse(&state, label, &scope, &params, started),
         Some(scene::ARTICLE_DETAIL) => match required_id(&params) {
             Some(id) => article_detail(
@@ -981,6 +984,123 @@ async fn mobile_category_shelf(
         Ok(value) => finish(&state, label, StatusCode::OK, &Envelope::ok(value)),
         Err(failure) => domain_failure(&state, label, &failure, Instant::now()),
     }
+}
+
+/// 页面级 Mobile BFF：Mock 与 Product 返回相同的模块 envelope。
+async fn mobile_page(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    method: Method,
+    Query(params): Query<HashMap<String, String>>,
+) -> Response {
+    let started = Instant::now();
+    let scope = session_scope(&headers);
+    let label = "GET /api/public/mobile/page";
+    let scene_code = params.get("sceneCode").map_or("", String::as_str);
+    if let Some(response) = gate(&state, label, scene_code, &scope).await {
+        return response;
+    }
+    if method != Method::GET || !scene::supports("GET", scene::MOBILE_PAGE_ENDPOINT, scene_code) {
+        return unknown_scene_code(&state, label);
+    }
+
+    let page = params.get("page").map_or("", String::as_str);
+    let article_id = parse_i64(params.get("id"));
+    let navigation = serde_json::json!({
+        "leftIcons": if page == "article-detail" { vec!["back"] } else { Vec::<&str>::new() },
+        "rightIcons": if page == "article-detail" {
+            vec!["favorite", "share", "more"]
+        } else {
+            vec!["search", "more"]
+        },
+        "shareUrl": article_id.map(|id| format!("/m/articles/detail.html?id={id}&share=article-{id}")),
+    });
+    let mut modules = vec![serde_json::json!({
+        "moduleKey": "mobile.navigation",
+        "data": navigation,
+    })];
+
+    match page {
+        "home" => {
+            let request = match bff::t_shelf::request(
+                params.get("surface").map(String::as_str),
+                params.get("filter_id").map(String::as_str),
+            ) {
+                Ok(value) => value,
+                Err(failure) => return domain_failure(&state, label, &failure, started),
+            };
+            let result = state
+                .store
+                .read(&scope, |domain| bff::t_shelf::load(domain, &request));
+            match result {
+                Ok(shelf) => modules.push(serde_json::json!({
+                    "moduleKey": "mobile.t-shelf",
+                    "data": shelf,
+                })),
+                Err(failure) => return domain_failure(&state, label, &failure, started),
+            }
+        }
+        "article-list" | "articles" => {
+            let selected = match params.get("category_id") {
+                Some(value) => match value.parse::<i64>() {
+                    Ok(id) if id > 0 => Some(id),
+                    _ => return invalid_json(&state, label),
+                },
+                None => None,
+            };
+            let result = state.store.read(&scope, |domain| {
+                let articles = domain.content_category_shelf(selected)?;
+                let taxonomy = domain.content_workspace().1.taxonomy.clone();
+                let total = articles.len();
+                Ok::<_, OperationFailure>(serde_json::json!({
+                    "taxonomy": taxonomy_json(&taxonomy),
+                    "selectedCategoryId": selected,
+                    "articles": articles
+                        .into_iter()
+                        .map(mobile_article_card_json)
+                        .collect::<Vec<_>>(),
+                    "total": total,
+                }))
+            });
+            match result {
+                Ok(data) => modules.push(serde_json::json!({
+                    "moduleKey": "mobile.category-shelf",
+                    "data": data,
+                })),
+                Err(failure) => return domain_failure(&state, label, &failure, started),
+            }
+        }
+        "article-detail" => {
+            let Some(id) = article_id else {
+                return invalid_id(&state, label);
+            };
+            let result = state.store.read(&scope, |domain| {
+                domain.article_get(&ArticleGetQuery {
+                    id,
+                    published_only: true,
+                })
+            });
+            match result {
+                Ok(article) => modules.push(serde_json::json!({
+                    "moduleKey": "mobile.article-detail",
+                    "data": to_detail_value(article),
+                })),
+                Err(failure) => return domain_failure(&state, label, &failure, started),
+            }
+        }
+        "settings" => modules.push(serde_json::json!({
+            "moduleKey": "mobile.settings",
+            "data": {},
+        })),
+        _ => {}
+    }
+
+    finish(
+        &state,
+        label,
+        StatusCode::OK,
+        &Envelope::ok(serde_json::json!({ "modules": modules })),
+    )
 }
 
 #[derive(Deserialize)]

@@ -1,24 +1,24 @@
-import { onMount } from "solid-js";
 import { err } from "@fluvient/core";
+import type {
+  DocumentPort,
+  NavigationPort,
+  PersistencePort,
+  TaskFailure,
+} from "@fluvient-loom/port";
 import { createDataTask } from "@fluvient-loom/query";
-import type { TaskFailure } from "@fluvient-loom/port";
-import {
-  articleFromPageModule,
-  navigationFromModule,
-  type MobileApi,
-} from "../../foundation/api";
+import { onMount } from "solid-js";
 import type {
   MobileApiFailure,
   MobileArticle,
   MobileNavigation,
 } from "../../foundation/api";
+import {
+  articleFromPageModule,
+  type MobileApi,
+  navigationFromModule,
+} from "../../foundation/api";
 import type { MobileRouteContext } from "../../foundation/context";
 import { useMobileResource } from "../../foundation/resource";
-import type {
-  DocumentPort,
-  NavigationPort,
-  PersistencePort,
-} from "@fluvient-loom/port";
 
 export interface MobileDetailInput {
   readonly id: number | undefined;
@@ -30,6 +30,7 @@ export interface MobileDetailInput {
   readonly persistence: PersistencePort;
   readonly document: DocumentPort;
   readonly share: (url: string) => Promise<void>;
+  readonly onAppShellReady: () => void;
 }
 
 export interface MobileDetailPayload {

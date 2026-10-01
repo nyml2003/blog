@@ -1,26 +1,23 @@
-import { For, Show, type Component } from "solid-js";
-import type { MobileRouteContext } from "../../foundation/context";
-import type { MobileApi } from "../../foundation/api";
+import { type DeepReadonly } from "@fluvient/core";
+import { findTextMatches } from "@fluvient-loom/text-highlight";
 import {
   type DocumentPort,
   type NavigationPort,
   type PersistencePort,
 } from "@fluvient-loom/port";
-import type { CategoryShelf } from "../../foundation/api";
-import { type DeepReadonly } from "@fluvient/core";
-import {
-  useMobileArticles,
-  rootCategoryName,
-} from "../../features/articles/model";
-import { ArticleCard } from "../../widgets/article-card/ui";
-import { Heading, StateMessage, Text } from "../../foundation/ui";
-import { MobileShell } from "../../widgets/shell/ui";
+import { type Component, For, Show } from "solid-js";
 import type { CategorySelection } from "../../features/articles/category";
 import {
-  searchQuery,
-  useMobileSearch,
-} from "../../features/search/model";
+  rootCategoryName,
+  useMobileArticles,
+} from "../../features/articles/model";
+import { searchQuery, useMobileSearch } from "../../features/search/model";
+import type { CategoryShelf, MobileApi } from "../../foundation/api";
+import type { MobileRouteContext } from "../../foundation/context";
 import { routeWithQuery } from "../../foundation/context";
+import { Heading, StateMessage, Text } from "../../foundation/ui";
+import { ArticleCard } from "../../widgets/article-card/ui";
+import { MobileShell } from "../../widgets/shell/ui";
 
 export interface MobileArticlesPageInput extends MobileRouteContext {
   readonly api: Pick<MobileApi, "page" | "search">;
@@ -74,18 +71,40 @@ export function createMobileArticlesPage(
             <section class="search-results" aria-live="polite">
               <Show
                 when={search.state().status !== "loading"}
-                fallback={<StateMessage kind="loading" text="正在搜索…" onRetry={undefined} />}
+                fallback={
+                  <StateMessage
+                    kind="loading"
+                    text="正在搜索…"
+                    onRetry={undefined}
+                  />
+                }
               >
                 <Show
-                  when={search.state().snapshot?.data !== undefined}
-                  fallback={<StateMessage kind="error" text="搜索失败，请稍后重试" onRetry={() => void search.refetch()} />}
+                  when={search.state().snapshot !== undefined}
+                  fallback={
+                    <StateMessage
+                      kind="error"
+                      text="搜索失败，请稍后重试"
+                      onRetry={() => void search.refetch()}
+                    />
+                  }
                 >
                   <p>找到 {search.state().snapshot?.total ?? 0} 篇文章</p>
                   <For each={search.state().snapshot?.items ?? []}>
                     {(article) => (
-                      <a class="article-search-result" href={detailHref(article.id)}>
-                        <strong>{article.title}</strong>
-                        <span>{article.summary}</span>
+                      <a
+                        class="article-search-result"
+                        href={detailHref(article.id)}
+                      >
+                        <strong>
+                          <HighlightedText text={article.title} query={query} />
+                        </strong>
+                        <span>
+                          <HighlightedText
+                            text={article.summary}
+                            query={query}
+                          />
+                        </span>
                       </a>
                     )}
                   </For>
@@ -171,6 +190,28 @@ export function createMobileArticlesPage(
       </MobileShell>
     );
   };
+}
+
+function HighlightedText(props: {
+  readonly text: string;
+  readonly query: string;
+}) {
+  const matches = findTextMatches(props.text, props.query).matches;
+  const parts: Array<{ readonly value: string; readonly hit: boolean }> = [];
+  let cursor = 0;
+  for (const match of matches) {
+    if (match.start > cursor)
+      parts.push({ value: props.text.slice(cursor, match.start), hit: false });
+    parts.push({ value: props.text.slice(match.start, match.end), hit: true });
+    cursor = match.end;
+  }
+  if (cursor < props.text.length)
+    parts.push({ value: props.text.slice(cursor), hit: false });
+  return (
+    <>
+      {parts.map((part) => (part.hit ? <mark>{part.value}</mark> : part.value))}
+    </>
+  );
 }
 
 function ForCategories(props: {

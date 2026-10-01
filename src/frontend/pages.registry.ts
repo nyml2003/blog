@@ -2,6 +2,33 @@ import type { AppShellSpec } from "@fluvient-loom/app-shell";
 
 export type PagePlatform = "desktop" | "mobile";
 
+const mobileDetailShell = {
+  platform: "mobile",
+  loadingLabel: "正在加载文章",
+  shimmer: false,
+  regions: [
+    { id: "header", role: "banner", blockSize: "68px", placeholders: [] },
+    {
+      id: "content",
+      role: "main",
+      blockSize: "720px",
+      placeholders: [
+        { kind: "line", blockSize: "14px", inlineSize: "24%" },
+        { kind: "line", blockSize: "30px", inlineSize: "94%" },
+        { kind: "line", blockSize: "30px", inlineSize: "78%" },
+        { kind: "line", blockSize: "12px", inlineSize: "44%" },
+        { kind: "line", blockSize: "14px", inlineSize: "92%" },
+        { kind: "line", blockSize: "14px", inlineSize: "84%" },
+        { kind: "line", blockSize: "14px", inlineSize: "68%" },
+        { kind: "media", blockSize: "180px", aspectRatio: 16 / 9 },
+        { kind: "line", blockSize: "14px", inlineSize: "90%" },
+        { kind: "line", blockSize: "14px", inlineSize: "82%" },
+        { kind: "line", blockSize: "14px", inlineSize: "74%" },
+      ],
+    },
+  ],
+} as const;
+
 export interface PageRegistration {
   id: string;
   platform: PagePlatform;
@@ -14,7 +41,7 @@ export interface PageRegistration {
   shell?: AppShellSpec;
 }
 
-export const pageRegistry = [
+export const pageRegistry: readonly PageRegistration[] = [
   {
     id: "desktop-public-home",
     platform: "desktop",
@@ -137,37 +164,6 @@ export const pageRegistry = [
     description: undefined,
     aliases: ["/m", "/m/"],
     bootstrap: true,
-    shell: {
-      id: "mobile-home-shell",
-      platform: "mobile",
-      loadingLabel: "正在加载首页",
-      regions: [
-        {
-          id: "header",
-          role: "banner",
-          blockSize: "68px",
-          placeholders: [],
-        },
-        {
-          id: "content",
-          role: "main",
-          blockSize: "480px",
-          placeholders: [
-            { kind: "line", blockSize: "34px", inlineSize: "42%" },
-            { kind: "line", blockSize: "18px", inlineSize: "78%" },
-            { kind: "media", blockSize: "150px", aspectRatio: 16 / 9 },
-            { kind: "line", blockSize: "20px", inlineSize: "90%" },
-            { kind: "line", blockSize: "20px", inlineSize: "68%" },
-          ],
-        },
-        {
-          id: "bottom-nav",
-          role: "contentinfo",
-          blockSize: "92px",
-          placeholders: [],
-        },
-      ],
-    },
   },
   {
     id: "mobile-articles",
@@ -198,6 +194,7 @@ export const pageRegistry = [
     description: undefined,
     aliases: ["/m/articles/detail.html"],
     bootstrap: true,
+    shell: { id: "mobile-detail-shell", ...mobileDetailShell },
   },
   {
     id: "mobile-settings",

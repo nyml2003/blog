@@ -500,6 +500,35 @@ fn default_scenario_serves_the_product_response_surface() {
     assert_camel_case(&data["items"][0]);
     assert_eq!(data["items"][0]["terms"][0]["kind"], "tag");
 
+    // 搜索场景与 Product 共用公开文章列表语义，不能被 Mock 路由误判为未知 scene。
+    let search = get(
+        port,
+        "/api/public/articles?sceneCode=public.article_search&q=SQLite&pageSize=100",
+    );
+    assert_eq!(search.status, 200, "{}", search.body);
+    let search = assert_envelope(&search, "OK")["data"].clone();
+    assert_eq!(search["total"], 1);
+    assert_eq!(search["items"][0]["id"], 10);
+    let numbered_search = get(
+        port,
+        "/api/public/articles?sceneCode=public.article_search&q=48&page=1",
+    );
+    assert_eq!(numbered_search.status, 200, "{}", numbered_search.body);
+    let numbered_search = assert_envelope(&numbered_search, "OK")["data"].clone();
+    assert_eq!(numbered_search["total"], 1);
+    assert_eq!(numbered_search["items"][0]["id"], 48);
+
+    let mobile_page = get(
+        port,
+        "/api/public/mobile/page?sceneCode=public.mobile_page&page=article-list",
+    );
+    assert_eq!(mobile_page.status, 200, "{}", mobile_page.body);
+    let mobile_page = assert_envelope(&mobile_page, "OK");
+    let modules = mobile_page["data"]["modules"].as_array().unwrap();
+    assert!(modules.iter().any(|module| {
+        module["moduleKey"] == "mobile.category-shelf" && module["data"]["total"] == 45
+    }));
+
     // page < 1 归一化为 1；越界页返回空页且 hasMore=false。
     let response = get(
         port,

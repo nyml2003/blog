@@ -1044,6 +1044,27 @@ fn shelf_sections_are_bounded_and_browse_filters_are_and() {
     assert_eq!(page["data"]["hasMore"], false);
     assert_eq!(page["data"]["total"], 45);
 
+    // ---------- 全文搜索：标题/摘要/正文 + 公开可见性 ----------
+    let before = data_query_total(BROWSE_DATA_PORT);
+    let search = json_of(&get(
+        BROWSE_PRODUCT_PORT,
+        "/api/public/articles?sceneCode=public.article_search&q=SQLite&pageSize=100",
+    ));
+    assert_eq!(search["code"], "OK");
+    let search_items = search["data"]["items"].as_array().unwrap();
+    assert!(search_items.iter().any(|item| item["id"] == 10));
+    assert!(
+        search_items
+            .iter()
+            .all(|item| item["status"] == "published")
+    );
+    assert!(
+        search_items
+            .iter()
+            .all(|item| item.get("contentHtml").is_none())
+    );
+    assert_eq!(data_query_total(BROWSE_DATA_PORT) - before, 3);
+
     // ---------- 共享的 `public.article_list` 契约零改动 ----------
     // `term_ids` 仍是同维度 OR；浏览专用参数不会被列表端点解析。
     let list = json_of(&get(

@@ -1,6 +1,6 @@
 import "../../mobile/foundation/styles/app.css";
-import { mountMobilePage } from "./environment";
 import { createMobileArticlesPage } from "../../mobile/pages/articles/page";
+import { mountMobilePage } from "./environment";
 
 mountMobilePage((context) =>
   createMobileArticlesPage(

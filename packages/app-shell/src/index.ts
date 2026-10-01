@@ -7,4 +7,4 @@ export {
   type AppShellRegionRole,
   type AppShellSpec,
   type RenderedAppShell,
-} from "./shell";
+} from "./shell.ts";

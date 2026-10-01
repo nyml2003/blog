@@ -1,9 +1,9 @@
-import { For, Show, type Component } from "solid-js";
-import type { DesktopPageContext } from "../../foundation/context";
-import { route } from "../../foundation/context";
+import { type DeepReadonly } from "@fluvient/core";
+import { type Component, For, Show } from "solid-js";
 import { useDesktopHome } from "../../features/home/model";
 import type { TShelf } from "../../foundation/api";
-import { type DeepReadonly } from "@fluvient/core";
+import type { DesktopPageContext } from "../../foundation/context";
+import { route } from "../../foundation/context";
 
 function Shelf(props: {
   data: DeepReadonly<TShelf> | undefined;

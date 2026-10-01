@@ -238,6 +238,25 @@ async function runIntegrationJourneys(browser: Browser, origin: string, artifact
   await desktop.screenshot({ path: join(artifactDir, 'desktop-detail.png'), fullPage: true });
 
   const mobile = await browser.newPage({ viewport: { width: 375, height: 812 } });
+  const shellOnly = await browser.newPage({
+    viewport: { width: 375, height: 812 },
+    javaScriptEnabled: false,
+  });
+  await shellOnly.goto(`${origin}/m/articles/detail.html?id=12`, { waitUntil: 'domcontentloaded' });
+  const shellProbe = await shellOnly.evaluate(() => {
+    const shell = document.querySelector('[data-loom-app-shell="true"]');
+    const app = document.querySelector('#app');
+    return {
+      shellPresent: shell !== null,
+      shellVisible: shell instanceof HTMLElement && getComputedStyle(shell).display !== 'none',
+      appHidden: app instanceof HTMLElement && getComputedStyle(app).visibility === 'hidden',
+    };
+  });
+  if (!shellProbe.shellPresent || !shellProbe.shellVisible || !shellProbe.appHidden) {
+    throw new Error(`mobile-detail: no-JS app shell contract failed: ${JSON.stringify(shellProbe)}`);
+  }
+  await shellOnly.screenshot({ path: join(artifactDir, 'mobile-detail-shell-no-js.png'), fullPage: true });
+  await shellOnly.close();
   await assertPage(mobile, 'mobile-home', `${origin}/m/`, artifactDir, failures, async (page) => {
     await page.getByRole('heading', { name: '推荐阅读', exact: true }).waitFor();
     await assertShellLayout(page, 'mobile-home');
@@ -261,6 +280,9 @@ async function runIntegrationJourneys(browser: Browser, origin: string, artifact
   }, 'domcontentloaded');
   await assertPage(mobile, 'mobile-detail', `${origin}/m/articles/detail.html?id=12`, artifactDir, failures, async (page) => {
     await page.locator('h1').waitFor();
+    if (await page.locator('[data-loom-app-shell="true"]').count() !== 0) {
+      throw new Error('mobile-detail: app shell was not removed after mount');
+    }
     if (await page.locator('.m-bottom-nav').count() !== 0) {
       throw new Error('mobile-detail: bottom nav must stay hidden on detail page');
     }

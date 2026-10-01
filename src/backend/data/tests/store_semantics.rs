@@ -284,6 +284,24 @@ fn sqlite_store_enforces_public_visibility_and_filter_semantics() {
     let ids: Vec<i64> = page.items.iter().map(|item| item.id).collect();
     assert_eq!(ids, vec![44, 32, 20, 11, 9], "Engineering AND runtime");
 
+    // 搜索覆盖标题、摘要和正文，公开查询仍只返回已发布文章。
+    let result = call(
+        &executor,
+        &runtime,
+        "search-title",
+        DataOperation::ArticleList(ArticleListQuery {
+            published_only: true,
+            page_size: Some(100),
+            search: Some("SQLite".to_owned()),
+            ..ArticleListQuery::default()
+        }),
+    );
+    let DataOutcome::ArticleList(page) = result.outcome.expect("ok") else {
+        panic!("expected search list");
+    };
+    assert!(page.items.iter().any(|item| item.id == 10));
+    assert!(page.items.iter().all(|item| item.status == "published"));
+
     // 时间过滤：updated_to 为排他日终点（含当日全天）。
     let result = call(
         &executor,
@@ -373,7 +391,7 @@ fn test_semantics_seeds_are_stable_across_runs() {
     let diagnostics = first
         .describe()
         .expect("sqlite semantics exposes diagnostics");
-    assert_eq!(diagnostics.applied_migrations, vec![1, 2, 3, 4, 5, 6]);
+    assert_eq!(diagnostics.applied_migrations, vec![1, 2, 3, 4, 5, 6, 7]);
     assert!(diagnostics.seeded);
     runtime.block_on(first.shutdown());
     runtime.block_on(second.shutdown());
