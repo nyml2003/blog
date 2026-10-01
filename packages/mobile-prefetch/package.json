@@ -1,0 +1,14 @@
+{
+  "name": "@fluvient-loom/mobile-prefetch",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts",
+    "./service-worker": "./src/service-worker.ts"
+  },
+  "scripts": {
+    "test": "tsx --test test/*.test.ts"
+  }
+}
