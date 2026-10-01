@@ -5,7 +5,7 @@ import {
   createPersistentDesiredState,
   type PersistentDesiredState,
 } from "@fluvient-loom/command";
-import { err, ok, type Result } from "@fluvient-loom/common";
+import { err, ok, type Result } from "@fluvient/core";
 import type {
   OperationIdPort,
   PersistencePort,

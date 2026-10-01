@@ -12,5 +12,16 @@
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true
   },
-  "include": ["app", "tests", "vite-env.d.ts", "vite.config.ts"]
+  "include": [
+    "bootstrap",
+    "desktop",
+    "domain",
+    "kernel",
+    "mobile",
+    "protocol",
+    "tests",
+    "validation",
+    "vite-env.d.ts",
+    "vite.config.ts"
+  ]
 }

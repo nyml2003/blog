@@ -11,9 +11,6 @@ importers:
       '@fluvient-loom/command':
         specifier: workspace:*
         version: link:packages/command
-      '@fluvient-loom/common':
-        specifier: workspace:*
-        version: link:packages/common
       '@fluvient-loom/node':
         specifier: workspace:*
         version: link:packages/node
@@ -23,6 +20,9 @@ importers:
       '@fluvient-loom/query':
         specifier: workspace:*
         version: link:packages/query
+      '@fluvient/core':
+        specifier: workspace:*
+        version: link:packages/core
       '@types/node':
         specifier: 26.4.1
         version: 26.4.1
@@ -44,6 +44,9 @@ importers:
       '@fluvient-cli/cli-plugins':
         specifier: workspace:*
         version: link:../../packages/cli-plugins
+      '@fluvient/core':
+        specifier: workspace:*
+        version: link:../../packages/core
 
   apps/blog-deploy:
     dependencies:
@@ -56,6 +59,11 @@ importers:
       '@fluvient-cli/cli-plugins':
         specifier: workspace:*
         version: link:../../packages/cli-plugins
+      '@fluvient/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+
+  packages/app-shell: {}
 
   packages/cli-core:
     dependencies:
@@ -63,7 +71,11 @@ importers:
         specifier: workspace:*
         version: link:../cli-kit
 
-  packages/cli-kit: {}
+  packages/cli-kit:
+    dependencies:
+      '@fluvient/core':
+        specifier: workspace:*
+        version: link:../core
 
   packages/cli-plugins:
     dependencies:
@@ -73,12 +85,12 @@ importers:
 
   packages/command:
     dependencies:
-      '@fluvient-loom/common':
-        specifier: workspace:*
-        version: link:../common
       '@fluvient-loom/port':
         specifier: workspace:*
         version: link:../port
+      '@fluvient/core':
+        specifier: workspace:*
+        version: link:../core
     devDependencies:
       '@fluvient-loom/node':
         specifier: workspace:*
@@ -90,7 +102,7 @@ importers:
         specifier: workspace:*
         version: link:../web
 
-  packages/common: {}
+  packages/core: {}
 
   packages/gesture-web:
     dependencies:
@@ -118,47 +130,47 @@ importers:
 
   packages/mock:
     dependencies:
-      '@fluvient-loom/common':
-        specifier: workspace:*
-        version: link:../common
       '@fluvient-loom/port':
         specifier: workspace:*
         version: link:../port
+      '@fluvient/core':
+        specifier: workspace:*
+        version: link:../core
 
   packages/nested-gesture: {}
 
   packages/node:
     dependencies:
-      '@fluvient-loom/common':
-        specifier: workspace:*
-        version: link:../common
       '@fluvient-loom/port':
         specifier: workspace:*
         version: link:../port
+      '@fluvient/core':
+        specifier: workspace:*
+        version: link:../core
 
   packages/port:
     dependencies:
-      '@fluvient-loom/common':
+      '@fluvient/core':
         specifier: workspace:*
-        version: link:../common
+        version: link:../core
 
   packages/query:
     dependencies:
-      '@fluvient-loom/common':
-        specifier: workspace:*
-        version: link:../common
       '@fluvient-loom/port':
         specifier: workspace:*
         version: link:../port
+      '@fluvient/core':
+        specifier: workspace:*
+        version: link:../core
 
   packages/web:
     dependencies:
-      '@fluvient-loom/common':
-        specifier: workspace:*
-        version: link:../common
       '@fluvient-loom/port':
         specifier: workspace:*
         version: link:../port
+      '@fluvient/core':
+        specifier: workspace:*
+        version: link:../core
 
   src/frontend:
     dependencies:
@@ -180,9 +192,6 @@ importers:
       '@codemirror/view':
         specifier: 6.36.5
         version: 6.36.5
-      '@fluvient-loom/common':
-        specifier: workspace:*
-        version: link:../../packages/common
       '@fluvient-loom/mobile-h5-solid-atoms':
         specifier: workspace:*
         version: link:../../packages/mobile-h5-solid-atoms
@@ -201,6 +210,9 @@ importers:
       '@fluvient-loom/web':
         specifier: workspace:*
         version: link:../../packages/web
+      '@fluvient/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       lucide-solid:
         specifier: 1.48.0
         version: 1.48.0(solid-js@1.9.15)

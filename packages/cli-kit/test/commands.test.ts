@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { defineCommand, reflectCommandRegistry, validateRegistry } from '../src/commands.ts';
-import { ok } from '../src/result.ts';
+import { ok } from '@fluvient/core';
 
 const handler = () => ok({ exitCode: 0 });
 

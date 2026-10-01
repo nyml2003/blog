@@ -10,7 +10,7 @@
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { ok } from '@fluvient-loom/common';
+import { ok } from '@fluvient/core';
 import type {
   PreparedCommand,
   ReversibleCommand,

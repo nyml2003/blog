@@ -19,11 +19,14 @@ const PACKAGE_IMPORT_ALLOWLIST = new Map([
   ['mobile-h5-solid-atoms', new Set(['solid-js'])],
 ]);
 
+/** Neutral scopes kernel packages may import: the Loom family and the shared core kernel. */
+const KERNEL_SCOPES = ['@fluvient-loom/', '@fluvient/core'];
+
 function isAllowed(packageName: string, specifier: string): boolean {
   return (
     specifier.startsWith('./') ||
     specifier.startsWith('../') ||
-    specifier.startsWith('@fluvient-loom/') ||
+    KERNEL_SCOPES.some((scope) => specifier === scope || specifier.startsWith(`${scope}/`)) ||
     PACKAGE_IMPORT_ALLOWLIST.get(packageName)?.has(specifier) === true
   );
 }
@@ -52,7 +55,7 @@ export function checkPackageNeutrality(
       if (specifier !== undefined && !isAllowed(packageName, specifier)) {
         violations.push({
           file,
-          message: `非中立依赖 "${specifier}"：包 src/ 只允许相对导入与 @fluvient-loom/* 内部导入`,
+          message: `非中立依赖 "${specifier}"：包 src/ 只允许相对导入与 @fluvient-loom/*、@fluvient/core 内部导入`,
         });
       }
     }

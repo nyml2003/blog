@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createCancellationSource } from "@fluvient-loom/common";
+import { createCancellationSource } from "@fluvient/core";
 import { createWebNetwork } from "@fluvient-loom/web";
 
 function response(body: unknown, status = 200): Response {

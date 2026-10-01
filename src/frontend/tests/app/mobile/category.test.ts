@@ -5,11 +5,11 @@ import {
   categoryIdFromSearch,
   categoryRequestId,
   categorySelection,
-} from "../../../app/habitat/mobile/logic/category";
+} from "../../../mobile/features/articles/category";
 import {
   displayDate,
   positiveFilterIdFromSearch,
-} from "../../../app/habitat/route-input";
+} from "../../../validation/route-input";
 
 const model = {
   taxonomy: {

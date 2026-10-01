@@ -15,8 +15,8 @@ last_reviewed: 2026-10-01
 
 | 你想做的事 | 从这里进 |
 | --- | --- |
-| 看一个页面长什么样、怎么交互 | 看 `src/frontend/app/bootstrap/` 与对应的 `app/habitat/<desktop|mobile>/` |
-| 看页面数据从哪来 | 看 `app/habitat/` 注入的 API、资源和 ports |
+| 看一个页面长什么样、怎么交互 | 看 `src/frontend/bootstrap/<desktop|mobile>/` 与对应平台世界的 `pages/<slice>/` |
+| 看页面数据从哪来 | 看 `{mobile,desktop}/foundation/api/` 与 `features/<slice>/` 注入的 API、资源和 ports |
 | 看一个 API 返回什么 | `src/core/protocol/src/wire.rs`（对外形状）+ `docs/api/routes.json`（路由总表） |
 | 看后端怎么处理一个请求 | `src/backend/product/src/http.rs` 找到 handler → 它调用的 `bff/` 或 `content_*` 模块 |
 | 看数据怎么存 | `src/backend/data/src/store/sqlite.rs` + `migrations/` |
@@ -44,16 +44,16 @@ blog/
 │   │   │   └── github/     ← GitHub 传输（只在后台线程里跑）
 │   │   ├── data/           ← Data 进程：SQLite 持久化（8081），不懂业务
 │   │   └── mock/           ← Mock 进程：开发时顶替 Product（9090），5 种故障场景
-│   └── frontend/
-│       ├── app/kernel/     ← 应用层残余：desired-state 状态原语（ports/Result/Task 已归 @fluvient-loom 包）
-│       ├── app/habitat/    ← 新运行时的 API 组合、Mobile 逻辑、页面和 UI
-│       ├── app/bootstrap/  ← 新运行时页面入口与首绘装配（唯一触碰浏览器全局的层）
+ │   └── frontend/
+│       ├── bootstrap/{desktop,mobile}/ ← 页面入口与首绘装配（组合根，唯一触碰浏览器全局的层）
+│       ├── mobile/  desktop/ ← 平台世界：pages/<slice> → widgets/<slice> → features/<slice> → foundation/{api,styles,ui}
+│       ├── kernel/          ← 纯机制：desired-state 状态原语（ports/Result/Task 已归 @fluvient-loom 包）
+│       ├── domain/ protocol/ validation/ ← 跨端契约与输入校验（route-input、article-html、WASM 产物 generated/）
 │       ├── pages.registry.ts ← 全部 17 个页面的登记表（单一事实源）
 │       ├── site-routes.json  ← 页面路由清单（后端经 /api/public/site-routes 下发）
-│       ├── app/habitat/validation/ ← HTML 诊断契约与 WASM 浏览器产物（generated/）
 │       ├── vite-plugins/   ← Vite 插件（页面模板生成、bootstrap 注入、dev 路由重写、Mobile prefetch SW）
 │       └── build/          ← 非 Vite 构建工具（article HTML 的 wasm 构建）
-├── packages/               ← @fluvient-loom 可复用包（ports/query/command/web/gesture 等）
+├── packages/               ← 可复用包：@fluvient-loom（前端运行时 ports/query/command/web/gesture 等）与 @fluvient/core（cli/loom 共享的 Result 与取消原语，后续 http 内核）
 │   └── cli-kit / cli-core / cli-plugins ← ops CLI 的框架能力（参数/输出/进程/端口分配）
 ├── apps/blog/              ← ops 命令实现（src/registry.ts 是命令登记表）
 │   └── src/{admin,content,delivery,e2e,quality,release,runtime}/ ← 各命令域模块
@@ -75,9 +75,9 @@ blog/
 
 ```
 浏览器 → /articles/detail.html?id=7（HTML 由构建期从 pages.registry 生成）
-  → app/bootstrap/desktop/detail.tsx 挂载
-  → app/habitat/desktop/pages/detail.tsx
-  → app/habitat/api/desktop 发 GET /api/public/articles
+  → bootstrap/desktop/detail.tsx 挂载
+  → desktop/pages/detail/page.tsx
+  → desktop/foundation/api 发 GET /api/public/articles
   → Product http.rs 路由 → 校验 sceneCode → BFF/data 读取
   → Data（sqlite.rs）查 SQLite 公开快照 → 原路返回 → 页面渲染
 ```
@@ -124,17 +124,20 @@ pages.registry.ts（页面登记表）
 | `data/` | 8081 | 只被 Product 调用：SQLite、迁移、受控读写 | `store/sqlite.rs`、`store/mock.rs`、`executor.rs`、`migrations/` |
 | `mock/` | 9090 | 开发时顶替 Product：等价 BFF + 故障场景 | `http.rs`、`scenario.rs`、`store/` |
 
-### src/frontend/ —— 两个端 + 共享层
+### src/frontend/ —— 功能切片 + 平台世界
 
 | 目录 | 内容 | 规则 |
 | --- | --- | --- |
 | `pages.registry.ts` | 17 个页面的登记表 | 加页面只改这里 + 建入口文件 |
-| `app/kernel/` | 应用层残余：desired-state 状态原语 | ports/Result/Task/Resource 统一来自 `@fluvient-loom/port|common|query` |
-| `app/habitat/` | 新运行时的 API、资源、Mobile 逻辑与 UI | 通过注入 ports 工作，不导入旧页面层或宿主适配器包 |
-| `app/bootstrap/` | 新运行时页面入口与首绘装配 | 只做 composition root，唯一允许装配 `@fluvient-loom/web` 适配器的层 |
-| `app/habitat/desktop/` | Desktop 页面逻辑、页面和 UI | 页面只编排已注入的 API、资源和命令 |
-| `app/habitat/mobile/` | Mobile 页面逻辑、页面和 UI | 页面只编排已注入的 API、资源和命令 |
-| `app/habitat/api/` | 页面域 API 与 wire schema | 不访问 UI 或宿主适配器 |
+| `bootstrap/{desktop,mobile}/` | 页面入口与首绘装配 | 只做 composition root，唯一允许装配 `@fluvient-loom/web` 适配器的层 |
+| `{mobile,desktop}/pages/<slice>/` | 页面（UI 编排） | 不触碰宿主能力；数据经 features 与注入 ports |
+| `{mobile,desktop}/widgets/<slice>/` | 复合组件（shell、article-card、source-editor 等） | 只依赖本端 foundation 与 features |
+| `{mobile,desktop}/features/<slice>/` | 业务模型（model/persistence） | 数据获取与领域状态在此 |
+| `{mobile,desktop}/foundation/{api,styles,ui}/` | 端内基础层：API 客户端与 BFF 归一化、全局样式、原子 UI | 不访问 UI 之外的宿主适配器 |
+| `kernel/` | 纯机制：desired-state 状态原语 | ports/Task/Resource 来自 `@fluvient-loom/port|query`；禁宿主能力 |
+| `validation/` | 跨端输入校验（route-input、article-html、WASM 产物） | 纯函数与契约，无 UI |
+
+依赖方向由 `tests/app/architecture/source-layout.test.ts` 门禁机械化：bootstrap → pages → widgets → features → foundation → kernel/domain/protocol/validation，同层 slice 互不 import，两端互不 import（详见 `SPEC-ARCH-BOUNDARY-001`）。
 
 ### packages/ 与 apps/ —— 可复用能力与 ops 命令工作区
 
@@ -149,7 +152,7 @@ pages.registry.ts（页面登记表）
 
 ## 当前布局状态
 
-- `app/` 是唯一页面运行时：`kernel` 只保留应用层状态原语，协议与宿主适配统一来自 `@fluvient-loom` workspace 包，`habitat` 负责应用组合，`bootstrap` 负责页面入口与适配器装配。
-- 全部 17 个注册页面均已接入 `app/bootstrap/`，旧页面、旧查询层、旧 Mobile UI 与旧 `desktop-ui/` 组件库已删除。
-- Desktop UI 组件位于 `app/habitat/desktop/components/`，Mobile UI 位于 `app/habitat/mobile/ui/`，两端互不导入。
+- 功能切片结构（FSD 适配版）于 2026-10-01 落地（PLAN-FRONTEND-FSD-RESTRUCTURE-001）：`bootstrap/` + `mobile|desktop` 平台世界（pages/widgets/features/foundation）+ `kernel/domain/protocol/validation` 底层；旧 `app/` 壳已删除。
+- 全部 17 个注册页面均已接入新 `bootstrap/`；旧页面、旧查询层、旧 Mobile UI 与旧 `desktop-ui/` 组件库在更早的整合中已删除。
+- Desktop UI 组件位于 `desktop/widgets/`，Mobile UI 位于 `mobile/widgets/` 与 `mobile/foundation/ui/`，两端互不导入。
 - 计划目录当前不作为代码地图的一部分。后续计划重新建立后，应只登记仍然有效的工作范围，不回填旧索引。

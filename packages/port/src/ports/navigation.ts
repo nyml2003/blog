@@ -1,4 +1,4 @@
-import type { ResourceHandle } from "@fluvient-loom/common";
+import type { ResourceHandle } from "@fluvient/core";
 
 export interface NavigationSnapshot {
   readonly pathname: string;

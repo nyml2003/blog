@@ -21,7 +21,7 @@ async function bundleBootstrap(root: string): Promise<string> {
       minify: false,
       target: "es2020",
       lib: {
-        entry: resolve(root, "app/bootstrap/mobile/settings.tsx"),
+        entry: resolve(root, "bootstrap/mobile/settings.tsx"),
         name: "PageBootstrap",
         formats: ["iife"],
       },

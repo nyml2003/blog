@@ -4,7 +4,7 @@ import type {
   CancellationSource,
   DeepReadonly,
   Result,
-} from "@fluvient-loom/common";
+} from "@fluvient/core";
 
 export interface TaskFailure {
   readonly kind: "task";

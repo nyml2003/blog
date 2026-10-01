@@ -57,7 +57,7 @@
 
 - Desktop 首页、文章列表和详情已切换 registry 到新 bootstrap。
 - 前端清理后的 typecheck、Oxlint、format check、41 项 runtime 测试和 Vite build 已通过。
-- 当前环境没有 Chromium 和 `playwright-core`，清理后的浏览器 E2E 需在具备浏览器依赖的环境补跑；已有通过产物为 `target/e2e/1790738049813-89671/`。
+- 清理后的浏览器 E2E 已在具备依赖的环境补跑通过（`playwright`/`playwright-core` 与 Chromium 就绪，产物 `target/e2e/1790817886941-81363/`；本行曾记录"当前环境没有 Chromium"，系当时快照，已被 PLAN.md 收尾记录取代）。
 
 ## 当前剩余工作
 

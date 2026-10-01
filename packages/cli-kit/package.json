@@ -6,5 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./*.ts": "./src/*.ts"
+  },
+  "dependencies": {
+    "@fluvient/core": "workspace:*"
   }
 }

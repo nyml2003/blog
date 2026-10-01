@@ -10,7 +10,7 @@ last_reviewed: 2026-09-29
 
 ## 分层策略
 
-- Rust 领域、存储、API（`src/core` 与 `src/backend`）和 `src/frontend/app`：严格 red-green-refactor；
+- Rust 领域、存储、API（`src/core` 与 `src/backend`）和 `src/frontend` 平台世界与底层：严格 red-green-refactor；
 - Desktop/Mobile UI 早期：使用稳定、可重复的人工验收场景；
 - 推荐、预览、发布和公开可见性稳定后，再补浏览器自动化测试。
 
@@ -42,8 +42,8 @@ pnpm -C src/frontend run build
 `ops quality check` 还扫描前端 TypeScript/TSX 与 Rust 源码，执行 `SPEC-ARCH-BOUNDARY-001` 的长期边界规则：
 
 - Desktop 与 Mobile 不互相导入 UI；平台 UI 不依赖网络、存储或其他平台；
-- 页面只从 `app/habitat` 注入的 API、resource 和 ports 取得业务数据，不直接装配网络、存储或 wire DTO；
-- `app/` 运行时遵守 `kernel → habitat → bootstrap` 边界：kernel 不依赖宿主或框架，habitat 通过注入的 API/ports 取数且不导入宿主适配器包，bootstrap 是唯一装配宿主适配器（`@fluvient-loom/web`/`node`）的层；
+- 页面只从各端 `foundation/api` 与 `features` 注入的 API、resource 和 ports 取得业务数据，不直接装配网络、存储或 wire DTO；
+- 前端遵守层序边界（`tests/app/architecture/source-layout.test.ts` 门禁）：bootstrap → pages → widgets → features → foundation → kernel/domain/protocol/validation，同层 slice 互不 import、两端互不 import，kernel 不依赖宿主或框架，bootstrap 是唯一装配宿主适配器（`@fluvient-loom/web`/`node`）的层；
 - 任一 `app/` 模块不导入旧前端运行时（`common/`、`solid/`、`desktop/`、`mobile/` 等）；
 - `app/kernel` 保持框架和宿主无关；
 - protocol 不承载货架编排，Product 不直接访问 SQLite，Data 不解析 HTML 或访问 GitHub。

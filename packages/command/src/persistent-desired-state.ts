@@ -2,7 +2,7 @@ import type {
   CancellationFailure,
   DeepReadonly,
   Result,
-} from "@fluvient-loom/common";
+} from "@fluvient/core";
 import type {
   DataTask,
   OperationIdPort,

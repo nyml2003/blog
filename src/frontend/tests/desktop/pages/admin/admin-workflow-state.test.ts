@@ -4,18 +4,18 @@ import test from "node:test";
 import {
   editorSnapshot,
   valueForCurrentSource,
-} from "../../../../app/habitat/desktop/logic/editor-state";
+} from "../../../../desktop/features/editor/state";
 import {
   takeEditorSessionDraft,
   writeEditorSessionDraft,
   type EditorDraftStorage,
-} from "../../../../app/habitat/desktop/logic/editor-session-draft";
+} from "../../../../desktop/features/editor/session-draft";
 import {
   canAbandonWorkspace,
   canSubmitWorkspace,
   workspaceActionPending,
   workspaceStatusLabel,
-} from "../../../../app/habitat/desktop/logic/taxonomy-state";
+} from "../../../../desktop/features/taxonomy/state";
 
 const memoryStorage = (): EditorDraftStorage => {
   const values = new Map<string, string>();
@@ -76,17 +76,11 @@ test("workspace actions follow the finite server status matrix", () => {
 
 test("editor keeps its form mounted after save and public navigation has no admin entry", () => {
   const editorSource = readFileSync(
-    new URL(
-      "../../../../app/habitat/desktop/pages/editor.tsx",
-      import.meta.url,
-    ),
+    new URL("../../../../desktop/pages/editor/page.tsx", import.meta.url),
     "utf8",
   );
   const headerSource = readFileSync(
-    new URL(
-      "../../../../app/habitat/desktop/pages/admin-home.tsx",
-      import.meta.url,
-    ),
+    new URL("../../../../desktop/pages/admin-home/page.tsx", import.meta.url),
     "utf8",
   );
 

@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createDesiredStateMutation } from "../../../app/kernel/desired-state";
+import { createDesiredStateMutation } from "../../../kernel/desired-state";
 import {
   type OperationIdPort,
   type PreparedCommand,
   type ReversibleCommand,
   type SchedulerPort,
 } from "@fluvient-loom/port";
-import { ok, type Result } from "@fluvient-loom/common";
+import { ok, type Result } from "@fluvient/core";
 
 interface Settings {
   readonly theme: string;

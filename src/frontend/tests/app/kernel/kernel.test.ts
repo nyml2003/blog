@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { err, ok } from "@fluvient-loom/common";
+import { err, ok } from "@fluvient/core";
 import { createDataResource, createDataTask } from "@fluvient-loom/query";
 
 test("DataTask is lazy, single start, cancellable before start, and maps rejection", async () => {

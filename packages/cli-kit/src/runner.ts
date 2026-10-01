@@ -3,7 +3,7 @@ import type { CommandArgs, CommandContext, CommandDefinition, GroupDefinition } 
 import type { ParameterSpec } from './parameters.ts';
 import type { Reporter } from './ports.ts';
 import type { OutputPort } from './output.ts';
-import type { Result } from './result.ts';
+import type { Result } from '@fluvient/core';
 import { extractGlobalSwitches, parseCommandArgs } from './parser.ts';
 
 export interface RunnerRegistry {

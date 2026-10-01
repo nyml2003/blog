@@ -1,4 +1,4 @@
-import { type DeepReadonly } from "@fluvient-loom/common";
+import { type DeepReadonly } from "@fluvient/core";
 
 const nested: DeepReadonly<{ item: { label: string } }> = {
   item: { label: "stable" },

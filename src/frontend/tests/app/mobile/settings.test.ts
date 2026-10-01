@@ -10,7 +10,7 @@ import {
   mobileSettingsKeys,
   readMobileSettings,
   readMobileSettingsAsync,
-} from "../../../app/habitat/mobile/logic/settings";
+} from "../../../mobile/features/settings/model";
 
 test("settings query migrates legacy keys into one snapshot", async () => {
   const persistence = createMemoryAsyncPersistence({

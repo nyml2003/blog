@@ -1,7 +1,7 @@
 import { defineCommand, reflectCommandRegistry, type CommandDefinition, type CommandMeta } from '@fluvient-cli/cli-kit/commands.ts';
 import type { FetchLike } from './release.ts';
 import type { InstallerOptions } from './main.ts';
-import { err, ok, type Result } from '@fluvient-cli/cli-kit/result.ts';
+import { err, ok, type Result } from '@fluvient/core';
 import { EXIT_OK, EXIT_USAGE, type OpsFailure } from '@fluvient-cli/cli-kit/errors.ts';
 
 export const initMeta = {

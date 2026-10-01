@@ -4,7 +4,7 @@ id: PLAN-DEPLOY-DOWNLOAD-PREFLIGHT-001
 status: ready
 owner: project-manager
 created: 2026-09-30
-last_reviewed: 2026-09-30
+last_reviewed: 2026-10-01
 ---
 
 # 部署预检与产物下载可观测性
@@ -50,12 +50,13 @@ last_reviewed: 2026-09-30
 
 - 当前阶段：查询、预检、下载、校验、解包、安装、重启、健康检查；
 - 已下载字节、总字节（若可得）、百分比或明确的未知总量状态；
+- TTY 人类模式下渲染真实进度条：已知 Content-Length 时显示进度条与百分比，总量未知时显示持续更新的已下载字节和速度行，不伪造固定总量；
 - 最近速度、已用时间和超时/重试次数；
 - 每次重试的原因、等待时间和剩余次数；
 - 下载完成后进入 checksum 校验，不把 HTTP 200 当作成功；
 - 失败时保留临时文件清理结果、可重试性和人工下一步。
 
-非 TTY 或 CI 环境不使用 spinner，只输出稳定阶段事件和周期性进度；`--json` 只输出结构化 NDJSON，不混入人类进度。
+非 TTY 或 CI 环境不使用进度条和 spinner，只输出稳定阶段事件和周期性进度；`--json` 只输出结构化 NDJSON，不混入人类进度。
 
 ## 网络预检设计
 
@@ -138,7 +139,7 @@ last_reviewed: 2026-09-30
 | 工作流 | Owner | 依赖 | Write set | 状态 |
 | --- | --- | --- | --- | --- |
 | 预检与输出契约 | deploy+qa | ops 输出标准化契约 | 本计划、错误码/事件 Spec、帮助与指南 | ready |
-| 网络客户端能力 | infra | 预检契约 | `apps/blog-deploy/src/installer/**`、网络测试、超时/重试/进度适配 | ready |
+| 网络客户端能力 | infra | 预检契约、`@fluvient/core` 原语统一 | `@fluvient/core/http` 传输内核、loom/node 适配改造、`apps/blog-deploy/src/installer/**`、网络测试、超时/重试/进度适配 | ready |
 | 三个命令接线 | deploy | 网络客户端能力 | `deploy`/`redeploy`/`self-update` runner、临时文件和安装步骤 | ready |
 | 输出消费者与文档 | qa+release | 事件模型、命令接线 | CI、运维脚本、`deploy/README.md`、operations guide、示例 | ready |
 | 受限网络验收 | qa+deploy | 上述工作流 | 网络模拟、隔离服务器演练、验收记录 | ready |
@@ -153,6 +154,13 @@ last_reviewed: 2026-09-30
 4. 使用非 TTY 管道和 `--json` 消费者运行，确认输出可逐行解析，没有 spinner、横幅或原始 HTTP 错误混入 stdout。
 5. 在受限带宽或短暂断网环境运行一次真实 installer 演练，记录预检是否提前暴露问题、重试耗时、最终恢复和人工动作。
 6. 运行 installer 测试、Release 相关测试、bundle `--help` 冒烟、`ops quality check` 和文档 `git diff --check`。
+
+## 已定决策
+
+- 2026-10-01：`Result`/取消原语统一到中立包 `@fluvient/core`（loom/common 与 cli-kit 删副本直接依赖，不留 re-export 门面）。
+- 2026-10-01：HTTP 传输内核（任意方法、绝对 URL、分档超时、重试退避、流式进度、原始错误分类）放 `@fluvient/core/http`，只用标准 Web API；`packages/node` 与 `packages/web` 的 NetworkPort 适配器（现为逐行重复的 fetch 实现）与 blog-deploy 下载器共建其上，收敛后不留重复实现；内核重试为可选策略，避免与 query 层 refetch 叠加。
+- 错误码到 `SPEC-OPS-OUTPUT-001` 稳定码的映射留在 cli 侧，不下沉内核。
+- DNS/TCP/TLS 分层探测基于 `node:dns`/`node:net`/`node:tls`，属 Node 专用，不进内核，留在 blog-deploy。
 
 ## 未决项
 

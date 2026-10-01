@@ -13,7 +13,7 @@ import { RELEASE_KINDS, runRelease } from './release/release.ts';
 import { PORT_MIN, PORT_MAX } from '@fluvient-cli/cli-kit/port-allocation.ts';
 import { E2E_MODES, E2E_SCENARIOS, runE2e } from './e2e/e2e.ts';
 import { E2E_PERF_PROFILES, runE2ePerf } from './e2e/perf.ts';
-import { err, ok, type Result } from '@fluvient-cli/cli-kit/result.ts';
+import { err, ok, type Result } from '@fluvient/core';
 import { EXIT_FAILURE, EXIT_OK, EXIT_SIGINT, EXIT_SIGTERM, EXIT_USAGE, type OpsFailure, type OpsErrorCode } from '@fluvient-cli/cli-kit/errors.ts';
 
 const FAILURE = { code: EXIT_FAILURE, meaning: '执行失败（构建失败、端口耗尽、服务启动失败或运行中的服务退出）' };

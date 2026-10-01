@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ok, type Result } from "@fluvient-loom/common";
+import { ok, type Result } from "@fluvient/core";
 import type {
   OperationIdPort,
   PreparedCommand,

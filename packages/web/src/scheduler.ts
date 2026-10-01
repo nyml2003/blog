@@ -1,4 +1,4 @@
-import type { ResourceHandle } from "@fluvient-loom/common";
+import type { ResourceHandle } from "@fluvient/core";
 import type { SchedulerPort } from "@fluvient-loom/port";
 
 type QueueMicrotaskLike = (callback: () => void) => void;

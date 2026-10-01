@@ -1,4 +1,4 @@
-import type { Result } from "@fluvient-loom/common";
+import type { Result } from "@fluvient/core";
 
 export type CommandKind = "atomic" | "compensatable" | "retryable";
 

@@ -9,6 +9,7 @@
   "dependencies": {
     "@fluvient-cli/cli-kit": "workspace:*",
     "@fluvient-cli/cli-core": "workspace:*",
-    "@fluvient-cli/cli-plugins": "workspace:*"
+    "@fluvient-cli/cli-plugins": "workspace:*",
+    "@fluvient/core": "workspace:*"
   }
 }

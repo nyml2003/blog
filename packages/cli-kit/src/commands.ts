@@ -1,6 +1,6 @@
 import { isModelValue, validateParameter, type ParameterSpec, type PositionalSpec, type ModelValue, type CommandArgs } from './parameters.ts';
 import type { OutputPort } from './output.ts';
-import type { Result } from './result.ts';
+import type { Result } from '@fluvient/core';
 export type { CommandArgs, PositionalSpec } from './parameters.ts';
 export type OptionSpec = ParameterSpec;
 export interface ExitCodeSpec { code: number; meaning: string }

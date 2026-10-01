@@ -11,7 +11,7 @@ import { resolve } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { pageRegistry, pageRoutes } from "../../pages.registry";
-import { siteRoutesSchema } from "../../app/habitat/api/mobile";
+import { siteRoutesSchema } from "../../mobile/foundation/api";
 import {
   generatedPagePath,
   generatePageInputs,
@@ -184,9 +184,9 @@ test("registered entries use the bootstrap and mobile has one CSS entry", () => 
   const entryFiles = new Set(pageRegistry.map((page) => page.entry));
   for (const entry of entryFiles) {
     const source = readFileSync(resolve(frontendRoot, entry.slice(1)), "utf8");
-    if (entry.startsWith("/app/bootstrap/mobile/")) {
+    if (/(?:^\/app)?\/bootstrap\/mobile\//.test(entry)) {
       assert.match(source, /mountMobilePage\([^;]+\);/);
-    } else if (entry.startsWith("/app/bootstrap/desktop/")) {
+    } else if (/(?:^\/app)?\/bootstrap\/desktop\//.test(entry)) {
       assert.match(source, /mountDesktopPage\([^;]+\);/);
     }
     assert.doesNotMatch(source, /getElementById\("app"\)/);
@@ -200,23 +200,15 @@ test("registered entries use the bootstrap and mobile has one CSS entry", () => 
       resolve(frontendRoot, page.entry.slice(1)),
       "utf8",
     );
-    if (page.entry.startsWith("/app/bootstrap/")) {
-      assert.equal(
-        source.match(/import "\.\.\/\.\.\/habitat\/mobile\/styles\/app\.css";/g)
-          ?.length,
-        1,
-      );
-    } else {
-      assert.equal(
-        source.match(/import "\.\.\/\.\.\/styles\/app\.css";/g)?.length,
-        1,
-      );
-      assert.equal(source.match(/import ".*styles\/.*\.css";/g)?.length, 1);
-    }
+    assert.equal(
+      source.match(/import "(?:\.\.\/)+mobile\/foundation\/styles\/app\.css";/g)
+        ?.length,
+      1,
+    );
   }
 
   const mobileStyles = readFileSync(
-    resolve(frontendRoot, "app/habitat/mobile/styles/app.css"),
+    resolve(frontendRoot, "mobile/foundation/styles/app.css"),
     "utf8",
   );
   assert.deepEqual(mobileStyles.trim().split("\n"), [

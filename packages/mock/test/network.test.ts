@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createCancellationSource } from "@fluvient-loom/common";
+import { createCancellationSource } from "@fluvient/core";
 import type { SchedulerPort } from "@fluvient-loom/port";
 import { createMockNetwork } from "@fluvient-loom/mock";
 

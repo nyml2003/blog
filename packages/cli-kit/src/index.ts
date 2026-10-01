@@ -12,4 +12,4 @@ export * from './service-contract.ts';
 export * from './value-parser.ts';
 export * from './workspace.ts';
 export * from './output.ts';
-export * from './result.ts';
+export * from '@fluvient/core';

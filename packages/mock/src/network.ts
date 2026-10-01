@@ -1,4 +1,4 @@
-import { cancellationFailure, err, ok } from "@fluvient-loom/common";
+import { cancellationFailure, err, ok } from "@fluvient/core";
 import type {
   NetworkFailure,
   NetworkMethod,

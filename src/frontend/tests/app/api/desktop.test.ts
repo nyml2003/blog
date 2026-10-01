@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createDesktopApi } from "../../../app/habitat/api/desktop";
-import { routeWithQuery } from "../../../app/habitat/desktop/context";
-import { ok } from "@fluvient-loom/common";
+import { createDesktopApi } from "../../../desktop/foundation/api";
+import { routeWithQuery } from "../../../desktop/foundation/context";
+import { ok } from "@fluvient/core";
 import { type NetworkPort } from "@fluvient-loom/port";
 
 function body(data: unknown, code = "OK") {

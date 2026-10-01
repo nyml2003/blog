@@ -1,15 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createMobileApi } from "../../../app/habitat/api/mobile";
+import { createMobileApi } from "../../../mobile/foundation/api";
 import {
   navigationFromModule,
   supportedNavigationIcons,
-} from "../../../app/habitat/api/mobile";
+} from "../../../mobile/foundation/api";
 import {
   articleIdFromSearch,
   canReturnToSite,
-} from "../../../app/bootstrap/mobile/detail-input";
-import { ok } from "@fluvient-loom/common";
+} from "../../../bootstrap/mobile/detail-input";
+import { ok } from "@fluvient/core";
 import {
   type NetworkPort,
   type NetworkRequest,

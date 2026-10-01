@@ -21,24 +21,33 @@ last_reviewed: 2026-10-01
 
 ## 前端分层规则
 
-`app/` 是唯一页面运行时：
+`src/frontend/` 采用功能切片 + 严格向下依赖（FSD 适配版，2026-10-01 重组，PLAN-FRONTEND-FSD-RESTRUCTURE-001）：
 
 ```text
-bootstrap（组合根，唯一允许装配 @fluvient-loom/web 等宿主适配器的层）
-├── habitat/api + habitat/desktop + habitat/mobile（业务、资源、页面和 UI）
-└── kernel（desired-state 状态原语；ports/Result/Task/Resource 来自 @fluvient-loom/port|common|query 包）
+bootstrap/{desktop,mobile}/   组合根：唯一允许装配 @fluvient-loom/web 等宿主适配器的层
+mobile/  desktop/             平台世界（UI 隔离边界）
+├── pages/<slice>/            页面（UI 编排；不触碰宿主能力）
+├── widgets/<slice>/          复合组件（shell、article-card 等）
+├── features/<slice>/         业务模型（model/persistence 等；数据获取在此）
+└── foundation/{api,styles,ui}/  端内基础层（api=端内 API 客户端与 BFF 归一化）
+kernel/                       纯机制（desired-state；ports/Task/Resource 来自 @fluvient-loom/port|query 包）
+domain/ protocol/ validation/ 跨端契约与输入校验（route-input、article-html 等）
 ```
 
-**禁令（门禁断言，规则文件 `apps/blog/src/quality/architecture.ts`）**：
+依赖方向机械化：`bootstrap → 平台世界（pages → widgets → features → foundation）→ kernel/domain/protocol/validation`，同层 slice 互不 import，跨端零 import。层序由 `src/frontend/tests/app/architecture/source-layout.test.ts` 逐条拦截。
+
+**禁令（门禁断言，前端层序门禁 + `apps/blog/src/quality/architecture.ts`）**：
 
 | 层 | 禁止 |
 | --- | --- |
-| 任一 `app/` 模块 | import 旧前端运行时（`common/`、`solid/`、`desktop/`、`mobile/`、`desktop-ui/`、`mobile-ui/`）或跨平台 UI |
-| `app/kernel` | import Solid、DOM、网络、存储、Node 宿主、宿主适配器包（`@fluvient-loom/web`/`node`）或 kernel 白名单（`@fluvient-loom/common|port|query`）之外的包；直接使用 fetch、window、document、storage、process 等宿主能力 |
-| `app/habitat/api` | import Solid、宿主适配器包、UI 或旧运行时 |
-| `app/habitat/desktop`、`app/habitat/mobile` | import 宿主适配器包或旧运行时；宿主能力必须经注入的 ports |
-| `app/bootstrap` | import 旧运行时；它只组合宿主适配器与 habitat |
-| Desktop UI 与 Mobile UI | 互相导入 |
+| 任一新结构模块 | 向上依赖（如 features import pages/widgets、foundation import 任一上层）；import 已删除的旧运行时路径（`common/`、`solid/`、`{desktop,mobile}/src`、`desktop-ui/`、`mobile-ui/`） |
+| 同层 slice（pages/widgets/features） | import 同段兄弟 slice |
+| 平台世界（mobile 与 desktop，含各自 bootstrap） | 互相 import |
+| `kernel/` | import Solid、DOM、网络、存储、Node 宿主、宿主适配器包或 kernel 白名单（`@fluvient-loom/common`、`port|query`）之外的包；直接使用 fetch、window、document、storage、process 等宿主能力 |
+| `{mobile,desktop}/foundation/api` | import Solid、宿主适配器包、UI 或旧运行时 |
+| 平台世界模块 | import 宿主适配器包或旧运行时；宿主能力必须经注入的 ports |
+| `mobile/pages` | 直接访问 `MobilePageContext` 或 `context.api|navigation|persistence`（宿主能力留在 bootstrap 与 features） |
+| 世界目录形态 | pages/widgets/features/foundation 之外的一级目录；foundation 下 api/styles/ui 之外的子目录；bootstrap 下 desktop/mobile 之外的平台目录 |
 
 ## 后端分层规则
 
@@ -88,11 +97,11 @@ Then 质量门禁失败
 
 ### SPEC-ARCH-BOUNDARY-001-002
 
-Given `app/` 页面需要业务数据或宿主能力
+Given 平台世界页面需要业务数据或宿主能力
 
 When 页面发起读取、写入或访问浏览器能力
 
-Then 页面通过 habitat API/resource 和注入的 ports；页面不直接装配 transport、存储或 wire DTO
+Then 页面通过 foundation/api 与 features 模型和注入的 ports；页面不直接装配 transport、存储或 wire DTO
 
 ### SPEC-ARCH-BOUNDARY-001-003
 
@@ -120,21 +129,21 @@ Then 对应测试失败（Rust 或 TS 侧红灯）
 
 ### SPEC-ARCH-BOUNDARY-001-007
 
-Given 新代码位于 `src/frontend/app/`
+Given 层序门禁生效
 
-When 它导入旧前端运行时，或 kernel/habitat 绕过各自依赖方向、bootstrap 之外直接装配宿主适配器
+When 新代码向上依赖、跨 slice/跨端 import、kernel 引入宿主能力或 world 目录形态越界
 
-Then 架构门禁失败并报告具体文件与边界规则
+Then 前端层序门禁失败并报告具体文件与规则
 
 ## 边界与失败
 
-- 新运行时的数据用例位于 habitat，宿主实现位于 `@fluvient-loom/web`/`node` 适配器包，抽象能力位于 kernel 与 `@fluvient-loom/port|common|query`；
+- 新运行时的数据用例位于平台世界 features/foundation，宿主实现位于 `@fluvient-loom/web`/`node` 适配器包，抽象能力位于 kernel 与 `@fluvient-loom/port|query`；
 - 与其他当前工作的写集冲突（`http.rs`、`wire.rs`、`client.ts`、各页面文件）：先完成契约和写集协调，再串行执行整改；
 - 治理中发现“边界正确但实现腐化”的项：登记问题并另行明确范围，不在本 Spec 中隐式扩大改动；
 - 门禁豁免清单是唯一合法的暂存违规形式，禁止新增未登记豁免。
 
 ## 测试/验收证据
 
-- `app/` 运行时的边界由 `apps/blog/src/quality/architecture.ts` 及其正负样例测试守卫；规则文件中针对已删除旧路径的正则不再匹配任何文件，属待清理规则。文档不以历史计划代替当前扫描结果。
+- 前端层序（依赖方向、slice 隔离、端隔离、目录形态、kernel 纯度、页面宿主能力）由 `src/frontend/tests/app/architecture/source-layout.test.ts` 守卫，每条规则以故意违规验证过“变红”；`apps/blog/src/quality/architecture.ts` 承接 kernel/api 边界与旧路径墓碑（其规则测试仍含旧 `app/` 合成路径样例，随下次门禁契约修订收敛）。文档不以历史计划代替当前扫描结果。
 - 后端边界由 Rust 模块检查、契约测试和真实 Product→Data 链路测试共同覆盖；门禁规则覆盖 Product HTTP snapshot 聚合与分类后代计算、Data Cargo manifest 的 HTML parser 和外部 HTTP/GitHub client 依赖；API golden 同时由 Rust 生产路由/scene 契约和 TS client 实际调用测试对照。
 - 历史通过结果（含历史 `ops quality check` 快照）不替代当前复跑；当前验收以现有 `ops quality check`、相关运行测试和用户产品确认共同决定。

@@ -2,7 +2,7 @@ import type {
   CancellationFailure,
   CancellationSignal,
   Result,
-} from "@fluvient-loom/common";
+} from "@fluvient/core";
 import type {
   NetworkFailure,
   NetworkPort,

@@ -1,4 +1,4 @@
-import { err, ok } from "@fluvient-loom/common";
+import { err, ok } from "@fluvient/core";
 import type {
   PersistenceFailure,
   PersistencePort,

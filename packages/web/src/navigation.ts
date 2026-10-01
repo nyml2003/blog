@@ -2,7 +2,7 @@ import type {
   NavigationPort,
   NavigationSnapshot,
 } from "@fluvient-loom/port";
-import type { ResourceHandle } from "@fluvient-loom/common";
+import type { ResourceHandle } from "@fluvient/core";
 
 export interface WebHistoryLike {
   readonly state: unknown;

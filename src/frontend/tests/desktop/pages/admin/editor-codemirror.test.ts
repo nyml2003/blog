@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { articleHtmlProfileVersion } from "../../../../app/habitat/validation/article-html";
-import { htmlDiagnosticsToCodeMirror } from "../../../../app/habitat/desktop/components/editor-codemirror";
+import { articleHtmlProfileVersion } from "../../../../validation/article-html";
+import { htmlDiagnosticsToCodeMirror } from "../../../../desktop/widgets/source-editor/codemirror";
 
 test("maps UTF-8 diagnostic byte spans to UTF-16 CodeMirror ranges", () => {
   const source = "<p>中文😀</p>";

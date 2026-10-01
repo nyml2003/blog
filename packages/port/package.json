@@ -10,6 +10,6 @@
     "test": "tsx --test test/*.test.ts"
   },
   "dependencies": {
-    "@fluvient-loom/common": "workspace:*"
+    "@fluvient/core": "workspace:*"
   }
 }

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createCancellationSource, err } from "@fluvient-loom/common";
+import { createCancellationSource, err } from "@fluvient/core";
 import {
   createJsonRequester,
   type NetworkPort,

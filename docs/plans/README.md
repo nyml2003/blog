@@ -10,7 +10,7 @@ Plan 面向一个跨职能、可验收的产品结果，不面向单个文件或
 
 当前 active：
 
-- [PLAN-FRONTEND-FSD-RESTRUCTURE-001](./active/PLAN-FRONTEND-FSD-RESTRUCTURE-001/PLAN.md)：前端目录重组——从按技术层改为按功能切片（两平台世界 + foundation/domain/protocol），行为零变化的纯位置重构；核心交付是"依赖只向下、同层不互引"的机械化门禁，需修订 SPEC-ARCH-BOUNDARY-001；与组件体验/检索/App Shell 等计划写集重叠，时机是闸门第一题。2026-10-01 立项，状态 ready。
+- [PLAN-FRONTEND-FSD-RESTRUCTURE-001](./archive/PLAN-FRONTEND-FSD-RESTRUCTURE-001/PLAN.md)：前端目录重组——从按技术层改为按功能切片（两平台世界 pages/widgets/features/foundation + kernel/domain/protocol/validation 底层），行为零变化的纯位置重构；核心交付"依赖只向下、同层不互引、两端互不导入"的层序门禁已落地并经变红演练；`SPEC-ARCH-BOUNDARY-001` 已修订生效。2026-10-01 立项并同日以 `completed` 收尾；遗留跟进项见其 RESULT.md（architecture.ts 旧样例收敛、CSS 按 slice 拆分暂缓）。
 - [PLAN-FRONTEND-APP-SHELL-001](./active/PLAN-FRONTEND-APP-SHELL-001/PLAN.md)：前端 App Shell 与不抖骨架屏——HTML 模板注入页面框架与骨架（内联关键 CSS），JS 挂载前即可渲染；建立几何一致、迟到流光、刷新旧内容顶住三条不抖纪律，配 e2e layout-shift 断言。承接一期白屏窗口暂缓项，与 SW 预取互补；Mobile 公共页试点先行，Desktop 纳入与否经闸门确认。2026-10-01 立项，状态 ready。
 - [PLAN-SEARCH-001](./active/PLAN-SEARCH-001/PLAN.md)：全文检索与搜索词高亮——从零建立文字搜索（现状"文章检索页"实为分类浏览）：标题/摘要/正文检索、结果列表高亮、详情页文内高亮定位；SQLite FTS 中文分词方案以 spike 数据经闸门选定，索引与快照同事务，性能预算约束在 2C2G 单机。2026-10-01 立项，状态 ready。
 - [PLAN-FRONTEND-CODEC-PERSISTENCE-001](./active/PLAN-FRONTEND-CODEC-PERSISTENCE-001/PLAN.md)：Codec/Persistence 原语包抽取——把产品定款的持久化分层方案（业务/Codec/编排/Port/存储）先抽成 workspace 包独立验收：common 增补 `LoomError`+`cause`、新建 `@fluvient-loom/codec`（含单测，作为模板包）、persistence 原语归属闸门定、ADR 留档；前端接入归边界归一化计划试点。2026-10-01 立项，状态 ready。

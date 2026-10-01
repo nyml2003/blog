@@ -43,7 +43,7 @@ test("enforces the new app foundation boundaries", () => {
   assert.deepEqual(
     check(
       "/repo/src/frontend/app/kernel/result.ts",
-      'export { ok } from "@fluvient-loom/common";',
+      'export { ok } from "@fluvient/core";',
     ),
     [],
   );

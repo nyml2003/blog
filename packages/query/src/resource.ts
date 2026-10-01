@@ -3,7 +3,7 @@ import {
   type CancellationFailure,
   type DeepReadonly,
   type Result,
-} from "@fluvient-loom/common";
+} from "@fluvient/core";
 import type { DataTask, TaskFailure } from "@fluvient-loom/port";
 
 function isCancellationFailure(error: unknown): error is CancellationFailure {

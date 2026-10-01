@@ -10,8 +10,8 @@ function guard(entries: Record<string, string>): ReturnType<typeof checkPackageN
 test('relative and same-scope imports pass with no platform globals', () => {
   const violations = guard({
     '/ws/packages/query/src/task.ts':
-      'import { ok } from "@fluvient-loom/common";\nimport type { DataTask } from "./ports/task.ts";\nexport const x = 1;',
-    '/ws/packages/common/src/result.ts': 'export type A = 1;',
+      'import { ok } from "@fluvient/core";\nimport type { DataTask } from "./ports/task.ts";\nexport const x = 1;',
+    '/ws/packages/core/src/result.ts': 'export type A = 1;',
   });
   assert.deepEqual(violations, []);
 });

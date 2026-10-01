@@ -8,7 +8,7 @@ import {
   type DeepReadonly,
   type ResourceHandle,
   type Result,
-} from "@fluvient-loom/common";
+} from "@fluvient/core";
 import type {
   CancellationSourceFactory,
   DataTask,

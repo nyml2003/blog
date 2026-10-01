@@ -54,12 +54,15 @@ function isAppModule(file: string): boolean {
 }
 
 function isKernelModule(file: string): boolean {
-  return file.includes("/src/frontend/app/kernel/");
+  return (
+    file.includes("/src/frontend/app/kernel/") ||
+    file.includes("/src/frontend/kernel/")
+  );
 }
 
 /** Workspace packages allowed inside the kernel compatibility boundary. */
 const KERNEL_PACKAGE_ALLOWLIST = new Set([
-  "@fluvient-loom/common",
+  "@fluvient/core",
   "@fluvient-loom/port",
   "@fluvient-loom/query",
 ]);
@@ -70,7 +73,10 @@ const HOST_ADAPTER_PACKAGES = [
 ];
 
 function isHabitatApiModule(file: string): boolean {
-  return file.includes("/src/frontend/app/habitat/api/");
+  return (
+    file.includes("/src/frontend/app/habitat/api/") ||
+    /\/src\/frontend\/(?:mobile|desktop)\/foundation\/api\//.test(file)
+  );
 }
 
 function isHabitatMobileModule(file: string): boolean {
@@ -89,8 +95,8 @@ function isLegacyFrontendModule(module: string): boolean {
   return [
     "common/",
     "solid/",
-    "desktop/",
-    "mobile/",
+    "mobile/src/",
+    "desktop/src/",
     "desktop-ui/",
     "mobile-ui/",
   ].some((path) => containsPath(module, path));

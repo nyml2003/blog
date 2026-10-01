@@ -48,19 +48,19 @@ last_reviewed: 2026-10-01
 | 术语 | 人话 | 落点 |
 | --- | --- | --- |
 | **页面注册表** | 17 个页面的登记表：路径别名、入口文件、标题。加页面只改这里 | `src/frontend/pages.registry.ts` |
-| **页面数据层** | 页面通过 habitat API、resource 和 ports 获取数据并处理异步状态 | `src/frontend/app/habitat/` |
-| **bootstrap** | 页面入口的组合根：装配环境、路由清单、依赖和挂载 | `src/frontend/app/bootstrap/` |
-| **app runtime** | 唯一前端运行时：kernel 保留状态原语，ports 与宿主适配来自 `@fluvient-loom` 包，habitat 组合业务和 UI，bootstrap 负责入口装配 | `src/frontend/app/` |
-| **T 型货架** | 公开页的文章陈列：顶部一排类型筛选 + 下面一列文章 | `src/frontend/app/habitat/desktop/pages/home.tsx` |
-| **F 型货架** | Mobile 分类浏览布局：左一级分类、右二级 tabs、下文章卡片 | `src/frontend/app/habitat/mobile/pages/articles.tsx` |
-| **原子/分子（atoms/molecules）** | 最小 UI 积木 / 由积木拼的小组件。Desktop 与 Mobile 各自实现，不跨端导入 | `src/frontend/app/habitat/desktop/components/`、`src/frontend/app/habitat/mobile/ui/` |
+| **页面数据层** | 页面通过 habitat API、resource 和 ports 获取数据并处理异步状态 | 各端 `foundation/api` 与 `features`（如 `src/frontend/mobile/foundation/api/`） |
+| **bootstrap** | 页面入口的组合根：装配环境、路由清单、依赖和挂载 | `src/frontend/bootstrap/<platform>/` |
+| **平台世界** | 功能切片结构：pages → widgets → features → foundation 严格向下依赖，kernel/domain/protocol/validation 为跨端底层；两端互不导入 | `src/frontend/mobile/`、`src/frontend/desktop/` |
+| **T 型货架** | 公开页的文章陈列：顶部一排类型筛选 + 下面一列文章 | `src/frontend/desktop/pages/home/page.tsx` |
+| **F 型货架** | Mobile 分类浏览布局：左一级分类、右二级 tabs、下文章卡片 | `src/frontend/mobile/pages/articles/page.tsx` |
+| **原子/分子（atoms/molecules）** | 最小 UI 积木 / 由积木拼的小组件。Desktop 与 Mobile 各自实现，不跨端导入 | `src/frontend/mobile/foundation/ui/`、`src/frontend/*/widgets/` |
 | **WASM 校验器** | 正文 HTML 规则检查器编译成的浏览器版本。编辑器实时报错和后端保存校验是同一套规则 | `src/core/article-html-wasm/` |
 
 ## CSS 踩坑
 
 | 术语 | 人话 | 落点 |
 | --- | --- | --- |
-| **overflow 杀 sticky** | 祖先带 `overflow(-x): hidden` 会变成滚动容器，后代的 `position: sticky` 改吸它而不是视口——吸顶静默失效（声明还在、行为没了）。改用 `overflow-x: clip`：它不创建滚动容器，规范上不破坏 sticky，实测 Chrome 正常。防回归不靠肉眼，靠 `ops e2e` 行为断言，且每类断言须用"注入坏样式→变红"证明有效 | `src/frontend/app/habitat/mobile/styles/shell.css`（`.mobile-shell` 用 clip）、`apps/blog/src/e2e/e2e.ts`（`assertStickyDocked`） |
+| **overflow 杀 sticky** | 祖先带 `overflow(-x): hidden` 会变成滚动容器，后代的 `position: sticky` 改吸它而不是视口——吸顶静默失效（声明还在、行为没了）。改用 `overflow-x: clip`：它不创建滚动容器，规范上不破坏 sticky，实测 Chrome 正常。防回归不靠肉眼，靠 `ops e2e` 行为断言，且每类断言须用"注入坏样式→变红"证明有效 | `src/frontend/mobile/foundation/styles/shell.css`（`.mobile-shell` 用 clip）、`apps/blog/src/e2e/e2e.ts`（`assertStickyDocked`） |
 
 ## ops 与质量
 

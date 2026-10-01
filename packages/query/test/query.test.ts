@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { err, ok } from "@fluvient-loom/common";
+import { err, ok } from "@fluvient/core";
 
 import {
   createDataResource,

@@ -20,7 +20,10 @@ last_reviewed: 2026-10-01
 
 ```text
 src/frontend/
-├── app/          # 唯一运行时：kernel / habitat / bootstrap
+├── bootstrap/{desktop,mobile}/ # 组合根：页面入口与首绘装配
+├── mobile/  desktop/           # 平台世界：pages/<slice> → widgets/<slice> → features/<slice> → foundation/{api,styles,ui}
+├── kernel/                      # 纯机制：desired-state 状态原语
+├── domain/ protocol/ validation/ # 跨端契约与输入校验（route-input、article-html、WASM generated/）
 ├── build/        # WASM 构建脚本等非插件工具
 ├── vite-plugins/ # Vite 页面生成插件
 ├── sw/           # Service Worker（Mobile 预取）
@@ -31,23 +34,23 @@ src/frontend/
 协议与宿主适配的唯一来源是 workspace 包：`@fluvient-loom/port`（宿主无关 ports）、
 `@fluvient-loom/common`（Result、取消、基础类型）、`@fluvient-loom/query`（Task/Resource）、
 `@fluvient-loom/web`（浏览器适配器）和 `@fluvient-loom/node`（Node 与内存适配器）。
-`app/kernel` 不再维护同名 ports，只剩 `desired-state` 等应用层状态原语，作为应用内的
-残余模块存在。`app/habitat` 负责 API、页面逻辑和 Mobile UI 的组合；`app/bootstrap`
+`kernel/` 只剩 `desired-state` 等纯状态原语，禁宿主能力。`bootstrap/`
 只负责把浏览器原生对象和运行配置装配进 workspace 适配器，是唯一允许触碰浏览器全局的层，
-habitat 与页面不直接导入 `@fluvient-loom/web`/`node`。
+平台世界与底层不直接导入 `@fluvient-loom/web`/`node`。
 
-所有注册页面均使用 `app/bootstrap/`，Desktop 与 Mobile 的业务逻辑和 UI 分别位于
-`app/habitat/desktop/` 与 `app/habitat/mobile/`。Desktop 基础组件位于
-`app/habitat/desktop/components/`，Mobile UI 位于 `app/habitat/mobile/ui/`，两端互不导入。
+依赖方向机械化（`tests/app/architecture/source-layout.test.ts` 门禁）：
+`bootstrap → 平台世界（pages → widgets → features → foundation） → kernel/domain/protocol/validation`；
+同层 slice 互不 import，Desktop 与 Mobile 两端互不 import。Desktop 与 Mobile 的业务逻辑和 UI
+分别位于 `desktop/` 与 `mobile/` 平台世界内，只共享数据语义，不共享界面实现。
 
-`app/habitat` 通过注入的 API、资源和 ports 负责请求参数、DTO 映射、错误归一和异步竞态；
-页面不直接拼 API 请求或映射 wire DTO，Desktop 与 Mobile 只共享数据语义，不共享界面实现。
+各端 `foundation/api` 与 `features/<slice>/` 通过注入的 ports 负责请求参数、DTO 映射、错误归一和异步竞态；
+页面不直接拼 API 请求或映射 wire DTO。
 
 ## 页面入口
 
 - Desktop 首页、文章列表、详情和 Admin 页面使用独立 HTML 入口；
-- Mobile 推荐、文章列表、详情和设置使用独立 HTML 入口，并由 `app/bootstrap/mobile/` 装配；
-- Mobile 管理预览也使用 `app/bootstrap/mobile/` 入口；
+- Mobile 推荐、文章列表、详情和设置使用独立 HTML 入口，并由 `bootstrap/mobile/` 装配；
+- Mobile 管理预览也使用 `bootstrap/mobile/` 入口；
 - URL 使用静态页面入口和 query 参数，不依赖动态路由库。
 
 ## 状态
@@ -70,11 +73,11 @@ T 型货架首次请求同时取得筛选项和首个筛选项对应的文章；
 ## Mobile 设置
 
 当前公开 Mobile 设置使用 `@fluvient-loom/port` 的 persistence ports 与可逆状态命令、
-`@fluvient-loom/web`/`node` 的 browser/memory 适配器，以及 `app/habitat/mobile` 的页面组合。
+`@fluvient-loom/web`/`node` 的 browser/memory 适配器，以及 `mobile` 平台世界的页面组合。
 设置以 `blog.mobile.settings.v1` 快照持久化；旧的 theme/font key 只用于兼容读取和迁移。
 保存失败时恢复上一次稳定快照并提供重试，页面不直接访问存储。
 
-公开 Mobile 页面统一使用 `.mobile-shell` 和 `app/habitat/mobile/ui` 的组件；设置页使用
+公开 Mobile 页面统一使用 `.mobile-shell` 和 `mobile/foundation/ui` 的组件；设置页使用
 `Field` + `Select`，带底栏的页面共享三项导航。主题变量覆盖 `.mobile-shell`，并兼容旧
 `.m-page-container`。所有已注册且启用 bootstrap 的 Mobile HTML 入口在 head 中同步执行同一
 首绘模块，避免在 HTML 中另写存储规则。
@@ -83,7 +86,7 @@ T 型货架首次请求同时取得筛选项和首个筛选项对应的文章；
 
 ## 正文校验
 
-`app/habitat/validation` 定义诊断 schema，其 `generated/` 子目录装配共享 Rust core 的 WASM 浏览器产物（构建期由 wasm-bindgen 生成，博客私有，不属于通用宿主适配器）；页面通过注入的编辑器 API 使用，不维护 TS allowlist。B Desktop 预览只能消费当前源码的成功校验结果；session preview 重新验证存储内容。WASM 加载失败、过期结果或无效正文均不注入 `innerHTML`，也不能绕过服务端保存校验。公开正文由 Product 的原生同源规则保证，见 `SPEC-ARTICLE-HTML-VALIDATION-001`。
+`validation/` 定义诊断 schema，其 `generated/` 子目录装配共享 Rust core 的 WASM 浏览器产物（构建期由 wasm-bindgen 生成，博客私有，不属于通用宿主适配器）；页面通过注入的编辑器 API 使用，不维护 TS allowlist。B Desktop 预览只能消费当前源码的成功校验结果；session preview 重新验证存储内容。WASM 加载失败、过期结果或无效正文均不注入 `innerHTML`，也不能绕过服务端保存校验。公开正文由 Product 的原生同源规则保证，见 `SPEC-ARTICLE-HTML-VALIDATION-001`。
 
 ## Client 注入与拦截器
 
