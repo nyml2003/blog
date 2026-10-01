@@ -36,6 +36,7 @@ interface BrowserPage {
   getByText(text: string, options: { exact?: boolean }): BrowserLocator;
   locator(selector: string): BrowserLocator;
   evaluate<T>(callback: () => T): Promise<T>;
+  evaluate<T, Arg>(callback: (arg: Arg) => T, arg: Arg): Promise<T>;
   screenshot(options: { path: string; fullPage?: boolean }): Promise<void>;
   waitForTimeout(milliseconds: number): Promise<void>;
   goBack(): Promise<unknown>;
@@ -236,6 +237,10 @@ async function runIntegrationJourneys(browser: Browser, origin: string, artifact
   await desktop.screenshot({ path: join(artifactDir, 'desktop-detail.png'), fullPage: true });
 
   const mobile = await browser.newPage({ viewport: { width: 375, height: 812 } });
+  await assertPage(mobile, 'mobile-home', `${origin}/m/`, artifactDir, failures, async (page) => {
+    await page.getByRole('heading', { name: '推荐阅读', exact: true }).waitFor();
+    await assertShellLayout(page, 'mobile-home');
+  }, 'domcontentloaded');
   await assertPage(mobile, 'mobile-articles', `${origin}/m/articles/index.html`, artifactDir, failures, async (page) => {
     await page.getByRole('heading', { name: '全部文章', exact: true }).waitFor();
     if (await page.locator('.category-root-list button').count() === 0) throw new Error('mobile categories are empty');
@@ -245,13 +250,26 @@ async function runIntegrationJourneys(browser: Browser, origin: string, artifact
     await page.evaluate(() => history.back());
     await page.waitForTimeout(50);
     if (/category_id=/.test(page.url())) throw new Error('browser back did not restore category URL');
+    await assertShellLayout(page, 'mobile-articles');
+    await assertStickyDocked(page, 'mobile-articles', '.category-root-list', '--shell-header-sticky-top');
   }, 'domcontentloaded');
   await assertPage(mobile, 'mobile-article-list', `${origin}/m/articles/list.html`, artifactDir, failures, async (page) => {
     await page.getByRole('heading', { name: '分类浏览', exact: true }).waitFor();
+    await assertShellLayout(page, 'mobile-article-list');
+    await assertStickyDocked(page, 'mobile-article-list', '.category-root-list', '--shell-header-sticky-top');
   }, 'domcontentloaded');
-  await mobile.goto(`${origin}/m/articles/detail.html?id=12`, { waitUntil: 'domcontentloaded' });
-  await mobile.locator('h1').waitFor();
-  await mobile.screenshot({ path: join(artifactDir, 'mobile-detail.png'), fullPage: true });
+  await assertPage(mobile, 'mobile-detail', `${origin}/m/articles/detail.html?id=12`, artifactDir, failures, async (page) => {
+    await page.locator('h1').waitFor();
+    if (await page.locator('.m-bottom-nav').count() !== 0) {
+      throw new Error('mobile-detail: bottom nav must stay hidden on detail page');
+    }
+    await assertSafeAreaWiring(page, 'mobile-detail', detailSafeAreaTargets);
+  }, 'domcontentloaded');
+  await assertPage(mobile, 'mobile-settings', `${origin}/m/settings/index.html`, artifactDir, failures, async (page) => {
+    await page.getByRole('heading', { name: '设置', exact: true }).waitFor();
+    await assertBottomNavDocked(page, 'mobile-settings');
+    await assertSafeAreaWiring(page, 'mobile-settings', shellSafeAreaTargets);
+  }, 'domcontentloaded');
   await desktop.close();
   await mobile.close();
 }
@@ -351,6 +369,128 @@ async function runDevJourney(browser: Browser, origin: string, artifactDir: stri
     await wide.close();
   }
   await page.close();
+}
+
+interface StickyProbe {
+  readonly present: boolean;
+  readonly scrollY: number;
+  readonly top: number | null;
+  readonly position: string | null;
+  readonly offset: number;
+}
+
+interface BottomNavProbe {
+  readonly present: boolean;
+  readonly viewport: number;
+  readonly bottomBefore: number | null;
+  readonly bottomAfter: number | null;
+  readonly topAfter: number | null;
+}
+
+interface SafeAreaTarget {
+  readonly selector: string;
+  readonly property: 'paddingTop' | 'paddingBottom';
+  readonly cssVar: string;
+  readonly injected: string;
+  readonly expected: number;
+}
+
+interface SafeAreaProbe {
+  readonly selector: string;
+  readonly before: string | null;
+  readonly after: string | null;
+}
+
+const shellSafeAreaTargets: readonly SafeAreaTarget[] = [
+  { selector: '.mobile-header', property: 'paddingTop', cssVar: '--safe-area-top', injected: '44px', expected: 44 },
+  { selector: '.m-bottom-nav', property: 'paddingBottom', cssVar: '--safe-area-bottom', injected: '34px', expected: 40 },
+];
+
+const detailSafeAreaTargets: readonly SafeAreaTarget[] = [
+  { selector: '.reading-bar', property: 'paddingTop', cssVar: '--safe-area-top', injected: '44px', expected: 44 },
+];
+
+async function assertStickyDocked(page: BrowserPage, name: string, selector: string, topOffsetVar?: string): Promise<void> {
+  const sticky = await page.evaluate<StickyProbe, { selector: string; offsetVar?: string }>((options) => {
+    window.scrollTo(0, document.documentElement.scrollHeight);
+    const element = document.querySelector(options.selector);
+    const attached = element instanceof HTMLElement;
+    const styles = attached ? getComputedStyle(element) : null;
+    return {
+      present: attached,
+      scrollY: Math.round(window.scrollY),
+      top: attached ? element.getBoundingClientRect().top : null,
+      position: styles === null ? null : styles.position,
+      offset: options.offsetVar === undefined
+        ? 0
+        : parseFloat(getComputedStyle(document.documentElement).getPropertyValue(options.offsetVar)),
+    };
+  }, { selector, offsetVar: topOffsetVar });
+  if (!sticky.present || sticky.top === null || sticky.position === null) {
+    throw new Error(`${name}: ${selector} is missing`);
+  }
+  if (sticky.scrollY < 100) throw new Error(`${name}: page too short to verify ${selector} (scrollY=${sticky.scrollY})`);
+  if (Math.abs(sticky.top - sticky.offset) > 1) {
+    throw new Error(`${name}: ${selector} not docked after scroll: ${JSON.stringify(sticky)}`);
+  }
+}
+
+async function assertBottomNavDocked(page: BrowserPage, name: string): Promise<void> {
+  const nav = await page.evaluate<BottomNavProbe>(() => {
+    const element = document.querySelector('.m-bottom-nav');
+    if (!(element instanceof HTMLElement)) {
+      return { present: false, viewport: innerHeight, bottomBefore: null, bottomAfter: null, topAfter: null };
+    }
+    window.scrollTo(0, 0);
+    const before = element.getBoundingClientRect();
+    window.scrollTo(0, document.documentElement.scrollHeight);
+    const after = element.getBoundingClientRect();
+    return { present: true, viewport: innerHeight, bottomBefore: before.bottom, bottomAfter: after.bottom, topAfter: after.top };
+  });
+  if (!nav.present || nav.bottomBefore === null || nav.bottomAfter === null || nav.topAfter === null) {
+    throw new Error(`${name}: .m-bottom-nav is missing`);
+  }
+  if (Math.abs(nav.bottomBefore - nav.viewport) > 1 || Math.abs(nav.bottomAfter - nav.viewport) > 1) {
+    throw new Error(`${name}: bottom nav not docked to viewport bottom: ${JSON.stringify(nav)}`);
+  }
+  if (nav.topAfter < 0 || nav.topAfter >= nav.viewport) {
+    throw new Error(`${name}: bottom nav outside viewport: ${JSON.stringify(nav)}`);
+  }
+}
+
+async function assertSafeAreaWiring(page: BrowserPage, name: string, targets: readonly SafeAreaTarget[]): Promise<void> {
+  const probes = await page.evaluate<readonly SafeAreaProbe[], readonly SafeAreaTarget[]>((areaTargets) => {
+    const read = () => areaTargets.map((target) => {
+      const element = document.querySelector(target.selector);
+      return element instanceof HTMLElement ? getComputedStyle(element)[target.property] : null;
+    });
+    const before = read();
+    const rootStyle = document.documentElement.style;
+    for (const target of areaTargets) rootStyle.setProperty(target.cssVar, target.injected);
+    const after = read();
+    for (const target of areaTargets) rootStyle.removeProperty(target.cssVar);
+    return areaTargets.map((target, index) => ({
+      selector: target.selector,
+      before: before[index] ?? null,
+      after: after[index] ?? null,
+    }));
+  }, targets);
+  for (const target of targets) {
+    const probe = probes.find((item) => item.selector === target.selector);
+    const actual = probe?.after === null || probe?.after === undefined ? null : parseFloat(probe.after);
+    if (actual === null || Math.abs(actual - target.expected) > 0.5) {
+      throw new Error(
+        `${name}: safe-area wiring broken for ${target.selector} `
+          + `(expected ${target.property}=${target.expected}px after injecting ${target.cssVar}=${target.injected}, got ${probe?.after ?? 'missing element'})`,
+      );
+    }
+  }
+}
+
+async function assertShellLayout(page: BrowserPage, name: string): Promise<void> {
+  await assertStickyDocked(page, name, '.mobile-header');
+  await assertBottomNavDocked(page, name);
+  await assertSafeAreaWiring(page, name, shellSafeAreaTargets);
 }
 
 async function assertPage(

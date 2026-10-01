@@ -1,9 +1,7 @@
+import { positiveIdFromSearch } from "../../habitat/route-input";
+
 export function articleIdFromSearch(search: string): number | undefined {
-  const raw = new URLSearchParams(search).get("id");
-  if (raw === null || !/^\d+$/.test(raw)) return undefined;
-  const id = Number(raw);
-  if (!Number.isSafeInteger(id) || id <= 0) return undefined;
-  return id;
+  return positiveIdFromSearch(search, "id");
 }
 
 export function canReturnToSite(

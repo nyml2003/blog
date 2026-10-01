@@ -10,10 +10,15 @@ Plan 面向一个跨职能、可验收的产品结果，不面向单个文件或
 
 当前 active：
 
+- [PLAN-FRONTEND-CODEC-PERSISTENCE-001](./active/PLAN-FRONTEND-CODEC-PERSISTENCE-001/PLAN.md)：Codec/Persistence 原语包抽取——把产品定款的持久化分层方案（业务/Codec/编排/Port/存储）先抽成 workspace 包独立验收：common 增补 `LoomError`+`cause`、新建 `@fluvient-loom/codec`（含单测，作为模板包）、persistence 原语归属闸门定、ADR 留档；前端接入归边界归一化计划试点。2026-10-01 立项，状态 ready。
+- [PLAN-MOBILE-COMPONENT-EXPERIENCE-001](./active/PLAN-MOBILE-COMPONENT-EXPERIENCE-001/PLAN.md)：Mobile 组件与交互体验专项——吸顶问题（header 已声明 sticky 但疑似被祖先 overflow 破坏，先复现归因再修）先行，组件交互盘点后经闸门确认本轮修复项，真机/浏览器证据验收。2026-10-01 立项，状态 ready。
+- [PLAN-FRONTEND-BOUNDARY-NORMALIZATION-001](./active/PLAN-FRONTEND-BOUNDARY-NORMALIZATION-001/PLAN.md)：前端边界归一化专项——按既有 TS 规范收敛"外部输入在边界归一化"的执行偏差：防御式代码全量盘点分类后，经决策闸门确认范围与方案，试点先行、行为零变化地推开。2026-10-01 立项，状态 ready。
 - [PLAN-CONTAINER-DEPLOYMENT-001](./active/PLAN-CONTAINER-DEPLOYMENT-001/PLAN.md)：低资源单机容器部署——结合现有 Product/Data、SQLite、nginx、systemd 和 Release，设计 2 核 2 GB 服务器上的可靠容器运行、备份、升级与回滚方案。2026-09-29 立项，状态 ready。
 - [PLAN-DEPLOY-DOWNLOAD-PREFLIGHT-001](./active/PLAN-DEPLOY-DOWNLOAD-PREFLIGHT-001/PLAN.md)：部署预检与产物下载可观测性——在部署下载前检查网络可达性，统一阶段提示、进度、重试、错误诊断和机器输出。2026-09-30 立项，状态 ready。
 
 已归档：
+
+- [PLAN-FRONTEND-CSS-COMPATIBILITY-001](./archive/PLAN-FRONTEND-CSS-COMPATIBILITY-001/PLAN.md)：前端 CSS 兼容性防线——本轮采纳动态层：`ops e2e` 落地 Mobile 公开页 5 页 × 4 类布局/CSS 行为断言（吸顶、底栏常驻、safe-area 链路、横向溢出，覆盖约 85%），四类断言均有"注入坏样式→变红"有效性证据；确认当前 Chrome 下 `overflow-x: clip` 不破坏 sticky，归因方向移交组件体验计划；GLOSSARY 落地首条 CSS 踩坑条目。浏览器基线、静态 lint、视觉回归推迟。2026-10-01 立项并同日以 `completed` 收尾。
 
 - [PLAN-FRONTEND-VITE-PLUGINS-DIRECTORY-001](./archive/PLAN-FRONTEND-VITE-PLUGINS-DIRECTORY-001/PLAN.md)：将 Vite 插件从 `src/frontend/build/` 收敛到 `src/frontend/vite-plugins/`，与 wasm 构建脚本等非插件工具分离；测试目录改名对齐，内联 dev 路由插件一并迁出。纯位置调整，构建产物清单前后一致。2026-10-01 立项并同日以 `completed` 收尾。
 

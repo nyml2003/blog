@@ -7,12 +7,14 @@ import { type DeepReadonly } from "@fluvient-loom/common";
 import type { HtmlInspection } from "../../validation/article-html";
 import { inspectHtml } from "../../validation/wasm";
 import {
+  createBrowserEditorDraftStorage,
   clearEditorSessionDraft,
   takeEditorSessionDraft,
   writeEditorSessionDraft,
-} from "../logic/editor-session-draft";
+} from "../editor-session-storage";
 import { editorSnapshot } from "../logic/editor-state";
 import { DesktopSourceEditor } from "../components/source-editor";
+import { positiveIdFromSearch } from "../../route-input";
 
 function numberList(value: string): number[] {
   return value
@@ -26,15 +28,9 @@ export function createDesktopEditorPage(
   creation: boolean,
 ) {
   return function DesktopEditorPage() {
-    const draftStorage = () => {
-      try {
-        return window.sessionStorage;
-      } catch {
-        return undefined;
-      }
-    };
-    const rawId = new URLSearchParams(window.location.search).get("id");
-    const articleId = rawId && /^\d+$/.test(rawId) ? Number(rawId) : 0;
+    const draftStorage = createBrowserEditorDraftStorage();
+    const articleId =
+      positiveIdFromSearch(context.navigation.current().search, "id") ?? 0;
     const workspace = useDesktopResource(() => context.api.content.workspace());
     const article = useDesktopResource(() =>
       context.api.content.getArticle(articleId),
@@ -73,7 +69,7 @@ export function createDesktopEditorPage(
       if (creation) {
         setVersion(workspaceValue.version);
         const draft = takeEditorSessionDraft(
-          draftStorage(),
+          draftStorage,
           `${window.location.pathname}${window.location.search}`,
         );
         if (draft) {
@@ -97,7 +93,7 @@ export function createDesktopEditorPage(
       setTags(detail.article.tagIds.join(", "));
       setContentHtml(detail.article.contentHtml);
       const draft = takeEditorSessionDraft(
-        draftStorage(),
+        draftStorage,
         `${window.location.pathname}${window.location.search}`,
       );
       if (draft) {
@@ -114,7 +110,7 @@ export function createDesktopEditorPage(
     onMount(() => {
       const persist = () => {
         if (!initialized) return;
-        writeEditorSessionDraft(draftStorage(), {
+        writeEditorSessionDraft(draftStorage, {
           schemaVersion: 1,
           returnPath: `${window.location.pathname}${window.location.search}`,
           expectedVersion: version(),
@@ -175,7 +171,7 @@ export function createDesktopEditorPage(
       setCategories(result.value.article.categoryIds.join(", "));
       setTags(result.value.article.tagIds.join(", "));
       setContentHtml(result.value.article.contentHtml);
-      clearEditorSessionDraft(draftStorage());
+      clearEditorSessionDraft(draftStorage);
       setMessage("已保存到待提交批次");
       if (creation) {
         context.navigation.replace(

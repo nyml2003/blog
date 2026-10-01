@@ -3,7 +3,7 @@ kind: guide
 id: GUIDE-GLOSSARY-001
 status: current
 owner: project-manager
-last_reviewed: 2026-09-19
+last_reviewed: 2026-10-01
 ---
 
 # GLOSSARY：项目术语表（人话版）
@@ -55,6 +55,12 @@ last_reviewed: 2026-09-19
 | **F 型货架** | Mobile 分类浏览布局：左一级分类、右二级 tabs、下文章卡片 | `src/frontend/app/habitat/mobile/pages/articles.tsx` |
 | **原子/分子（atoms/molecules）** | 最小 UI 积木 / 由积木拼的小组件。Desktop 与 Mobile 各自实现，不跨端导入 | `src/frontend/app/habitat/desktop/components/`、`src/frontend/app/habitat/mobile/ui/` |
 | **WASM 校验器** | 正文 HTML 规则检查器编译成的浏览器版本。编辑器实时报错和后端保存校验是同一套规则 | `src/core/article-html-wasm/` |
+
+## CSS 踩坑
+
+| 术语 | 人话 | 落点 |
+| --- | --- | --- |
+| **overflow 杀 sticky** | 祖先带 `overflow(-x): hidden` 会变成滚动容器，后代的 `position: sticky` 改吸它而不是视口——吸顶静默失效（声明还在、行为没了）。改用 `overflow-x: clip`：它不创建滚动容器，规范上不破坏 sticky，实测 Chrome 正常。防回归不靠肉眼，靠 `ops e2e` 行为断言，且每类断言须用"注入坏样式→变红"证明有效 | `src/frontend/app/habitat/mobile/styles/shell.css`（`.mobile-shell` 用 clip）、`apps/blog/src/e2e/e2e.ts`（`assertStickyDocked`） |
 
 ## ops 与质量
 

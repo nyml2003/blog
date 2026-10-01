@@ -7,23 +7,7 @@ import { routeWithQuery } from "../context";
 import { useMobileAdminPreview } from "../logic/admin-preview";
 import { ArticleBody } from "../components";
 import { Heading, Link, StateMessage, Tag, Text } from "../ui";
-
-function idFromSearch(search: string): number | undefined {
-  const raw = new URLSearchParams(search).get("id");
-  if (raw === null || !/^\d+$/.test(raw)) return undefined;
-  const value = Number(raw);
-  return Number.isSafeInteger(value) && value > 0 ? value : undefined;
-}
-
-function displayDate(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-  return new Intl.DateTimeFormat("zh-CN", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  }).format(date);
-}
+import { displayDate, positiveIdFromSearch } from "../../route-input";
 
 type MobileAdminPreviewInput = MobileRouteContext & {
   readonly api: MobileApi;
@@ -36,7 +20,7 @@ export function createMobileAdminPreviewPage(
   return function MobileAdminPreviewPage() {
     const detail = useMobileAdminPreview(
       input.api,
-      idFromSearch(input.navigation.current().search),
+      positiveIdFromSearch(input.navigation.current().search, "id"),
     );
     const editHref = (id: number) =>
       routeWithQuery(input.routes, "desktop-admin-article-edit", { id });

@@ -6,6 +6,10 @@ import {
   categoryRequestId,
   categorySelection,
 } from "../../../app/habitat/mobile/logic/category";
+import {
+  displayDate,
+  positiveFilterIdFromSearch,
+} from "../../../app/habitat/route-input";
 
 const model = {
   taxonomy: {
@@ -32,6 +36,12 @@ test("category input accepts only positive safe integer ids", () => {
     categoryIdFromSearch("?category_id=9007199254740992"),
     undefined,
   );
+});
+
+test("shared route input normalizes filters and invalid dates", () => {
+  assert.equal(positiveFilterIdFromSearch("?type_id=3", "type_id"), "3");
+  assert.equal(positiveFilterIdFromSearch("?type_id=0", "type_id"), "all");
+  assert.equal(displayDate("not-a-date"), "-");
 });
 
 test("category selection falls back to the first root", () => {

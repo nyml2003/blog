@@ -4,19 +4,13 @@ import type { DesktopPageContext } from "../context";
 import { route } from "../context";
 import { useDesktopArticle } from "../logic/detail";
 import { ArticleBody } from "../components/article-body";
-
-function articleId(search: string): number | undefined {
-  const raw = new URLSearchParams(search).get("id");
-  if (raw === null || !/^\d+$/.test(raw)) return undefined;
-  const id = Number(raw);
-  return Number.isSafeInteger(id) && id > 0 ? id : undefined;
-}
+import { positiveIdFromSearch } from "../../route-input";
 
 export function createDesktopDetailPage(input: DesktopPageContext): Component {
   return function DesktopDetailPage() {
     const page = useDesktopArticle(
       input.api,
-      articleId(input.navigation.current().search),
+      positiveIdFromSearch(input.navigation.current().search, "id"),
     );
     const archiveHref = route(input.routes, "desktop-public-articles");
     const homeHref = route(input.routes, "desktop-public-home");

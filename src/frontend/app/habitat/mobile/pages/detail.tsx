@@ -3,16 +3,7 @@ import { For, Show, type Component } from "solid-js";
 import { useMobileDetail, type MobileDetailInput } from "../logic/detail";
 import { ArticleBody } from "../components";
 import { Heading, StateMessage, Tag, Text } from "../ui";
-
-function displayDate(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-  return new Intl.DateTimeFormat("zh-CN", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  }).format(date);
-}
+import { displayDate } from "../../route-input";
 
 export function createMobileDetailPage(input: MobileDetailInput): Component {
   return function MobileDetailPage() {

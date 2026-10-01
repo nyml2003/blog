@@ -4,11 +4,7 @@ import { route, routeWithQuery } from "../context";
 import { useDesktopArticles } from "../logic/articles";
 import type { TShelf } from "../../api/desktop";
 import { type DeepReadonly } from "@fluvient-loom/common";
-
-function filterId(search: string): string {
-  const raw = new URLSearchParams(search).get("type_id");
-  return raw !== null && /^\d+$/.test(raw) && Number(raw) > 0 ? raw : "all";
-}
+import { positiveFilterIdFromSearch } from "../../route-input";
 
 export function createDesktopArticlesPage(
   input: DesktopPageContext,
@@ -16,7 +12,7 @@ export function createDesktopArticlesPage(
   return function DesktopArticlesPage() {
     const page = useDesktopArticles(
       input.api,
-      filterId(input.navigation.current().search),
+      positiveFilterIdFromSearch(input.navigation.current().search, "type_id"),
     );
     const archiveHref = route(input.routes, "desktop-public-articles");
     const homeHref = route(input.routes, "desktop-public-home");

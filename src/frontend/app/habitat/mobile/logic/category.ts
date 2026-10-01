@@ -1,22 +1,19 @@
 import type { CategoryShelf } from "../../api/mobile";
 import { type DeepReadonly } from "@fluvient-loom/common";
 
+export { categoryIdFromSearch } from "../category-input";
+
 export interface CategorySelection {
   readonly rootId: number;
   readonly childId: number | undefined;
-}
-
-export function categoryIdFromSearch(search: string): number | undefined {
-  const raw = new URLSearchParams(search).get("category_id");
-  if (raw === null || !/^\d+$/.test(raw)) return undefined;
-  const value = Number(raw);
-  return Number.isSafeInteger(value) && value > 0 ? value : undefined;
 }
 
 export function categorySelection(
   model: DeepReadonly<CategoryShelf>,
   requestedId: number | undefined,
 ): CategorySelection | undefined {
+  // The API validates field shapes, but does not yet certify the taxonomy as
+  // a rooted forest. Keep these fallbacks until that boundary invariant exists.
   const roots = model.taxonomy.categories
     .filter((category) => category.parentId === undefined)
     .sort(

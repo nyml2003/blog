@@ -4,80 +4,26 @@ import {
   type AsyncPersistencePort,
   type CommandContext,
   type DataTask,
-  type PersistencePort,
   type ReversibleCommand,
 } from "@fluvient-loom/port";
-import { type Result } from "@fluvient-loom/common";
+import {
+  mobileSettingsKeys,
+  type MobileSettings,
+  type MobileSettingsError,
+} from "../settings-model";
+import { readMobileSettingsAsync } from "../settings-storage";
 
-export type MobileTheme = "paper" | "dark" | "sepia";
-export type MobileFont = "sans" | "serif" | "mono";
-export interface MobileSettings {
-  readonly theme: MobileTheme;
-  readonly font: MobileFont;
-}
-
-export const mobileSettingsKeys = {
-  snapshot: "blog.mobile.settings.v1",
-  theme: "blog.mobile.theme",
-  font: "blog.mobile.font",
-} as const;
-
-export const defaultMobileSettings: MobileSettings = {
-  theme: "paper",
-  font: "sans",
-};
-
-export const mobileSettingsOptions = {
-  themes: [
-    { value: "paper", label: "纸张" },
-    { value: "dark", label: "暗色" },
-    { value: "sepia", label: "sepia" },
-  ] as const,
-  fonts: [
-    { value: "sans", label: "无衬线" },
-    { value: "serif", label: "衬线" },
-    { value: "mono", label: "等宽" },
-  ] as const,
-};
-
-export function isMobileTheme(value: unknown): value is MobileTheme {
-  return mobileSettingsOptions.themes.some((option) => option.value === value);
-}
-
-export function isMobileFont(value: unknown): value is MobileFont {
-  return mobileSettingsOptions.fonts.some((option) => option.value === value);
-}
-
-export function normalizeMobileSettings(
-  theme: unknown,
-  font: unknown,
-): MobileSettings {
-  return {
-    theme: isMobileTheme(theme) ? theme : defaultMobileSettings.theme,
-    font: isMobileFont(font) ? font : defaultMobileSettings.font,
-  };
-}
-
-export function readMobileSettings(
-  persistence: PersistencePort,
-): MobileSettings {
-  const snapshot = persistence.read(mobileSettingsKeys.snapshot);
-  const parsedSnapshot = snapshot.ok
-    ? parseSnapshot(snapshot.value)
-    : undefined;
-  if (parsedSnapshot !== undefined) return parsedSnapshot;
-  const theme = persistence.read(mobileSettingsKeys.theme);
-  const font = persistence.read(mobileSettingsKeys.font);
-  return normalizeMobileSettings(
-    theme.ok ? theme.value : undefined,
-    font.ok ? font.value : undefined,
-  );
-}
-
-export interface MobileSettingsError {
-  readonly kind: "settings";
-  readonly message: string;
-}
+export {
+  defaultMobileSettings,
+  mobileSettingsKeys,
+  mobileSettingsOptions,
+} from "../settings-model";
+export type { MobileSettings } from "../settings-model";
+export type { MobileSettingsError } from "../settings-model";
+export {
+  readMobileSettings,
+  readMobileSettingsAsync,
+} from "../settings-storage";
 
 export type MobileSettingsCommandInput = {
   readonly previous: MobileSettings;
@@ -89,48 +35,8 @@ function settingsError(message: string): MobileSettingsError {
   return { kind: "settings", message };
 }
 
-function parseSnapshot(value: string | undefined): MobileSettings | undefined {
-  if (value === undefined) return undefined;
-  try {
-    const parsed: unknown = JSON.parse(value);
-    if (typeof parsed !== "object" || parsed === null) return undefined;
-    const record = parsed as Record<string, unknown>;
-    return normalizeMobileSettings(record.theme, record.font);
-  } catch {
-    return undefined;
-  }
-}
-
 function serialize(settings: MobileSettings): string {
   return JSON.stringify(settings);
-}
-
-export async function readMobileSettingsAsync(
-  persistence: AsyncPersistencePort,
-): Promise<Result<MobileSettings, MobileSettingsError>> {
-  const snapshot = await persistence.read(mobileSettingsKeys.snapshot);
-  if (!snapshot.ok) return err(settingsError(snapshot.error.message));
-  const parsed = parseSnapshot(snapshot.value);
-  if (parsed !== undefined) return ok(parsed);
-  if (snapshot.value !== undefined) return ok(defaultMobileSettings);
-
-  const legacy = await Promise.all([
-    persistence.read(mobileSettingsKeys.theme),
-    persistence.read(mobileSettingsKeys.font),
-  ]);
-  const theme = legacy[0];
-  const font = legacy[1];
-  if (!theme.ok) return err(settingsError(theme.error.message));
-  if (!font.ok) return err(settingsError(font.error.message));
-  const migrated = normalizeMobileSettings(theme.value, font.value);
-  if (theme.value !== undefined || font.value !== undefined) {
-    const written = await persistence.write(
-      mobileSettingsKeys.snapshot,
-      serialize(migrated),
-    );
-    if (!written.ok) return err(settingsError(written.error.message));
-  }
-  return ok(migrated);
 }
 
 export function createMobileSettingsReadTask(

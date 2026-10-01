@@ -4,13 +4,7 @@ import type { DesktopPageContext } from "../context";
 import { route, routeWithQuery } from "../context";
 import { useDesktopAdminPreview } from "../logic/admin-preview";
 import { ArticleBody } from "../components/article-body";
-
-function idFromSearch(search: string): number | undefined {
-  const raw = new URLSearchParams(search).get("id");
-  if (raw === null || !/^\d+$/.test(raw)) return undefined;
-  const value = Number(raw);
-  return Number.isSafeInteger(value) && value > 0 ? value : undefined;
-}
+import { positiveIdFromSearch } from "../../route-input";
 
 export function createDesktopAdminPreviewPage(
   input: DesktopPageContext,
@@ -18,7 +12,7 @@ export function createDesktopAdminPreviewPage(
   return function DesktopAdminPreviewPage() {
     const page = useDesktopAdminPreview(
       input.api,
-      idFromSearch(input.navigation.current().search),
+      positiveIdFromSearch(input.navigation.current().search, "id"),
     );
     const adminHref = route(input.routes, "desktop-admin-home");
     const editHref = (id: number) =>
