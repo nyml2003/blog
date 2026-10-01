@@ -16,9 +16,10 @@ Plan 面向一个跨职能、可验收的产品结果，不面向单个文件或
 - [PLAN-FRONTEND-CODEC-PERSISTENCE-001](./active/PLAN-FRONTEND-CODEC-PERSISTENCE-001/PLAN.md)：Codec/Persistence 原语包抽取——把产品定款的持久化分层方案（业务/Codec/编排/Port/存储）先抽成 workspace 包独立验收：common 增补 `LoomError`+`cause`、新建 `@fluvient-loom/codec`（含单测，作为模板包）、persistence 原语归属闸门定、ADR 留档；前端接入归边界归一化计划试点。2026-10-01 立项，状态 ready。
 - [PLAN-MOBILE-COMPONENT-EXPERIENCE-001](./active/PLAN-MOBILE-COMPONENT-EXPERIENCE-001/PLAN.md)：Mobile 组件与交互体验专项——吸顶问题（header 已声明 sticky 但疑似被祖先 overflow 破坏，先复现归因再修）先行，组件交互盘点后经闸门确认本轮修复项，真机/浏览器证据验收。2026-10-01 立项，状态 ready。
 - [PLAN-CONTAINER-DEPLOYMENT-001](./active/PLAN-CONTAINER-DEPLOYMENT-001/PLAN.md)：低资源单机容器部署——结合现有 Product/Data、SQLite、nginx、systemd 和 Release，设计 2 核 2 GB 服务器上的可靠容器运行、备份、升级与回滚方案。2026-09-29 立项，状态 ready。
-- [PLAN-DEPLOY-DOWNLOAD-PREFLIGHT-001](./active/PLAN-DEPLOY-DOWNLOAD-PREFLIGHT-001/PLAN.md)：部署预检与产物下载可观测性——在部署下载前检查网络可达性，统一阶段提示、进度、重试、错误诊断和机器输出。2026-09-30 立项，状态 ready。
 
 已归档：
+
+- [PLAN-DEPLOY-DOWNLOAD-PREFLIGHT-001](./archive/PLAN-DEPLOY-DOWNLOAD-PREFLIGHT-001/PLAN.md)：部署预检与产物下载可观测性——`@fluvient/core` 统一 Result/取消原语并新增 `/http` 传输内核（分档超时/流式进度/错误分类/可选重试），`@fluvient-loom/net` 收敛重复 fetch 适配器；三个下载型命令统一网络预检（DNS/TCP/TLS/API/资产探测）、进度条与 `--json` 事件流、稳定错误码、`--package` 离线安装。blog-deploy 21/21 测试、全仓 typecheck/test、bundle 冒烟、真实受限网络服务器实测均通过。2026-09-30 立项，2026-10-01 以 `completed` 收尾。
 
 - [PLAN-NAV-ACTIONS-001](./archive/PLAN-NAV-ACTIONS-001/PLAN.md)：Mobile 顶栏操作——页面级 BFF 以 `modules[]` 聚合页面与导航数据，导航组件只消费归一化后的 `MobileNavigation`；收藏走本地 `PersistencePort`（无读者账号），分享归因服务端校验 token、明细保留 90 天；品牌区移除。`ops quality check`、E2E、perf 均通过。2026-10-01 立项并同日以 `completed` 收尾；Desktop 侧另立计划。
 
