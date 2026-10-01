@@ -10,6 +10,8 @@ Plan 面向一个跨职能、可验收的产品结果，不面向单个文件或
 
 当前 active：
 
+- [PLAN-SEARCH-001](./active/PLAN-SEARCH-001/PLAN.md)：全文检索与搜索词高亮——从零建立文字搜索（现状"文章检索页"实为分类浏览）：标题/摘要/正文检索、结果列表高亮、详情页文内高亮定位；SQLite FTS 中文分词方案以 spike 数据经闸门选定，索引与快照同事务，性能预算约束在 2C2G 单机。2026-10-01 立项，状态 ready。
+- [PLAN-NAV-ACTIONS-001](./active/PLAN-NAV-ACTIONS-001/PLAN.md)：顶部导航操作——Mobile 顶栏升级为后退/搜索/收藏/分享/更多，Desktop 同能力不同位置；收藏与分享归因为全新公共 API 域。推进顺序：契约冻结 → 共享逻辑包（不含 UI）+ 后端 → 两端 UI 接入；收藏/归因形态经闸门决策。2026-10-01 立项，状态 ready。
 - [PLAN-FRONTEND-CODEC-PERSISTENCE-001](./active/PLAN-FRONTEND-CODEC-PERSISTENCE-001/PLAN.md)：Codec/Persistence 原语包抽取——把产品定款的持久化分层方案（业务/Codec/编排/Port/存储）先抽成 workspace 包独立验收：common 增补 `LoomError`+`cause`、新建 `@fluvient-loom/codec`（含单测，作为模板包）、persistence 原语归属闸门定、ADR 留档；前端接入归边界归一化计划试点。2026-10-01 立项，状态 ready。
 - [PLAN-MOBILE-COMPONENT-EXPERIENCE-001](./active/PLAN-MOBILE-COMPONENT-EXPERIENCE-001/PLAN.md)：Mobile 组件与交互体验专项——吸顶问题（header 已声明 sticky 但疑似被祖先 overflow 破坏，先复现归因再修）先行，组件交互盘点后经闸门确认本轮修复项，真机/浏览器证据验收。2026-10-01 立项，状态 ready。
 - [PLAN-FRONTEND-BOUNDARY-NORMALIZATION-001](./active/PLAN-FRONTEND-BOUNDARY-NORMALIZATION-001/PLAN.md)：前端边界归一化专项——按既有 TS 规范收敛"外部输入在边界归一化"的执行偏差：防御式代码全量盘点分类后，经决策闸门确认范围与方案，试点先行、行为零变化地推开。2026-10-01 立项，状态 ready。
