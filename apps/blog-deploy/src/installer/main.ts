@@ -40,6 +40,7 @@ import {
   targetForArch,
   isHttpFailure,
   TransportFailure,
+  type ReleaseAsset,
   verifyChecksums,
   verifyAssetChecksum,
   pickChecksumAsset,
@@ -55,6 +56,7 @@ export interface InstallerOptions {
   readonly configFile?: string;
   readonly dryRun: boolean;
   readonly force: boolean;
+  readonly packageFile?: string;
 }
 
 export interface InstallerDeps {
@@ -92,7 +94,9 @@ function run(command: string, args: readonly string[]): void {
 }
 
 function isRoot(required: boolean): boolean {
-  return !required || typeof process.getuid !== 'function' || process.getuid() === 0;
+  if (!required) return true;
+  if (process.env.BLOG_DEPLOY_ALLOW_NON_ROOT === '1') return true;
+  return typeof process.getuid !== 'function' || process.getuid() === 0;
 }
 
 function networkConfigSummary(): string {
@@ -185,6 +189,22 @@ export async function runDeploy(options: InstallerOptions, deps: InstallerDeps):
     return { exitCode: EXIT_USAGE, code: 'CONFIG_INVALID' };
   }
 
+  let onlineAsset: ReleaseAsset | undefined;
+  if (options.packageFile !== undefined) {
+    if (!(await exists(options.packageFile))) {
+      reporter.fail(`本地发布包不存在:${options.packageFile}`);
+      return { exitCode: EXIT_USAGE, code: 'CONFIG_INVALID' };
+    }
+    reporter.stage('release_resolved', `本地发布包 ${basename(options.packageFile)}(离线模式,跳过网络预检与下载)`, {
+      asset: basename(options.packageFile),
+      offline: true,
+    });
+    if (options.dryRun) {
+      reporter.stage('dry_run_report', 'dry-run:已确认本地包存在,未解包、未安装、未重启');
+      return { exitCode: EXIT_OK };
+    }
+  } else {
+
   reporter.stage('network_preflight_started', `网络预检(${options.dryRun ? 'dry-run' : 'deploy'}):当前安装器 script-v${INSTALLER_VERSION},架构 ${target}`, {
     command: 'deploy',
     dryRun: options.dryRun,
@@ -209,6 +229,7 @@ export async function runDeploy(options: InstallerOptions, deps: InstallerDeps):
     return { exitCode: EXIT_FAILURE, code: 'PREFLIGHT_FAILED', retryable: true, message: '网络预检未通过' };
   }
   const { release, asset } = preflight.resolved;
+  onlineAsset = asset;
   const assetProbe = preflight.assetResults.find((probe) => probe.url === asset.url);
   reporter.stage('release_resolved', `目标 Release ${release.tag},资产 ${asset.name}${assetProbe?.contentLength === undefined ? '(大小未知)' : `(${assetProbe.contentLength} 字节)`}`, {
     tag: release.tag,
@@ -221,14 +242,15 @@ export async function runDeploy(options: InstallerOptions, deps: InstallerDeps):
     reporter.stage('dry_run_report', 'dry-run:已完成 Release 解析与网络预检,未下载、未安装、未重启');
     return { exitCode: EXIT_OK };
   }
+  }
 
   const workDir = `/tmp/blog-deploy-${process.pid}`;
   try {
     await rm(workDir, { recursive: true, force: true });
     await mkdir(workDir, { recursive: true, mode: 0o700 });
-    const tarball = join(workDir, asset.name);
-    try {
-      await downloadAsset(asset, tarball, { kernel: deps.kernel, reporter, totalMs: TARBALL_TOTAL_MS });
+    const tarball = options.packageFile ?? join(workDir, onlineAsset?.name ?? 'release.tar.gz');
+    if (options.packageFile === undefined && onlineAsset !== undefined) try {
+      await downloadAsset(onlineAsset, tarball, { kernel: deps.kernel, reporter, totalMs: TARBALL_TOTAL_MS });
     } catch (error) {
       if (error instanceof TransportFailure) {
         const retryable = isHttpFailure(error.failure) && error.failure.retryable;

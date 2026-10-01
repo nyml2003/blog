@@ -48,6 +48,20 @@ node /etc/blog/blog-deploy.mjs self-update
 - 下载后强制 SHA256SUMS 校验,HTTP 200 不视为成功;任何阶段失败都会清理临时文件,旧安装器、旧业务包与配置保持原状;
 - `--json` 输出 NDJSON 事件流(`release_resolved`、`network_preflight_*`、`download_*`、`checksum_*`、`install_started`、`healthcheck_completed`、`deployment_*`),stdout 不混入人类文本;失败使用稳定错误码(`PREFLIGHT_FAILED` / `DOWNLOAD_FAILED` / `CHECKSUM_MISMATCH`,附 `retryable` 判定),便于 CI 决定是否稍后重试。
 
+## 离线安装(--package)
+
+服务器无法访问 GitHub 资产域(国内云机器常见:API 可达但 release CDN 被限速或重置)时,在能访问 GitHub 的机器上下载发布包,scp 到服务器后离线安装:
+
+```sh
+# 本机
+gh release download -R nyml2003/blog -p '*x86_64*.tar.gz' -O pkg.tar.gz   # 按服务器架构选 x86_64/aarch64
+scp pkg.tar.gz root@<server>:/tmp/
+# 服务器
+node /etc/blog/blog-deploy.mjs redeploy --package /tmp/pkg.tar.gz
+```
+
+离线模式跳过网络预检与下载,但校验、安装、重启、健康检查与在线完全一致;校验基准是包内 SHA256SUMS(与在线模式相同)。下载通道的安全由你的本机 HTTPS 下载与 ssh 传输保证。
+
 ## 目录与权限
 
 ```text

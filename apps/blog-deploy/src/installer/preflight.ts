@@ -53,8 +53,21 @@ export interface PreflightReport<T> {
 
 const PROBE_TIMEOUT_MS = 5_000;
 
+const PROBE_ATTEMPTS = 3;
+const PROBE_RETRY_DELAY_MS = 500;
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
 function describeFailure(failure: { readonly kind: string }): string {
   return failure.kind === 'cancelled' ? '已取消' : (failure as { readonly message?: string }).message ?? failure.kind;
+}
+
+function retryableOf(failure: { readonly kind: string }): boolean {
+  return failure.kind !== 'cancelled' && (failure as { readonly retryable?: unknown }).retryable === true;
 }
 
 function detailOf(error: unknown): string {
@@ -110,31 +123,56 @@ export function createDefaultProbes(kernel: HttpKernel): PreflightProbes {
       });
     },
     async probeAsset(url) {
-      const head = await kernel.request({ url, method: 'HEAD', headers: { 'user-agent': 'blog-deploy' }, timeouts: { headersMs: 15_000, totalMs: 20_000 } });
-      if (!head.ok) throw new Error(`资产探测失败:${head.error.kind}:${describeFailure(head.error)}`);
-      const headLength = head.value.contentLength;
-      const headType = head.value.headers['content-type'];
-      if (head.value.status >= 200 && head.value.status < 300 && head.value.status !== 405 && headLength !== undefined) {
-        return { url, status: head.value.status, contentLength: headLength, contentType: headType, finalUrl: head.value.finalUrl, method: 'HEAD' };
+      for (let attempt = 1; ; attempt += 1) {
+        const outcome = await probeAssetOnce(kernel, url);
+        if (outcome.ok) return outcome.value;
+        if (!outcome.retryable || attempt >= PROBE_ATTEMPTS) {
+          throw new Error(`资产探测失败:${outcome.kind}:${outcome.detail}`);
+        }
+        await delay(PROBE_RETRY_DELAY_MS * attempt);
       }
-      const range = await kernel.request({
-        url,
-        headers: { 'user-agent': 'blog-deploy', range: 'bytes=0-0' },
-        timeouts: { headersMs: 15_000, totalMs: 20_000 },
-      });
-      if (!range.ok) throw new Error(`资产探测失败:${range.error.kind}:${describeFailure(range.error)}`);
-      if (range.value.status >= 300) throw new Error(`资产探测失败:HTTP ${range.value.status}`);
-      await range.value.readText();
-      const contentRange = range.value.headers['content-range'];
-      const total = /^bytes\s+\d+-\d+\/(\d+)$/i.exec(contentRange ?? '');
-      return {
-        url,
-        status: range.value.status,
-        contentLength: total === null ? undefined : Number(total[1]),
-        contentType: range.value.headers['content-type'],
-        finalUrl: range.value.finalUrl,
-        method: 'RANGE',
-      };
+    },
+  };
+}
+
+async function probeAssetOnce(
+  kernel: HttpKernel,
+  url: string,
+): Promise<{ ok: true; value: AssetProbe } | { ok: false; retryable: boolean; kind: string; detail: string }> {
+  const head = await kernel.request({ url, method: 'HEAD', headers: { 'user-agent': 'blog-deploy' }, timeouts: { headersMs: 15_000, totalMs: 20_000 } });
+  if (!head.ok) {
+    return { ok: false, retryable: retryableOf(head.error), kind: head.error.kind, detail: describeFailure(head.error) };
+  }
+  {
+    const headLength = head.value.contentLength;
+    const headType = head.value.headers['content-type'];
+    if (head.value.status >= 200 && head.value.status < 300 && head.value.status !== 405 && headLength !== undefined) {
+      return { ok: true, value: { url, status: head.value.status, contentLength: headLength, contentType: headType, finalUrl: head.value.finalUrl, method: 'HEAD' } };
+    }
+  }
+  const range = await kernel.request({
+    url,
+    headers: { 'user-agent': 'blog-deploy', range: 'bytes=0-0' },
+    timeouts: { headersMs: 15_000, totalMs: 20_000 },
+  });
+  if (!range.ok) {
+    return { ok: false, retryable: retryableOf(range.error), kind: range.error.kind, detail: describeFailure(range.error) };
+  }
+  if (range.value.status >= 300) {
+    return { ok: false, retryable: range.value.status === 429 || range.value.status >= 500, kind: `HTTP ${range.value.status}`, detail: String(range.value.status) };
+  }
+  await range.value.readText();
+  const contentRange = range.value.headers['content-range'];
+  const total = /^bytes\s+\d+-\d+\/(\d+)$/i.exec(contentRange ?? '');
+  return {
+    ok: true,
+    value: {
+      url,
+      status: range.value.status,
+      contentLength: total === null ? undefined : Number(total[1]),
+      contentType: range.value.headers['content-type'],
+      finalUrl: range.value.finalUrl,
+      method: 'RANGE',
     },
   };
 }

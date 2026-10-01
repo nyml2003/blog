@@ -4,10 +4,15 @@
   contain: layout paint;
   display: block;
   font-family: var(--loom-shell-font, inherit);
+  inset-block-start: 0;
+  inset-inline: 0;
   min-block-size: 100%;
   overflow: hidden;
+  pointer-events: none;
+  position: absolute;
   padding-block-end: var(--loom-shell-bottom-space, 0px);
   background: var(--loom-shell-surface, var(--paper, #f4f1ea));
+  z-index: 1;
 }
 
 .loom-app-shell + #app {

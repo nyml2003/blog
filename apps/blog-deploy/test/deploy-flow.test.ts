@@ -1,6 +1,7 @@
 import test from 'node:test';
+import { spawnSync } from 'node:child_process';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createHttpKernel } from '@fluvient/core/http';
@@ -270,6 +271,95 @@ test('the tty reporter renders a bar with percent and speed', async () => {
   assert.match(bar, /50%/);
   assert.match(bar, /100%/);
   assert.match(bar, /总量未知|\/200 B/);
+});
+
+test('offline --package skips preflight and installs from the local tarball', async () => {
+  process.env.BLOG_DEPLOY_ALLOW_NON_ROOT = '1';
+  const directory = await mkdtemp(join(tmpdir(), 'blog-deploy-off-'));
+  try {
+    const configFile = await writeConfig(directory);
+    const staging = join(directory, 'pkg');
+    await mkdir(staging, { recursive: true });
+    await writeFile(join(staging, 'web', 'dist', 'index.html'), 'dist', { flag: 'wx' }).catch(async () => {
+      await mkdir(join(staging, 'web', 'dist'), { recursive: true });
+      await writeFile(join(staging, 'web', 'dist', 'index.html'), 'dist');
+    });
+    await mkdir(join(staging, 'bin'), { recursive: true });
+    await mkdir(join(staging, 'systemd'), { recursive: true });
+    await mkdir(join(staging, 'nginx'), { recursive: true });
+    await writeFile(join(staging, 'bin', 'blog-product'), 'bin');
+    await writeFile(join(staging, 'systemd', 'unit.service'), 'unit');
+    await writeFile(join(staging, 'nginx', 'site.conf'), 'site');
+    await writeFile(join(staging, 'web', 'dist', 'index.html'), 'dist');
+    const sums = `${createHash('sha256').update('bin').digest('hex')}  bin/blog-product
+${createHash('sha256').update('unit').digest('hex')}  systemd/unit.service
+${createHash('sha256').update('site').digest('hex')}  nginx/site.conf
+${createHash('sha256').update('dist').digest('hex')}  web/dist/index.html`;
+    await writeFile(join(staging, 'SHA256SUMS'), sums);
+    const tarball = join(directory, 'pkg.tar.gz');
+    assert.equal(spawnSync('tar', ['-czf', tarball, '-C', staging, '.']).status, 0);
+
+    let probesConsulted = false;
+    const box = harness(async () => releasesResponse(), {
+      ...okProbes(),
+      probeAsset: async (url) => {
+        probesConsulted = true;
+        return okProbes().probeAsset(url);
+      },
+    });
+    const outcome = await runInstallerCommand('deploy', { configFile, dryRun: false, force: false, packageFile: tarball }, box.deps);
+    assert.equal(probesConsulted, false);
+    const names = box.events.map((event) => event.event);
+    assert.ok(!names.includes('network_preflight_started'));
+    assert.ok(!names.includes('download_started'));
+    assert.ok(names.includes('checksum_completed'));
+    assert.ok(names.includes('install_started'));
+    assert.notEqual(outcome.exitCode, 10);
+    assert.notEqual(outcome.code, 'CHECKSUM_MISMATCH');
+  } finally {
+    delete process.env.BLOG_DEPLOY_ALLOW_NON_ROOT;
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('offline --package with a tampered payload stops at CHECKSUM_MISMATCH', async () => {
+  process.env.BLOG_DEPLOY_ALLOW_NON_ROOT = '1';
+  const directory = await mkdtemp(join(tmpdir(), 'blog-deploy-tamper-'));
+  try {
+    const configFile = await writeConfig(directory);
+    const staging = join(directory, 'pkg');
+    await mkdir(join(staging, 'bin'), { recursive: true });
+    await writeFile(join(staging, 'bin', 'blog-product'), 'tampered');
+    await writeFile(join(staging, 'SHA256SUMS'), `${createHash('sha256').update('expected').digest('hex')}  bin/blog-product\n`);
+    const tarball = join(directory, 'pkg.tar.gz');
+    assert.equal(spawnSync('tar', ['-czf', tarball, '-C', staging, '.']).status, 0);
+    const box = harness(async () => releasesResponse(), okProbes());
+    const outcome = await runInstallerCommand('deploy', { configFile, dryRun: false, force: false, packageFile: tarball }, box.deps);
+    assert.equal(outcome.exitCode, 20);
+    assert.equal(outcome.code, 'CHECKSUM_MISMATCH');
+  } finally {
+    delete process.env.BLOG_DEPLOY_ALLOW_NON_ROOT;
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('offline --package with a missing file fails fast with usage', async () => {
+  process.env.BLOG_DEPLOY_ALLOW_NON_ROOT = '1';
+  const directory = await mkdtemp(join(tmpdir(), 'blog-deploy-miss-'));
+  try {
+    const configFile = await writeConfig(directory);
+    const box = harness(async () => releasesResponse(), okProbes());
+    const outcome = await runInstallerCommand(
+      'deploy',
+      { configFile, dryRun: false, force: false, packageFile: join(directory, 'nope.tar.gz') },
+      box.deps,
+    );
+    assert.equal(outcome.exitCode, 10);
+    assert.equal(outcome.code, 'CONFIG_INVALID');
+  } finally {
+    delete process.env.BLOG_DEPLOY_ALLOW_NON_ROOT;
+    await rm(directory, { recursive: true, force: true });
+  }
 });
 
 test('default probes prefer HEAD and fall back to a ranged GET when length is missing', async () => {

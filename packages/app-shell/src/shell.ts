@@ -185,7 +185,7 @@ function renderCriticalCss(spec: AppShellSpec): string {
     .join("");
 
   const baseRules = [
-    ".loom-app-shell{box-sizing:border-box;color:var(--loom-shell-ink,inherit);contain:layout paint;display:block;font-family:var(--loom-shell-font,inherit);min-block-size:100%;overflow:hidden;padding-block-end:var(--loom-shell-bottom-space,0px);background:var(--loom-shell-surface,var(--paper,#f4f1ea));}",
+    ".loom-app-shell{box-sizing:border-box;color:var(--loom-shell-ink,inherit);contain:layout paint;display:block;font-family:var(--loom-shell-font,inherit);inset-block-start:0;inset-inline:0;min-block-size:100%;overflow:hidden;pointer-events:none;position:absolute;z-index:1;padding-block-end:var(--loom-shell-bottom-space,0px);background:var(--loom-shell-surface,var(--paper,#f4f1ea));}",
     ".loom-app-shell *,.loom-app-shell *::before,.loom-app-shell *::after{box-sizing:inherit;}",
     ".loom-app-shell + #app{visibility:hidden;}",
     ".loom-app-shell__status{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;clip-path:inset(50%);}",

@@ -157,7 +157,7 @@ export function createReporter(deps: ReporterDeps): Reporter {
       totalBytes = total;
       const at = now();
       samples.push({ at, received });
-      if (at - lastEventAt >= PROGRESS_EVENT_INTERVAL_MS) {
+      if (!tty && at - lastEventAt >= PROGRESS_EVENT_INTERVAL_MS) {
         lastEventAt = at;
         const rate = speed(at);
         emit(

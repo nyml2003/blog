@@ -20,8 +20,11 @@ export const initMeta = {
 export const deployMeta = {
   path: ['deploy'],
   summary: '首次部署服务器',
-  description: '网络预检(DNS/TLS/Release API/资产可达)通过后,从最新稳定 build-v* Release 流式下载对应架构发布包,校验 SHA256SUMS 后安装并重启;下载带进度与有限重试。',
-  options: [{ name: 'config', description: '配置文件路径', model: { kind: 'path' as const }, optional: true }],
+  description: '网络预检(DNS/TLS/Release API/资产可达)通过后,从最新稳定 build-v* Release 流式下载对应架构发布包,校验 SHA256SUMS 后安装并重启;下载带进度与有限重试。指定 --package 时跳过网络,直接安装本地发布包(适合服务器无法访问 GitHub 资产域的场景)。',
+  options: [
+    { name: 'config', description: '配置文件路径', model: { kind: 'path' as const }, optional: true },
+    { name: 'package', description: '本地发布包 tarball 路径(离线安装,跳过预检与下载)', model: { kind: 'path' as const }, optional: true },
+  ],
   examples: ['node blog-deploy.mjs deploy', 'node blog-deploy.mjs deploy --dry-run'],
   exitCodes: [
     { code: 0, meaning: '部署成功或 dry-run 预检完成' },
@@ -76,8 +79,8 @@ function depsOf(context: { readonly output: OutputPort; readonly json: boolean }
 export function installerDefinitions(kernel: InstallerDeps['kernel'], run: InstallerRunner): readonly CommandDefinition[] {
   return [
     defineCommand(initMeta, (context, args) => installerResult(run('init', { configFile: args.config, dryRun: context.dryRun, force: args.force }, depsOf(context, kernel)))),
-    defineCommand(deployMeta, (context, args) => installerResult(run('deploy', { configFile: args.config, dryRun: context.dryRun, force: false }, depsOf(context, kernel)))),
-    defineCommand(redeployMeta, (context, args) => installerResult(run('redeploy', { configFile: args.config, dryRun: context.dryRun, force: false }, depsOf(context, kernel)))),
+    defineCommand(deployMeta, (context, args) => installerResult(run('deploy', { configFile: args.config, dryRun: context.dryRun, force: false, ...(args.package === undefined ? {} : { packageFile: args.package }) }, depsOf(context, kernel)))),
+    defineCommand(redeployMeta, (context, args) => installerResult(run('redeploy', { configFile: args.config, dryRun: context.dryRun, force: false, ...(args.package === undefined ? {} : { packageFile: args.package }) }, depsOf(context, kernel)))),
     defineCommand(selfUpdateMeta, (context) => installerResult(run('self-update', { dryRun: context.dryRun, force: false }, depsOf(context, kernel)))),
   ];
 }

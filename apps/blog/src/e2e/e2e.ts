@@ -31,6 +31,7 @@ interface E2eReport {
 }
 
 interface BrowserPage {
+  addInitScript(script: () => void): Promise<void>;
   goto(url: string, options?: { waitUntil?: string }): Promise<unknown>;
   getByRole(role: string, options?: { name?: string; exact?: boolean }): BrowserLocator;
   getByLabel(text: string | RegExp, options?: { exact?: boolean }): BrowserLocator;
@@ -278,6 +279,20 @@ async function runIntegrationJourneys(browser: Browser, origin: string, artifact
     await assertShellLayout(page, 'mobile-article-list');
     await assertStickyDocked(page, 'mobile-article-list', '.category-root-list', '--shell-header-sticky-top');
   }, 'domcontentloaded');
+  await mobile.addInitScript(() => {
+    let value = 0;
+    try {
+      new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+          const shift = entry as PerformanceEntry & { value?: number; hadRecentInput?: boolean };
+          if (!shift.hadRecentInput) value += shift.value ?? 0;
+        }
+      }).observe({ type: 'layout-shift', buffered: true });
+    } catch {
+      // Browsers without layout-shift support leave the probe undefined.
+    }
+    (window as typeof window & { __appShellLayoutShift?: () => number }).__appShellLayoutShift = () => value;
+  });
   await assertPage(mobile, 'mobile-detail', `${origin}/m/articles/detail.html?id=12`, artifactDir, failures, async (page) => {
     await page.locator('h1').waitFor();
     if (await page.locator('[data-loom-app-shell="true"]').count() !== 0) {
@@ -285,6 +300,12 @@ async function runIntegrationJourneys(browser: Browser, origin: string, artifact
     }
     if (await page.locator('.m-bottom-nav').count() !== 0) {
       throw new Error('mobile-detail: bottom nav must stay hidden on detail page');
+    }
+    const layoutShift = await page.evaluate(() =>
+      (window as typeof window & { __appShellLayoutShift?: () => number }).__appShellLayoutShift?.() ?? 0,
+    );
+    if (layoutShift > 0.01) {
+      throw new Error(`mobile-detail: app shell layout shift too large: ${layoutShift}`);
     }
     await assertSafeAreaWiring(page, 'mobile-detail', detailSafeAreaTargets);
   }, 'domcontentloaded');
