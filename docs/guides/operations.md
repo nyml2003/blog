@@ -24,6 +24,7 @@ ops release build --yes
 ops release both --yes
 ops runtime dev --scenario default --web-port 5173 --mock-port 9090
 ops runtime backend --content-source fixture --data mock --product-port 8080 --data-port 8081
+ops runtime backend --content-source github --data prod --database-path ~/.local/state/blog/prod.db --product-port 18080 --data-port 18081
 ops runtime integration --content-source fixture --product-port 8080 --data-port 8081
 ops e2e --mode integration --playwright-module playwright-core/index.mjs --chromium-path /nix/store/.../chromium
 ops e2e --mode dev --scenario empty --playwright-module playwright-core/index.mjs --chromium-path /nix/store/.../chromium
@@ -36,34 +37,12 @@ BLOG_CONTENT_REPO=owner/repository BLOG_CONTENT_TOKEN=... ops content repository
 
 ## 运行模式
 
-## 发布
-
-`ops release` 是唯一的发布入口。它只允许在 `main` 分支、干净工作树上运行，并按发布类型读取已有 tag 后自动递增 patch 版本：`script` 和 `build` 各自维护版本序列，`both` 使用同一提交但不要求两个版本号相同。
-
-先用 dry-run 查看提交、远程仓库和将创建的 tag：
-
-```text
-ops release script --dry-run
-ops release build --dry-run
-ops release both --dry-run
-```
-
-确认输出无误后，添加 `--yes` 才会创建并推送 tag：
-
-```text
-ops release script --yes
-ops release build --yes
-ops release both --yes
-```
-
-命令不会覆盖已有 tag、不会修改服务器，也不会把 GitHub Actions 的异步结果当作本地成功；推送后需按输出的 workflow 地址检查 Release 资产、checksum、安装器 `--help` 和发布包清单。服务器更新仍单独执行 `redeploy` 并人工确认。
-
 | 命令 | 进程 | 数据来源 | 页面入口 |
 | --- | --- | --- | --- |
 | `ops runtime dev --scenario <NAME> --web-port <PORT> --mock-port <PORT>` | Vite dev + Mock Product API | Mock（`default`/`empty`/`slow`/`server-error`/`malformed-response`） | Vite 实际绑定地址 |
-| `ops runtime backend --content-source <fixture\|github> --data <mock\|test> --product-port <PORT> --data-port <PORT>` | Rust Product API-only + Rust Data | Data 为 `mock`（内存夹具）或 `test`（临时 SQLite）；内容来源单独显式选择 | 无，API 基址即 Product 地址 |
+| `ops runtime backend --content-source <fixture\|github> --data <mock\|test\|prod> [--database-path <PATH>] --product-port <PORT> --data-port <PORT>` | Rust Product API-only + Rust Data | Data 为 `mock`（内存夹具）、`test`（临时 SQLite）或 `prod`（显式路径 SQLite，必须提供 `--database-path`，自动迁移、不加载 seed、退出不删除） | 无，API 基址即 Product 地址 |
 | `ops runtime integration --content-source <fixture\|github> --product-port <PORT> --data-port <PORT> [--watch]` | 先构建 `src/frontend/dist`，再启动 Rust Product（挂载 `src/frontend/dist`）+ Rust Data(test) | Data 固定为 `test`；内容来源单独显式选择 | Product 地址，页面与 `/api` 同源 |
-| `ops delivery build` | 无（只构建 `src/frontend/dist` 与 Rust Product/Data/Mock binary，不编译 Go 目标） | — | — |
+| `ops delivery build` | 无（只构建 `src/frontend/dist` 与 Rust Product/Data/Mock binary） | — | — |
 | `ops e2e --mode integration` | Ops 启动隔离的 integration 栈并在同一进程内执行 Playwright | fixture + Data(test) | Product 页面与 `/api` 同源 |
 | `ops e2e --mode dev --scenario <NAME>` | Ops 启动隔离的 Vite + Mock 栈并在同一进程内执行 Playwright | Mock 命名场景 | Vite 实际绑定地址 |
 | `ops perf mobile --mode integration` | Ops 启动隔离的 integration 栈并对 Mobile 公开页做 Playwright 性能采样 | fixture + Data(test) | Product 页面与 `/api` 同源 |
@@ -87,6 +66,28 @@ ops release both --yes
 - 顶层退出码全局统一：`0` 成功、`10` 用法/配置错误、`20` 执行失败（端口耗尽、服务启动失败、构建失败或子进程退出）、`130` SIGINT、`143` SIGTERM。运行中的模式没有 `0` 退出路径：正常停止只能通过信号（130/143）；任一服务子进程在运行态自行退出——含 `exit 0`——都算 `CHILD_EXITED`/`20` 并停止其余服务。Ctrl-C 会传播到所有子进程并等待退出（限期 5s，超限 SIGKILL）。
 - `--dry-run` 只打印将启动的进程、候选端口与构建步骤，无副作用；`--json` 的 stdout 使用统一 NDJSON 事件（每行一个 JSON 对象），包括帮助、参数错误、服务地址、dry-run、子进程行和最终终止结果。机器消费者把最后一个 JSON 对象视为最终结果，并按 `schemaVersion/event/command/code/exitCode/message` 解析；日志事件额外保留 `source/channel`。人类模式才渲染成文本并分别使用 stdout/stderr。
 - ops 内部命令结果使用结构化 `Result`，输出通过统一事件端口交给终端或 NDJSON 适配器；JSON runtime 事件带 `schemaVersion`、`event`、`code`、`exitCode` 和 `message`。埋点事件默认不进入终端输出，后续可接入独立收集器。
+
+## 发布
+
+`ops release` 是唯一的发布入口。它只允许在 `main` 分支、干净工作树上运行，并按发布类型读取已有 tag 后自动递增 patch 版本：`script` 和 `build` 各自维护版本序列，`both` 使用同一提交但不要求两个版本号相同。
+
+先用 dry-run 查看提交、远程仓库和将创建的 tag：
+
+```text
+ops release script --dry-run
+ops release build --dry-run
+ops release both --dry-run
+```
+
+确认输出无误后，添加 `--yes` 才会创建并推送 tag：
+
+```text
+ops release script --yes
+ops release build --yes
+ops release both --yes
+```
+
+命令不会覆盖已有 tag、不会修改服务器，也不会把 GitHub Actions 的异步结果当作本地成功；推送后需按输出的 workflow 地址检查 Release 资产、checksum、安装器 `--help` 和发布包清单。服务器更新仍单独执行 `redeploy` 并人工确认。
 
 ## 管理端凭证
 

@@ -50,12 +50,12 @@ last_reviewed: 2026-09-29
 
 ## 验收映射
 
-- 模型输入、范围、完整枚举、path 取值、非法声明：`packages/cli-kit/src/value-parser.test.ts`。
-- 缺参、重复、负数、全局 switch、分隔符与 optional 缺省：`packages/cli-kit/src/parser.test.ts`。
+- 模型输入、范围、完整枚举、path 取值、非法声明：`packages/cli-kit/test/value-parser.test.ts`。
+- 缺参、重复、负数、全局 switch、分隔符与 optional 缺省：`packages/cli-kit/test/parser.test.ts`。
 - 路由与帮助等价、非法输入零副作用、组合校验（prod 缺路径/非 prod 带路径）、format/watch dry-run：`apps/blog/test/entrypoints/cli.test.ts`。
-- 帮助由声明生成、必填/可选性与全部取值：`packages/cli-kit/src/help.test.ts`。
-- 类型化执行边界、optional 声明边界、声明不可变：`packages/cli-kit/src/commands.test.ts`。
-- 显式运行配置及服务启动参数（含 prod 的 `--data-database-path`）：`packages/cli-kit/src/port-allocation.test.ts`、`apps/blog/test/commands/runtime.test.ts`、`apps/blog/test/commands/runtime.stack.test.ts`。
+- 帮助由声明生成、必填/可选性与全部取值：`apps/blog/test/entrypoints/help.test.ts`。
+- 类型化执行边界、optional 声明边界、声明不可变：`packages/cli-kit/test/commands.test.ts`。
+- 显式运行配置及服务启动参数（含 prod 的 `--data-database-path`）：`apps/blog/test/commands/port-allocation.test.ts`、`apps/blog/test/commands/runtime.test.ts`、`apps/blog/test/commands/runtime.stack.test.ts`。
 
 ## 决策
 

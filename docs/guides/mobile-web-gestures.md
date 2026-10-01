@@ -1,3 +1,11 @@
+---
+kind: guide
+id: GUIDE-MOBILE-WEB-GESTURES
+status: current
+owner: frontend
+last_reviewed: 2026-10-01
+---
+
 # 移动 Web 手感开发：行为矩阵与坑位图
 
 来源：`apps/playground` 在 2026-09-11/12 的真机调研实证，以及当前源码和测试中的复现结果。结论先行：**mobile web 的"极致手感"有平台天花板，达到 Ionic 级需要长期行为沉淀**；本仓库优先保证架构清晰和交互可用，具体取舍以当前实现与专项任务为准。本文记录踩过的每个坑的根因与正解，避免重复交学费。

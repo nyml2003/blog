@@ -3,7 +3,7 @@ kind: spec
 id: SPEC-ARCH-BOUNDARY-001
 status: accepted
 owner: backend
-last_reviewed: 2026-09-19
+last_reviewed: 2026-10-01
 ---
 
 # 架构分层边界规则
@@ -14,42 +14,31 @@ last_reviewed: 2026-09-19
 
 ## 非目标
 
-- 本 Spec 不要求旧前端和新 `app/` 运行时立即合并或全量迁移；
+- 旧前端运行时（`solid/`、`common/`、`{desktop,mobile}/src` 页面链路）已删除，本 Spec 不维护其兼容边界；
 - 不以架构门禁替代 API、产品行为、性能或视觉验收；
 - 不改变 Desktop/Mobile UI 隔离规则；
 - 具体重构和迁移范围由当前任务单独确定。
 
 ## 前端分层规则
 
-旧页面链路：
+`app/` 是唯一页面运行时：
 
 ```text
-页面入口 / 页面 → bootstrap → habitat API/resource → infrastructure/kernel ports
+bootstrap（组合根，唯一允许装配 @fluvient-loom/web 等宿主适配器的层）
+├── habitat/api + habitat/desktop + habitat/mobile（业务、资源、页面和 UI）
+└── kernel（desired-state 状态原语；ports/Result/Task/Resource 来自 @fluvient-loom/port|common|query 包）
 ```
 
-新 `app/` 运行时：
-
-```text
-bootstrap（组合根）
-├── habitat/api + habitat/mobile（业务、资源、页面和 UI）
-├── infrastructure（browser / memory 等宿主适配器）
-└── kernel（ports、Result、Task、Resource、状态原语）
-```
-
-**禁令（门禁断言）**：
+**禁令（门禁断言，规则文件 `apps/blog/src/quality/architecture.ts`）**：
 
 | 层 | 禁止 |
 | --- | --- |
-| 页面 | import API、resource、storage、transport 或 wire DTO |
-| UI 组件 | import API、storage、transport、路由实现或另一平台 UI |
-| habitat API | import infrastructure、页面或 UI |
-| kernel | import Solid、DOM、网络、存储或 Node 宿主 |
-| 任一 `app/` 模块 | import 已删除的旧前端运行时或跨平台 UI |
-| `app/kernel` | import Solid、DOM、Node、schema/UI 库，或直接使用 fetch、window、document、storage、process 等宿主能力 |
-| `app/infrastructure` | import 业务 API、sceneCode、UI 或 kernel/infrastructure 之外的项目模块 |
-| `app/habitat/api` | import Solid、infrastructure、旧运行时或 UI |
-| `app/habitat/mobile` | import infrastructure 或旧运行时；宿主能力必须经 kernel ports 注入 |
-| `app/bootstrap` | import 旧运行时；它只组合 infrastructure 与 habitat |
+| 任一 `app/` 模块 | import 旧前端运行时（`common/`、`solid/`、`desktop/`、`mobile/`、`desktop-ui/`、`mobile-ui/`）或跨平台 UI |
+| `app/kernel` | import Solid、DOM、网络、存储、Node 宿主、宿主适配器包（`@fluvient-loom/web`/`node`）或 kernel 白名单（`@fluvient-loom/common|port|query`）之外的包；直接使用 fetch、window、document、storage、process 等宿主能力 |
+| `app/habitat/api` | import Solid、宿主适配器包、UI 或旧运行时 |
+| `app/habitat/desktop`、`app/habitat/mobile` | import 宿主适配器包或旧运行时；宿主能力必须经注入的 ports |
+| `app/bootstrap` | import 旧运行时；它只组合宿主适配器与 habitat |
+| Desktop UI 与 Mobile UI | 互相导入 |
 
 ## 后端分层规则
 
@@ -99,31 +88,23 @@ Then 质量门禁失败
 
 ### SPEC-ARCH-BOUNDARY-001-002
 
-Given 旧页面或新 `app/` 页面需要业务数据或宿主能力
+Given `app/` 页面需要业务数据或宿主能力
 
 When 页面发起读取、写入或访问浏览器能力
 
-Then 页面通过 habitat API/resource 和注入的 kernel ports；页面不直接装配 transport、存储或 wire DTO
+Then 页面通过 habitat API/resource 和注入的 ports；页面不直接装配 transport、存储或 wire DTO
 
 ### SPEC-ARCH-BOUNDARY-001-003
 
-Given 后端治理完成
+Given 任意后端变更
 
 When 审查 `http.rs` 与 `wire.rs`
 
 Then `http.rs` 无 BFF 决策（仅适配与分发调用）；`to_shelf` 类编排逻辑位于 product 的 BFF 模块；protocol 只含形状映射
 
-### SPEC-ARCH-BOUNDARY-001-004
-
-Given 治理全程
-
-When 每轮迁移完成
-
-Then 公开 API、wire 响应、页面行为与迁移前一致（既有 product/mock/前端测试全绿），无行为性改动混入
-
 ### SPEC-ARCH-BOUNDARY-001-005
 
-Given 治理完成
+Given 门禁规则生效
 
 When 新代码试图把编排逻辑写进 protocol 或让页面直接调 client
 
@@ -141,24 +122,19 @@ Then 对应测试失败（Rust 或 TS 侧红灯）
 
 Given 新代码位于 `src/frontend/app/`
 
-When 它导入旧前端运行时，或 kernel/infrastructure/habitat 绕过各自依赖方向
+When 它导入旧前端运行时，或 kernel/habitat 绕过各自依赖方向、bootstrap 之外直接装配宿主适配器
 
 Then 架构门禁失败并报告具体文件与边界规则
 
 ## 边界与失败
 
-- 新运行时的数据用例位于 habitat，宿主实现位于 infrastructure，抽象能力位于 kernel；
+- 新运行时的数据用例位于 habitat，宿主实现位于 `@fluvient-loom/web`/`node` 适配器包，抽象能力位于 kernel 与 `@fluvient-loom/port|common|query`；
 - 与其他当前工作的写集冲突（`http.rs`、`wire.rs`、`client.ts`、各页面文件）：先完成契约和写集协调，再串行执行整改；
 - 治理中发现“边界正确但实现腐化”的项：登记问题并另行明确范围，不在本 Spec 中隐式扩大改动；
 - 门禁豁免清单是唯一合法的暂存违规形式，禁止新增未登记豁免。
 
 ## 测试/验收证据
 
-- 旧前端与新 `app/` 的当前边界均由 `apps/blog/src/quality/architecture.ts` 及其正负样例测试守卫；文档不以历史计划代替当前扫描结果。
-- 前端历史交付曾通过 typecheck、lint、format、核心测试与 build；具体数量不作为长期契约，当前变更必须按现有命令重新验证。
-- 后端边界由 Rust 模块检查、契约测试和真实 Product→Data 链路测试共同覆盖；历史通过结果不替代当前复跑。
-- 门禁规则覆盖 Product HTTP
-  snapshot 聚合与分类后代计算、Data Cargo manifest 的 HTML parser 和外部
-  HTTP/GitHub client 依赖；API golden 同时由 Rust 生产路由/scene 契约和 TS client 实际调用测试对照。
-- 2026-09-08 曾有一次完整 `ops quality check` 与代表路径浏览器证据；它只证明当时快照，不证明后续版本。
-- 当前验收以现有 `ops quality check`、相关运行测试和用户产品确认共同决定。
+- `app/` 运行时的边界由 `apps/blog/src/quality/architecture.ts` 及其正负样例测试守卫；规则文件中针对已删除旧路径的正则不再匹配任何文件，属待清理规则。文档不以历史计划代替当前扫描结果。
+- 后端边界由 Rust 模块检查、契约测试和真实 Product→Data 链路测试共同覆盖；门禁规则覆盖 Product HTTP snapshot 聚合与分类后代计算、Data Cargo manifest 的 HTML parser 和外部 HTTP/GitHub client 依赖；API golden 同时由 Rust 生产路由/scene 契约和 TS client 实际调用测试对照。
+- 历史通过结果（含历史 `ops quality check` 快照）不替代当前复跑；当前验收以现有 `ops quality check`、相关运行测试和用户产品确认共同决定。

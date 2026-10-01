@@ -22,7 +22,7 @@ created: 2026-09-09
 ## 前端消费规则
 
 - 旧页面由 `definePage`、新 Mobile 页面由 bootstrap environment 在渲染前完成清单引导；引导失败时页面渲染错误状态并允许重试，不用字面量兜底。
-- 页面代码（旧页面的 `src/frontend/{desktop,mobile}/src/pages/` 以及新运行时的 `src/frontend/app/`）不出现路由 id 查询或 URL 字面量；条目级导航（文章详情、编辑）使用后端在数据响应中下发的 href，壳层导航（页头、底部导航、登录重定向）由壳层与基础设施消费清单。
+- 页面代码（`src/frontend/app/` 下的页面与 UI）不出现路由 id 查询或 URL 字面量；条目级导航（文章详情、编辑）使用后端在数据响应中下发的 href，壳层导航（页头、底部导航、登录重定向）由壳层与基础设施消费清单。
 - API endpoint 字面量不属于本 Spec 范围：它们收敛在 `app/habitat/api` 的页面域 API 契约表并由 golden 测试锚定（见 `docs/api/routes.json`）。
 
 ## 场景

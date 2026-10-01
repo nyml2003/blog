@@ -27,7 +27,7 @@ last_reviewed: 2026-09-19
 - **持久化**：规范键为 `blog.mobile.settings.v1`，值是同时包含 `theme` 和 `font` 的 JSON 快照。`blog.mobile.theme`、`blog.mobile.font` 只作为旧数据兼容读取；设置页成功读取后可迁移到规范快照，新写入不得继续拆成两个 key。
 - **作用域**：主题变量覆盖当前 `.mobile-shell`，并兼容旧 `.m-page-container`；不得在 `html`/`body` 上重写整套全局 palette。
 - **首绘**：页面注册表中 `bootstrap: true` 的 Mobile HTML 入口在 head 内同步执行同一首绘模块。HTML 模板不另写一份 key、枚举或回落规则。
-- **分层**：kernel 定义 persistence ports 和可逆状态能力，infrastructure 提供 browser/memory 适配器，habitat 持有设置语义与页面组合，bootstrap 负责首绘装配。页面与 UI 组件不直接访问 `localStorage`。
+- **分层**：kernel 定义 persistence ports 和可逆状态能力，宿主适配器由 `@fluvient-loom` workspace 包提供、经 bootstrap 装配，habitat 持有设置语义与页面组合，bootstrap 负责首绘装配。页面与 UI 组件不直接访问 `localStorage`。
 - **保存**：选择先反映到期望状态并写入完整快照；写入或后续校验失败时恢复上一次稳定设置，保留错误提示和重试动作。快速连续选择以最后一次期望状态为准。
 - **组件**：设置页使用 `Field` + 受控 `Select`；带底栏的公开 Mobile 页面提供推荐、文章、设置三项导航，详情页不显示底栏。
 

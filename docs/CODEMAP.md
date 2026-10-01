@@ -3,7 +3,7 @@ kind: guide
 id: GUIDE-CODEMAP-001
 status: current
 owner: project-manager
-last_reviewed: 2026-09-19
+last_reviewed: 2026-10-01
 ---
 
 # CODEMAP：代码地图（人类阅读版）
@@ -45,19 +45,18 @@ blog/
 │   │   ├── data/           ← Data 进程：SQLite 持久化（8081），不懂业务
 │   │   └── mock/           ← Mock 进程：开发时顶替 Product（9090），5 种故障场景
 │   └── frontend/
- │       ├── app/kernel/     ← 应用层残余：desired-state 状态原语（ports/Result/Task 已归 @fluvient-loom 包）
- │       ├── app/habitat/    ← 新运行时的 API 组合、Mobile 逻辑、页面和 UI
- │       ├── app/bootstrap/  ← 新运行时页面入口与首绘装配（唯一触碰浏览器全局的层）
- │       ├── pages.registry.ts ← 全部 17 个页面的登记表（单一事实源）
- │       ├── site-routes.json  ← 页面路由清单（后端经 /api/public/site-routes 下发）
- │       ├── desktop-ui/      ← Desktop 独立基础组件库
- │       ├── app/habitat/validation/ ← HTML 诊断契约与 WASM 浏览器产物（generated/）
- │       └── build/           ← Vite 插件：按注册表生成各页 HTML 入口
+│       ├── app/kernel/     ← 应用层残余：desired-state 状态原语（ports/Result/Task 已归 @fluvient-loom 包）
+│       ├── app/habitat/    ← 新运行时的 API 组合、Mobile 逻辑、页面和 UI
+│       ├── app/bootstrap/  ← 新运行时页面入口与首绘装配（唯一触碰浏览器全局的层）
+│       ├── pages.registry.ts ← 全部 17 个页面的登记表（单一事实源）
+│       ├── site-routes.json  ← 页面路由清单（后端经 /api/public/site-routes 下发）
+│       ├── app/habitat/validation/ ← HTML 诊断契约与 WASM 浏览器产物（generated/）
+│       └── build/           ← Vite 插件：按注册表生成各页 HTML 入口
 ├── packages/               ← @fluvient-loom 可复用包（ports/query/command/web/gesture 等）
-├── apps/playground/        ← 包能力与移动手势的独立演示、实证入口
-├── ops/                    ← 开发工具链 CLI（Node 直跑 TS，零依赖）
-│   └── src/{domain,application,infrastructure,interface}/
-│                           ← 四层；interface/registry.ts 是命令登记表
+│   └── cli-kit / cli-core / cli-plugins ← ops CLI 的框架能力（参数/输出/进程/端口分配）
+├── apps/blog/              ← ops 命令实现（src/registry.ts 是命令登记表）
+│   └── src/{admin,content,delivery,e2e,quality,release,runtime}/ ← 各命令域模块
+├── apps/blog-deploy/       ← 部署器与安装器（@blog/blog-deploy）
 ├── docs/                   ← 正式文档（本文件所在）
 │   ├── FACTS.md            ← 项目稳定基线（受控）
 │   ├── architecture/       ← 当前生效的架构描述
@@ -66,8 +65,7 @@ blog/
 │   ├── api/routes.json     ← 全部 API 路由总表（有 golden 测试锚定）
 │   ├── content-repo/       ← GitHub 内容仓库的契约与 schema
 │   └── specs/archive/      ← 已替代契约的历史版本
-├── nix/flake.nix           ← 开发环境与 ops 命令 wrapper
-└── tempDocForHuman/        ← 给人类读者的图（PlantUML 源码 + PNG）
+└── nix/flake.nix           ← 开发环境与 ops 命令 wrapper
 ```
 
 ## 三条旅程（按功能走读代码）
@@ -104,7 +102,7 @@ pages.registry.ts（页面登记表）
   → Desktop 与 Mobile 均由 bootstrap environment 运行时装配；
     Mobile 入口在构建期内嵌同一份清单（bootstrap/mobile/environment.tsx），
     首绘不再等待该请求
-  → 页面调语义函数（如 mobileArticlesHref()）得到路径 → 渲染 <a href>
+  → 页面调语义函数（如 `categoryHref()`）得到路径 → 渲染 <a href>
 ```
 
 ## 按目录明细
@@ -137,20 +135,20 @@ pages.registry.ts（页面登记表）
 | `app/habitat/mobile/` | Mobile 页面逻辑、页面和 UI | 页面只编排已注入的 API、资源和命令 |
 | `app/habitat/api/` | 页面域 API 与 wire schema | 不访问 UI 或宿主适配器 |
 
-### packages/ 与 apps/ —— 可复用能力工作区
+### packages/ 与 apps/ —— 可复用能力与 ops 命令工作区
 
 根目录 pnpm workspace 覆盖 `packages/*`、`apps/*` 和 `src/frontend`。`packages/` 提供
-`@fluvient-loom` 的平台中立能力、宿主适配和 Web/手势模块，博客前端通过 workspace 依赖
-消费这些包；`apps/playground/` 用于独立演示与实机验证。入口以各包 `package.json`、根
+`@fluvient-loom` 的平台中立能力、宿主适配和 Web/手势模块（另有 `@fluvient-cli/cli-*` 三个包承载 ops CLI 框架能力），博客前端通过 workspace 依赖
+消费这些包。入口以各包 `package.json`、根
 `package.json` 和 `ops package check` 为准。
 
-### ops/ —— 开发工具链
+### apps/blog —— ops 命令实现
 
-四层结构：`interface/`（CLI 与命令登记表）→ `application/`（编排）→ `domain/`（纯规则：架构边界检查、运行矩阵、端口分配）→ `infrastructure/`（进程/文件系统/网络适配）。质量门禁的全部规则在 `domain/architecture.ts`。
+`apps/blog/src/registry.ts` 是命令登记表（命令面以 `ops help` 为准）；各命令域模块位于 `admin/`、`content/`、`delivery/`、`e2e/`、`playground/`、`quality/`、`release/`、`runtime/`。质量门禁的全部规则在 `quality/architecture.ts`。`apps/blog-deploy/` 提供部署器与安装器。
 
 ## 当前布局状态
 
 - `app/` 是唯一页面运行时：`kernel` 只保留应用层状态原语，协议与宿主适配统一来自 `@fluvient-loom` workspace 包，`habitat` 负责应用组合，`bootstrap` 负责页面入口与适配器装配。
-- 全部 17 个注册页面均已接入 `app/bootstrap/`，旧页面、旧查询层和旧 Mobile UI 已删除。
-- `desktop-ui/` 与 `app/habitat/mobile/ui/` 分别维护 Desktop、Mobile 的 UI 边界。
+- 全部 17 个注册页面均已接入 `app/bootstrap/`，旧页面、旧查询层和旧 Mobile UI 已删除；`desktop-ui/` 是旧 Desktop 基础组件库，应用侧已无消费者（仍保留自身测试与门禁，待清理决策）。
+- Desktop UI 组件位于 `app/habitat/desktop/components/`，Mobile UI 位于 `app/habitat/mobile/ui/`，两端互不导入。
 - 计划目录当前不作为代码地图的一部分。后续计划重新建立后，应只登记仍然有效的工作范围，不回填旧索引。
