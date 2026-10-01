@@ -53,7 +53,7 @@ blog/
 │       ├── site-routes.json  ← 页面路由清单（后端经 /api/public/site-routes 下发）
 │       ├── vite-plugins/   ← Vite 插件（页面模板生成、bootstrap 注入、dev 路由重写、Mobile prefetch SW）
 │       └── build/          ← 非 Vite 构建工具（article HTML 的 wasm 构建）
-├── packages/               ← 可复用包：@fluvient-loom（前端运行时 ports/query/command/web/gesture 等）与 @fluvient/core（cli/loom 共享的 Result 与取消原语，后续 http 内核）
+├── packages/               ← 可复用包：@fluvient-loom（前端运行时 ports/query/command/web/gesture/net 等）与 @fluvient/core（cli/loom 共享的 Result、取消原语与 http 传输内核）
 │   └── cli-kit / cli-core / cli-plugins ← ops CLI 的框架能力（参数/输出/进程/端口分配）
 ├── apps/blog/              ← ops 命令实现（src/registry.ts 是命令登记表）
 │   └── src/{admin,content,delivery,e2e,quality,release,runtime}/ ← 各命令域模块

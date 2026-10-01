@@ -12,7 +12,8 @@ import packageInfo from '../../package.json' with { type: 'json' };
 import { access, chmod, copyFile, mkdir, readFile, rename, rm, readdir, writeFile } from 'node:fs/promises';
 import { dirname, join, basename } from 'node:path';
 import { apexAlias, configTemplate, parseBlogConfig, seedFromLegacy, type BlogConfig } from './config.ts';
-import { EXIT_FAILURE, EXIT_LOCKED, EXIT_OK, EXIT_USAGE } from '@fluvient-cli/cli-kit/errors.ts';
+import { EXIT_FAILURE, EXIT_LOCKED, EXIT_OK, EXIT_USAGE, type OpsErrorCode } from '@fluvient-cli/cli-kit/errors.ts';
+import type { HttpKernel } from '@fluvient/core/http';
 import {
   BIN_DIR,
   CONFIG_DIR,
@@ -30,19 +31,22 @@ import {
   WEB_DIR,
 } from './paths.ts';
 import { renderTemplate } from './render.ts';
+import { createReporter, type Reporter } from './reporter.ts';
 import {
   downloadAsset,
   fetchReleases,
   pickAsset,
   pickBuildRelease,
   targetForArch,
+  isHttpFailure,
+  TransportFailure,
   verifyChecksums,
   verifyAssetChecksum,
   pickChecksumAsset,
   pickScriptAsset,
   pickScriptRelease,
-  type FetchLike,
 } from './release.ts';
+import { createDefaultProbes, runPreflight, type PreflightProbes } from './preflight.ts';
 import { RELEASE_BINARIES, RELEASE_NGINX, RELEASE_UNITS } from '../deploy-plan.ts';
 
 declare const __BLOG_DEPLOY_RELEASE_VERSION__: string | undefined;
@@ -52,10 +56,28 @@ export interface InstallerOptions {
   readonly dryRun: boolean;
   readonly force: boolean;
 }
+
+export interface InstallerDeps {
+  readonly kernel: HttpKernel;
+  readonly reporter: Reporter;
+  readonly probes?: PreflightProbes;
+}
+
+export interface InstallerOutcome {
+  readonly exitCode: number;
+  readonly code?: OpsErrorCode;
+  readonly retryable?: boolean;
+  readonly message?: string;
+}
+
 /** The package version is the single source of truth for script-v* releases. */
 export const INSTALLER_VERSION =
   typeof __BLOG_DEPLOY_RELEASE_VERSION__ === 'string' ? __BLOG_DEPLOY_RELEASE_VERSION__ : packageInfo.version;
 class RunError extends Error {}
+
+const GITHUB_API_HOST = 'api.github.com';
+const TARBALL_TOTAL_MS = 600_000;
+const SCRIPT_TOTAL_MS = 120_000;
 
 function configPath(options: InstallerOptions): string {
   return options.configFile ?? CONFIG_FILE;
@@ -69,8 +91,18 @@ function run(command: string, args: readonly string[]): void {
   }
 }
 
-function ok(message: string): void {
-  console.log(`✓ ${message}`);
+function isRoot(required: boolean): boolean {
+  return !required || typeof process.getuid !== 'function' || process.getuid() === 0;
+}
+
+function networkConfigSummary(): string {
+  const proxy = process.env.HTTPS_PROXY ?? process.env.https_proxy;
+  return [
+    `代理:${proxy === undefined ? '未配置(使用环境默认)' : proxy}`,
+    '证书:系统默认校验',
+    '超时:API 响应头 15s/总 30s;下载响应头 30s/读体空闲 60s',
+    '重试:最多 3 次,退避 1-8s(仅瞬断/超时/429/5xx)',
+  ].join(';');
 }
 
 async function exists(path: string): Promise<boolean> {
@@ -90,29 +122,29 @@ async function readOptional(path: string): Promise<string | undefined> {
   }
 }
 
-export async function runInit(options: InstallerOptions): Promise<number> {
+export async function runInit(options: InstallerOptions, deps: InstallerDeps): Promise<InstallerOutcome> {
+  const reporter = deps.reporter;
   const configFile = configPath(options);
   const directory = dirname(configFile);
   await mkdir(directory, { recursive: true, mode: CONFIG_DIR_MODE });
   await chmod(directory, CONFIG_DIR_MODE).catch(() => undefined);
   if (await exists(configFile)) {
     if (!options.force) {
-      console.error(`blog.json 已存在:${configFile}(要重写请加 --force)`);
-      return EXIT_USAGE;
+      reporter.fail(`blog.json 已存在:${configFile}(要重写请加 --force)`);
+      return { exitCode: EXIT_USAGE, code: 'USAGE' };
     }
   }
   const legacy = await legacySeed(configFile);
   await writeFile(configFile, configTemplate(legacy.seed), { mode: CONFIG_FILE_MODE });
   await chmod(configFile, CONFIG_FILE_MODE);
-  console.log(`已生成 ${configFile}(0600)`);
-  if (legacy.found.length > 0) console.log(`已从旧文件预填:${legacy.found.join('、')}`);
-  console.log('');
-  console.log('待办:');
-  console.log(`  1. 填写 serverName / contentRepo / contentToken(buildTag 固定为 latest)`);
+  reporter.stage('install_step', `已生成 ${configFile}(0600)`);
+  if (legacy.found.length > 0) reporter.stage('install_step', `已从旧文件预填:${legacy.found.join('、')}`);
+  reporter.stage('install_step', '待办:');
+  reporter.stage('install_step', `  1. 填写 serverName / contentRepo / contentToken(buildTag 固定为 latest)`);
   const serverName = legacy.seed.serverName ?? '<serverName>';
-  console.log(`  2. 放证书:${directory}/${serverName}.pem 与 ${directory}/${serverName}.key(0600)`);
-  console.log(`  3. 执行:node ${process.argv[1]} deploy`);
-  return EXIT_OK;
+  reporter.stage('install_step', `  2. 放证书:${directory}/${serverName}.pem 与 ${directory}/${serverName}.key(0600)`);
+  reporter.stage('install_step', `  3. 执行:node ${process.argv[1]} deploy`);
+  return { exitCode: EXIT_OK };
 }
 
 async function legacySeed(configFile: string): Promise<{ seed: Partial<BlogConfig>; found: string[] }> {
@@ -129,66 +161,94 @@ function targetNow(): string {
   return targetForArch(process.arch);
 }
 
-export async function runDeploy(options: InstallerOptions, fetchImpl: FetchLike): Promise<number> {
+export async function runDeploy(options: InstallerOptions, deps: InstallerDeps): Promise<InstallerOutcome> {
+  const reporter = deps.reporter;
   const configFile = configPath(options);
   const directory = dirname(configFile);
-  if (!options.dryRun && typeof process.getuid === 'function' && process.getuid() !== 0) {
-    console.error('请以 root 运行(例如 sudo node blog-deploy.mjs deploy)');
-    return EXIT_USAGE;
+  if (!isRoot(!options.dryRun)) {
+    reporter.fail('请以 root 运行(例如 sudo node blog-deploy.mjs deploy)');
+    return { exitCode: EXIT_USAGE, code: 'USAGE' };
   }
   let config: BlogConfig;
   try {
     config = parseBlogConfig(await readFile(configFile, 'utf8'));
   } catch (error) {
-    console.error(`配置不可用:${error instanceof Error ? error.message : String(error)}`);
-    console.error(`请先执行:node ${process.argv[1]} init(或检查 ${configFile})`);
-    return EXIT_USAGE;
+    reporter.fail(`配置不可用:${error instanceof Error ? error.message : String(error)}`);
+    reporter.stage('install_step', `请先执行:node ${process.argv[1]} init(或检查 ${configFile})`, { severity: 'hint' });
+    return { exitCode: EXIT_USAGE, code: 'CONFIG_INVALID' };
   }
   const target = targetNow();
   const certPem = join(directory, `${config.serverName}.pem`);
   const certKey = join(directory, `${config.serverName}.key`);
   if (!(await exists(certPem)) || !(await exists(certKey))) {
-    console.error(`缺少证书:${certPem} / ${certKey}`);
-    return EXIT_USAGE;
+    reporter.fail(`缺少证书:${certPem} / ${certKey}`);
+    return { exitCode: EXIT_USAGE, code: 'CONFIG_INVALID' };
   }
 
-  let releaseTag = '(最新稳定 build-v*)';
-  let assetName = '(按架构选择)';
-  if (options.dryRun) {
-    try {
-      const release = pickBuildRelease(await fetchReleases(RELEASE_REPO, fetchImpl));
-      const asset = pickAsset(release, target);
-      releaseTag = release.tag;
-      assetName = asset.name;
-    } catch (error) {
-      console.log(`(dry-run 未解析到 Release:${error instanceof Error ? error.message : String(error)})`);
-    }
+  reporter.stage('network_preflight_started', `网络预检(${options.dryRun ? 'dry-run' : 'deploy'}):当前安装器 script-v${INSTALLER_VERSION},架构 ${target}`, {
+    command: 'deploy',
+    dryRun: options.dryRun,
+    installerVersion: INSTALLER_VERSION,
+    arch: target,
+  });
+  const preflight = await runPreflight(
+    {
+      apiHost: GITHUB_API_HOST,
+      apiPort: 443,
+      resolveApi: async () => {
+        const release = pickBuildRelease(await fetchReleases(RELEASE_REPO, deps.kernel));
+        return { release, asset: pickAsset(release, target) };
+      },
+      assetsOf: ({ asset }) => [{ label: `发布包 ${asset.name}`, url: asset.url }],
+    },
+    deps.probes ?? createDefaultProbes(deps.kernel),
+    reporter,
+  );
+  if (!preflight.ok || preflight.resolved === undefined) {
+    reporter.fail(`网络预检未通过,已阻止下载与安装。建议:${preflight.suggestion ?? '检查网络后重试'}`);
+    return { exitCode: EXIT_FAILURE, code: 'PREFLIGHT_FAILED', retryable: true, message: '网络预检未通过' };
   }
-  console.log(`安装计划:`);
-  console.log(`  域名      ${config.serverName}`);
-  console.log(`  内容仓库  ${config.contentRepo}`);
-  console.log(`  架构      ${target}`);
-  console.log(`  版本      ${releaseTag}`);
-  console.log(`  资产      ${assetName}`);
-  console.log(`  证书      ${certPem} / ${certKey} → ${NGINX_CERT_DIR}`);
-  console.log(`  发布包    ${RELEASE_REPO}`);
+  const { release, asset } = preflight.resolved;
+  const assetProbe = preflight.assetResults.find((probe) => probe.url === asset.url);
+  reporter.stage('release_resolved', `目标 Release ${release.tag},资产 ${asset.name}${assetProbe?.contentLength === undefined ? '(大小未知)' : `(${assetProbe.contentLength} 字节)`}`, {
+    tag: release.tag,
+    asset: asset.name,
+    size: assetProbe?.contentLength,
+    url: asset.url,
+  });
+  reporter.stage('network_preflight_completed', `预检通过。${networkConfigSummary()}`, { ok: true });
   if (options.dryRun) {
-    console.log('dry-run:未下载、未安装、未重启');
-    return EXIT_OK;
+    reporter.stage('dry_run_report', 'dry-run:已完成 Release 解析与网络预检,未下载、未安装、未重启');
+    return { exitCode: EXIT_OK };
   }
 
-  const release = pickBuildRelease(await fetchReleases(RELEASE_REPO, fetchImpl));
-  const asset = pickAsset(release, target);
   const workDir = `/tmp/blog-deploy-${process.pid}`;
   try {
     await rm(workDir, { recursive: true, force: true });
     await mkdir(workDir, { recursive: true, mode: 0o700 });
     const tarball = join(workDir, asset.name);
-    console.log(`下载 ${asset.name}(${release.tag})`);
-    await downloadAsset(asset, tarball, fetchImpl);
+    try {
+      await downloadAsset(asset, tarball, { kernel: deps.kernel, reporter, totalMs: TARBALL_TOTAL_MS });
+    } catch (error) {
+      if (error instanceof TransportFailure) {
+        const retryable = isHttpFailure(error.failure) && error.failure.retryable;
+        const status = isHttpFailure(error.failure) ? error.failure.status : undefined;
+        const detail = isHttpFailure(error.failure) ? error.failure.message : '已取消';
+        reporter.fail(`下载失败:${error.failure.kind}${status === undefined ? '' : ` ${status}`}:${detail}${retryable ? '(可稍后重试)' : '(不建议直接重试)'}`);
+        return { exitCode: EXIT_FAILURE, code: 'DOWNLOAD_FAILED', retryable, message: '资产下载失败' };
+      }
+      throw error;
+    }
     run('tar', ['-xzf', tarball, '-C', workDir]);
-    await verifyChecksums(workDir, join(workDir, 'SHA256SUMS'));
-    ok('发布包校验通过');
+    reporter.stage('checksum_started', '校验发布包(SHA256SUMS)');
+    try {
+      await verifyChecksums(workDir, join(workDir, 'SHA256SUMS'));
+    } catch (error) {
+      reporter.fail(`校验失败:${error instanceof Error ? error.message : String(error)};已阻止安装,服务器保持原状`);
+      return { exitCode: EXIT_FAILURE, code: 'CHECKSUM_MISMATCH', retryable: false, message: '发布包校验失败' };
+    }
+    reporter.stage('checksum_completed', '发布包校验通过');
+    reporter.stage('install_started', '开始安装二进制、unit 与 nginx 配置');
 
     const values = { serverName: config.serverName, contentRepo: config.contentRepo, apexName: apexAlias(config.serverName) };
     const renderedDir = join(workDir, 'rendered');
@@ -200,10 +260,10 @@ export async function runDeploy(options: InstallerOptions, fetchImpl: FetchLike)
     }
     const nginxSource = await readFile(join(workDir, 'nginx', RELEASE_NGINX), 'utf8');
     await writeFile(join(renderedDir, 'nginx', RELEASE_NGINX), renderTemplate(nginxSource, values), { mode: 0o644 });
-    ok('模板渲染完成');
+    reporter.stage('install_step', '✓ 模板渲染完成');
 
     if (spawnSync('sh', ['-c', 'command -v nginx'], { encoding: 'utf8' }).status !== 0) {
-      console.log('安装 nginx');
+      reporter.stage('install_step', '安装 nginx');
       run('sh', ['-c', 'apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq nginx']);
     }
     run('sh', [
@@ -222,7 +282,7 @@ export async function runDeploy(options: InstallerOptions, fetchImpl: FetchLike)
     }
     run('systemctl', ['daemon-reload']);
     run('systemctl', ['enable', 'blog-data.service', 'blog-product.service']);
-    ok('二进制与 systemd unit 安装完成');
+    reporter.stage('install_step', '✓ 二进制与 systemd unit 安装完成');
 
     run('install', ['-m', '0644', join(renderedDir, 'nginx', RELEASE_NGINX), NGINX_AVAILABLE]);
     run('ln', ['-sfn', NGINX_AVAILABLE, NGINX_ENABLED]);
@@ -230,34 +290,41 @@ export async function runDeploy(options: InstallerOptions, fetchImpl: FetchLike)
     await mkdir(NGINX_CERT_DIR, { recursive: true, mode: 0o755 });
     run('install', ['-m', '0644', certPem, join(NGINX_CERT_DIR, `${config.serverName}.pem`)]);
     run('install', ['-m', '0600', certKey, join(NGINX_CERT_DIR, `${config.serverName}.key`)]);
-    ok('nginx 配置与证书安装完成');
+    reporter.stage('install_step', '✓ nginx 配置与证书安装完成');
 
     await writeFile(PRODUCT_ENV, `BLOG_CONTENT_TOKEN=${config.contentToken}\n`, { mode: 0o600 });
     await chmod(PRODUCT_ENV, 0o600);
-    ok('内容 token 已派生到 /var/lib/blog/product.env(0600)');
+    reporter.stage('install_step', '✓ 内容 token 已派生到 /var/lib/blog/product.env(0600)');
 
     run('nginx', ['-t']);
     run('systemctl', ['enable', '--now', 'nginx']);
     run('sh', ['-c', 'systemctl reload nginx || systemctl restart nginx']);
     run('systemctl', ['restart', 'blog-data.service', 'blog-product.service']);
+    reporter.stage('install_step', '✓ 服务已重启,等待健康检查');
 
     for (let attempt = 0; attempt < 60; attempt += 1) {
-      const healthy = await fetchImpl(HEALTH_URL)
-        .then((response) => response.ok)
+      const healthy = await deps.kernel
+        .request({ url: HEALTH_URL, timeouts: { headersMs: 2_000, totalMs: 3_000 } })
+        .then((response) => response.ok && response.value.status === 200)
         .catch(() => false);
       if (healthy) {
         try {
           run('systemctl', ['is-active', '--quiet', 'blog-data.service', 'blog-product.service']);
-          console.log(`部署完成:https://${config.serverName}`);
-          return EXIT_OK;
+          reporter.stage('healthcheck_completed', '健康检查通过');
+          reporter.stage('deployment_completed', `部署完成:https://${config.serverName}`);
+          return { exitCode: EXIT_OK };
         } catch {
           /* 服务仍在拉起,继续等待 */
         }
       }
       await new Promise((resolve) => setTimeout(resolve, 500));
     }
-    console.error('健康检查超时;排查:journalctl -u blog-product -n 100 --no-pager');
-    return EXIT_FAILURE;
+    reporter.fail('健康检查超时;排查:journalctl -u blog-product -n 100 --no-pager');
+    return { exitCode: EXIT_FAILURE, code: 'SERVICE_START_FAILED', message: '健康检查超时' };
+  } catch (error) {
+    reporter.fail(`部署失败:${error instanceof Error ? error.message : String(error)}`);
+    reporter.stage('install_step', '旧文件与配置未被修改,可修复后重试');
+    return { exitCode: EXIT_FAILURE, code: 'EXTERNAL_COMMAND_FAILED', message: '部署执行失败' };
   } finally {
     await rm(workDir, { recursive: true, force: true }).catch(() => undefined);
   }
@@ -267,47 +334,99 @@ async function installerPath(): Promise<string> {
   return process.env.BLOG_DEPLOY_INSTALLER_PATH ?? process.argv[1] ?? '/etc/blog/blog-deploy.mjs';
 }
 
-export async function runSelfUpdate(options: InstallerOptions, fetchImpl: FetchLike): Promise<number> {
+interface SelfUpdateResolved {
+  readonly tag: string;
+  readonly script: { readonly name: string; readonly url: string };
+  readonly checksum: { readonly name: string; readonly url: string };
+  readonly isLatest: boolean;
+}
+
+export async function runSelfUpdate(options: InstallerOptions, deps: InstallerDeps): Promise<InstallerOutcome> {
+  const reporter = deps.reporter;
   const target = await installerPath();
-  if (!options.dryRun && typeof process.getuid === 'function' && process.getuid() !== 0) {
-    console.error('请以 root 运行 self-update');
-    return EXIT_USAGE;
+  if (!isRoot(!options.dryRun)) {
+    reporter.fail('请以 root 运行 self-update');
+    return { exitCode: EXIT_USAGE, code: 'USAGE' };
   }
-  let release;
-  try {
-    release = pickScriptRelease(await fetchReleases(RELEASE_REPO, fetchImpl));
-  } catch (error) {
-    console.error(`无法查询 script Release:${error instanceof Error ? error.message : String(error)}`);
-    return EXIT_FAILURE;
+  reporter.stage('network_preflight_started', `self-update 网络预检(${options.dryRun ? 'dry-run' : '更新前'}):当前 script-v${INSTALLER_VERSION}`, {
+    command: 'self-update',
+    dryRun: options.dryRun,
+    installerVersion: INSTALLER_VERSION,
+  });
+  const preflight = await runPreflight<SelfUpdateResolved>(
+    {
+      apiHost: GITHUB_API_HOST,
+      apiPort: 443,
+      resolveApi: async () => {
+        const release = pickScriptRelease(await fetchReleases(RELEASE_REPO, deps.kernel));
+        const script = pickScriptAsset(release);
+        const checksum = pickChecksumAsset(release);
+        return { tag: release.tag, script, checksum, isLatest: release.tag === `script-v${INSTALLER_VERSION}` };
+      },
+      assetsOf: (resolved) =>
+        resolved.isLatest
+          ? []
+          : [
+              { label: `安装器 ${resolved.script.name}`, url: resolved.script.url },
+              { label: `校验 ${resolved.checksum.name}`, url: resolved.checksum.url },
+            ],
+    },
+    deps.probes ?? createDefaultProbes(deps.kernel),
+    reporter,
+  );
+  if (!preflight.ok || preflight.resolved === undefined) {
+    reporter.fail(`网络预检未通过,已阻止下载与替换。建议:${preflight.suggestion ?? '检查网络后重试'}`);
+    return { exitCode: EXIT_FAILURE, code: 'PREFLIGHT_FAILED', retryable: true, message: '网络预检未通过' };
   }
-  const current = `script-v${INSTALLER_VERSION}`;
-  if (release.tag === current) {
-    console.log(`安装器已是最新:${current}`);
-    return EXIT_OK;
+  const resolved = preflight.resolved;
+  if (resolved.isLatest) {
+    reporter.stage('install_step', `安装器已是最新:script-v${INSTALLER_VERSION}`);
+    return { exitCode: EXIT_OK };
   }
-  const script = pickScriptAsset(release);
-  const checksum = pickChecksumAsset(release);
+  const scriptProbe = preflight.assetResults.find((probe) => probe.url === resolved.script.url);
+  reporter.stage('release_resolved', `self-update:script-v${INSTALLER_VERSION} → ${resolved.tag},资产 ${resolved.script.name} 与 ${resolved.checksum.name}${scriptProbe?.contentLength === undefined ? '' : `(${scriptProbe.contentLength} 字节)`}`, {
+    from: `script-v${INSTALLER_VERSION}`,
+    tag: resolved.tag,
+  });
+  reporter.stage('network_preflight_completed', `预检通过。${networkConfigSummary()}`, { ok: true });
   if (options.dryRun) {
-    console.log(`self-update:${current} → ${release.tag} (dry-run,未下载、未替换)`);
-    return EXIT_OK;
+    reporter.stage('dry_run_report', 'dry-run:已完成 Release 解析与网络预检,未下载、未替换、未重启业务服务');
+    return { exitCode: EXIT_OK };
   }
+
   const directory = dirname(target);
   const lock = `${target}.self-update.lock`;
   const temp = join(directory, `.${basename(target)}.${process.pid}.tmp`);
+  const checksumTemp = `${temp}.sums`;
   const backup = join(directory, `${basename(target)}.bak-${INSTALLER_VERSION}-${Date.now()}`);
   let replacementAttempted = false;
   let backupCreated = false;
   try {
     await mkdir(lock, { mode: 0o700 });
   } catch {
-    console.error(`已有 self-update 正在运行:${lock}`);
-    return EXIT_LOCKED;
+    reporter.fail(`已有 self-update 正在运行:${lock}`);
+    return { exitCode: EXIT_LOCKED, code: 'PORT_EXHAUSTED', message: 'self-update 锁被占用' };
   }
   try {
-    await downloadAsset(script, temp, fetchImpl);
-    const checksumTemp = `${temp}.sums`;
-    await downloadAsset(checksum, checksumTemp, fetchImpl);
-    await verifyAssetChecksum(temp, checksumTemp, 'blog-deploy.mjs');
+    try {
+      await downloadAsset(resolved.script, temp, { kernel: deps.kernel, reporter, totalMs: SCRIPT_TOTAL_MS });
+      await downloadAsset(resolved.checksum, checksumTemp, { kernel: deps.kernel, reporter, totalMs: SCRIPT_TOTAL_MS });
+    } catch (error) {
+      if (error instanceof TransportFailure) {
+        const retryable = isHttpFailure(error.failure) && error.failure.retryable;
+        const detail = isHttpFailure(error.failure) ? error.failure.message : '已取消';
+        reporter.fail(`下载失败:${error.failure.kind}:${detail}${retryable ? '(可稍后重试)' : ''}`);
+        return { exitCode: EXIT_FAILURE, code: 'DOWNLOAD_FAILED', retryable, message: '安装器资产下载失败' };
+      }
+      throw error;
+    }
+    reporter.stage('checksum_started', '校验安装器资产(SHA256SUMS)');
+    try {
+      await verifyAssetChecksum(temp, checksumTemp, 'blog-deploy.mjs');
+    } catch (error) {
+      reporter.fail(`校验失败:${error instanceof Error ? error.message : String(error)};已阻止替换,当前安装器保持原状`);
+      return { exitCode: EXIT_FAILURE, code: 'CHECKSUM_MISMATCH', retryable: false, message: '安装器校验失败' };
+    }
     const downloaded = await readFile(temp, 'utf8');
     if (!downloaded.startsWith('#!') || !downloaded.includes('blog-deploy')) throw new Error('安装器资产格式非法');
     await copyFile(target, backup);
@@ -319,10 +438,11 @@ export async function runSelfUpdate(options: InstallerOptions, fetchImpl: FetchL
     if (check.status !== 0) {
       throw new Error(`新安装器 --help 失败:${(check.stderr || check.stdout || '').trim().slice(-500)}`);
     }
+    reporter.stage('checksum_completed', '校验通过');
     const backups = (await readdir(directory)).filter((name) => name.startsWith(`${basename(target)}.bak-`)).sort();
     await Promise.all(backups.slice(0, -1).map((name) => rm(join(directory, name), { force: true })));
-    console.log(`安装器已更新:${current} → ${release.tag}`);
-    return EXIT_OK;
+    reporter.stage('installer_updated', `安装器已更新:script-v${INSTALLER_VERSION} → ${resolved.tag}`);
+    return { exitCode: EXIT_OK };
   } catch (error) {
     let detail = error instanceof Error ? error.message : String(error);
     if (replacementAttempted && backupCreated) {
@@ -333,8 +453,8 @@ export async function runSelfUpdate(options: InstallerOptions, fetchImpl: FetchL
         detail += `;恢复失败，人工恢复备份:${backup};${restoreError instanceof Error ? restoreError.message : String(restoreError)}`;
       }
     }
-    console.error(`self-update 失败:${detail}`);
-    return EXIT_FAILURE;
+    reporter.fail(`self-update 失败:${detail}`);
+    return { exitCode: EXIT_FAILURE, code: 'EXTERNAL_COMMAND_FAILED', message: '安装器更新失败' };
   } finally {
     await rm(temp, { force: true }).catch(() => undefined);
     await rm(`${temp}.sums`, { force: true }).catch(() => undefined);
@@ -342,10 +462,16 @@ export async function runSelfUpdate(options: InstallerOptions, fetchImpl: FetchL
   }
 }
 
-export async function runInstallerCommand(command: string, options: InstallerOptions, fetchImpl: FetchLike): Promise<number> {
-  if (command === 'init') return runInit(options);
-  if (command === 'deploy' || command === 'redeploy') return runDeploy(options, fetchImpl);
-  if (command === 'self-update') return runSelfUpdate(options, fetchImpl);
-  console.error(`未知命令:${command}`);
-  return EXIT_USAGE;
+export async function runInstallerCommand(
+  command: string,
+  options: InstallerOptions,
+  deps: InstallerDeps,
+): Promise<InstallerOutcome> {
+  if (command === 'init') return runInit(options, deps);
+  if (command === 'deploy' || command === 'redeploy') return runDeploy(options, deps);
+  if (command === 'self-update') return runSelfUpdate(options, deps);
+  deps.reporter.fail(`未知命令:${command}`);
+  return { exitCode: EXIT_USAGE, code: 'USAGE' };
 }
+
+

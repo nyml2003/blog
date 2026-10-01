@@ -1076,7 +1076,11 @@ impl DataStore for SqliteStore {
         let page = normalize_page(query.page);
         let page_size = normalize_page_size(query.page_size);
         let filter = ArticleFilter::from_query(query);
-        let (where_sql, args) = build_article_where(query.published_only, &filter);
+        let (where_sql, args) = build_article_where(
+            query.published_only,
+            &filter,
+            query.search.as_deref(),
+        );
         let mut conn = self.connect()?;
 
         // 1/3 count（与 Go 参考实现一致：JOIN article_types 过滤无类型文章）。
@@ -1564,7 +1568,7 @@ impl DataStore for SqliteStore {
             updated_from: query.updated_from.clone(),
             updated_to: query.updated_to.clone(),
         };
-        let (where_sql, args) = build_article_where(true, &filter);
+        let (where_sql, args) = build_article_where(true, &filter, None);
 
         let count_sql = format!("SELECT COUNT(*) AS total {ARTICLE_FROM}{where_sql}");
         let row = self
@@ -1677,7 +1681,11 @@ fn placeholders_for(count: usize) -> String {
 }
 
 /// WHERE 子句构造（参数顺序与 `Bind` 列表严格一致）。
-fn build_article_where(published_only: bool, filter: &ArticleFilter) -> (String, Vec<Bind>) {
+fn build_article_where(
+    published_only: bool,
+    filter: &ArticleFilter,
+    search: Option<&str>,
+) -> (String, Vec<Bind>) {
     let mut sql = String::from(" WHERE 1=1");
     let mut args: Vec<Bind> = Vec::new();
     if published_only {
@@ -1711,6 +1719,26 @@ fn build_article_where(published_only: bool, filter: &ArticleFilter) -> (String,
         ));
         for term_id in &filter.term_ids {
             args.push(Bind::Int(*term_id));
+        }
+    }
+    if let Some(search) = search.map(str::trim).filter(|value| !value.is_empty()) {
+        if search.chars().count() < 3 {
+            let escaped = search
+                .replace('\\', "\\\\")
+                .replace('%', "\\%")
+                .replace('_', "\\_");
+            sql.push_str(
+                " AND (a.title LIKE ? ESCAPE '\\' OR a.summary LIKE ? ESCAPE '\\' OR a.content_html LIKE ? ESCAPE '\\')",
+            );
+            let value = format!("%{escaped}%");
+            args.push(Bind::Text(value.clone()));
+            args.push(Bind::Text(value.clone()));
+            args.push(Bind::Text(value));
+        } else {
+            sql.push_str(
+                " AND a.id IN (SELECT rowid FROM article_search_fts WHERE article_search_fts MATCH ?)",
+            );
+            args.push(Bind::Text(format!("\"{}\"", search.replace('"', "'"))));
         }
     }
     (sql, args)

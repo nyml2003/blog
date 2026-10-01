@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createCancellationSource } from "@fluvient/core";
-import { createNodeNetwork } from "@fluvient-loom/node";
+import { createFetchNetwork } from "../src/network.ts";
 
 function dataUrl(json: unknown): string {
   const encoded = btoa(JSON.stringify(json));
@@ -10,8 +10,8 @@ function dataUrl(json: unknown): string {
 
 const idleSignal = () => createCancellationSource().signal;
 
-test("node network round-trips a real (data:) request through global fetch", async () => {
-  const network = createNodeNetwork();
+test("the fetch network round-trips a real (data:) request through global fetch", async () => {
+  const network = createFetchNetwork();
   const result = await network.request({
     path: dataUrl({ theme: "dark", font: "serif" }),
     method: "GET",
@@ -28,7 +28,7 @@ test("node network round-trips a real (data:) request through global fetch", asy
 });
 
 test("a pre-cancelled signal short-circuits with a cancellation failure", async () => {
-  const network = createNodeNetwork();
+  const network = createFetchNetwork();
   const source = createCancellationSource();
   source.cancel();
   const result = await network.request({
@@ -43,7 +43,7 @@ test("a pre-cancelled signal short-circuits with a cancellation failure", async 
 });
 
 test("cancelling mid-flight settles as a cancellation failure", async () => {
-  const network = createNodeNetwork({
+  const network = createFetchNetwork({
     fetcher: (_input, init) =>
       new Promise((_resolve, reject) => {
         init?.signal?.addEventListener("abort", () =>
@@ -66,7 +66,7 @@ test("cancelling mid-flight settles as a cancellation failure", async () => {
 });
 
 test("an injected immediate timer turns into a timeout failure", async () => {
-  const network = createNodeNetwork({
+  const network = createFetchNetwork({
     fetcher: (_input, init) =>
       new Promise((_resolve, reject) => {
         init?.signal?.addEventListener("abort", () =>
@@ -93,7 +93,7 @@ test("an injected immediate timer turns into a timeout failure", async () => {
 });
 
 test("a non-JSON body settles as a protocol failure", async () => {
-  const network = createNodeNetwork({
+  const network = createFetchNetwork({
     fetcher: async () => new Response("not json"),
   });
   const result = await network.request({
@@ -110,7 +110,7 @@ test("a non-JSON body settles as a protocol failure", async () => {
 });
 
 test("a thrown fetcher settles as a network failure", async () => {
-  const network = createNodeNetwork({
+  const network = createFetchNetwork({
     fetcher: async () => {
       throw new TypeError("fetch failed");
     },
@@ -130,7 +130,7 @@ test("a thrown fetcher settles as a network failure", async () => {
 
 test("POST bodies are serialized as JSON and passed through", async () => {
   let observed: { method?: string; body?: string } = {};
-  const network = createNodeNetwork({
+  const network = createFetchNetwork({
     fetcher: async (_input, init) => {
       observed = { method: init?.method, body: init?.body as string };
       return new Response(JSON.stringify({ saved: true }), {

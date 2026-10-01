@@ -139,6 +139,15 @@ importers:
 
   packages/nested-gesture: {}
 
+  packages/net:
+    dependencies:
+      '@fluvient-loom/port':
+        specifier: workspace:*
+        version: link:../port
+      '@fluvient/core':
+        specifier: workspace:*
+        version: link:../core
+
   packages/node:
     dependencies:
       '@fluvient-loom/port':
@@ -162,6 +171,8 @@ importers:
       '@fluvient/core':
         specifier: workspace:*
         version: link:../core
+
+  packages/text-highlight: {}
 
   packages/web:
     dependencies:
@@ -192,12 +203,18 @@ importers:
       '@codemirror/view':
         specifier: 6.36.5
         version: 6.36.5
+      '@fluvient-loom/app-shell':
+        specifier: workspace:*
+        version: link:../../packages/app-shell
       '@fluvient-loom/mobile-h5-solid-atoms':
         specifier: workspace:*
         version: link:../../packages/mobile-h5-solid-atoms
       '@fluvient-loom/mobile-prefetch':
         specifier: workspace:*
         version: link:../../packages/mobile-prefetch
+      '@fluvient-loom/net':
+        specifier: workspace:*
+        version: link:../../packages/net
       '@fluvient-loom/node':
         specifier: workspace:*
         version: link:../../packages/node
@@ -207,6 +224,9 @@ importers:
       '@fluvient-loom/query':
         specifier: workspace:*
         version: link:../../packages/query
+      '@fluvient-loom/text-highlight':
+        specifier: workspace:*
+        version: link:../../packages/text-highlight
       '@fluvient-loom/web':
         specifier: workspace:*
         version: link:../../packages/web

@@ -6,12 +6,13 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { renderAppShell } from "@fluvient-loom/app-shell";
 import type { Plugin } from "vite";
 import {
-  pageRegistry,
-  pageRoutes,
   type PageRegistration,
   type PageRoute,
+  pageRegistry,
+  pageRoutes,
 } from "../pages.registry.ts";
 
 export const generatedPagesDirectory = ".generated/pages";
@@ -29,6 +30,12 @@ export function renderPageHtml(page: PageRegistration): string {
   const description = page.description
     ? `\n    <meta name="description" content="${escapeHtml(page.description)}" />`
     : "";
+  const shell =
+    page.shell === undefined ? undefined : renderAppShell(page.shell);
+  const shellMarkup =
+    shell === undefined
+      ? ""
+      : `\n    <style data-loom-app-shell>${shell.criticalCss}</style>\n    ${shell.html}`;
 
   return `<!doctype html>
 <html lang="zh-CN">
@@ -39,6 +46,7 @@ export function renderPageHtml(page: PageRegistration): string {
     <title>${escapeHtml(page.title)}</title>
   </head>
   <body>
+    ${shellMarkup}
     <div id="app"></div>
     <script type="module" src="${escapeHtml(page.entry)}"></script>
   </body>

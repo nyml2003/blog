@@ -1,16 +1,15 @@
-import { ArrowRight } from "lucide-solid";
-import { For, Show } from "solid-js";
-import type { Component } from "solid-js";
-import type { MobileRouteContext } from "../../foundation/context";
 import type {
   DocumentPort,
   NavigationPort,
   PersistencePort,
 } from "@fluvient-loom/port";
-import type { MobileApi } from "../../foundation/api";
-import { route } from "../../foundation/context";
+import { ArrowRight } from "lucide-solid";
+import type { Component } from "solid-js";
+import { createEffect, For, Show } from "solid-js";
 import { useMobileHome } from "../../features/home/model";
-import { ArticleCard } from "../../widgets/article-card/ui";
+import type { MobileApi } from "../../foundation/api";
+import type { MobileRouteContext } from "../../foundation/context";
+import { route } from "../../foundation/context";
 import {
   Heading,
   Link,
@@ -18,6 +17,7 @@ import {
   TabGroup,
   Text,
 } from "../../foundation/ui";
+import { ArticleCard } from "../../widgets/article-card/ui";
 import { MobileShell } from "../../widgets/shell/ui";
 
 export interface MobileHomePageInput extends MobileRouteContext {
@@ -26,12 +26,19 @@ export interface MobileHomePageInput extends MobileRouteContext {
   readonly persistence: PersistencePort;
   readonly document: DocumentPort;
   readonly share: (url: string) => Promise<void>;
+  readonly onAppShellReady: () => void;
 }
 
 export function createMobileHomePage(input: MobileHomePageInput): Component {
   return function MobileHomePage() {
     const home = useMobileHome(input);
     const snapshot = home.snapshot;
+    createEffect(() => {
+      const status = home.resource.state().status;
+      if (status !== "idle" && status !== "loading") {
+        input.onAppShellReady();
+      }
+    });
     return (
       <MobileShell
         context={input}
@@ -70,7 +77,10 @@ export function createMobileHomePage(input: MobileHomePageInput): Component {
             aria-busy={home.resource.state().status === "loading"}
           >
             <Show
-              when={home.resource.state().status !== "loading"}
+              when={
+                home.resource.state().status !== "loading" ||
+                snapshot() !== undefined
+              }
               fallback={
                 <StateMessage
                   kind="loading"

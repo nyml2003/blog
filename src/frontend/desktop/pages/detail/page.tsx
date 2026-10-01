@@ -5,6 +5,7 @@ import { route } from "../../foundation/context";
 import { useDesktopArticle } from "../../features/detail/model";
 import { ArticleBody } from "../../widgets/article-body/ui";
 import { positiveIdFromSearch } from "../../../validation/route-input";
+import { searchQuery } from "../../features/search/model";
 
 export function createDesktopDetailPage(input: DesktopPageContext): Component {
   return function DesktopDetailPage() {
@@ -12,6 +13,7 @@ export function createDesktopDetailPage(input: DesktopPageContext): Component {
       input.api,
       positiveIdFromSearch(input.navigation.current().search, "id"),
     );
+    const query = searchQuery(input.navigation.current().search);
     const archiveHref = route(input.routes, "desktop-public-articles");
     const homeHref = route(input.routes, "desktop-public-home");
     if (page.kind === "invalid")
@@ -63,7 +65,7 @@ export function createDesktopDetailPage(input: DesktopPageContext): Component {
                   </For>
                 </div>
                 <div class="article-accent" aria-hidden="true" />
-                <ArticleBody html={value().contentHtml} />
+                <ArticleBody html={value().contentHtml} query={query} />
                 <footer class="article-footer">
                   <a href={archiveHref}>
                     <ArrowLeft size={18} aria-hidden="true" />

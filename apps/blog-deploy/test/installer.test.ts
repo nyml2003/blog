@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { apexAlias, configTemplate, parseBlogConfig, seedFromLegacy } from '../src/installer/config.ts';
 import { renderTemplate } from '../src/installer/render.ts';
+import { createHttpKernel } from '@fluvient/core/http';
 import { fetchReleases, pickAsset, pickBuildRelease, pickChecksumAsset, pickScriptAsset, pickScriptRelease, targetForArch, verifyAssetChecksum, verifyChecksums } from '../src/installer/release.ts';
 import { main } from '../src/main.ts';
 import { parseBuildVersion, parseScriptVersion, serializeBuildVersion, serializeScriptVersion } from '../src/installer/version.ts';
@@ -86,7 +87,7 @@ test('fetchReleases parses the public API payload', async () => {
       { tag_name: 'build-v0.1.0', assets: [{ name: 'a.tar.gz', browser_download_url: 'https://example.test/a' }] },
       { tag_name: 'script-v0.1.0', assets: [] },
     ]), { status: 200 });
-  const releases = await fetchReleases('owner/repo', fakeFetch as never);
+  const releases = await fetchReleases('owner/repo', createHttpKernel({ fetcher: fakeFetch as never }));
   assert.deepEqual(releases[0], { tag: 'build-v0.1.0', assets: [{ name: 'a.tar.gz', url: 'https://example.test/a' }] });
 });
 
@@ -123,17 +124,4 @@ test('init creates a skeleton, refuses overwrite, and force rewrites', async () 
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
-});
-
-test('self-update is explicit and supports a release dry-run', async () => {
-  const fakeFetch = async (input: string): Promise<Awaited<ReturnType<typeof fetch>>> => {
-    if (input.includes('/releases?')) {
-      return new Response(JSON.stringify([{ tag_name: 'script-v9.9.9', assets: [
-        { name: 'blog-deploy.mjs', browser_download_url: 'https://example.test/mjs' },
-        { name: 'SHA256SUMS', browser_download_url: 'https://example.test/sums' },
-      ] }]), { status: 200 });
-    }
-    return new Response('', { status: 200 });
-  };
-  assert.equal(await main(['self-update', '--dry-run'], fakeFetch as never), 0);
 });

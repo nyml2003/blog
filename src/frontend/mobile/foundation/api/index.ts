@@ -15,6 +15,7 @@ export {
 export type {
   CategoryShelf,
   AdminArticle,
+  ArticleSearch,
   MobileApi,
   MobileApiFailure,
   MobileArticle,

@@ -5,6 +5,7 @@
 //! 取值集合与已移除的 Go 参考实现行为对齐（2026-09-06 退场）。
 
 pub const ARTICLE_LIST: &str = "public.article_list";
+pub const ARTICLE_SEARCH: &str = "public.article_search";
 /// Mobile 平铺页的分页检索：type/topic/tag
 /// 三个独立维度各单选、维度间 AND；与 `article_list` 的 `term_ids`（同维度 OR）并存。
 pub const ARTICLE_BROWSE: &str = "public.article_browse";
@@ -88,6 +89,11 @@ pub const ROUTES: &[ApiRoute] = &[
         method: "GET",
         endpoint: PUBLIC_ARTICLES_ENDPOINT,
         scene_code: ARTICLE_LIST,
+    },
+    ApiRoute {
+        method: "GET",
+        endpoint: PUBLIC_ARTICLES_ENDPOINT,
+        scene_code: ARTICLE_SEARCH,
     },
     ApiRoute {
         method: "GET",
@@ -295,6 +301,7 @@ pub fn supports(method: &str, endpoint: &str, scene_code: &str) -> bool {
 /// 公开端点使用的 `public.*` 场景集合（Mock 场景覆盖的输入来源）。
 pub const PUBLIC: &[&str] = &[
     ARTICLE_LIST,
+    ARTICLE_SEARCH,
     ARTICLE_BROWSE,
     ARTICLE_DETAIL,
     ARTICLE_TYPE_LIST,
@@ -352,7 +359,7 @@ mod tests {
         sorted.sort_unstable();
         sorted.dedup();
         assert_eq!(all.len(), sorted.len(), "scene codes must be unique");
-        assert_eq!(all.len(), 40);
+        assert_eq!(all.len(), 41);
         for scene in all {
             assert!(
                 scene.starts_with("public.") || scene.starts_with("admin."),

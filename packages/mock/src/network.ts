@@ -111,7 +111,7 @@ export function createMockNetwork(
       if (isNetworkResponse(result)) return ok(result);
       if (result.kind === "hang") {
         // This request never settles; transport-level timeouts are the
-        // consumer's business (see createNodeNetwork's timeoutMs).
+        // consumer's business (see the fetch network adapter in @fluvient-loom/port).
         return new Promise<never>(() => undefined) as NetworkCall;
       }
       return err(result);

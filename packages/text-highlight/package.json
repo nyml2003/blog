@@ -1,0 +1,24 @@
+{
+  "name": "@fluvient-loom/text-highlight",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    },
+    "./web": {
+      "types": "./src/web.ts",
+      "import": "./src/web.ts"
+    },
+    "./styles.css": "./styles.css"
+  },
+  "files": ["src", "styles.css", "README.md", "package.json"],
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "tsx --test test/*.test.ts",
+    "build": "pnpm typecheck && pnpm test",
+    "smoke": "test -s src/index.ts && test -s src/web.ts"
+  }
+}

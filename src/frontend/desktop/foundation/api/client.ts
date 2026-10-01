@@ -11,6 +11,7 @@ import { z } from "zod";
 import {
   adminArticleSchema,
   articleSchema,
+  articleSearchSchema,
   siteRoutesSchema,
   tShelfSchema,
   type AdminSessionLoginInput,
@@ -37,6 +38,10 @@ const routes = {
   article: {
     endpoint: "/api/public/articles",
     sceneCode: "public.article_detail",
+  },
+  search: {
+    endpoint: "/api/public/articles",
+    sceneCode: "public.article_search",
   },
   adminArticle: {
     endpoint: "/api/admin/articles",
@@ -477,6 +482,19 @@ export function createDesktopApi(network: NetworkPort): DesktopApi {
             }),
           ),
           articleSchema,
+        ),
+    },
+    search: {
+      get: (query, page = 1) =>
+        request(
+          network,
+          getRequest(
+            requestPath(routes.search.endpoint, routes.search.sceneCode, {
+              q: query,
+              page: String(page),
+            }),
+          ),
+          articleSearchSchema,
         ),
     },
     adminArticle: {

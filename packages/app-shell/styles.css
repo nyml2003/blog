@@ -1,61 +1,66 @@
 .loom-app-shell {
-  box-sizing: border-box;
-  color: var(--loom-shell-ink, inherit);
-  contain: layout paint;
-  display: block;
-  min-block-size: 100%;
-  overflow: hidden;
-  padding-block-end: var(--loom-shell-bottom-space, 0px);
-  background: var(--loom-shell-surface, transparent);
+	box-sizing: border-box;
+	color: var(--loom-shell-ink, inherit);
+	contain: layout paint;
+	display: block;
+	font-family: var(--loom-shell-font, inherit);
+	min-block-size: 100%;
+	overflow: hidden;
+	padding-block-end: var(--loom-shell-bottom-space, 0px);
+	background: var(--loom-shell-surface, var(--paper, #f4f1ea));
+}
+
+.loom-app-shell + #app {
+	visibility: hidden;
 }
 
 .loom-app-shell *,
 .loom-app-shell *::before,
 .loom-app-shell *::after {
-  box-sizing: inherit;
+	box-sizing: inherit;
 }
 
 .loom-app-shell__status {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-  clip-path: inset(50%);
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+	clip-path: inset(50%);
 }
 
 .loom-app-shell__region {
-  display: block;
-  padding: var(--loom-shell-region-padding, 0px);
+	display: block;
+	padding: var(--loom-shell-region-padding, 0px);
 }
 
 .loom-app-shell__placeholder {
-  display: block;
-  max-inline-size: 100%;
-  border-radius: var(--loom-shell-radius, 8px);
-  background: var(--loom-shell-skeleton, #e2e4e8);
-  animation: loom-app-shell-shimmer 1.4s linear infinite;
-  animation-delay: var(--loom-shell-shimmer-delay, 200ms);
+	display: block;
+	max-inline-size: 100%;
+	border-radius: var(--loom-shell-radius, 8px);
+	background: var(--loom-shell-skeleton, var(--border, #e2e4e8));
+	animation: loom-app-shell-shimmer 1.4s linear infinite;
+	animation-delay: var(--loom-shell-shimmer-delay, 200ms);
 }
 
 .loom-app-shell__placeholder--media {
-  overflow: hidden;
+	overflow: hidden;
 }
 
 @keyframes loom-app-shell-shimmer {
-  0%,
-  100% {
-    opacity: 0.72;
-  }
+	0%,
+	100% {
+		opacity: 0.72;
+	}
 
-  50% {
-    opacity: 1;
-  }
+	50% {
+		opacity: 1;
+	}
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .loom-app-shell__placeholder {
-    animation: none;
-  }
+	.loom-app-shell__placeholder {
+		animation: none;
+	}
 }

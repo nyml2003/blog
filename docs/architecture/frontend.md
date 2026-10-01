@@ -32,7 +32,8 @@ src/frontend/
 ```
 
 协议与宿主适配的唯一来源是 workspace 包：`@fluvient-loom/port`（宿主无关 ports）、
-`@fluvient-loom/common`（Result、取消、基础类型）、`@fluvient-loom/query`（Task/Resource）、
+`@fluvient/core`（Result、取消、基础类型，cli 与 loom 共享；`/http` 子路径是共享传输内核）、
+`@fluvient-loom/query`（Task/Resource）、`@fluvient-loom/net`（fetch 型 NetworkPort 适配器）、
 `@fluvient-loom/web`（浏览器适配器）和 `@fluvient-loom/node`（Node 与内存适配器）。
 `kernel/` 只剩 `desired-state` 等纯状态原语，禁宿主能力。`bootstrap/`
 只负责把浏览器原生对象和运行配置装配进 workspace 适配器，是唯一允许触碰浏览器全局的层，

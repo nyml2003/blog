@@ -199,7 +199,15 @@ impl MockStore {
             .articles
             .iter()
             .filter(|article| {
-                (!query.published_only || article.status == "published") && filter.matches(*article)
+                (!query.published_only || article.status == "published")
+                    && filter.matches(*article)
+                    && query.search.as_deref().is_none_or(|search| {
+                        let search = search.trim().to_lowercase();
+                        search.is_empty()
+                            || article.title.to_lowercase().contains(&search)
+                            || article.summary.to_lowercase().contains(&search)
+                            || article.content_html.to_lowercase().contains(&search)
+                    })
             })
             .cloned()
             .collect();
@@ -875,6 +883,7 @@ impl DataStore for MockStore {
         ctx.meter.record(1);
 
         let list_query = ArticleListQuery {
+            search: None,
             page: Some(1),
             page_size: Some(u32::MAX),
             article_type_id: query.article_type_id,

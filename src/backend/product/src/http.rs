@@ -657,7 +657,9 @@ async fn public_articles(
         return unknown_scene_code();
     }
     match scene_code {
-        Some(scene::ARTICLE_LIST) => article_list_handler(&state, &params, true).await,
+        Some(scene::ARTICLE_LIST) | Some(scene::ARTICLE_SEARCH) => {
+            article_list_handler(&state, &params, true).await
+        }
         Some(scene::ARTICLE_BROWSE) => article_browse_handler(&state, &params).await,
         Some(scene::ARTICLE_DETAIL) => {
             let id = required_id(&params);
@@ -1050,6 +1052,7 @@ fn article_list_handler(
     published_only: bool,
 ) -> impl std::future::Future<Output = Response> + Send {
     let query = ArticleListQuery {
+        search: non_empty(params.get("q")),
         page: parse_u32(params.get("page")),
         page_size: parse_u32(params.get("pageSize")),
         article_type_id: parse_i64(params.get("type_id")),

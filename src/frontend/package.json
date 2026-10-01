@@ -16,6 +16,7 @@
     "format:check": "biome format ."
   },
   "dependencies": {
+    "@fluvient-loom/app-shell": "workspace:*",
     "@codemirror/commands": "6.8.1",
     "@codemirror/lang-html": "6.4.9",
     "@codemirror/language": "6.12.4",
@@ -25,9 +26,11 @@
     "@fluvient/core": "workspace:*",
     "@fluvient-loom/mobile-h5-solid-atoms": "workspace:*",
     "@fluvient-loom/mobile-prefetch": "workspace:*",
+    "@fluvient-loom/net": "workspace:*",
     "@fluvient-loom/node": "workspace:*",
     "@fluvient-loom/port": "workspace:*",
     "@fluvient-loom/query": "workspace:*",
+    "@fluvient-loom/text-highlight": "workspace:*",
     "@fluvient-loom/web": "workspace:*",
     "lucide-solid": "1.48.0",
     "solid-js": "1.9.15",

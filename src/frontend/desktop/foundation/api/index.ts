@@ -1,6 +1,7 @@
 export { createDesktopApi } from "./client";
 export type {
   AdminArticle,
+  ArticleSearch,
   AdminSessionLoginInput,
   DesktopApi,
   DesktopApiFailure,

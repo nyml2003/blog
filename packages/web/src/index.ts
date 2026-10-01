@@ -25,10 +25,6 @@ export {
   type WebOperationIdOptions,
 } from "./operation-id";
 export {
-  createWebNetwork,
-  type WebNetworkOptions,
-} from "./network";
-export {
   createWebSpaceTime,
   type WebSpaceTimeOptions,
 } from "./space-time";

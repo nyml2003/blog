@@ -139,7 +139,7 @@ last_reviewed: 2026-10-01
 | 工作流 | Owner | 依赖 | Write set | 状态 |
 | --- | --- | --- | --- | --- |
 | 预检与输出契约 | deploy+qa | ops 输出标准化契约 | 本计划、错误码/事件 Spec、帮助与指南 | ready |
-| 网络客户端能力 | infra | 预检契约、`@fluvient/core` 原语统一 | `@fluvient/core/http` 传输内核、loom/node 适配改造、`apps/blog-deploy/src/installer/**`、网络测试、超时/重试/进度适配 | ready |
+| 网络客户端能力 | infra | 预检契约、`@fluvient/core` 原语统一 | `@fluvient/core/http` 传输内核、loom/net 适配收敛、`apps/blog-deploy/src/installer/**`、网络测试、超时/重试/进度适配 | done（内核与适配已交付；部署侧超时/重试参数随接线工作流落地） |
 | 三个命令接线 | deploy | 网络客户端能力 | `deploy`/`redeploy`/`self-update` runner、临时文件和安装步骤 | ready |
 | 输出消费者与文档 | qa+release | 事件模型、命令接线 | CI、运维脚本、`deploy/README.md`、operations guide、示例 | ready |
 | 受限网络验收 | qa+deploy | 上述工作流 | 网络模拟、隔离服务器演练、验收记录 | ready |
@@ -158,7 +158,9 @@ last_reviewed: 2026-10-01
 ## 已定决策
 
 - 2026-10-01：`Result`/取消原语统一到中立包 `@fluvient/core`（loom/common 与 cli-kit 删副本直接依赖，不留 re-export 门面）。
-- 2026-10-01：HTTP 传输内核（任意方法、绝对 URL、分档超时、重试退避、流式进度、原始错误分类）放 `@fluvient/core/http`，只用标准 Web API；`packages/node` 与 `packages/web` 的 NetworkPort 适配器（现为逐行重复的 fetch 实现）与 blog-deploy 下载器共建其上，收敛后不留重复实现；内核重试为可选策略，避免与 query 层 refetch 叠加。
+- 2026-10-01：HTTP 传输内核（任意方法、绝对 URL、分档超时、重试退避、流式进度、原始错误分类）放 `@fluvient/core/http`，只用标准 Web API；已交付，含 21 项内核测试（超时/取消/流式/分类/重试）。
+- 2026-10-01（落地修正）：fetch 型 NetworkPort 适配器最终收敛为新包 `@fluvient-loom/net` 的 `createFetchNetwork`（取代 web/node 各自的副本）；不放 `@fluvient-loom/port`，因为 port 在 kernel 白名单内、其编译闭包禁止平台全局类型（fetch/Headers 等）。内核重试为可选策略，避免与 query 层 refetch 叠加。
+- 2026-10-01：内核与适配收敛完成，"三个命令接线"工作流的前置依赖已满足。
 - 错误码到 `SPEC-OPS-OUTPUT-001` 稳定码的映射留在 cli 侧，不下沉内核。
 - DNS/TCP/TLS 分层探测基于 `node:dns`/`node:net`/`node:tls`，属 Node 专用，不进内核，留在 blog-deploy。
 

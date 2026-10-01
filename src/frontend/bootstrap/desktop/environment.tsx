@@ -1,6 +1,7 @@
 import { createComponent, type Component } from "solid-js";
 import { render } from "solid-js/web";
-import { createWebNavigation, createWebNetwork } from "@fluvient-loom/web";
+import { createWebNavigation } from "@fluvient-loom/web";
+import { createFetchNetwork } from "@fluvient-loom/net";
 import { type Result } from "@fluvient/core";
 import {
   createDesktopApi,
@@ -19,7 +20,7 @@ function browserNavigation() {
 export async function createBrowserDesktopContext(): Promise<
   Result<DesktopPageContext, DesktopApiFailure>
 > {
-  const network = createWebNetwork({
+  const network = createFetchNetwork({
     fetcher: window.fetch.bind(window),
     setTimeoutFn: (callback, delayMs) => window.setTimeout(callback, delayMs),
     clearTimeoutFn: (handle) => window.clearTimeout(handle as number),

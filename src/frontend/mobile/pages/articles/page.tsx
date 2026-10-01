@@ -1,4 +1,4 @@
-import { type Component } from "solid-js";
+import { For, Show, type Component } from "solid-js";
 import type { MobileRouteContext } from "../../foundation/context";
 import type { MobileApi } from "../../foundation/api";
 import {
@@ -16,9 +16,14 @@ import { ArticleCard } from "../../widgets/article-card/ui";
 import { Heading, StateMessage, Text } from "../../foundation/ui";
 import { MobileShell } from "../../widgets/shell/ui";
 import type { CategorySelection } from "../../features/articles/category";
+import {
+  searchQuery,
+  useMobileSearch,
+} from "../../features/search/model";
+import { routeWithQuery } from "../../foundation/context";
 
 export interface MobileArticlesPageInput extends MobileRouteContext {
-  readonly api: Pick<MobileApi, "page">;
+  readonly api: Pick<MobileApi, "page" | "search">;
   readonly navigation: NavigationPort;
   readonly persistence: PersistencePort;
   readonly document: DocumentPort;
@@ -31,6 +36,10 @@ export function createMobileArticlesPage(
 ): Component {
   return function MobileArticlesPage() {
     const articles = useMobileArticles(input);
+    const query = searchQuery(input.navigation.current().search);
+    const search = useMobileSearch({ api: input.api, query });
+    const detailHref = (id: number) =>
+      routeWithQuery(input.routes, "mobile-article-detail", { id, q: query });
     return (
       <MobileShell
         context={input}
@@ -48,9 +57,44 @@ export function createMobileArticlesPage(
             content="从一级领域进入，再用二级分类收窄文章。"
             options={{ as: "p", tone: "muted", size: "meta" }}
           />
+          <form class="article-search" method="get">
+            <label for="article-search-query">搜索文章</label>
+            <input
+              id="article-search-query"
+              name="q"
+              type="search"
+              value={query}
+              placeholder="标题、摘要或正文"
+            />
+            <button type="submit">搜索</button>
+          </form>
         </header>
         <div class="category-shelf-content">
+          <Show when={query !== ""}>
+            <section class="search-results" aria-live="polite">
+              <Show
+                when={search.state().status !== "loading"}
+                fallback={<StateMessage kind="loading" text="正在搜索…" onRetry={undefined} />}
+              >
+                <Show
+                  when={search.state().snapshot?.data !== undefined}
+                  fallback={<StateMessage kind="error" text="搜索失败，请稍后重试" onRetry={() => void search.refetch()} />}
+                >
+                  <p>找到 {search.state().snapshot?.data.total ?? 0} 篇文章</p>
+                  <For each={search.state().snapshot?.data.items ?? []}>
+                    {(article) => (
+                      <a class="article-search-result" href={detailHref(article.id)}>
+                        <strong>{article.title}</strong>
+                        <span>{article.summary}</span>
+                      </a>
+                    )}
+                  </For>
+                </Show>
+              </Show>
+            </section>
+          </Show>
           {(() => {
+            if (query !== "") return null;
             const model = articles.current();
             if (articles.resource.state().error !== undefined) {
               return (

@@ -1,4 +1,5 @@
 @import "@fluvient-loom/mobile-h5-solid-atoms/styles.css";
+@import "@fluvient-loom/app-shell/styles.css";
 @import "./tokens.css";
 @import "./base.css";
 @import "./shell.css";

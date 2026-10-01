@@ -1,23 +1,23 @@
-import { createComponent, type Component } from "solid-js";
-import { render } from "solid-js/web";
+import { type Result } from "@fluvient/core";
+import { createMobilePrefetchClient } from "@fluvient-loom/mobile-prefetch";
+import { createFetchNetwork } from "@fluvient-loom/net";
 import { asAsyncPersistence } from "@fluvient-loom/port";
 import {
   createWebDocument,
   createWebNavigation,
-  createWebNetwork,
   createWebOperationId,
   createWebPersistence,
   createWebScheduler,
   createWebSpaceTime,
   createWebViewport,
 } from "@fluvient-loom/web";
-import { type Result } from "@fluvient/core";
-import { createMobilePrefetchClient } from "@fluvient-loom/mobile-prefetch";
+import { type Component, createComponent } from "solid-js";
+import { render } from "solid-js/web";
 import {
   createMobileApi,
-  siteRoutesSchema,
   type MobileApiFailure,
   type SiteRoutes,
+  siteRoutesSchema,
 } from "../../mobile/foundation/api";
 import type { MobilePageContext } from "../../mobile/foundation/context";
 // 路由清单在构建期由 pages.registry 投影生成（与后端 /api/public/site-routes 同源，
@@ -25,7 +25,7 @@ import type { MobilePageContext } from "../../mobile/foundation/context";
 import siteRoutesManifest from "../../site-routes.json";
 
 function browserContextWithoutRoutes(): Omit<MobilePageContext, "routes"> {
-  const network = createWebNetwork({
+  const network = createFetchNetwork({
     fetcher: window.fetch.bind(window),
     setTimeoutFn: (callback, delayMs) => window.setTimeout(callback, delayMs),
     clearTimeoutFn: (handle) => window.clearTimeout(handle as number),
@@ -118,12 +118,20 @@ export function mountMobilePage(
   if (!mount) throw new Error('Page mount element "#app" is missing');
   const result = createBrowserMobileContext();
   if (!result.ok) {
+    removeMobileAppShell();
     render(() => createComponent(StartupError, {}), mount);
     return;
   }
   const Page = createPage(result.value);
   render(() => createComponent(Page, {}), mount);
   void registerMobilePrefetch(window.location.pathname);
+}
+
+export function removeMobileAppShell(): void {
+  const shell = document.querySelector<HTMLElement>(
+    '[data-loom-app-shell="true"]',
+  );
+  shell?.remove();
 }
 
 async function registerMobilePrefetch(pathname: string): Promise<void> {

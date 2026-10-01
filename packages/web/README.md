@@ -2,14 +2,14 @@
 
 Browser host adapters for the `@fluvient-loom/port` protocol: persistence
 (localStorage), document root attributes, history navigation, scheduler
-(microtask / timer / animation frame), operation ids, network (fetch with
-JSON codec, timeout, and cancellation), space-time clock, and viewport
-scrolling.
+(microtask / timer / animation frame), operation ids, space-time clock, and
+viewport scrolling. The fetch-based network adapter (`createFetchNetwork`)
+now lives in `@fluvient-loom/net`, built on the shared HTTP kernel in
+`@fluvient/core/http`; it runs on web standards in the browser and Node alike.
 
 ```ts
 import {
   createWebNavigation,
-  createWebNetwork,
   createWebPersistence,
   createWebScheduler,
 } from "@fluvient-loom/web";

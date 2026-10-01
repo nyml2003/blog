@@ -13,12 +13,13 @@ last_reviewed: 2026-10-01
 
 把产品已定稿的持久化分层方案（业务 / Codec / 编排 / Port / 存储实现，2026-10-01 对话留档）先以 workspace 包形式落地：**先抽包、独立验收，前端接入后置**。本轮交付：
 
-1. `@fluvient-loom/common` 原语增补：`LoomError`（带 `cause` 透传）与 `createError`；
+1. `@fluvient-loom/core`（原 `common`，FSD 重组中已与 `query` 合并）原语增补：`LoomError`（带 `cause` 透传）与 `createError`；
 2. `@fluvient-loom/codec` 新包：`Codec<T>` / `createJsonCodec` / `CodecError`，完整实现 + 单测，作为后续包的模板；
 3. persistence 原语（`PersistPlan` 及对应 port 签名演进）——归属经闸门确认后落地；
-4. ADR：把方案第八节的刻意取舍（序列化不进 port、PersistPlan、codec 只认 string、错误联合、读缺省返回默认值）留档评审。
+4. ADR：把方案第八节的刻意取舍（序列化不进 port、PersistPlan、codec 只认 string、错误联合、读缺省返回默认值）留档评审；
+5. **错误保真度收敛**（2026-10-01 产品补充）：`LoomError` 落地后必须被消费——消灭域代码里 `cause instanceof Error ? cause.message : "…"` 的压扁模式，cause 链端到端保留；只有原语没有消费侧等于白做。
 
-前端接入（settings 迁移到该栈）不在本计划——归 `PLAN-FRONTEND-BOUNDARY-NORMALIZATION-001` 的试点域，消费本计划产出的包。
+前端接入（settings 迁移到该栈）不在本计划本轮——接入去向见"决策闸门"。
 
 ## 设计输入（产品已决策，本计划不重开）
 
@@ -32,12 +33,12 @@ last_reviewed: 2026-10-01
 - **读路径缺数据返回默认值**是产品决策；换产品语义时改那一处即可。
 - 方案中的 settings 字段（light/dark/system、locale、notifications）仅为示例，不构成契约；接入时以真实领域模型（paper/dark/sepia + font）与真实 key（含 legacy 迁移）为准。
 
-## 当前基线（2026-10-01 现场核实）
+## 当前基线（2026-10-01 复核，FSD 重组后）
 
-- `packages/common`：现有 `Result`/`ok`/`err`/`DeepReadonly`/`ResourceHandle`，**无** `LoomError`/`createError`——确属增补，且不得破坏既有消费者（`port`/`query`/`command`/`web`/`node` 等）。
-- `packages/port`：已有 `PersistencePort`/`AsyncPersistencePort`/`combinators`/`PersistenceFailure`（含 `operation` 字段）；`packages/web` 已有 localStorage 适配器。**无 codec 包**。
+- **包布局已变**：`packages/common` 与 `packages/query` 已在 FSD 重组（`c89cae3`）中合并为 `packages/core`（现有 `Result`/`ok`/`err`/`DeepReadonly`/`resource`/`cancellation`，**无** `LoomError`/`createError`）；本计划写集以 `core` 为准。`packages/port`（`PersistencePort`/`combinators`/`PersistenceFailure`）与 `packages/web`（localStorage 适配器）仍在。**无 codec 包**。
+- **错误保真度现状**（产品 2026-10-01 指认的债务）：`throw` 纪律已落地（域代码仅 4 处、全在 bootstrap 启动级）；但拒绝路径的压扁模式遍布——`cause instanceof Error ? cause.message : "请求执行失败"` 至少 5 处：`mobile/features/settings/model.ts:48`、`mobile/features/detail/model.ts:86`、`mobile/foundation/api/client.ts:89`、`mobile/pages/settings/page.tsx:64`、`desktop/foundation/api/client.ts:308`——unknown rejection 被压成字符串，stack 与 cause 链丢失。
+- **接入端背景已迁移**：settings 已在边界归一化计划中拆为 `mobile/features/settings/{model,storage}.ts`（该计划已归档）；legacy key 双写问题（`mobile-nav.tsx:68` 直写 `blog.mobile.theme`）仍在，是接入阶段的顺手修复项。
 - 包门禁：`ops package check`（平台中立护栏 + typecheck/test/smoke）；npm 发布决策沿用 `PLAN-FRONTEND-INFRASTRUCTURE-PACKAGES-001` 收尾记录，默认不发布。
-- 前端 settings 现状（接入背景，本计划不动）：`logic/settings.ts` 四种职责混居，`parseSnapshot` 的 try/catch、legacy key 迁移、默认值归一化都在业务文件里。
 
 ## 决策闸门（实现前确认，均为方案留白或与现状的接缝）
 

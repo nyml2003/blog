@@ -58,6 +58,8 @@ impl Lane {
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", default)]
 pub struct ArticleListQuery {
+    /// Literal search across title, summary and article body.
+    pub search: Option<String>,
     pub page: Option<u32>,
     pub page_size: Option<u32>,
     pub article_type_id: Option<i64>,

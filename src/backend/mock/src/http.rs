@@ -496,6 +496,7 @@ fn article_list(
     started: Instant,
 ) -> Response {
     let query = ArticleListQuery {
+        search: non_empty(params.get("q")),
         page: parse_u32(params.get("page")),
         page_size: parse_u32(params.get("pageSize")),
         article_type_id: parse_i64(params.get("type_id")),

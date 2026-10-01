@@ -10,8 +10,8 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { pageRegistry, pageRoutes } from "../../pages.registry";
 import { siteRoutesSchema } from "../../mobile/foundation/api";
+import { pageRegistry, pageRoutes } from "../../pages.registry";
 import {
   generatedPagePath,
   generatePageInputs,
@@ -155,6 +155,25 @@ test("generated HTML has the shared head and exact registered entry", () => {
   }
 });
 
+test("mobile home injects an app shell before the application mount", () => {
+  const page = pageRegistry.find((entry) => entry.id === "mobile-home");
+  assert.ok(page);
+  const html = renderPageHtml(page);
+  const shellOffset = html.indexOf('data-loom-app-shell="true"');
+  const appOffset = html.indexOf('<div id="app"></div>');
+
+  assert.ok(shellOffset >= 0);
+  assert.ok(html.includes("<style data-loom-app-shell>"));
+  assert.ok(html.includes('aria-hidden="true"'));
+  assert.ok(shellOffset < appOffset);
+  assert.deepEqual(
+    pageRegistry
+      .filter((entry) => entry.shell !== undefined)
+      .map((entry) => entry.id),
+    ["mobile-home"],
+  );
+});
+
 test("the generator writes one input per page without source HTML", () => {
   const tempRoot = mkdtempSync(resolve(tmpdir(), "blog-page-template-"));
   try {
@@ -213,6 +232,7 @@ test("registered entries use the bootstrap and mobile has one CSS entry", () => 
   );
   assert.deepEqual(mobileStyles.trim().split("\n"), [
     '@import "@fluvient-loom/mobile-h5-solid-atoms/styles.css";',
+    '@import "@fluvient-loom/app-shell/styles.css";',
     '@import "./tokens.css";',
     '@import "./base.css";',
     '@import "./shell.css";',

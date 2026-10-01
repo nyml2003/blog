@@ -1,3 +1,5 @@
+import type { AppShellSpec } from "@fluvient-loom/app-shell";
+
 export type PagePlatform = "desktop" | "mobile";
 
 export interface PageRegistration {
@@ -9,6 +11,7 @@ export interface PageRegistration {
   description: string | undefined;
   aliases: readonly string[];
   bootstrap: boolean;
+  shell?: AppShellSpec;
 }
 
 export const pageRegistry = [
@@ -134,6 +137,37 @@ export const pageRegistry = [
     description: undefined,
     aliases: ["/m", "/m/"],
     bootstrap: true,
+    shell: {
+      id: "mobile-home-shell",
+      platform: "mobile",
+      loadingLabel: "正在加载首页",
+      regions: [
+        {
+          id: "header",
+          role: "banner",
+          blockSize: "68px",
+          placeholders: [],
+        },
+        {
+          id: "content",
+          role: "main",
+          blockSize: "480px",
+          placeholders: [
+            { kind: "line", blockSize: "34px", inlineSize: "42%" },
+            { kind: "line", blockSize: "18px", inlineSize: "78%" },
+            { kind: "media", blockSize: "150px", aspectRatio: 16 / 9 },
+            { kind: "line", blockSize: "20px", inlineSize: "90%" },
+            { kind: "line", blockSize: "20px", inlineSize: "68%" },
+          ],
+        },
+        {
+          id: "bottom-nav",
+          role: "contentinfo",
+          blockSize: "92px",
+          placeholders: [],
+        },
+      ],
+    },
   },
   {
     id: "mobile-articles",

@@ -1,8 +1,10 @@
 /* PageContainer owns theme inheritance; document and legacy defaults stay intact. */
 html:not([data-theme]) .m-page-container,
 html:not([data-theme]) .mobile-shell,
+html:not([data-theme]) .loom-app-shell,
 html[data-theme="paper"] .m-page-container,
-html[data-theme="paper"] .mobile-shell {
+html[data-theme="paper"] .mobile-shell,
+html[data-theme="paper"] .loom-app-shell {
   color-scheme: light;
 }
 
@@ -24,6 +26,12 @@ html[data-theme="dark"] .mobile-shell {
   color-scheme: dark;
 }
 
+html[data-theme="dark"] .loom-app-shell {
+  --loom-shell-surface: #202124;
+  --loom-shell-skeleton: #777d86;
+  --loom-shell-ink: #f1f3f4;
+}
+
 html[data-theme="sepia"] .m-page-container,
 html[data-theme="sepia"] .mobile-shell {
   --paper: #f1e6cf;
@@ -42,9 +50,20 @@ html[data-theme="sepia"] .mobile-shell {
   color-scheme: light;
 }
 
+html[data-theme="sepia"] .loom-app-shell {
+  --loom-shell-surface: #f1e6cf;
+  --loom-shell-skeleton: #98856b;
+  --loom-shell-ink: #352d23;
+}
+
 html[data-font="sans"] .m-page-container,
 html[data-font="sans"] .mobile-shell {
   --font-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+html[data-font="sans"] .loom-app-shell {
+  --loom-shell-font:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 html[data-font="serif"] .m-page-container,
@@ -53,8 +72,18 @@ html[data-font="serif"] .mobile-shell {
     ui-serif, Georgia, "Times New Roman", "Songti SC", "SimSun", serif;
 }
 
+html[data-font="serif"] .loom-app-shell {
+  --loom-shell-font:
+    ui-serif, Georgia, "Times New Roman", "Songti SC", "SimSun", serif;
+}
+
 html[data-font="mono"] .m-page-container,
 html[data-font="mono"] .mobile-shell {
   --font-body:
+    ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+
+html[data-font="mono"] .loom-app-shell {
+  --loom-shell-font:
     ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }

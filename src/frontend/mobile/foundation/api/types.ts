@@ -11,6 +11,29 @@ export type MobileTerm = z.output<typeof mobileTermSchema>;
 
 const articleTypeSchema = z.object({ id: positiveId, name: z.string() });
 
+const articleListItemSchema = z.object({
+  id: positiveId,
+  title: z.string(),
+  summary: z.string(),
+  articleTypeId: positiveId,
+  articleType: articleTypeSchema.nullish(),
+  status: z.enum(["draft", "published"]),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  publishedAt: z.string().nullish(),
+  termIds: z.array(positiveId),
+  terms: z.array(mobileTermSchema),
+});
+
+export const articleSearchSchema = z.object({
+  items: z.array(articleListItemSchema),
+  page: z.number().int().positive(),
+  pageSize: z.number().int().positive(),
+  total: z.number().int().nonnegative(),
+  hasMore: z.boolean(),
+});
+export type ArticleSearch = z.output<typeof articleSearchSchema>;
+
 export const mobileArticleSchema = z
   .object({
     id: positiveId,
@@ -244,6 +267,15 @@ export interface MobileApi {
     getPublished(
       id: number,
     ): import("@fluvient-loom/port").DataTask<MobileArticle, MobileApiFailure>;
+  };
+  readonly search: {
+    get(
+      query: string,
+      page?: number,
+    ): import("@fluvient-loom/port").DataTask<
+      ArticleSearch,
+      MobileApiFailure
+    >;
   };
   readonly adminArticle: {
     get(

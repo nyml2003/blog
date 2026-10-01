@@ -8,10 +8,12 @@ import { ArticleBody } from "../../widgets/article-body/ui";
 import { MobileNav } from "../../widgets/shell/mobile-nav";
 import { Heading, StateMessage, Tag, Text } from "../../foundation/ui";
 import { displayDate } from "../../../validation/route-input";
+import { searchQuery } from "../../features/search/model";
 
 export function createMobileDetailPage(input: MobileDetailInput): Component {
   return function MobileDetailPage() {
     const detail = useMobileDetail(input);
+    const query = searchQuery(input.navigation.current().search);
     const backLink = (
       <a
         class="detail-back"
@@ -94,7 +96,7 @@ export function createMobileDetailPage(input: MobileDetailInput): Component {
                       </time>
                     </p>
                   </header>
-                  <ArticleBody html={value().contentHtml} />
+                  <ArticleBody html={value().contentHtml} query={query} />
                 </article>
               )}
             </Show>

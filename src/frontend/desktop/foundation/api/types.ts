@@ -32,6 +32,27 @@ export const tShelfSchema = z.object({
   total: z.number().int().nonnegative(),
 });
 
+const articleListItemSchema = z.object({
+  id: positiveId,
+  title: z.string(),
+  summary: z.string(),
+  articleTypeId: positiveId,
+  articleType: z.object({ id: positiveId, name: z.string() }).nullish(),
+  status: z.enum(["draft", "published"]),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  publishedAt: z.string().nullish(),
+  termIds: z.array(positiveId),
+  terms: z.array(termSchema),
+});
+export const articleSearchSchema = z.object({
+  items: z.array(articleListItemSchema),
+  page: z.number().int().positive(),
+  pageSize: z.number().int().positive(),
+  total: z.number().int().nonnegative(),
+  hasMore: z.boolean(),
+});
+
 export const siteRoutesSchema = z.object({
   routes: z.record(z.string(), z.string()),
 });
@@ -58,6 +79,7 @@ export const articleSchema = z
   }));
 
 export type TShelf = z.output<typeof tShelfSchema>;
+export type ArticleSearch = z.output<typeof articleSearchSchema>;
 export type TShelfInput = {
   readonly surface: "recommendation" | "archive";
   readonly filterId: string;
@@ -237,6 +259,15 @@ export interface DesktopApi {
       id: number,
     ): import("@fluvient-loom/port").DataTask<
       DesktopArticle,
+      DesktopApiFailure
+    >;
+  };
+  readonly search: {
+    get(
+      query: string,
+      page?: number,
+    ): import("@fluvient-loom/port").DataTask<
+      ArticleSearch,
       DesktopApiFailure
     >;
   };

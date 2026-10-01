@@ -43,7 +43,7 @@ domain/ protocol/ validation/ 跨端契约与输入校验（route-input、articl
 | 任一新结构模块 | 向上依赖（如 features import pages/widgets、foundation import 任一上层）；import 已删除的旧运行时路径（`common/`、`solid/`、`{desktop,mobile}/src`、`desktop-ui/`、`mobile-ui/`） |
 | 同层 slice（pages/widgets/features） | import 同段兄弟 slice |
 | 平台世界（mobile 与 desktop，含各自 bootstrap） | 互相 import |
-| `kernel/` | import Solid、DOM、网络、存储、Node 宿主、宿主适配器包或 kernel 白名单（`@fluvient-loom/common`、`port|query`）之外的包；直接使用 fetch、window、document、storage、process 等宿主能力 |
+| `kernel/` | import Solid、DOM、网络、存储、Node 宿主、宿主适配器包或 kernel 白名单（`@fluvient/core`、`@fluvient-loom/port|query`）之外的包；直接使用 fetch、window、document、storage、process 等宿主能力 |
 | `{mobile,desktop}/foundation/api` | import Solid、宿主适配器包、UI 或旧运行时 |
 | 平台世界模块 | import 宿主适配器包或旧运行时；宿主能力必须经注入的 ports |
 | `mobile/pages` | 直接访问 `MobilePageContext` 或 `context.api|navigation|persistence`（宿主能力留在 bootstrap 与 features） |

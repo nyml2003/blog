@@ -9,6 +9,7 @@ import {
 import { type Result } from "@fluvient/core";
 import {
   categoryShelfSchema,
+  articleSearchSchema,
   adminArticleSchema,
   mobileArticleSchema,
   mobilePageSchema,
@@ -35,6 +36,10 @@ const route = {
   categoryShelf: {
     endpoint: "/api/public/mobile/category-shelf",
     sceneCode: "public.mobile_category_shelf",
+  },
+  search: {
+    endpoint: "/api/public/articles",
+    sceneCode: "public.article_search",
   },
   article: {
     endpoint: "/api/public/articles",
@@ -222,6 +227,19 @@ export function createMobileApi(network: NetworkPort): MobileApi {
           mobileArticleSchema,
         ),
     },
+    search: {
+      get: (query, page = 1) =>
+        request(
+          network,
+          getRequest(
+            path(route.search.endpoint, route.search.sceneCode, {
+              q: query,
+              page: String(page),
+            }),
+          ),
+          articleSearchSchema,
+        ),
+    },
     adminArticle: {
       get: (id) =>
         request(
@@ -239,6 +257,7 @@ export function createMobileApi(network: NetworkPort): MobileApi {
 
 export type {
   AdminArticle,
+  ArticleSearch,
   CategoryShelf,
   MobileApi,
   MobileApiFailure,

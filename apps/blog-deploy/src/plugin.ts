@@ -1,4 +1,5 @@
 import type { CliPlugin } from '@fluvient-cli/cli-kit/plugin.ts';
+import { createHttpKernel } from '@fluvient/core/http';
 import type { FetchLike } from './installer/release.ts';
 import { installerDefinitions } from './installer/registry.ts';
 import { runInstallerCommand } from './installer/main.ts';
@@ -8,7 +9,7 @@ import { OutputRuntimeLog } from '@fluvient-cli/cli-core/runtime-output.ts';
 export function installerPlugin(fetchImpl: FetchLike): CliPlugin {
   return {
     name: 'installer',
-    commands: installerDefinitions(fetchImpl, runInstallerCommand),
+    commands: installerDefinitions(createHttpKernel({ fetcher: fetchImpl }), runInstallerCommand),
     configure({ container }) {
       const workspace = container.get<import('@fluvient-cli/cli-kit/workspace.ts').Workspace>('workspace');
       const fs = container.get<import('@fluvient-cli/cli-kit/ports.ts').FsPort>('fs');

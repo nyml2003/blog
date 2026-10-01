@@ -508,6 +508,7 @@ impl DomainState {
     /// mobile shelf 读模型：完整筛选结果 + 类型 + 推荐（无分页，BFF 需要全量）。
     pub fn article_shelf(&self, query: &ArticleShelfQuery) -> ArticleShelfData {
         let list_query = ArticleListQuery {
+            search: None,
             page: Some(1),
             page_size: None,
             article_type_id: query.article_type_id,

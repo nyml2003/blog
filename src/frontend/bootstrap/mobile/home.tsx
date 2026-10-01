@@ -1,6 +1,6 @@
 import "../../mobile/foundation/styles/app.css";
-import { mountMobilePage } from "./environment";
 import { createMobileHomePage } from "../../mobile/pages/home/page";
+import { mountMobilePage, removeMobileAppShell } from "./environment";
 
 mountMobilePage((context) =>
   createMobileHomePage({
@@ -10,5 +10,6 @@ mountMobilePage((context) =>
     persistence: context.persistence,
     document: context.document,
     share: context.share,
+    onAppShellReady: removeMobileAppShell,
   }),
 );
