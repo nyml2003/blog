@@ -105,6 +105,9 @@ impl StaticFiles {
         if let Some(relative) = self.pages.get(path) {
             return self.read_file(relative, true).await;
         }
+        if path == "/mobile-prefetch-sw.js" {
+            return self.read_file("mobile-prefetch-sw.js", false).await;
+        }
         if let Some(asset) = path.strip_prefix(ASSETS_PREFIX) {
             if asset.is_empty() || asset.contains("..") || asset.contains('\\') {
                 return plain(StatusCode::NOT_FOUND, "404 page not found\n");

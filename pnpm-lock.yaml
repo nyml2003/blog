@@ -186,6 +186,9 @@ importers:
       '@fluvient-loom/mobile-h5-solid-atoms':
         specifier: workspace:*
         version: link:../../packages/mobile-h5-solid-atoms
+      '@fluvient-loom/mobile-prefetch':
+        specifier: workspace:*
+        version: link:../../packages/mobile-prefetch
       '@fluvient-loom/node':
         specifier: workspace:*
         version: link:../../packages/node

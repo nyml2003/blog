@@ -7,6 +7,7 @@ body,
 }
 
 .desktop-home {
+  box-sizing: border-box;
   width: 100%;
   max-width: none;
   margin: 0;
@@ -285,11 +286,15 @@ body,
   color: #68717d;
 }
 .desktop-login {
+  box-sizing: border-box;
   min-height: 100vh;
   padding: 0 38px;
   color: #182230;
   background: #f4f1ea;
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+.desktop-login * {
+  box-sizing: border-box;
 }
 .desktop-login header {
   min-height: 88px;
@@ -538,6 +543,7 @@ button:disabled {
 .desktop-taxonomy > main textarea,
 .editor-page textarea,
 .editor-page input {
+  box-sizing: border-box;
   width: 100%;
   border: 1px solid var(--border);
   border-radius: 4px;

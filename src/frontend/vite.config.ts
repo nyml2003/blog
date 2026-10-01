@@ -2,6 +2,7 @@ import { resolve } from "node:path";
 import { defineConfig } from "vite";
 import solid from "vite-plugin-solid";
 import { pageBootstrap } from "./build/page-bootstrap.ts";
+import { mobilePrefetchServiceWorker } from "./build/mobile-prefetch.ts";
 import {
   generatePageInputs,
   pageRouteMap,
@@ -17,6 +18,7 @@ export default defineConfig({
   plugins: [
     pageTemplatePlugin(),
     pageBootstrap(root),
+    mobilePrefetchServiceWorker(root),
     {
       name: "mvp-page-routes",
       configureServer(server) {

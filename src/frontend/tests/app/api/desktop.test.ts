@@ -65,9 +65,10 @@ test("desktop API keeps admin credentials in the login body", async () => {
   assert.equal(result.ok, true);
   assert.equal(
     requestPath,
-    "/api/admin/session?sceneCode=admin.session_create",
+    "/api/admin/session?sceneCode=admin.session.create",
   );
   assert.deepEqual(requestBody, {
+    sceneCode: "admin.session.create",
     password: "secret",
     verification: { kind: "totp", code: "123456" },
   });

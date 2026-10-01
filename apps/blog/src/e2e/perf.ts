@@ -41,6 +41,7 @@ const HOME_PAGE = '/m/';
 const SHELL_SELECTOR = '.m-bottom-nav';
 const CONTENT_SELECTOR = '.category-root-list button, .article-card';
 const HOME_SETTLED_SELECTOR = '.mobile-t-shelf-content .article-card, .mobile-t-shelf-content .m-state-message';
+const PREFETCH_SETTLED_SELECTOR = 'html[data-mobile-prefetch="complete"], html[data-mobile-prefetch="failed"]';
 
 const LCP_INIT_SCRIPT = `(() => {
   try {
@@ -181,6 +182,8 @@ export interface JourneyRun {
   readonly contentMs: number;
   readonly firstContentfulPaintMs: number | undefined;
   readonly largestContentfulPaintMs: number | undefined;
+  readonly prefetchStatus?: string;
+  readonly prefetchCount?: number;
   readonly metrics: AggregatedRunNumbers;
 }
 
@@ -202,6 +205,7 @@ export interface JourneySummary {
     readonly htmlBytes?: Stat;
     readonly dataApiBytes?: Stat;
     readonly otherBytes?: Stat;
+    readonly prefetchCount?: Stat;
   };
 }
 
@@ -227,6 +231,7 @@ export function buildJourneySummary(runs: readonly JourneyRun[]): JourneySummary
       htmlBytes: summarizeNumbers(runs.map((sample) => sample.metrics.htmlBytes)),
       dataApiBytes: summarizeNumbers(runs.map((sample) => sample.metrics.dataApi.bytes)),
       otherBytes: summarizeNumbers(runs.map((sample) => sample.metrics.otherBytes)),
+      prefetchCount: summarizeNumbers(runs.map((sample) => sample.prefetchCount ?? 0)),
     },
   };
 }
@@ -433,7 +438,7 @@ async function runJourneyOnce(
         latency: conditions.latency,
       });
     }
-    if (journey === 'nav-switch') await settleHomePage(page, origin);
+    const prefetch = journey === 'nav-switch' ? await settleHomePage(page, origin) : undefined;
     const startedAt = performance.now();
     if (journey === 'cold-load') {
       await page.goto(`${origin}${ARTICLES_PAGE}`, { waitUntil: 'domcontentloaded' });
@@ -454,6 +459,8 @@ async function runJourneyOnce(
       contentMs,
       firstContentfulPaintMs: raw.firstContentfulPaintMs,
       largestContentfulPaintMs: raw.largestContentfulPaintMs,
+      prefetchStatus: prefetch?.status,
+      prefetchCount: prefetch?.count,
       metrics: aggregateNavigationMetrics(raw),
     };
   } finally {
@@ -461,9 +468,14 @@ async function runJourneyOnce(
   }
 }
 
-async function settleHomePage(page: PerfPage, origin: string): Promise<void> {
+async function settleHomePage(page: PerfPage, origin: string): Promise<{ readonly status: string; readonly count: number }> {
   await page.goto(`${origin}${HOME_PAGE}`, { waitUntil: 'domcontentloaded' });
   await page.locator(HOME_SETTLED_SELECTOR).first().waitFor();
+  await page.locator(PREFETCH_SETTLED_SELECTOR).waitFor();
+  return page.evaluate(() => ({
+    status: document.documentElement.dataset.mobilePrefetch ?? 'missing',
+    count: Number(document.documentElement.dataset.mobilePrefetchCount ?? 0),
+  }));
 }
 
 async function collectNavigationMetrics(page: PerfPage): Promise<RawNavigationMetrics> {
@@ -512,6 +524,7 @@ function printProfileSummary(context: CommandContext, profile: ProfileResult): v
     const decodedBytes = journey.summary.staticAssetDecodedBytes?.median;
     const htmlBytes = journey.summary.htmlBytes?.median;
     const dataApiBytes = journey.summary.dataApiBytes?.median;
+    const prefetchCount = journey.summary.prefetchCount?.median;
     const otherBytes = journey.summary.otherBytes?.median;
     const fcp = journey.summary.firstContentfulPaintMs?.median;
     const lcp = journey.summary.largestContentfulPaintMs?.median;
@@ -524,6 +537,7 @@ function printProfileSummary(context: CommandContext, profile: ProfileResult): v
       `缓存命中 ${hits === undefined ? '-' : `${hits}/${requests ?? '-'}`}`,
       `JS/CSS 复用 ${formatBytes(reusedBytes)}/${formatBytes(decodedBytes)}（${reuseRate === undefined ? '-' : `${(reuseRate * 100).toFixed(1)}%`}）`,
       `HTML/API/其他 ${formatBytes(htmlBytes)}/${formatBytes(dataApiBytes)}/${formatBytes(otherBytes)}`,
+      ...(journey.journey === 'nav-switch' ? [`预取分类数 ${prefetchCount ?? '-'}`] : []),
     ];
     context.log.info(`[${profile.profile}] ${journey.journey}: ${parts.join(' | ')}`);
   }

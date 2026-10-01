@@ -44,7 +44,7 @@ const routes = {
   },
   adminSession: {
     endpoint: "/api/admin/session",
-    sceneCode: "admin.session_create",
+    sceneCode: "admin.session.create",
   },
   contentArticleList: {
     endpoint: "/api/admin/content/articles",
@@ -320,7 +320,7 @@ export function createDesktopApi(network: NetworkPort): DesktopApi {
             ),
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: input,
+            body: { sceneCode: routes.adminSession.sceneCode, ...input },
             timeoutMs: undefined,
           },
           z.unknown().transform(() => undefined),

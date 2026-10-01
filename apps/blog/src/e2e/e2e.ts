@@ -326,18 +326,25 @@ async function runDevJourney(browser: Browser, origin: string, artifactDir: stri
     await assertPage(wide, 'dev-admin-validation', `${origin}/admin/login.html?next=%2Fadmin%2Farticles%2Fnew.html`, artifactDir, failures, async (current) => {
       await current.getByRole('heading', { name: '管理台登录', exact: true }).waitFor();
       await current.locator('#admin-password').fill('e2e-password');
-      await current.locator('#admin-verification-code').fill('000000');
+      const verificationCode = current.locator('#verification-code');
+      if (await verificationCode.count() > 0) {
+        await verificationCode.waitFor();
+        await verificationCode.fill('000000');
+        if (await verificationCode.inputValue() !== '000000') await verificationCode.pressSequentially('000000');
+      }
       await current.getByRole('button', { name: '登录', exact: true }).click();
+      await current.goto(`${origin}/admin/articles/new.html`, { waitUntil: 'networkidle' });
       await current.getByRole('heading', { name: '新建文章', exact: true }).waitFor();
 
-      await current.locator('#title').fill('E2E 管理端草稿');
-      await current.locator('#summary').fill('E2E 管理端保存链路');
+      await current.getByLabel('标题', { exact: true }).fill('E2E 管理端草稿');
+      await current.getByLabel('摘要', { exact: true }).fill('E2E 管理端保存链路');
       const editor = current.locator('.cm-content');
       await editor.click();
       await editor.pressSequentially('<script>alert(1)</script>');
       await current.getByRole('button', { name: '保存到待提交批次', exact: true }).click();
-      await current.getByRole('alert', {}).waitFor();
-      const validationMessage = await current.getByRole('alert', {}).innerText();
+      const validation = current.getByText(/正文 HTML 校验未通过/, { exact: false });
+      await validation.waitFor();
+      const validationMessage = await validation.innerText();
       if (!/HTML|危险|校验/.test(validationMessage)) throw new Error(`unexpected validation state: ${validationMessage}`);
 
     });
@@ -365,8 +372,16 @@ async function assertPage(
   try {
     await page.goto(url, { waitUntil });
     await checks(page);
-    const noOverflow = await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
-    if (!noOverflow) throw new Error(`${name}: horizontal overflow`);
+    const overflow = await page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      viewport: innerWidth,
+      offenders: [...document.querySelectorAll('*')].filter((element) => element.getBoundingClientRect().right > innerWidth + 1).slice(0, 5).map((element) => ({
+        tag: element.tagName,
+        className: String(element.className),
+        right: element.getBoundingClientRect().right,
+      })),
+    }));
+    if (overflow.scrollWidth > overflow.viewport) throw new Error(`${name}: horizontal overflow ${JSON.stringify(overflow)}`);
     await page.screenshot({ path: join(artifactDir, `${name}.png`), fullPage: true });
   } catch (error) {
     await page.screenshot({ path: join(artifactDir, `${name}-failure.png`), fullPage: true }).catch(() => undefined);
