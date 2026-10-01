@@ -89,6 +89,10 @@ ops release both --yes
 
 命令不会覆盖已有 tag、不会修改服务器，也不会把 GitHub Actions 的异步结果当作本地成功；推送后需按输出的 workflow 地址检查 Release 资产、checksum、安装器 `--help` 和发布包清单。服务器更新仍单独执行 `redeploy` 并人工确认。
 
+## 服务器部署与网络预检
+
+服务器上的 `blog-deploy.mjs` 在 `deploy` / `redeploy` / `self-update` 下载或替换文件前执行统一网络预检（DNS → TCP → TLS → Release API → 资产可达），失败即终止并给出建议动作；下载带进度、分档超时与有限重试，下载后强制 SHA256SUMS 校验。加 `--dry-run` 只出预检报告，`--json` 输出 NDJSON 事件流与稳定错误码。排障入口与行为细节见 `deploy/README.md` 的"网络预检与下载行为"一节；常见网络故障（DNS 失败、TLS 证书、限流 429、资产 404）按预检结论的分类处理，`PREFLIGHT_FAILED` / `DOWNLOAD_FAILED` 带 `retryable=true` 时可稍后原样重试，`CHECKSUM_MISMATCH` 不要盲目重试。
+
 ## 管理端凭证
 
 首次启用管理端前运行 `ops admin credentials init`。该命令只允许在 stdin、stdout 和 stderr 都连接到 TTY 时运行，并在读取任何凭证或创建状态前拒绝管道与重定向；它会隐藏输入并确认密码，生成 Argon2id 密码哈希、TOTP secret 和 10 张一次性恢复码。密码和验证码不会进入进程参数或 ops 日志。TOTP secret 与恢复码只显示一次，应在当前终端完成验证器录入并把恢复码存入独立的安全位置。

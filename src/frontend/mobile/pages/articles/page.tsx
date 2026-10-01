@@ -80,8 +80,8 @@ export function createMobileArticlesPage(
                   when={search.state().snapshot?.data !== undefined}
                   fallback={<StateMessage kind="error" text="搜索失败，请稍后重试" onRetry={() => void search.refetch()} />}
                 >
-                  <p>找到 {search.state().snapshot?.data.total ?? 0} 篇文章</p>
-                  <For each={search.state().snapshot?.data.items ?? []}>
+                  <p>找到 {search.state().snapshot?.total ?? 0} 篇文章</p>
+                  <For each={search.state().snapshot?.items ?? []}>
                     {(article) => (
                       <a class="article-search-result" href={detailHref(article.id)}>
                         <strong>{article.title}</strong>

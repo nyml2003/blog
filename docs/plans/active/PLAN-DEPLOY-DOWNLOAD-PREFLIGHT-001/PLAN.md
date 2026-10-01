@@ -140,9 +140,9 @@ last_reviewed: 2026-10-01
 | --- | --- | --- | --- | --- |
 | 预检与输出契约 | deploy+qa | ops 输出标准化契约 | 本计划、错误码/事件 Spec、帮助与指南 | ready |
 | 网络客户端能力 | infra | 预检契约、`@fluvient/core` 原语统一 | `@fluvient/core/http` 传输内核、loom/net 适配收敛、`apps/blog-deploy/src/installer/**`、网络测试、超时/重试/进度适配 | done（内核与适配已交付；部署侧超时/重试参数随接线工作流落地） |
-| 三个命令接线 | deploy | 网络客户端能力 | `deploy`/`redeploy`/`self-update` runner、临时文件和安装步骤 | ready |
-| 输出消费者与文档 | qa+release | 事件模型、命令接线 | CI、运维脚本、`deploy/README.md`、operations guide、示例 | ready |
-| 受限网络验收 | qa+deploy | 上述工作流 | 网络模拟、隔离服务器演练、验收记录 | ready |
+| 三个命令接线 | deploy | 网络客户端能力 | `deploy`/`redeploy`/`self-update` runner、临时文件和安装步骤 | done(2026-10-01,含 18 项测试) |
+| 输出消费者与文档 | qa+release | 事件模型、命令接线 | CI、运维脚本、`deploy/README.md`、operations guide、示例 | done(文档与帮助已更新;CI/运维脚本消费者按需接入) |
+| 受限网络验收 | qa+deploy | 上述工作流 | 网络模拟、隔离服务器演练、验收记录 | pending(需真实受限网络环境) |
 
 网络客户端、installer runner、Release 资产协议属于共享写集，必须串行修改；网络测试可以使用独立 mock server，但不得把真实 GitHub 可达性写成必过的单元测试。
 
@@ -163,6 +163,16 @@ last_reviewed: 2026-10-01
 - 2026-10-01：内核与适配收敛完成，"三个命令接线"工作流的前置依赖已满足。
 - 错误码到 `SPEC-OPS-OUTPUT-001` 稳定码的映射留在 cli 侧，不下沉内核。
 - DNS/TCP/TLS 分层探测基于 `node:dns`/`node:net`/`node:tls`，属 Node 专用，不进内核，留在 blog-deploy。
+
+## 交付记录(2026-10-01)
+
+- 预检:`apps/blog-deploy/src/installer/preflight.ts`,DNS/TCP/TLS 探测可注入,资产 HEAD 优先、无 Content-Length 回退 `Range: bytes=0-0`;失败按分类给建议动作。
+- 下载:`release.ts` 改建在 `@fluvient/core/http` 上,流式写盘、分档超时(API 头 15s/总 30s;下载头 30s/空闲 60s/总 10min)、重试退避 3 次 1-8s(仅瞬断/超时/429/5xx)。
+- 输出:`reporter.ts` 统一阶段/进度/失败事件;TTY 进度条(未知总量不伪造百分比),非 TTY 周期进度,`--json` 纯 NDJSON(stdout 无人类文本,已端到端测试);稳定错误码 `PREFLIGHT_FAILED`/`DOWNLOAD_FAILED`/`CHECKSUM_MISMATCH` 附 `retryable`。
+- dry-run:三个命令均完成 Release 解析 + 网络预检并明确无副作用;`deploy` 预检含目标 tag/资产/大小/URL。
+- 安全:预检失败/下载失败/校验失败均不触碰旧文件;临时文件清理保留;`self-update` 锁/备份/回滚不变。
+- 验证:blog-deploy 18 项测试(含预检失败阻断、下载重试、进度条、JSON 纯净性、HEAD→Range 回退);全仓 typecheck/test 通过;esbuild 单文件 bundle(108.7kb)+ `--help` 冒烟通过。
+- 未完成:受限网络环境真实演练(成功标准 8 的最后一条);事件消费者(CI/运维脚本)未实际接入;默认超时/重试参数未在 2 核/2 GB 服务器实测标定(见未决项)。
 
 ## 未决项
 

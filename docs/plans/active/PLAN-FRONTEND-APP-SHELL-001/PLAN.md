@@ -93,8 +93,8 @@ last_reviewed: 2026-10-01
 | --- | --- | --- | --- | --- |
 | App Shell 包设计与契约 | frontend | - | `packages/app-shell/package.json`、公开入口、类型/纯函数、README、包测试 | completed |
 | App Shell 包验证与 pack smoke | frontend | 包设计与契约 | `packages/app-shell/test/**`、golden、package smoke/门禁补充 | completed |
-| 阶段闸门与应用接入决策 | 产品+pm | 包契约验收 | 本 PLAN.md 阶段状态、接入范围、阈值与顺序 | blocked |
-| Mobile 公共页 shell 试点（home/articles/detail） | frontend | 闸门 + 写集互核 | `pages.registry.ts`、`vite-plugins/page-template.ts`、Mobile shell 模板（新）、Mobile bootstrap 删壳逻辑、Mobile 样式、相关 e2e | blocked by 闸门 |
+| 阶段闸门与应用接入决策 | 产品+pm | 包契约验收 | 本 PLAN.md 阶段状态、接入范围、阈值与顺序 | completed for home pilot |
+| Mobile 公共页 shell 试点（home/articles/detail） | frontend | 闸门 + 写集互核 | `pages.registry.ts`、`vite-plugins/page-template.ts`、Mobile shell 模板（新）、Mobile bootstrap 删壳逻辑、Mobile 样式、相关 e2e | partial: home |
 | Desktop 公共页推广 | frontend | 试点验收 + 闸门确认纳入 | Desktop 对应 shell 模板（新）、bootstrap、样式、e2e | blocked |
 | 第二阶段验收与收尾 | qa+pm | 推广完成 | 性能/浏览器证据、RESULT.md | pending |
 
@@ -112,6 +112,14 @@ last_reviewed: 2026-10-01
 - 已通过：`tsc --noEmit -p packages/app-shell/tsconfig.json`、`tsx --test packages/app-shell/test/*.test.ts`、包 smoke，以及 `NPM_CONFIG_CACHE=/tmp/blog-app-shell-npm-cache npm pack --dry-run --json`。pack 清单只包含 README、package.json、源码和 CSS。
 - `ops package check` 的平台中立性检查触达新包且未报告新包违规；统一门禁随后被当前工作树既有的 `@fluvient/core` 迁移/锁文件漂移阻断（`package.json` 与 `pnpm-lock.yaml` 的 workspace 依赖不一致），未能取得全工作区门禁通过证据。
 - 第一阶段不发布公共 npm，不接入博客页面；第二阶段仍需阶段闸门、写集互核和应用验收证据后再启动。
+
+### 移动端首页接入记录（2026-10-01）
+
+- 已在 `mobile-home` registry 条目接入 `@fluvient-loom/app-shell`：构建期模板在 `#app` 前注入 shell HTML 与关键 CSS，壳存在时隐藏应用挂载点，避免首帧出现两套加载态。
+- 已在首页 bootstrap 接入删壳回调：推荐请求首次进入成功、错误或空结果等确定状态后移除 shell；启动失败也会移除 shell 并显示现有错误态。
+- 首页刷新筛选时继续消费 query resource 的 `latest`，已有内容保持可见并标记 `aria-busy`，首次加载仍使用现有 `StateMessage`。
+- 主题样式为 shell 提供 paper/dark/sepia 与字体变量映射；articles/detail/Desktop 尚未接入。
+- 已通过：app-shell 4 项测试、page-template/page-bootstrap 8 项测试、定向 TypeScript 检查和改动文件格式检查。全量前端类型检查仍被工作树既有的 `mobile/features/search/model.ts` 可变/只读数组类型错误阻断。
 
 ## 集成验收
 

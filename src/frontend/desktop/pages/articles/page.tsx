@@ -36,7 +36,7 @@ export function createDesktopArticlesPage(input: DesktopPageContext): Component 
             <div class="search-results" aria-live="polite">
               {search.state().status === "loading" ? <p>正在搜索...</p> : null}
               {search.state().status === "error" ? <p role="alert">搜索失败，请重试。</p> : null}
-              <Show when={search.state().snapshot?.data !== undefined}>{(snapshot) => <><p>找到 {snapshot().data.total} 篇文章</p><For each={snapshot().data.items}>{(article) => <a class="article-search-result" href={routeWithQuery(input.routes, "desktop-public-detail", { id: article.id, q: query })}><strong>{article.title}</strong><span>{article.summary}</span></a>}</For></>}</Show>
+              <Show when={search.state().snapshot !== undefined}>{(snapshot) => <><p>找到 {snapshot().total} 篇文章</p><For each={snapshot().items}>{(article) => <a class="article-search-result" href={routeWithQuery(input.routes, "desktop-public-detail", { id: article.id, q: query })}><strong>{article.title}</strong><span>{article.summary}</span></a>}</For></>}</Show>
             </div>
           ) : (
             <div class="t-shelf">

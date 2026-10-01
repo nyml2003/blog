@@ -25,7 +25,17 @@ export function useMobileSearch(input: {
             status: undefined,
             issues: undefined,
           });
-        return result;
+        return {
+          ok: true as const,
+          value: {
+            ...result.value,
+            items: result.value.items.map((item) => ({
+              ...item,
+              termIds: [...item.termIds],
+              terms: [...item.terms],
+            })),
+          },
+        };
       },
       mapRejected() {
         return {
