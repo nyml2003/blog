@@ -73,4 +73,7 @@ last_reviewed: 2026-10-01
 
 - 实施时二期改动仍未提交：`mobile-prefetch.ts` 以未跟踪状态迁至新路径，`vite.config.ts` 基于含二期改动的最新工作树内容编辑，未回退任何改动；二期提交时将自然携带新路径。
 - `tsconfig.json` include 未加 `vite-plugins`（沿用原 `build/` 的处理：经 `vite.config.ts` 与测试的 import 图纳入 typecheck）。
-- 归档待用户验收。
+
+### 收尾（2026-10-01）
+
+用户验收通过，归档。无遗留阻塞；二期未提交改动的提交路径说明见上。

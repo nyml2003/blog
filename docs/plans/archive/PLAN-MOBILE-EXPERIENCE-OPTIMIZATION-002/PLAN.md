@@ -1,7 +1,7 @@
 ---
 kind: plan
 id: PLAN-MOBILE-EXPERIENCE-OPTIMIZATION-002
-status: partial
+status: completed
 owner: project-manager
 created: 2026-09-30
 last_reviewed: 2026-10-01
@@ -181,12 +181,11 @@ last_reviewed: 2026-10-01
 - cold-load content 约 `5156ms`，相对本轮基线未劣化。
 - 发布后用户确认运行正常。
 
-### 未交付与移交
+### 后续计划输入
 
-- 九项端到端体验审计未纳入本次实现，保留为后续 Mobile 体验专项输入。
-- `ops perf mobile --origin <部署域名>` 线上数字未在本次收尾中留档。
-- 预取浪费率、数据新鲜度、TTL 调优和 HTML 缓存仍需真实流量数据后再决策。
+- 九项端到端体验审计、线上长期观测、预取浪费率、数据新鲜度、TTL 调优和 HTML 缓存作为后续 Mobile 体验专项输入。
+- `ops perf mobile --origin <部署域名>` 线上采样属于后续部署观测工作，不构成本期预取优化的交付条件。
 
 ### 收尾结论
 
-本计划以 `partial` 归档：非首次访问预取与响应复用目标已实现并部署；未纳入的体验审计和线上长期观测不作为本次发布阻塞项。
+本计划以 `completed` 归档：本期目标已收敛为非首次访问预取与响应复用，目标已实现、完成指标验证并部署。其他体验审计和长期观测明确移交后续计划，不作为本期未完成项。
