@@ -10,16 +10,19 @@ Plan 面向一个跨职能、可验收的产品结果，不面向单个文件或
 
 当前 active：
 
+- [PLAN-FRONTEND-FSD-RESTRUCTURE-001](./active/PLAN-FRONTEND-FSD-RESTRUCTURE-001/PLAN.md)：前端目录重组——从按技术层改为按功能切片（两平台世界 + foundation/domain/protocol），行为零变化的纯位置重构；核心交付是"依赖只向下、同层不互引"的机械化门禁，需修订 SPEC-ARCH-BOUNDARY-001；与组件体验/检索/App Shell 等计划写集重叠，时机是闸门第一题。2026-10-01 立项，状态 ready。
 - [PLAN-FRONTEND-APP-SHELL-001](./active/PLAN-FRONTEND-APP-SHELL-001/PLAN.md)：前端 App Shell 与不抖骨架屏——HTML 模板注入页面框架与骨架（内联关键 CSS），JS 挂载前即可渲染；建立几何一致、迟到流光、刷新旧内容顶住三条不抖纪律，配 e2e layout-shift 断言。承接一期白屏窗口暂缓项，与 SW 预取互补；Mobile 公共页试点先行，Desktop 纳入与否经闸门确认。2026-10-01 立项，状态 ready。
 - [PLAN-SEARCH-001](./active/PLAN-SEARCH-001/PLAN.md)：全文检索与搜索词高亮——从零建立文字搜索（现状"文章检索页"实为分类浏览）：标题/摘要/正文检索、结果列表高亮、详情页文内高亮定位；SQLite FTS 中文分词方案以 spike 数据经闸门选定，索引与快照同事务，性能预算约束在 2C2G 单机。2026-10-01 立项，状态 ready。
-- [PLAN-NAV-ACTIONS-001](./active/PLAN-NAV-ACTIONS-001/PLAN.md)：公开 Mobile 顶栏升级为后退/搜索/收藏/分享/更多；页面级 BFF 以 `modules[]` 聚合页面和导航数据，收藏纯本地，分享归因明细保留 90 天。2026-10-01 立项并完成，状态 completed；Desktop 后续另立计划。
 - [PLAN-FRONTEND-CODEC-PERSISTENCE-001](./active/PLAN-FRONTEND-CODEC-PERSISTENCE-001/PLAN.md)：Codec/Persistence 原语包抽取——把产品定款的持久化分层方案（业务/Codec/编排/Port/存储）先抽成 workspace 包独立验收：common 增补 `LoomError`+`cause`、新建 `@fluvient-loom/codec`（含单测，作为模板包）、persistence 原语归属闸门定、ADR 留档；前端接入归边界归一化计划试点。2026-10-01 立项，状态 ready。
 - [PLAN-MOBILE-COMPONENT-EXPERIENCE-001](./active/PLAN-MOBILE-COMPONENT-EXPERIENCE-001/PLAN.md)：Mobile 组件与交互体验专项——吸顶问题（header 已声明 sticky 但疑似被祖先 overflow 破坏，先复现归因再修）先行，组件交互盘点后经闸门确认本轮修复项，真机/浏览器证据验收。2026-10-01 立项，状态 ready。
-- [PLAN-FRONTEND-BOUNDARY-NORMALIZATION-001](./active/PLAN-FRONTEND-BOUNDARY-NORMALIZATION-001/PLAN.md)：前端边界归一化专项——按既有 TS 规范收敛"外部输入在边界归一化"的执行偏差：防御式代码全量盘点分类后，经决策闸门确认范围与方案，试点先行、行为零变化地推开。2026-10-01 立项，状态 ready。
 - [PLAN-CONTAINER-DEPLOYMENT-001](./active/PLAN-CONTAINER-DEPLOYMENT-001/PLAN.md)：低资源单机容器部署——结合现有 Product/Data、SQLite、nginx、systemd 和 Release，设计 2 核 2 GB 服务器上的可靠容器运行、备份、升级与回滚方案。2026-09-29 立项，状态 ready。
 - [PLAN-DEPLOY-DOWNLOAD-PREFLIGHT-001](./active/PLAN-DEPLOY-DOWNLOAD-PREFLIGHT-001/PLAN.md)：部署预检与产物下载可观测性——在部署下载前检查网络可达性，统一阶段提示、进度、重试、错误诊断和机器输出。2026-09-30 立项，状态 ready。
 
 已归档：
+
+- [PLAN-NAV-ACTIONS-001](./archive/PLAN-NAV-ACTIONS-001/PLAN.md)：Mobile 顶栏操作——页面级 BFF 以 `modules[]` 聚合页面与导航数据，导航组件只消费归一化后的 `MobileNavigation`；收藏走本地 `PersistencePort`（无读者账号），分享归因服务端校验 token、明细保留 90 天；品牌区移除。`ops quality check`、E2E、perf 均通过。2026-10-01 立项并同日以 `completed` 收尾；Desktop 侧另立计划。
+
+- [PLAN-FRONTEND-BOUNDARY-NORMALIZATION-001](./archive/PLAN-FRONTEND-BOUNDARY-NORMALIZATION-001/PLAN.md)：前端边界归一化——URL 参数/日期/taxonomy/编辑会话/设置解析集中到边界层（`route-input`、`taxonomy-input`、`editor-session-storage`、`settings-model+storage`、`category-input`），分类树回退定为 D 类保留并注释锚定；行为零变化，防御式写法显著下降。共享 persistence 协议双重缺失语义与 style guide 补严移出为后续项。2026-10-01 立项并同日以 `completed` 收尾；盘点见 INVENTORY.md。
 
 - [PLAN-FRONTEND-CSS-COMPATIBILITY-001](./archive/PLAN-FRONTEND-CSS-COMPATIBILITY-001/PLAN.md)：前端 CSS 兼容性防线——本轮采纳动态层：`ops e2e` 落地 Mobile 公开页 5 页 × 4 类布局/CSS 行为断言（吸顶、底栏常驻、safe-area 链路、横向溢出，覆盖约 85%），四类断言均有"注入坏样式→变红"有效性证据；确认当前 Chrome 下 `overflow-x: clip` 不破坏 sticky，归因方向移交组件体验计划；GLOSSARY 落地首条 CSS 踩坑条目。浏览器基线、静态 lint、视觉回归推迟。2026-10-01 立项并同日以 `completed` 收尾。
 
