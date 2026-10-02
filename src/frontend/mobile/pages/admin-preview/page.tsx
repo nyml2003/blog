@@ -1,20 +1,18 @@
-import { ArrowLeft } from "lucide-solid";
 import { For, Show, type Component } from "solid-js";
-import type { MobileRouteContext } from "../../foundation/context";
+import type { MobilePageContext } from "../../foundation/context";
 import type { MobileApi } from "../../foundation/api";
-import { type NavigationPort } from "@fluvient-loom/port";
 import { routeWithQuery } from "../../foundation/context";
 import { useMobileAdminPreview } from "../../features/admin-preview/model";
 import { ArticleBody } from "../../widgets/article-body/ui";
+import { Navigator } from "../../widgets/shell/navigator";
 import { Heading, Link, StateMessage, Tag, Text } from "../../foundation/ui";
 import {
   displayDate,
   positiveIdFromSearch,
 } from "../../../validation/route-input";
 
-type MobileAdminPreviewInput = MobileRouteContext & {
+type MobileAdminPreviewInput = MobilePageContext & {
   readonly api: MobileApi;
-  readonly navigation: NavigationPort;
 };
 
 export function createMobileAdminPreviewPage(
@@ -45,23 +43,22 @@ export function createMobileAdminPreviewPage(
     };
     return (
       <div class="mobile-shell mobile-preview-page">
-        <header class="reading-bar">
-          <Link
-            content={
-              <>
-                <ArrowLeft size={18} aria-hidden="true" />
-                <span>返回编辑</span>
-              </>
-            }
-            href={
-              article()
-                ? editHref(article()!.id)
-                : routeWithQuery(input.routes, "desktop-admin-home", {})
-            }
-            options={{}}
-          />
-          <span>已保存版本</span>
-        </header>
+        <Navigator
+          context={input}
+          leftIcons={["back"]}
+          leftLabel="返回编辑"
+          leftHref={
+            article()
+              ? editHref(article()!.id)
+              : routeWithQuery(input.routes, "desktop-admin-home", {})
+          }
+          title="已保存版本"
+          browserNavigation={input.navigation}
+          persistence={input.persistence}
+          document={input.document}
+          share={input.share}
+          className="reading-bar"
+        />
         <main id="main" class="mobile-main detail-main">
           <Show
             when={detail.state().status !== "loading"}

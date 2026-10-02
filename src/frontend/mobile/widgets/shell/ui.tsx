@@ -2,7 +2,7 @@ import type { JSX } from "solid-js";
 import type { MobileRouteContext } from "../../foundation/context";
 import { mobileNavigationItems } from "../../features/navigation/model";
 import { BottomNav } from "./bottom-nav";
-import { MobileNav } from "./mobile-nav";
+import { Navigator } from "./navigator";
 import type { MobileNavigation } from "../../foundation/api";
 import type {
   DocumentPort,
@@ -24,7 +24,7 @@ export interface MobileShellProps {
 export function MobileShell(props: MobileShellProps) {
   return (
     <div class="mobile-shell">
-      <MobileNav
+      <Navigator
         context={props.context}
         navigation={props.navigation}
         browserNavigation={props.browserNavigation}

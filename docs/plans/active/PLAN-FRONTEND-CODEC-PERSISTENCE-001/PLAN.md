@@ -1,96 +1,126 @@
 ---
 kind: plan
 id: PLAN-FRONTEND-CODEC-PERSISTENCE-001
-status: ready
+status: partial
 owner: project-manager
 created: 2026-10-01
-last_reviewed: 2026-10-01
+last_reviewed: 2026-10-02
 ---
 
 # Codec/Persistence 原语包抽取
 
 ## 目标
 
-把产品已定稿的持久化分层方案（业务 / Codec / 编排 / Port / 存储实现，2026-10-01 对话留档）先以 workspace 包形式落地：**先抽包、独立验收，前端接入后置**。本轮交付：
+把已经确定的持久化分层落成可独立验收的 workspace 原语：业务类型、Codec、编排、Port、存储实现各自有清楚边界。本轮先交付共享原语和契约，settings 等业务接入后置。
 
-1. `@fluvient-loom/core`（原 `common`，FSD 重组中已与 `query` 合并）原语增补：`LoomError`（带 `cause` 透传）与 `createError`；
-2. `@fluvient-loom/codec` 新包：`Codec<T>` / `createJsonCodec` / `CodecError`，完整实现 + 单测，作为后续包的模板；
-3. persistence 原语（`PersistPlan` 及对应 port 签名演进）——归属经闸门确认后落地；
-4. ADR：把方案第八节的刻意取舍（序列化不进 port、PersistPlan、codec 只认 string、错误联合、读缺省返回默认值）留档评审；
-5. **错误保真度收敛**（2026-10-01 产品补充）：`LoomError` 落地后必须被消费——消灭域代码里 `cause instanceof Error ? cause.message : "…"` 的压扁模式，cause 链端到端保留；只有原语没有消费侧等于白做。
+本轮交付：
 
-前端接入（settings 迁移到该栈）不在本计划本轮——接入去向见"决策闸门"。
+1. 在现有 `@fluvient/core`（`packages/core`）基于已有 `Result` 增加 `ErrorInfo`、`SerializableFailure`、`SerializableResult`、`toErrorInfo` 和 `isSerializableFailure`；
+2. 新建 `@fluvient-loom/codec`，实现 `Codec<T>`、`createJsonCodec`、`CodecError` 及可复制的单测模板；
+3. 在 persistence 归属闸门通过后落地 `PersistPlan` 和对应 Port 原语；
+4. 为序列化不进入 Port、`PersistPlan`、Codec 只认 string、错误联合和读缺省返回默认值建立 ADR；
+5. 收敛当前已发现的错误压扁点：原语必须有消费侧，未知 `cause` 必须转换为可序列化 `ErrorInfo`，不能把原生 `Error` 放进跨边界 `Result`。settings 迁移本身不在本轮。
 
-## 设计输入（产品已决策，本计划不重开）
+## 计划价值
 
-以下为已定架构，实现不得偏离；细节以对话留档全文为准：
+- **降低接入风险**：后续 settings 只组合领域模型、Codec 和 Port，不再重复实现 JSON 解析、默认值和存储异常处理。
+- **固定跨包协议**：`Codec` 和 `PersistPlan` 先独立验收，避免业务接入时同时改变 `port`、`web` 和页面代码。
+- **保留故障证据**：当前多个边界把异常压成字符串，调用方丢失错误名、错误码和错误链；统一的可序列化投影后，日志、重试和上层错误映射可以保留上下文，同时不会把运行时对象泄漏到 Port、Codec 或 UI 进程。
+- **控制架构漂移**：ADR 把本轮取舍写成可追溯事实，后续新增存储实现或业务接入不必重新解释分层边界。
 
-- **分层边界**：业务只认领域类型；Codec 层对象⇄字符串纯函数；编排层业务意图→`PersistPlan`；Port 只认 key+string；存储实现只写字节。
-- **Codec 铁律**：只认 `string` 不认二进制（二进制另包 transport codec）；`encode`/`decode` 绝不抛异常，全走 `Result`；`validate`/`normalize` 是可选钩子，不绑 schema 库；`normalize` 负责裁掉未知字段防旧数据写回污染。
-- **PersistPlan**：`write(plan: PersistPlan)` 而非 `(key, string)`，为版本/时间戳/批处理预留；序列化不在 port 里做。
-- **错误模型**：`LoomError` 带 `cause` 全链路透传；领域错误是联合（`settings | codec | persistence`）靠 `kind` 区分，不做 class 继承。
-- **编排层是纯函数**不是类；`prepare` 中算 plan 走 `Result`、不 reject；`execute`/`compensate` 共用 `applyPlan`。
-- **读路径缺数据返回默认值**是产品决策；换产品语义时改那一处即可。
-- 方案中的 settings 字段（light/dark/system、locale、notifications）仅为示例，不构成契约；接入时以真实领域模型（paper/dark/sepia + font）与真实 key（含 legacy 迁移）为准。
+## 当前执行记录（2026-10-02）
 
-## 当前基线（2026-10-01 复核，FSD 重组后）
+本次已交付：
 
-- **包布局已变**：`packages/common` 与 `packages/query` 已在 FSD 重组（`c89cae3`）中合并为 `packages/core`（现有 `Result`/`ok`/`err`/`DeepReadonly`/`resource`/`cancellation`，**无** `LoomError`/`createError`）；本计划写集以 `core` 为准。`packages/port`（`PersistencePort`/`combinators`/`PersistenceFailure`）与 `packages/web`（localStorage 适配器）仍在。**无 codec 包**。
-- **错误保真度现状**（产品 2026-10-01 指认的债务）：`throw` 纪律已落地（域代码仅 4 处、全在 bootstrap 启动级）；但拒绝路径的压扁模式遍布——`cause instanceof Error ? cause.message : "请求执行失败"` 至少 5 处：`mobile/features/settings/model.ts:48`、`mobile/features/detail/model.ts:86`、`mobile/foundation/api/client.ts:89`、`mobile/pages/settings/page.tsx:64`、`desktop/foundation/api/client.ts:308`——unknown rejection 被压成字符串，stack 与 cause 链丢失。
-- **接入端背景已迁移**：settings 已在边界归一化计划中拆为 `mobile/features/settings/{model,storage}.ts`（该计划已归档）；legacy key 双写问题（`mobile-nav.tsx:68` 直写 `blog.mobile.theme`）仍在，是接入阶段的顺手修复项。
-- 包门禁：`ops package check`（平台中立护栏 + typecheck/test/smoke）；npm 发布决策沿用 `PLAN-FRONTEND-INFRASTRUCTURE-PACKAGES-001` 收尾记录，默认不发布。
+- `@fluvient/core` 新增 `ErrorInfo`、`SerializableFailure`、`SerializableResult`、`toErrorInfo`、`isJsonValue` 和 `isSerializableFailure`；`Error` 的 cause 会被投影为有限的纯对象，默认不传播 stack，并处理循环与深度上限。
+- `PersistencePort`、`NetworkPort`、`JsonRequester` 的失败返回改用 `SerializableResult`；web persistence、HTTP/network、query task 的已知异常路径会附带可序列化 `cause`。
+- 移除本计划原先的 `LoomError`/`createError` 目标；内部 `DataTask` 等编排泛型继续通用，避免把本地测试错误误当成跨边界协议。
 
-## 决策闸门（实现前确认，均为方案留白或与现状的接缝）
+尚未交付：Codec 包、`PersistPlan`、ADR、剩余错误压扁点的逐项迁移和 settings 接入。当前证据为 core、web、net、query 相关测试通过，以及 workspace `pnpm typecheck` 通过；全量质量门禁和浏览器验收尚未执行。
 
-- **persistence 原语归属**：新建 `@fluvient-loom/persistence` 包，还是演进展 `@fluvient-loom/port`（既有 `PersistencePort` 消费者：web 适配器、前端 habitat、combinators）——影响签名迁移面，实现方给方案后定。
-- **port `read` 的 `string | null`**：与 TS 规范"领域缺失用 `undefined`、外部 null 边界归一化"的接缝——port 是边界，`null` 可表示原生缺失，但消费侧归一化到 `undefined` 的位置要在接入时钉死。
-- `codec` 是否本轮就带 zod 适配示例（`validate` 钩子接 `safeParse`）或留到接入再加。
-- ADR 编号与归档位置（`docs/architecture/` 决策记录惯例是否已有，无则本 ADR 定格式）。
+## 已确认的设计输入
+
+以下是实现约束，不在本计划内重新讨论：
+
+- **分层边界**：业务只认领域类型；Codec 做对象与字符串之间的纯转换；编排层把业务意图转换为 `PersistPlan`；Port 只认 key 和 string；存储实现只处理字节或宿主 API。
+- **Codec 铁律**：只认 `string`，二进制另设 transport codec；`encode`/`decode` 全部返回 `Result`，不得抛出；`validate`/`normalize` 是可选钩子，不把 schema 库放进 Codec 本体；`normalize` 可裁掉未知字段，避免旧数据被原样写回。
+- **PersistPlan**：Port 的写入口使用 `write(plan: PersistPlan)`，为版本、时间戳和批处理预留；序列化不放进 Port。
+- **错误模型**：`Result<T, E>` 仍是控制流原语；具体跨 Port、Codec、Persistence 和 UI 边界的 failure DTO 使用 `SerializableResult` 约束，运行时用 `isSerializableFailure` 校验不可信输入。原生 `Error`/`unknown` 只能在 catch 边界通过 `toErrorInfo` 转成纯对象。内部编排泛型可以暂时保持通用，但不得把原生 `Error` 暴露给公开协议。领域错误使用带 `kind` 的联合，不通过 class 继承表达 settings、codec、persistence 的差异。
+- **编排层**：使用纯函数；`prepare` 通过 `Result` 返回计划，不 reject；`execute` 与 `compensate` 共用 `applyPlan`。
+- **读路径**：缺数据返回领域默认值；产品语义变化时只修改该处。
+- 方案中的 settings 字段只是示例；未来接入使用真实模型（paper/dark/sepia + font）和真实 key（含 legacy 迁移）。
+
+## 当前基线（2026-10-02 复核）
+
+- 共享原语包是 `@fluvient/core`，目录为 `packages/core`；它已有 `Result`、`DeepReadonly`、`resource`、`cancellation` 和 `/http`，本轮新增可序列化错误投影，不新增全局错误 class。
+- `@fluvient-loom/query` 仍是独立包，未与 `@fluvient/core` 合并；`packages/common` 不存在。所有写集和依赖名以当前 workspace 为准。
+- `@fluvient-loom/port` 已有 `PersistencePort`、`AsyncPersistencePort` 和 `PersistenceFailure`；当前 `read` 返回 `string | undefined`，`packages/web` 已将 `localStorage` 的 `null` 在边界归一化为 `undefined`。本轮不再把 `string | null` 作为待决语义。
+- 边界归一化计划已归档并完成，且明确保持 `@fluvient-loom/port`/`web` 协议不变；本计划应把它视为前置结果，不再引用为 active 依赖。
+- settings 已拆到 `src/frontend/mobile/features/settings/`，当前 `mobile-nav.tsx` 仍直接写 `blog.mobile.theme`，属于后续接入迁移的已知事项。
+- 错误压扁扫描基线不是“至少 5 处”：当前至少有 12 个相关点，包含 `cause instanceof Error ? cause.message : ...` 和 `String(error)` 路径，分布在 `src/frontend`、`packages/query`、`packages/web`、`packages/core/http`、`packages/net` 和 `packages/mobile-prefetch`。实现前需按错误契约逐处分类，不能只修原先列出的 5 个前端点。
+- 本计划尚未取得新的 `ops package check` 结果；执行时必须记录新包检查结果，并区分已有 workspace/lockfile 或中立性护栏失败与本计划引入的失败。
+
+## 本轮范围与非目标
+
+本轮范围：
+
+- `packages/core` 的可序列化错误原语，并把公开跨边界 failure 逐步约束到 `SerializableResult`；
+- 新建 `packages/codec`；
+- persistence 原语及其归属、签名和兼容路径的决策与实现；
+- 错误压扁点的逐处消费改造，保持用户可见文案和业务结果不变；
+- ADR、测试和交付证据。
+
+非目标：
+
+- 不把 settings 迁移到 Codec/Persistence 栈，不改真实 settings 领域模型和 legacy 迁移流程；
+- 不在未通过闸门前修改现有 `PersistencePort` 签名或 `packages/web` 行为；
+- 不发布 npm，不做二进制 Codec，不把 zod 或其他 schema 库作为 `@fluvient-loom/codec` 的运行时依赖；
+- 不定义新的错误码体系，不改 `SPEC-OPS-OUTPUT-001`；
+- 不改变用户可见业务行为。错误对象可增加 `cause`，但 message、Result 成功/失败语义和页面流程保持不变。
+
+## 决策闸门
+
+1. **Persistence 归属**：默认优先演进 `@fluvient-loom/port`，因为现有 `web`、`node`、`query`、`command` 和前端都从这里消费；只有需要独立发布、独立依赖或不同演进节奏时才新建 `@fluvient-loom/persistence`。决策记录需列出消费者、迁移面和兼容策略。
+2. **PersistPlan 契约**：在 ADR 中写明 plan 的字段、版本/时间戳是否可选、批处理表示方式、同步/异步 Port 的对应签名，以及旧 `(key, value)` 实现如何过渡。本轮不以 `null` 作为缺失语义，读缺省统一沿用现有 `undefined` 边界。
+3. **Codec 契约**：在编码前固定 `Codec<T>`、`createJsonCodec`、`CodecError` 的字段和 `validate`/`normalize` 调用顺序；本轮不提供 zod 适配示例，zod 继续由业务边界自行使用。
+4. **错误保真度范围**：逐处处理基线扫描出的 12 个错误压扁点；若某处必须只保留字符串，需在结果记录中写明边界理由和测试证据。公开 failure 只能携带 `ErrorInfo` 等纯数据，禁止携带原生 `Error`、Promise、函数、DOM、二进制对象或未验证的任意对象。
+5. **ADR 位置**：新建 `docs/architecture/codec-persistence.md`，采用现有架构文档的 Markdown 形式并带 `kind`、`id`、`status`、`date` 元数据；同步在 `docs/architecture/README.md` 增加入口。
 
 ## 成功标准
 
-1. `common` 增补落地：`createError`/`LoomError` 带 `cause` 透传，全部既有包 typecheck/test 不破。
-2. `@fluvient-loom/codec` 落地：`encode`/`decode` 全路径返回 `Result` 不抛异常（用异常注入测试证明）；`validate` 拒绝、`normalize` 裁剪、`JSON.stringify` 返回 `undefined` 兜底均有边界单测。
-3. persistence 原语（闸门定归属后）落地且现有 `PersistencePort` 消费者迁移路径明确（本轮不强制迁移，但路径成文）。
-4. `ops package check` 对新包通过；单测以 `codec` 包为后续包的模板（覆盖度与写法可复制）。
-5. ADR 留档并通过产品评审。
-6. 前端行为零变化：不 import 新包，构建产物不变。
-
-## 非目标
-
-- 不接入前端、不迁移 `logic/settings.ts`（归 `PLAN-FRONTEND-BOUNDARY-NORMALIZATION-001` 试点）。
-- 不改现有 `PersistencePort` 签名与 `packages/web` 适配器行为（除非闸门明确迁移路径并单独实施）。
-- 不发布 npm；不做二进制 codec；不引入 schema 库依赖进 codec 包本体。
-- 不定义新错误码体系或改动 `SPEC-OPS-OUTPUT-001`。
-
-## 约束与依据
-
-- 平台中立：`codec`/`common` 不得依赖 DOM、Node API 或 Solid（`ops package check` 护栏会拦）。
-- 写集协调：与 `PLAN-FRONTEND-BOUNDARY-NORMALIZATION-001`（active）在接入阶段衔接——本计划产包、彼计划消费；`common`/`port` 是共享协议，签名演进走闸门并核对全部消费者（blog 前端、playground、ops cli 包）。
-- 方案全文（对话留档）为设计事实源；ADR 落地后以 ADR 为准。
+1. `@fluvient/core` 提供 `ErrorInfo`、`SerializableFailure`、`SerializableResult`、`toErrorInfo`、`isJsonValue` 和 `isSerializableFailure`；未知抛出值、cause 循环和深度上限均有测试，公开 failure 不携带原生 `Error`；现有 core、port、query、web、node、net 及前端 typecheck/test 不回归。
+2. `@fluvient-loom/codec` 的 `encode`/`decode` 所有路径返回 `Result` 不抛出；异常注入、非法 JSON、`validate` 拒绝、`normalize` 裁剪和 `JSON.stringify` 返回 `undefined` 均有单测。
+3. persistence 闸门形成书面决策；选定包提供 `PersistPlan` 和对应 Port 原语；现有消费者的迁移路径、兼容期和不迁移部分明确记录。
+4. 错误压扁清单逐项关闭或有书面例外；未知 `cause` 不被无理由丢弃，用户可见 message 和业务结果保持不变。
+5. ADR 覆盖所有已确认取舍并完成产品评审；不再以对话留档作为唯一事实源。
+6. 新包通过 `ops package check` 的相关步骤；跨共享包改动补跑 `ops quality check`，失败项按基线与本计划引入项区分。
+7. 不导入新 Codec/Persistence 包到 settings 或页面，前端构建和运行行为保持不变。
 
 ## 工作流
 
 | 工作流 | Owner | 依赖 | Write set | 状态 |
 | --- | --- | --- | --- | --- |
-| common 原语增补 | frontend | - | `packages/common/src/`、其测试 | ready |
-| codec 包实现与单测 | frontend | common 增补 | `packages/codec/`（新建） | blocked by common |
-| ADR 起草 | frontend+pm | -（可并行） | `docs/architecture/` 或闸门定位置 | ready |
-| 闸门：persistence 归属等 | 产品+pm | codec 包成型 | 本 PLAN.md 决策记录 | blocked |
-| persistence 原语落地 | frontend | 闸门 | 闸门定归属的包 | blocked by 闸门 |
-| 收尾：包模板总结与移交 | pm | 全部落地 | RESULT.md、boundary plan 移交记录 | pending |
+| 基线清单与错误点分类 | frontend+qa | - | 本计划执行记录或 `RESULT.md` | ready |
+| core 可序列化错误原语 | frontend | - | `packages/core/src/`、`packages/core/test/` | completed |
+| codec 包实现与单测 | frontend | core 错误原语的类型/错误约定 | `packages/codec/`（新建） | blocked by core |
+| ADR 起草 | frontend+pm | - | `docs/architecture/codec-persistence.md`、架构索引 | ready |
+| Persistence 归属与契约闸门 | 产品+pm | 基线清单、codec 契约草案 | 本计划决策记录 | blocked |
+| persistence 原语落地 | frontend | 闸门通过 | `packages/port/` 或闸门选定的新包 | blocked by gate |
+| 错误消费改造 | frontend | core 错误原语、错误契约 | 清单中列出的 `src/`、`packages/` 文件及测试 | blocked by core/contract |
+| 收尾与移交 | pm | 全部工作流、质量证据 | `RESULT.md`、后续 settings 接入说明 | pending |
 
-## 集成验收
+## 验收证据
 
-1. 异常注入证明：对 `encode`/`decode` 传入会抛的实现（如循环引用、非法 JSON）断言返回 `err` 且 `cause` 保留。
-2. 既有消费者回归：全部 `@fluvient-loom/*` 包与前端 typecheck、`ops package check` 通过。
-3. 前端 `vite build` 产物清单与改前一致（零接入证明）。
-4. ADR 覆盖方案第八节全部取舍点，产品评审通过。
+1. Codec 对循环引用、非法 JSON 和异常钩子注入返回 `err`，并能断言原始 `cause`；
+2. 共享包消费者和前端 typecheck/test 通过；`ops package check`、必要的 `ops quality check` 结果带命令、退出码和已知基线失败；
+3. 前端构建产物和运行行为无用户可见变化；本轮不以“未 import 新包”替代错误消费改造的证据；
+4. ADR 的取舍、Persistence 迁移路径、错误点清单和例外理由均可从仓库文件追溯。
 
 ## 未决项
 
-- persistence 原语归属（新包 vs 演进 port 包）——闸门第一题。
-- port `read` null 语义与规范 `undefined` 条款的归一化位置——接入时钉死。
-- zod 适配示例是否本轮纳入。
-- ADR 格式与归档位置。
-- npm 发布时机（沿用既有未决记录）。
+- Persistence 原语继续演进 `@fluvient-loom/port`，还是新建独立包；
+- `PersistPlan` 的最小字段和旧 Port 的兼容过渡方式；
+- `Codec<T>`/`CodecError` 的最终字段和钩子顺序；
+- 各错误消费者公开 failure 的 `kind`、`code`、`details` 和 `cause` 最小字段；
+- ADR 产品评审结论；
+- npm 发布时机（沿用既有基础设施包收尾记录）。

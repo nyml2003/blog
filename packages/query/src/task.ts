@@ -8,6 +8,7 @@ import {
   type DeepReadonly,
   type ResourceHandle,
   type Result,
+  toErrorInfo,
 } from "@fluvient/core";
 import type {
   CancellationSourceFactory,
@@ -25,6 +26,7 @@ function taskFailure(cause: unknown): TaskFailure {
   return {
     kind: "task",
     message: cause instanceof Error ? cause.message : String(cause),
+    cause: toErrorInfo(cause),
   };
 }
 

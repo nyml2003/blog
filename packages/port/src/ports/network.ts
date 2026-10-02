@@ -1,7 +1,8 @@
 import type {
   CancellationFailure,
   CancellationSignal,
-  Result,
+  ErrorInfo,
+  SerializableResult,
 } from "@fluvient/core";
 
 export type NetworkMethod = "GET" | "POST" | "DELETE";
@@ -24,10 +25,11 @@ export interface NetworkResponse {
 export interface NetworkFailure {
   readonly kind: "network" | "timeout" | "protocol";
   readonly message: string;
+  readonly cause?: ErrorInfo;
 }
 
 export interface NetworkPort {
   request(
     request: NetworkRequest,
-  ): Promise<Result<NetworkResponse, NetworkFailure | CancellationFailure>>;
+  ): Promise<SerializableResult<NetworkResponse, NetworkFailure | CancellationFailure>>;
 }

@@ -10,6 +10,8 @@ Plan 面向一个跨职能、可验收的产品结果，不面向单个文件或
 
 当前 active：
 
+- [PLAN-MOBILE-PERSISTED-STATE-001](./active/PLAN-MOBILE-PERSISTED-STATE-001/PLAN.md)：Mobile 持久化 UI 状态能力与 SOP——修复详情页收藏状态不恢复（组件创建时 `favoriteKey` 未到达导致读路径死代码），沉淀 `createPersistedRecord` 轻量原语 + favorites 单文档 store + `MobileNav` 状态/回调契约，配 source-layout 执法测试、e2e 刷新恢复回归与 `persisted-ui-state` SOP 文档；与 PLAN-FRONTEND-CODEC-PERSISTENCE-001 写集零重叠，theme 双真相记为后续项。2026-10-02 立项，状态 ready。
+- [PLAN-QUALITY-GOVERNANCE-001](./active/PLAN-QUALITY-GOVERNANCE-001/PLAN.md)：质量治理——修复 `ops package check` 中立性误报，补齐真实 runtime 与浏览器验收证据，并统一 active/archive 计划状态和质量命令分层。2026-10-02 立项，状态 ready。
 - [PLAN-FRONTEND-FSD-RESTRUCTURE-001](./archive/PLAN-FRONTEND-FSD-RESTRUCTURE-001/PLAN.md)：前端目录重组——从按技术层改为按功能切片（两平台世界 pages/widgets/features/foundation + kernel/domain/protocol/validation 底层），行为零变化的纯位置重构；核心交付"依赖只向下、同层不互引、两端互不导入"的层序门禁已落地并经变红演练；`SPEC-ARCH-BOUNDARY-001` 已修订生效。2026-10-01 立项并同日以 `completed` 收尾；遗留跟进项见其 RESULT.md（architecture.ts 旧样例收敛、CSS 按 slice 拆分暂缓）。
 - [PLAN-FRONTEND-APP-SHELL-001](./active/PLAN-FRONTEND-APP-SHELL-001/PLAN.md)：前端 App Shell 与不抖骨架屏——HTML 模板注入页面框架与骨架（内联关键 CSS），JS 挂载前即可渲染；建立几何一致、迟到流光、刷新旧内容顶住三条不抖纪律，配 e2e layout-shift 断言。承接一期白屏窗口暂缓项，与 SW 预取互补；Mobile 公共页试点先行，Desktop 纳入与否经闸门确认。2026-10-01 立项，状态 ready。
 - [PLAN-SEARCH-001](./archive/PLAN-SEARCH-001/PLAN.md)：全文检索与搜索词高亮——从零建立文字搜索（现状"文章检索页"实为分类浏览）：标题/摘要/正文检索、结果列表高亮、详情页文内高亮定位；SQLite FTS5 trigram 与短词 `LIKE` 回退、独立 `@fluvient-loom/text-highlight` workspace 包、Desktop/Mobile 同轮交付。2026-10-01 立项并同日以 `completed` 收尾；公共 npm 发布、限速、量化性能预算和浏览器矩阵另列后续议题。

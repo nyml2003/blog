@@ -25,8 +25,10 @@ import {
 export interface MobileNavProps {
   readonly context: MobileRouteContext;
   readonly navigation?: MobileNavigation;
-  readonly favoriteKey?: string;
+  /** 收藏状态与领域动作由 feature store 提供；组件不接触持久化细节。 */
+  readonly favorite?: { readonly active: boolean; readonly toggle: () => void };
   readonly browserNavigation: NavigationPort;
+  /** 仅供 `cycleTheme` 遗留写入使用；theme 双真相收敛后移除。 */
   readonly persistence: PersistencePort;
   readonly document: DocumentPort;
   readonly share: (url: string) => Promise<void>;
@@ -34,23 +36,7 @@ export interface MobileNavProps {
 }
 
 export function MobileNav(props: MobileNavProps) {
-  const favoriteValue =
-    props.favoriteKey === undefined
-      ? undefined
-      : props.persistence.read(`favorite:${props.favoriteKey}`);
-  const [favorite, setFavorite] = createSignal(
-    props.favoriteKey !== undefined &&
-      favoriteValue?.ok === true &&
-      favoriteValue.value === "1",
-  );
   const [moreOpen, setMoreOpen] = createSignal(false);
-  const toggleFavorite = () => {
-    if (props.favoriteKey === undefined) return;
-    const next = !favorite();
-    setFavorite(next);
-    if (next) props.persistence.write(`favorite:${props.favoriteKey}`, "1");
-    else props.persistence.remove(`favorite:${props.favoriteKey}`);
-  };
   const share = async () => {
     const current = props.browserNavigation.current();
     const url =
@@ -77,7 +63,7 @@ export function MobileNav(props: MobileNavProps) {
         return (
           <Heart
             size={18}
-            fill={favorite() ? "currentColor" : "none"}
+            fill={props.favorite?.active === true ? "currentColor" : "none"}
             aria-hidden="true"
           />
         );
@@ -88,7 +74,7 @@ export function MobileNav(props: MobileNavProps) {
     }
   };
   const action = (name: MobileNavigationIcon) => {
-    if (name === "favorite") return toggleFavorite;
+    if (name === "favorite") return props.favorite?.toggle;
     if (name === "share") return () => void share();
     if (name === "more") return () => setMoreOpen((value) => !value);
     if (name === "back")
@@ -149,9 +135,11 @@ export function MobileNav(props: MobileNavProps) {
               }
               options={{}}
             />
-            <button type="button" onClick={toggleFavorite}>
-              <Heart size={16} /> 收藏
-            </button>
+            <Show when={props.favorite !== undefined}>
+              <button type="button" onClick={() => props.favorite?.toggle()}>
+                <Heart size={16} /> 收藏
+              </button>
+            </Show>
             <button type="button" onClick={() => void share()}>
               <Share2 size={16} /> 分享
             </button>

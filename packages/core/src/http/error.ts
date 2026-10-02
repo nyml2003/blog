@@ -1,3 +1,5 @@
+import { toErrorInfo, type ErrorInfo } from "../error-info.ts";
+
 export type HttpErrorKind =
   | "dns"
   | "tls"
@@ -10,6 +12,7 @@ export type HttpErrorKind =
 export interface HttpError {
   readonly kind: HttpErrorKind;
   readonly message: string;
+  readonly cause?: ErrorInfo;
   readonly url?: string;
   /** Present when kind is "status". */
   readonly status?: number;
@@ -37,19 +40,20 @@ const RESET_CODES = new Set(["ECONNRESET", "EPIPE"]);
 export function classifyTransportFailure(cause: unknown, url?: string): HttpError {
   const code = readCauseCode(cause);
   const message = cause instanceof Error ? cause.message : String(cause);
+  const errorInfo = toErrorInfo(cause);
   if (code !== undefined && DNS_CODES.has(code)) {
-    return { kind: "dns", message, url, retryable: code === "EAI_AGAIN" };
+    return { kind: "dns", message, url, retryable: code === "EAI_AGAIN", cause: errorInfo };
   }
   if (code !== undefined && TLS_CODES.has(code)) {
-    return { kind: "tls", message, url, retryable: false };
+    return { kind: "tls", message, url, retryable: false, cause: errorInfo };
   }
   if (code !== undefined && CONNECTION_CODES.has(code)) {
-    return { kind: "connection", message, url, retryable: false };
+    return { kind: "connection", message, url, retryable: false, cause: errorInfo };
   }
   if (code !== undefined && RESET_CODES.has(code)) {
-    return { kind: "reset", message, url, retryable: true };
+    return { kind: "reset", message, url, retryable: true, cause: errorInfo };
   }
-  return { kind: "transport", message, url, retryable: true };
+  return { kind: "transport", message, url, retryable: true, cause: errorInfo };
 }
 
 /** Timeout classification for aborts raised by the kernel's own timers. */

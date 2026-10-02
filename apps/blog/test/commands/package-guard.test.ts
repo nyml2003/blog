@@ -65,6 +65,8 @@ test('non-kernel packages use their explicit platform/framework exceptions', () 
       'const binding = typeof navigator === "undefined" ? undefined : navigator.serviceWorker;',
     '/ws/packages/mobile-h5-solid-atoms/src/define.ts':
       'import { mergeProps } from "solid-js";',
+    '/ws/packages/persisted-state/src/persisted-record.ts':
+      'import { createSignal } from "solid-js";',
   });
   assert.deepEqual(violations, []);
 });

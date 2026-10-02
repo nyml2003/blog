@@ -1,5 +1,12 @@
 import { createHttpKernel, type HttpError, type HttpKernelOptions } from "@fluvient/core/http";
-import { cancellationFailure, err, ok, type CancellationFailure, type Result } from "@fluvient/core";
+import {
+  cancellationFailure,
+  err,
+  ok,
+  toErrorInfo,
+  type CancellationFailure,
+  type SerializableResult,
+} from "@fluvient/core";
 import type {
   NetworkFailure,
   NetworkPort,
@@ -9,18 +16,28 @@ import type {
 
 export type FetchNetworkOptions = HttpKernelOptions;
 
-type NetworkOutcome = Result<NetworkResponse, NetworkFailure | CancellationFailure>;
+type NetworkOutcome = SerializableResult<NetworkResponse, NetworkFailure | CancellationFailure>;
 type KernelFailure = HttpError | CancellationFailure;
 
 function asKernelFailure(error: unknown): KernelFailure {
   if (typeof error === "object" && error !== null && "kind" in error) {
     if ((error as { kind: unknown }).kind === "cancelled") return cancellationFailure();
-    const candidate = error as { kind?: unknown; message?: unknown; retryable?: unknown };
+    const candidate = error as {
+      kind?: unknown;
+      message?: unknown;
+      retryable?: unknown;
+      cause?: unknown;
+    };
     if (isHttpErrorKind(candidate.kind) && typeof candidate.message === "string") {
-      return { kind: candidate.kind, message: candidate.message, retryable: candidate.retryable === true };
+      return {
+        kind: candidate.kind,
+        message: candidate.message,
+        retryable: candidate.retryable === true,
+        cause: candidate.cause === undefined ? undefined : toErrorInfo(candidate.cause),
+      };
     }
   }
-  return { kind: "transport", message: String(error), retryable: true };
+  return { kind: "transport", message: String(error), retryable: true, cause: toErrorInfo(error) };
 }
 
 function isHttpErrorKind(value: unknown): value is HttpError["kind"] {
@@ -37,7 +54,11 @@ function isHttpErrorKind(value: unknown): value is HttpError["kind"] {
 
 function toNetworkFailure(error: KernelFailure): NetworkFailure | CancellationFailure {
   if (error.kind === "cancelled") return cancellationFailure();
-  return { kind: error.kind === "timeout" ? "timeout" : "network", message: error.message };
+  return {
+    kind: error.kind === "timeout" ? "timeout" : "network",
+    message: error.message,
+    cause: error.cause,
+  };
 }
 
 /**
@@ -73,6 +94,7 @@ export function createFetchNetwork(options: FetchNetworkOptions = {}): NetworkPo
         return err({
           kind: "protocol",
           message: cause instanceof Error ? cause.message : String(cause),
+          cause: toErrorInfo(cause),
         });
       }
       return ok({

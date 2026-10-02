@@ -157,6 +157,28 @@ importers:
         specifier: workspace:*
         version: link:../core
 
+  packages/persisted-state:
+    dependencies:
+      '@fluvient-loom/port':
+        specifier: workspace:*
+        version: link:../port
+      '@fluvient/core':
+        specifier: workspace:*
+        version: link:../core
+      solid-js:
+        specifier: ^1.9.0
+        version: 1.9.15
+    devDependencies:
+      '@types/node':
+        specifier: 26.4.1
+        version: 26.4.1
+      tsx:
+        specifier: ^4.23.13
+        version: 4.23.13
+      typescript:
+        specifier: 7.0.2
+        version: 7.0.2
+
   packages/port:
     dependencies:
       '@fluvient/core':
@@ -218,6 +240,9 @@ importers:
       '@fluvient-loom/node':
         specifier: workspace:*
         version: link:../../packages/node
+      '@fluvient-loom/persisted-state':
+        specifier: workspace:*
+        version: link:../../packages/persisted-state
       '@fluvient-loom/port':
         specifier: workspace:*
         version: link:../../packages/port

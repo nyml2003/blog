@@ -60,7 +60,11 @@ test("DataTask converts mapper failures into a task Result", async () => {
   });
   assert.deepEqual(await task.start(), {
     ok: false,
-    error: { kind: "task", message: "mapper failed" },
+    error: {
+      kind: "task",
+      message: "mapper failed",
+      cause: { name: "Error", message: "mapper failed" },
+    },
   });
 
   const resource = createDataResource<number, string>(() =>
@@ -75,7 +79,11 @@ test("DataTask converts mapper failures into a task Result", async () => {
   );
   assert.deepEqual(await resource.start(), {
     ok: false,
-    error: { kind: "task", message: "mapper failed" },
+    error: {
+      kind: "task",
+      message: "mapper failed",
+      cause: { name: "Error", message: "mapper failed" },
+    },
   });
   assert.equal(resource.getSnapshot().status, "error");
 });

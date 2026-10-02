@@ -3,18 +3,18 @@ import type {
   CancellationSignal,
   CancellationSource,
   DeepReadonly,
+  ErrorInfo,
   Result,
 } from "@fluvient/core";
 
 export interface TaskFailure {
   readonly kind: "task";
   readonly message: string;
+  readonly cause?: ErrorInfo;
 }
 
 export interface DataTask<T, E = never> {
-  start(): Promise<
-    Result<DeepReadonly<T>, E | CancellationFailure | TaskFailure>
-  >;
+  start(): Promise<Result<DeepReadonly<T>, E | CancellationFailure | TaskFailure>>;
   cancel(): void;
 }
 

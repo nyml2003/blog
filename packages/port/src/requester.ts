@@ -1,7 +1,7 @@
 import type {
   CancellationFailure,
   CancellationSignal,
-  Result,
+  SerializableResult,
 } from "@fluvient/core";
 import type {
   NetworkFailure,
@@ -19,19 +19,19 @@ export interface JsonRequester {
   get(
     path: string,
     options?: JsonRequestCallOptions,
-  ): Promise<Result<NetworkResponse, NetworkFailure | CancellationFailure>>;
+  ): Promise<SerializableResult<NetworkResponse, NetworkFailure | CancellationFailure>>;
   post(
     path: string,
     body: unknown,
     options?: JsonRequestCallOptions,
-  ): Promise<Result<NetworkResponse, NetworkFailure | CancellationFailure>>;
+  ): Promise<SerializableResult<NetworkResponse, NetworkFailure | CancellationFailure>>;
   delete(
     path: string,
     options?: JsonRequestCallOptions,
-  ): Promise<Result<NetworkResponse, NetworkFailure | CancellationFailure>>;
+  ): Promise<SerializableResult<NetworkResponse, NetworkFailure | CancellationFailure>>;
 }
 
-type RequestOutcome = Result<NetworkResponse, NetworkFailure | CancellationFailure>;
+type RequestOutcome = SerializableResult<NetworkResponse, NetworkFailure | CancellationFailure>;
 
 /**
  * Port-level combinator: removes the five-field NetworkRequest boilerplate.

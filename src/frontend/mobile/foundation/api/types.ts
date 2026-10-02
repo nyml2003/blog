@@ -126,13 +126,7 @@ export const siteRoutesSchema = z.object({
 });
 export type SiteRoutes = z.output<typeof siteRoutesSchema>;
 
-export const mobileNavigationIconSchema = z.enum([
-  "back",
-  "search",
-  "favorite",
-  "share",
-  "more",
-]);
+export const mobileNavigationIconSchema = z.string().trim().min(1);
 export type MobileNavigationIcon = z.output<typeof mobileNavigationIconSchema>;
 
 export const mobileNavigationSchema = z.object({
@@ -160,10 +154,10 @@ export type MobilePage = z.output<typeof mobilePageSchema>;
 export function supportedNavigationIcons(
   values: readonly string[],
 ): MobileNavigationIcon[] {
-  return values.filter(
-    (value): value is MobileNavigationIcon =>
-      mobileNavigationIconSchema.safeParse(value).success,
-  );
+  return values.flatMap((value) => {
+    const parsed = mobileNavigationIconSchema.safeParse(value);
+    return parsed.success ? [parsed.data] : [];
+  });
 }
 
 export function navigationFromModule(

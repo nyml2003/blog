@@ -1,0 +1,31 @@
+{
+  "name": "@fluvient-loom/persisted-state",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "files": ["src", "README.md", "package.json"],
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "tsx --test test/*.test.ts",
+    "build": "pnpm typecheck && pnpm test",
+    "smoke": "test -s src/index.ts"
+  },
+  "dependencies": {
+    "@fluvient/core": "workspace:*",
+    "@fluvient-loom/port": "workspace:*"
+  },
+  "peerDependencies": {
+    "solid-js": "^1.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "26.4.1",
+    "tsx": "^4.23.13",
+    "typescript": "7.0.2"
+  }
+}

@@ -11,7 +11,7 @@ import {
 import { mobileNavigationItems } from "../../features/navigation/model";
 import { mobileSettingsOptions } from "../../features/settings/model";
 import { useMobileSettings } from "../../features/settings/page-model";
-import { MobileNav } from "../../widgets/shell/mobile-nav";
+import { Navigator } from "../../widgets/shell/navigator";
 import { Field, Heading, Select, Text } from "../../foundation/ui";
 import { BottomNav } from "../../widgets/shell/bottom-nav";
 import { createDataTask } from "@fluvient-loom/query";
@@ -72,7 +72,7 @@ export function createMobileSettingsPage(
     onMount(() => void page.start());
     return (
       <div class="mobile-shell">
-        <MobileNav
+        <Navigator
           context={input}
           navigation={page.state()?.snapshot}
           browserNavigation={input.navigation}

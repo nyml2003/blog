@@ -1,4 +1,4 @@
-import { err, ok } from "@fluvient/core";
+import { err, ok, toErrorInfo } from "@fluvient/core";
 import type {
   PersistenceFailure,
   PersistencePort,
@@ -23,6 +23,7 @@ function failure(
     kind: "persistence",
     operation,
     message: cause instanceof Error ? cause.message : String(cause),
+    cause: toErrorInfo(cause),
   };
 }
 

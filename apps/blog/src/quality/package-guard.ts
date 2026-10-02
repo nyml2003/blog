@@ -17,6 +17,7 @@ const HOST_ADAPTER_PACKAGES = new Set(['web', 'gesture-web', 'mobile-prefetch'])
 /** UI packages may depend on their rendering framework by design. */
 const PACKAGE_IMPORT_ALLOWLIST = new Map([
   ['mobile-h5-solid-atoms', new Set(['solid-js'])],
+  ['persisted-state', new Set(['solid-js'])],
 ]);
 
 /** Neutral scopes kernel packages may import: the Loom family and the shared core kernel. */
