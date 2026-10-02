@@ -114,7 +114,15 @@ export function createPersistedRecord<T>(
     }
     if (written.ok) {
       lastReadFailure = undefined;
-      if (options.equals === undefined || !options.equals(value(), next)) {
+      let equivalent = false;
+      if (options.equals !== undefined) {
+        try {
+          equivalent = options.equals(value(), next);
+        } catch {
+          equivalent = false;
+        }
+      }
+      if (!equivalent) {
         setValue(() => next);
       }
       return ok(undefined);
@@ -131,10 +139,7 @@ export function createPersistedRecord<T>(
   };
 
   const initialValue = read();
-  const [value, setValue] =
-    options.equals === undefined
-      ? createSignal(initialValue)
-      : createSignal(initialValue, { equals: options.equals });
+  const [value, setValue] = createSignal(initialValue);
   return {
     value,
     readFailure: () => lastReadFailure,

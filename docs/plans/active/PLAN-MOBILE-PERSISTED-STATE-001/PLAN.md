@@ -68,7 +68,7 @@ last_reviewed: 2026-10-02
 
 ## 执行记录
 
-- 2026-10-02 第一阶段（npm 包）完成：`packages/persisted-state/` 落地，包 typecheck + 单测 11/11 通过；原语已改为 `set(value)` + `update(updater)`，返回 `Result`，可观察序列化、写入和读回失败，避免函数值歧义与静默失败；支持领域相等比较以抑制等价值通知，值按不可变数据使用；护栏单测（`@blog/blog` 120 用例）通过；`ops package check` 中 `pnpm check` 通过，中立性扫描为既有误报基线（nix 二进制落后于已修复的源码，源码级护栏经单测证明放行 `@fluvient-loom/*` 与白名单内 solid-js；本包新增 1 条与基线同类，无新增违规类别）。第二阶段（前端接入）进行中。
+- 2026-10-02 第一阶段（npm 包）完成：`packages/persisted-state/` 落地，包 typecheck + 单测 12/12 通过；原语已改为 `set(value)` + `update(updater)`，返回 `Result`，可观察序列化、写入和读回失败，避免函数值歧义与静默失败；支持领域相等比较以抑制等价值通知，值按不可变数据使用；护栏单测（`@blog/blog` 120 用例）通过；`ops package check` 中 `pnpm check` 通过，中立性扫描为既有误报基线（nix 二进制落后于已修复的源码，源码级护栏经单测证明放行 `@fluvient-loom/*` 与白名单内 solid-js；本包新增 1 条与基线同类，无新增违规类别）。第二阶段（前端接入）进行中。
 
 ## 决策闸门
 

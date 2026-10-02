@@ -154,6 +154,21 @@ test("custom equality keeps the existing value when values are equivalent", () =
   assert.equal(record.value(), previous);
 });
 
+test("a throwing equality comparator cannot break a successful write", () => {
+  const persistence = fakePersistence();
+  const record = createPersistedRecord<TestRecord>(persistence, {
+    key: "test.equal-throws.v1",
+    parse: parseRecord,
+    serialize: JSON.stringify,
+    equals: () => {
+      throw new Error("injected equality exception");
+    },
+  });
+  const result = record.set({ count: 6 });
+  assert.equal(result.ok, true);
+  assert.deepEqual(record.value(), { count: 6 });
+});
+
 test("serialization failure leaves memory unchanged and returns a Result error", () => {
   const persistence = fakePersistence();
   const record = createPersistedRecord<TestRecord>(persistence, {
