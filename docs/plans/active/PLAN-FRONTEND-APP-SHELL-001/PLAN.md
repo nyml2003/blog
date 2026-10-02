@@ -1,7 +1,7 @@
 ---
 kind: plan
 id: PLAN-FRONTEND-APP-SHELL-001
-status: partial
+status: completed
 owner: project-manager
 created: 2026-10-01
 last_reviewed: 2026-10-01
@@ -94,9 +94,9 @@ last_reviewed: 2026-10-01
 | App Shell 包设计与契约 | frontend | - | `packages/app-shell/package.json`、公开入口、类型/纯函数、README、包测试 | completed |
 | App Shell 包验证与 pack smoke | frontend | 包设计与契约 | `packages/app-shell/test/**`、golden、package smoke/门禁补充 | completed |
 | 阶段闸门与应用接入决策 | 产品+pm | 包契约验收 | 本 PLAN.md 阶段状态、接入范围、阈值与顺序 | completed for mobile detail pilot |
-| Mobile 文章详情 shell 试点 | frontend | 闸门 + 写集互核 | `pages.registry.ts`、`vite-plugins/page-template.ts`、Mobile detail bootstrap、Mobile 样式、相关 e2e | partial: detail only |
+| Mobile 文章详情 shell 试点 | frontend | 闸门 + 写集互核 | `pages.registry.ts`、`vite-plugins/page-template.ts`、Mobile detail bootstrap、Mobile 样式、相关 e2e | completed: detail only |
 | 其他公共页推广 | frontend | 详情试点验收 + 重新确认范围 | Desktop 与 Mobile 首页/列表对应 shell、bootstrap、样式、e2e | parked: visual feedback |
-| 第二阶段验收与收尾 | qa+pm | 推广完成 | 性能/浏览器证据、RESULT.md | pending |
+| 第二阶段验收与收尾 | qa+pm | 详情试点验收 | 性能/浏览器证据、RESULT.md | completed for mobile detail pilot; broader rollout remains parked |
 
 第一阶段包开发与第二阶段应用接入在写集上隔离，可以先完成包；阶段闸门通过后才允许修改共享前端模板和 bootstrap。试点与 Desktop 推广共享前端构建/模板写集，不得并行修改；与 FSD-RESTRUCTURE、COMPONENT-EXPERIENCE 的 Mobile UI 写集重叠部分按"约束与依据"逐项互核。
 
@@ -111,25 +111,37 @@ last_reviewed: 2026-10-01
 - 已交付 `packages/app-shell/` workspace 包：结构化 shell 描述、确定性 HTML/关键 CSS 生成器、静态基础样式、README、类型检查与 4 项单元测试；未修改 `src/frontend` 应用接入代码。
 - 已通过：`tsc --noEmit -p packages/app-shell/tsconfig.json`、`tsx --test packages/app-shell/test/*.test.ts`、包 smoke，以及 `NPM_CONFIG_CACHE=/tmp/blog-app-shell-npm-cache npm pack --dry-run --json`。pack 清单只包含 README、package.json、源码和 CSS。
 - `ops package check` 的平台中立性检查触达新包且未报告新包违规；统一门禁随后被当前工作树既有的 `@fluvient/core` 迁移/锁文件漂移阻断（`package.json` 与 `pnpm-lock.yaml` 的 workspace 依赖不一致），未能取得全工作区门禁通过证据。
-- 第一阶段不发布公共 npm；第二阶段目前只保留移动端文章详情试点，仍需浏览器与性能证据后收尾。
+- 第一阶段不发布公共 npm；第二阶段按已确认范围收敛为移动端文章详情试点，浏览器与性能证据已补齐。
 
 ### 第二阶段移动端文章详情接入记录（2026-10-01）
 
 - 目前只有 `mobile-article-detail` 在构建期模板中注入 `@fluvient-loom/app-shell`；shell 位于 `#app` 前并在 JS 确定文章状态后删除。
 - 骨架改为静态低对比度布局：标题、元信息、正文线和媒体位分开表达，默认不使用 shimmer，避免首帧闪烁和大块灰色覆盖。
 - Mobile 首页、文章库、检索页及 Desktop 公共页已移除 shell 注册和删壳回调；管理端、Mobile settings/admin preview 继续不接入。
-- 集成 e2e 的禁用 JavaScript 检查改为移动端文章详情页，并保留正常挂载后的壳移除检查；`ops e2e` 与 `ops perf mobile` 的参数 dry-run 通过，但当前环境没有可用 Chromium，尚未执行浏览器运行证据。
-- 已通过：app-shell 单元测试、前端相关测试、完整前端 typecheck 与 Vite build（本轮修改后需重新执行）。`ops package check` 仍受工作树既有包迁移依赖违规影响。
+- 集成 e2e 的禁用 JavaScript 检查改为移动端文章详情页，并保留正常挂载后的壳移除与 layout-shift 检查；最新 `CI=true ops e2e --mode integration` 已通过，产物为 `target/e2e/1790866310044-4354`，包含禁 JS、纸张/无衬线、暗色/衬线和复古/等宽三组 shell 截图及几何断言。
+- `CI=true ops perf mobile --mode integration --runs 3` 已通过，产物为 `target/e2e/1790863506185-97046`：390px 视口下 nav-switch content 中位数 53/59/63ms（unthrottled/slow4g/slow3g），三组缓存命中均为 15/15；slow3g cold-load 的 shell/content 中位数为 4748/5539ms。
+- 用户指定的 `CI=true ops runtime dev --scenario default --web-port 5173 --mock-port 9090 --json` 已启动 mock 与 Vite 并报告 `SERVICES_READY`，随后通过 SIGINT 正常停止。
+- `server-error` 与 `malformed-response` 场景均已完成移动端详情错误态验证：shell 被移除、现有错误提示可见；产物分别为 `target/e2e/1790866474487-4578` 与 `target/e2e/1790866474487-4579`。
+- 已通过：app-shell 类型检查、4 项单元测试、smoke、`npm pack --dry-run`、前端相关测试、完整前端 typecheck、Vite build、`ops quality check` 与集成 e2e。`ops quality check` 的格式检查在修正测试排版后已通过。
+- `ops package check` 的统一工作树门禁仍受已有 `@fluvient/core` 迁移/锁文件漂移影响；本轮没有改动该依赖关系。
 
 ## 集成验收
 
-1. `ops perf mobile --mode integration --runs 3` 前后对比：cold-load 白屏窗口/shell 首帧可见时机、nav-switch 与传输不劣化，对照闸门阈值。
-2. `ops e2e --mode integration` 全量回归 + 新增断言：禁 JS 的 shell 截图、shell→内容 layout-shift 为 0、shell/内容几何一致性。
-3. 375px、390px、430px 宽度与主题/字体组合截图对照；弱网、断网、接口 4xx/5xx 下 shell 正确让位于错误态，不永久滞留。
-4. 优化前后截图对照，视觉差异非目标行为时必须修复或记录。
-5. 自动化证据与人工视觉/交互证据分开记录。
+1. 已完成 `ops perf mobile --mode integration --runs 3` 采样并留存 shell/content、FCP/LCP、传输与缓存命中证据；390px 视口 nav-switch 未出现明显回归。
+2. 已完成 `ops e2e --mode integration` 全量回归：禁 JS shell 截图、正常挂载删壳、layout-shift <= 0.01、详情页横向溢出与安全区检查。
+3. 375px 与 430px 已由集成 e2e 覆盖，390px 已由性能采样覆盖；纸张/暗色/复古主题和无衬线/衬线/等宽字体组合均通过初始 shell 的颜色、字体和几何断言，错误与畸形响应场景均通过删壳断言。
+4. 已保留禁 JS 骨架与正常详情页截图用于视觉对照；骨架为静态、低对比度分行和媒体位，没有周期性闪烁。
+5. 自动化证据与人工视觉/交互证据已分开记录；当前计划按已确认的“包 + 移动端文章详情”范围收尾为 `completed`。公共首页、文章库、检索页和 Desktop 推广仍保持停放，不计入本次交付。
 
-## 第二阶段未决项
+## 收尾记录（2026-10-01）
+
+- 实际交付：`@fluvient-loom/app-shell` workspace/npm 包，以及仅用于 `mobile-article-detail` 的构建期静态 shell；首帧使用低对比度分行和媒体位，不启用 shimmer，JS 在文章成功、空态或错误确定后删除 shell。
+- 已验证：包类型检查、单元测试、smoke、pack 清单；前端质量门禁；默认 runtime 启动；集成 e2e 的禁 JS 首帧、响应式/主题/字体几何、正常删壳、错误态和 layout-shift；移动性能采样与缓存命中。
+- 未交付：Mobile 首页、文章库、检索页、Desktop 和 admin 的 shell 推广；详情页没有筛选/重取交互，因此“旧内容顶住”规则没有新增浏览器场景。后续扩大到列表或重取场景时，需要先补充该行为的实现和验收证据。
+- 停止原因：用户将接入范围收敛为移动端文章详情页，并要求暂停其他公共页的视觉推广；该决定已反映在工作流和写集范围中。
+- 恢复条件：重新确认公共页接入范围，按端隔离逐页增加 registry shell，并为重取场景补充 `latest` 保留、视觉和性能验收。
+
+## 后续扩展项（不阻塞本次收尾）
 
 - Desktop 与 admin 页是否纳入本轮（闸门）。
 - 与 `PLAN-FRONTEND-FSD-RESTRUCTURE-001` 的先后顺序（闸门必答）。
@@ -137,7 +149,7 @@ last_reviewed: 2026-10-01
 - JS 完全加载失败时 shell 的兜底形态（`noscript` 提示或超时文案），不阻塞主链路。
 - App Shell 模式是否在收尾时固化为 Spec。
 
-## 第一阶段未决项
+## 发布与扩展决策（不阻塞本次收尾）
 
 - 包是否仅作为 workspace 内部包，还是在第二阶段验收后进入公共 npm registry。
 - 包是否需要预构建 ESM/CSS 产物，还是暂时沿用仓库现有的 TypeScript 源码导出方式。

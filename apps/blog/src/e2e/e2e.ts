@@ -32,6 +32,7 @@ interface E2eReport {
 
 interface BrowserPage {
   addInitScript(script: () => void): Promise<void>;
+  addInitScript<T>(script: (arg: T) => void, arg: T): Promise<void>;
   goto(url: string, options?: { waitUntil?: string }): Promise<unknown>;
   getByRole(role: string, options?: { name?: string; exact?: boolean }): BrowserLocator;
   getByLabel(text: string | RegExp, options?: { exact?: boolean }): BrowserLocator;
@@ -72,7 +73,7 @@ interface BrowserContext {
 }
 
 interface Browser {
-  newPage(options?: { viewport?: { width: number; height: number } }): Promise<BrowserPage>;
+  newPage(options?: { viewport?: { width: number; height: number }; javaScriptEnabled?: boolean }): Promise<BrowserPage>;
   newContext(options?: { viewport?: { width: number; height: number } }): Promise<BrowserContext>;
   close(): Promise<void>;
 }
@@ -258,6 +259,7 @@ async function runIntegrationJourneys(browser: Browser, origin: string, artifact
   }
   await shellOnly.screenshot({ path: join(artifactDir, 'mobile-detail-shell-no-js.png'), fullPage: true });
   await shellOnly.close();
+  await assertDetailShellVariants(browser, origin, artifactDir, failures);
   await assertPage(mobile, 'mobile-home', `${origin}/m/`, artifactDir, failures, async (page) => {
     await page.getByRole('heading', { name: '推荐阅读', exact: true }).waitFor();
     await assertShellLayout(page, 'mobile-home');
@@ -316,6 +318,75 @@ async function runIntegrationJourneys(browser: Browser, origin: string, artifact
   }, 'domcontentloaded');
   await desktop.close();
   await mobile.close();
+}
+
+interface DetailShellVariant {
+  readonly theme: 'paper' | 'dark' | 'sepia';
+  readonly font: 'sans' | 'serif' | 'mono';
+  readonly surface: string;
+  readonly skeleton: string;
+}
+
+const detailShellVariants: readonly DetailShellVariant[] = [
+  { theme: 'paper', font: 'sans', surface: 'rgb(244, 241, 234)', skeleton: 'rgb(231, 226, 217)' },
+  { theme: 'dark', font: 'serif', surface: 'rgb(32, 33, 36)', skeleton: 'rgb(53, 56, 62)' },
+  { theme: 'sepia', font: 'mono', surface: 'rgb(241, 230, 207)', skeleton: 'rgb(221, 206, 180)' },
+];
+
+async function assertDetailShellVariants(
+  browser: Browser,
+  origin: string,
+  artifactDir: string,
+  failures: string[],
+): Promise<void> {
+  for (const variant of detailShellVariants) {
+    const page = await browser.newPage({ viewport: { width: variant.theme === 'sepia' ? 430 : 375, height: 812 } });
+    await page.addInitScript((settings: Pick<DetailShellVariant, 'theme' | 'font'>) => {
+      localStorage.setItem('blog.mobile.settings.v1', JSON.stringify(settings));
+      window.fetch = () => new Promise<Response>(() => undefined);
+    }, variant);
+    await assertPage(
+      page,
+      `mobile-detail-shell-${variant.theme}-${variant.font}`,
+      `${origin}/m/articles/detail.html?id=12`,
+      artifactDir,
+      failures,
+      async (current) => {
+        const probe = await current.evaluate(() => {
+          const shell = document.querySelector<HTMLElement>('[data-loom-app-shell="true"]');
+          const placeholder = shell?.querySelector<HTMLElement>('[data-loom-shell-placeholder="1-7"]');
+          if (!shell || !placeholder) throw new Error('mobile-detail shell variant is missing');
+          const shellStyle = getComputedStyle(shell);
+          const placeholderStyle = getComputedStyle(placeholder);
+          const region = shell.querySelector<HTMLElement>('[data-loom-shell-region-index="1"]');
+          return {
+            theme: document.documentElement.getAttribute('data-theme'),
+            font: document.documentElement.getAttribute('data-font'),
+            surface: shellStyle.backgroundColor,
+            skeleton: placeholderStyle.backgroundColor,
+            animation: placeholderStyle.animationName,
+            shellWidth: shell.getBoundingClientRect().width,
+            viewportWidth: innerWidth,
+            mediaHeight: placeholder.getBoundingClientRect().height,
+            regionHeight: region?.getBoundingClientRect().height ?? 0,
+          };
+        });
+        if (probe.theme !== variant.theme || probe.font !== variant.font) {
+          throw new Error(`mobile-detail shell settings did not apply: ${JSON.stringify(probe)}`);
+        }
+        if (probe.surface !== variant.surface || probe.skeleton !== variant.skeleton) {
+          throw new Error(`mobile-detail shell colors drifted: ${JSON.stringify(probe)}`);
+        }
+        if (probe.animation !== 'none') throw new Error(`mobile-detail shell unexpectedly animates: ${JSON.stringify(probe)}`);
+        if (probe.shellWidth !== probe.viewportWidth) throw new Error(`mobile-detail shell width drifted: ${JSON.stringify(probe)}`);
+        if (Math.abs(probe.mediaHeight - 180) > 1 || probe.regionHeight < 720) {
+          throw new Error(`mobile-detail shell geometry drifted: ${JSON.stringify(probe)}`);
+        }
+      },
+      'domcontentloaded',
+    );
+    await page.close();
+  }
 }
 
 async function runDevJourney(browser: Browser, origin: string, artifactDir: string, scenario: string, failures: string[]): Promise<void> {
@@ -411,6 +482,15 @@ async function runDevJourney(browser: Browser, origin: string, artifactDir: stri
 
     });
     await wide.close();
+  }
+  if (scenario === 'server-error' || scenario === 'malformed-response') {
+    await assertPage(page, `dev-${scenario}-detail`, `${origin}/m/articles/detail.html?id=12`, artifactDir, failures, async (current) => {
+      const alert = current.getByRole('alert', {});
+      await alert.waitFor();
+      const message = await alert.innerText();
+      if (!/文章不存在或暂不可见|页面初始化失败/.test(message)) throw new Error(`unexpected detail error state: ${message}`);
+      if (await current.locator('[data-loom-app-shell="true"]').count() !== 0) throw new Error(`dev-${scenario}-detail: app shell was not removed`);
+    }, 'networkidle', [500]);
   }
   await page.close();
 }

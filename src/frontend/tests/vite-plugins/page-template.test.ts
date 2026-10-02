@@ -156,7 +156,9 @@ test("generated HTML has the shared head and exact registered entry", () => {
 });
 
 test("mobile article detail injects an app shell before the application mount", () => {
-  const page = pageRegistry.find((entry) => entry.id === "mobile-article-detail");
+  const page = pageRegistry.find(
+    (entry) => entry.id === "mobile-article-detail",
+  );
   assert.ok(page);
   const html = renderPageHtml(page);
   const shellOffset = html.indexOf('data-loom-app-shell="true"');
@@ -170,9 +172,7 @@ test("mobile article detail injects an app shell before the application mount", 
     pageRegistry
       .filter((entry) => entry.shell !== undefined)
       .map((entry) => entry.id),
-    [
-      "mobile-article-detail",
-    ],
+    ["mobile-article-detail"],
   );
 });
 
