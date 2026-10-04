@@ -138,38 +138,17 @@ export function validatePageRegistry(
     }
 
     const derivedPlatform = platformFromOutputPath(page.outputPath);
-    const entryPlatformPrefix =
-      derivedPlatform === undefined
-        ? undefined
-        : `/bootstrap/${derivedPlatform}/`;
-    if (
-      derivedPlatform !== page.platform ||
-      entryPlatformPrefix === undefined ||
-      !page.entry.startsWith(entryPlatformPrefix)
-    ) {
+    if (derivedPlatform !== page.platform) {
       violations.push({
         rule: "platform-consistency",
         pageId: page.id,
         message:
-          `声明的 platform "${page.platform}"、outputPath 首段 "${derivedPlatform ?? "(无平台前缀)"}" ` +
-          `与 entry 前缀三者必须指向同一平台世界`,
+          `声明的 platform "${page.platform}" 与 outputPath 首段 "${derivedPlatform ?? "(无平台前缀)"}" 必须指向同一平台世界`,
       });
     }
 
-    if (!page.entry.startsWith("/")) {
-      violations.push({
-        rule: "entry-format",
-        pageId: page.id,
-        message: `entry "${page.entry}" 必须以 / 开头（相对宿主前端根目录）`,
-      });
-    }
-    if (!dependencies.entryExists(page.entry)) {
-      violations.push({
-        rule: "entry-exists",
-        pageId: page.id,
-        message: `entry 文件不存在：${page.entry}`,
-      });
-    }
+    // 入口已按平台统一（main.tsx + data-page-id），不再逐页检查入口文件。
+    // page.entry 字段保留为文档值，构建系统用 platformEntry() 派生实际入口。
 
     if (page.bootstrap && page.platform !== "mobile") {
       violations.push({

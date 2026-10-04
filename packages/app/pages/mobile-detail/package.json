@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./page": "./src/page.tsx",
-    "./favorites": "./src/favorites.ts"
+    "./favorites": "./src/favorites.ts",
+    "./entry": "./src/entry.ts"
   },
   "dependencies": {
     "@blog/mobile-api": "workspace:*",

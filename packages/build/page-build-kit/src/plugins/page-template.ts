@@ -9,44 +9,38 @@ import { dirname, resolve } from "node:path";
 import { renderAppShell } from "@fluvient-loom/app-shell";
 import type { Plugin } from "vite";
 import { pageRoutes, type PageRegistration } from "../types.ts";
+import { h } from "./jsx-html.ts";
 
 export const generatedPagesDirectory = ".generated/pages";
 export const pageRoutesManifest = "page-routes.json";
 
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
+/** 平台统一入口：所有页面共享同一 main.tsx，data-page-id 区分页面。 */
+export function platformEntry(platform: string): string {
+  return platform === "desktop"
+    ? "/bootstrap/desktop/main.tsx"
+    : "/bootstrap/mobile/main.tsx";
 }
 
 export function renderPageHtml(page: PageRegistration): string {
-  const description = page.description
-    ? `\n    <meta name="description" content="${escapeHtml(page.description)}" />`
-    : "";
   const shell =
     page.shell === undefined ? undefined : renderAppShell(page.shell);
-  const shellMarkup =
-    shell === undefined
-      ? ""
-      : `\n    <style data-loom-app-shell>${shell.criticalCss}</style>\n    ${shell.html}`;
 
-  return `<!doctype html>
-<html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#f4f1ea" />${description}
-    <title>${escapeHtml(page.title)}</title>
-  </head>
-  <body>
-    ${shellMarkup}
-    <div id="app"></div>
-    <script type="module" src="${escapeHtml(page.entry)}"></script>
-  </body>
-</html>
-`;
+  const head = h("head", null,
+    h("meta", { charset: "UTF-8" }),
+    h("meta", { name: "viewport", content: "width=device-width, initial-scale=1" }),
+    h("meta", { name: "theme-color", content: "#f4f1ea" }),
+    page.description ? h("meta", { name: "description", content: page.description }) : null,
+    h("title", null, page.title),
+  );
+
+  const body = h("body", null,
+    shell ? h("style", { "data-loom-app-shell": true, dangerouslySetInnerHTML: shell.criticalCss }) : null,
+    shell ? h("div", { "data-loom-app-shell": "true", "aria-hidden": "true", dangerouslySetInnerHTML: shell.html }) : null,
+    h("div", { id: "app" }),
+    h("script", { type: "module", src: platformEntry(page.platform) }),
+  );
+
+  return `<!doctype html>\n<html lang="zh-CN" data-page-id="${page.id}">\n  ${head.html}\n  ${body.html}\n</html>\n`;
 }
 
 export function generatedPagePath(

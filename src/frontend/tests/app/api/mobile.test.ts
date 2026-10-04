@@ -5,10 +5,7 @@ import {
   navigationFromModule,
   supportedNavigationIcons,
 } from "@blog/mobile-api";
-import {
-  articleIdFromSearch,
-  canReturnToSite,
-} from "../../../bootstrap/mobile/detail-input";
+import { positiveIdFromSearch } from "@blog/route-input";
 import { ok } from "@fluvient/core";
 import {
   type NetworkPort,
@@ -240,8 +237,8 @@ test("mobile admin preview reads the management article contract", async () => {
   );
 });
 
-test("detail input rejects invalid IDs and only returns into same-site history", () => {
-  assert.equal(articleIdFromSearch("?id=7"), 7);
+test("route input rejects invalid IDs", () => {
+  assert.equal(positiveIdFromSearch("?id=7", "id"), 7);
   for (const search of [
     "",
     "?id=0",
@@ -249,19 +246,6 @@ test("detail input rejects invalid IDs and only returns into same-site history",
     "?id=1.5",
     "?id=9007199254740992",
   ]) {
-    assert.equal(articleIdFromSearch(search), undefined);
+    assert.equal(positiveIdFromSearch(search, "id"), undefined);
   }
-  assert.equal(
-    canReturnToSite("https://blog.test/m/articles", "https://blog.test", 2),
-    true,
-  );
-  assert.equal(
-    canReturnToSite("https://other.test/page", "https://blog.test", 2),
-    false,
-  );
-  assert.equal(
-    canReturnToSite("https://blog.test/m/articles", "https://blog.test", 1),
-    false,
-  );
-  assert.equal(canReturnToSite("", "https://blog.test", 2), false);
 });

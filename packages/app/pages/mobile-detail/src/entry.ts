@@ -1,0 +1,42 @@
+import { type Component } from "solid-js";
+import type { MobilePageContext } from "@blog/mobile-shared";
+import { route } from "@blog/mobile-shared";
+import { positiveIdFromSearch } from "@blog/route-input";
+import { createFavoriteStore } from "./favorites.ts";
+import { createMobileDetailPage } from "./page.tsx";
+
+// 页面自己的组合根：从完整 context 出发组装自己的输入（id 解析、收藏、返回策略）。
+// main.tsx 只按 id 路由到这里，不知道页面的内部依赖。
+export function createMobileDetailEntry(
+  context: MobilePageContext,
+  onAppShellReady: () => void,
+): Component {
+  return createMobileDetailPage({
+    context,
+    navigation: context.navigation,
+    persistence: context.persistence,
+    favorites: createFavoriteStore(context.persistence),
+    document: context.document,
+    share: context.share,
+    onAppShellReady,
+    id: positiveIdFromSearch(context.navigation.current().search, "id"),
+    api: context.api,
+    articleListHref: route(context.routes, "mobile-articles"),
+    onBack() {
+      if (canReturnToSite()) {
+        context.navigation.back();
+        return;
+      }
+      context.navigation.push(route(context.routes, "mobile-articles"), undefined);
+    },
+  });
+}
+
+function canReturnToSite(): boolean {
+  if (window.history.length <= 1 || document.referrer === "") return false;
+  try {
+    return new URL(document.referrer).origin === window.location.origin;
+  } catch {
+    return false;
+  }
+}

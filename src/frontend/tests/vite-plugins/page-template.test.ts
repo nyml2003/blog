@@ -75,11 +75,11 @@ test("embedded site-routes manifest satisfies both runtime schemas", () => {
   }
 });
 
-test("generated HTML has the shared head and exact registered entry", () => {
+test("generated HTML has the shared head, page id, and platform entry", () => {
   for (const page of pageRegistry) {
     const html = renderPageHtml(page);
     assert.match(html, /^<!doctype html>/);
-    assert.match(html, /<html lang="zh-CN">/);
+    assert.match(html, new RegExp(`<html lang="zh-CN" data-page-id="${page.id}">`));
     assert.match(html, /<meta charset="UTF-8" \/>/);
     assert.match(
       html,
@@ -87,7 +87,11 @@ test("generated HTML has the shared head and exact registered entry", () => {
     );
     assert.match(html, /<meta name="theme-color" content="#f4f1ea" \/>/);
     assert.ok(html.includes(`<title>${page.title}</title>`));
-    assert.ok(html.includes(`src="${page.entry}"`));
+    // 统一入口：script 指向平台 main.tsx，不逐页建入口
+    const expectedEntry = page.platform === "desktop"
+      ? "/bootstrap/desktop/main.tsx"
+      : "/bootstrap/mobile/main.tsx";
+    assert.ok(html.includes(`src="${expectedEntry}"`), `entry mismatch for ${page.id}`);
     assert.doesNotMatch(
       page.title,
       /\b(?:Blog|Admin|Article|Articles|New|Edit)\b/,
@@ -141,32 +145,23 @@ test("the generator writes one input per page without source HTML", () => {
   }
 });
 
-test("registered entries use the bootstrap and mobile has one CSS entry", () => {
-  const entryFiles = new Set(pageRegistry.map((page) => page.entry));
-  for (const entry of entryFiles) {
-    const source = readFileSync(resolve(frontendRoot, entry.slice(1)), "utf8");
-    if (/(?:^\/app)?\/bootstrap\/mobile\//.test(entry)) {
-      assert.match(source, /mountMobilePage\([^;]+\);/);
-    } else if (/(?:^\/app)?\/bootstrap\/desktop\//.test(entry)) {
-      assert.match(source, /mountDesktopPage\([^;]+\);/);
-    }
-    assert.doesNotMatch(source, /getElementById\("app"\)/);
-    assert.doesNotMatch(source, /from "solid-js\/web"/);
-  }
+test("platform main entries mount pages and mobile imports CSS once", () => {
+  // 统一入口：每端一个 main.tsx，含挂载调用和 CSS 引入
+  const desktopMain = readFileSync(
+    resolve(frontendRoot, "bootstrap/desktop/main.tsx"),
+    "utf8",
+  );
+  assert.match(desktopMain, /mountDesktopApplication/);
+  assert.match(desktopMain, /home\.css/);
+  assert.doesNotMatch(desktopMain, /getElementById\("app"\)/);
 
-  for (const page of pageRegistry.filter(
-    (entry) => entry.platform === "mobile",
-  )) {
-    const source = readFileSync(
-      resolve(frontendRoot, page.entry.slice(1)),
-      "utf8",
-    );
-    assert.equal(
-      source.match(/import "(?:\.\.\/)+mobile\/foundation\/styles\/app\.css";/g)
-        ?.length,
-      1,
-    );
-  }
+  const mobileMain = readFileSync(
+    resolve(frontendRoot, "bootstrap/mobile/main.tsx"),
+    "utf8",
+  );
+  assert.match(mobileMain, /mountMobileApplication/);
+  assert.match(mobileMain, /app\.css/);
+  assert.doesNotMatch(mobileMain, /getElementById\("app"\)/);
 
   const mobileStyles = readFileSync(
     resolve(frontendRoot, "mobile/foundation/styles/app.css"),
