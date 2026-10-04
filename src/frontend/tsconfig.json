@@ -15,12 +15,9 @@
   "include": [
     "bootstrap",
     "desktop",
-    "domain",
     "mobile",
     "page-registry",
-    "protocol",
     "tests",
-    "validation",
     "vite-env.d.ts",
     "vite.config.ts"
   ]

@@ -13,7 +13,7 @@
     "typecheck": "pnpm wasm:build && tsc --noEmit",
     "page:check": "tsx page-registry/check.ts",
     "page:generate": "tsx page-registry/check.ts --write",
-    "lint": "oxlint --deny-warnings bootstrap desktop domain kernel mobile protocol validation build page-registry vite-plugins tests pages.registry.ts vite.config.ts",
+    "lint": "oxlint --deny-warnings bootstrap desktop mobile build page-registry vite-plugins tests pages.registry.ts vite.config.ts",
     "format": "biome format --write .",
     "format:check": "biome format ."
   },
