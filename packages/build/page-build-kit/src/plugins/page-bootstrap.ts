@@ -32,7 +32,8 @@ async function bundleBootstrap(root: string, entry: string): Promise<string> {
     build: {
       write: false,
       emptyOutDir: false,
-      minify: false,
+      // 内联进每张 HTML：<head> 里逐字节都算成本，去注释/空白后再注入。
+      minify: true,
       target: "es2020",
       lib: {
         entry: resolve(root, entry),

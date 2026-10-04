@@ -41,3 +41,8 @@ export {
   type PageBootstrapOptions,
 } from "./plugins/page-bootstrap.ts";
 export { pageRoutesPlugin } from "./plugins/page-routes.ts";
+export {
+  compressArtifacts,
+  type ArtifactEncoding,
+  type CompressArtifactsOptions,
+} from "./plugins/compress-artifacts.ts";

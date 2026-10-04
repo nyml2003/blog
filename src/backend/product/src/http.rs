@@ -632,8 +632,17 @@ async fn diagnostics(State(state): State<Arc<AppState>>) -> Response {
 async fn fallback(State(state): State<Arc<AppState>>, request: axum::extract::Request) -> Response {
     let method = request.method().clone();
     let path = request.uri().path().to_owned();
+    let accept_encoding = request
+        .headers()
+        .get(header::ACCEPT_ENCODING)
+        .and_then(|value| value.to_str().ok())
+        .map(str::to_owned);
     match &state.static_files {
-        Some(files) => files.serve(&method, &path).await,
+        Some(files) => {
+            files
+                .serve(&method, &path, accept_encoding.as_deref())
+                .await
+        }
         None => not_found_plain(),
     }
 }

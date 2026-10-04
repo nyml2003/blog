@@ -165,7 +165,9 @@ mod tests {
             mobile.articles[0].href
         );
         assert!(
-            desktop.articles[0].href.starts_with("/articles/detail.html"),
+            desktop.articles[0]
+                .href
+                .starts_with("/articles/detail.html"),
             "desktop surface card href: {}",
             desktop.articles[0].href
         );

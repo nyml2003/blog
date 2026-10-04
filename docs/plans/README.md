@@ -11,6 +11,7 @@ Plan 面向一个跨职能、可验收的产品结果，不面向单个文件或
 当前 active：
 
 
+- [PLAN-DELIVERY-COMPONENT-RELEASE-001](./active/PLAN-DELIVERY-COMPONENT-RELEASE-001/PLAN.md)：前后端独立构建与组件化发布——基于调研（产物层已解耦：Product 运行时挂载 web/dist、包内 bin 与 dist 分离、script/build 双发布线先例；耦合全在流水线：一条命令双构建、单一 tar、单一 build tag、安装器只会挑整包）分三阶段拆分：L1 构建范围参数与预构建复用 → L2 产物拆分 + manifest format 2（补齐 web/dist 哈希缺口）→ L3 web/backend 独立发布线与安装器组件化；版本配对策略（G1）为 L2 前置决策闸门。与 PLAN-CONTAINER-DEPLOYMENT-001 在 `deploy/` 有潜在写集重叠，交叉处先对齐。2026-10-05 立项，状态 ready。
 - [PLAN-MOBILE-PERSISTED-STATE-001](./active/PLAN-MOBILE-PERSISTED-STATE-001/PLAN.md)：Mobile 持久化 UI 状态能力与 SOP——修复详情页收藏状态不恢复（组件创建时 `favoriteKey` 未到达导致读路径死代码），沉淀 `createPersistedRecord` 轻量原语 + favorites 单文档 store + `MobileNav` 状态/回调契约，配 source-layout 执法测试、e2e 刷新恢复回归与 `persisted-ui-state` SOP 文档；与 PLAN-FRONTEND-CODEC-PERSISTENCE-001 写集零重叠，theme 双真相记为后续项。2026-10-02 立项，状态 ready。
 - [PLAN-QUALITY-GOVERNANCE-001](./active/PLAN-QUALITY-GOVERNANCE-001/PLAN.md)：质量治理——修复 `ops package check` 中立性误报，补齐真实 runtime 与浏览器验收证据，并统一 active/archive 计划状态和质量命令分层。2026-10-02 立项，状态 ready。
 - [PLAN-FRONTEND-FSD-RESTRUCTURE-001](./archive/PLAN-FRONTEND-FSD-RESTRUCTURE-001/PLAN.md)：前端目录重组——从按技术层改为按功能切片（两平台世界 pages/widgets/features/foundation + kernel/domain/protocol/validation 底层），行为零变化的纯位置重构；核心交付"依赖只向下、同层不互引、两端互不导入"的层序门禁已落地并经变红演练；`SPEC-ARCH-BOUNDARY-001` 已修订生效。2026-10-01 立项并同日以 `completed` 收尾；遗留跟进项见其 RESULT.md（architecture.ts 旧样例收敛、CSS 按 slice 拆分暂缓）。

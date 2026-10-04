@@ -1,5 +1,6 @@
 import { resolve } from "node:path";
 import {
+  compressArtifacts,
   generatePageInputs,
   pageBootstrap,
   pageRouteMap,
@@ -46,6 +47,8 @@ export default defineConfig({
       apiPathPrefix: MOBILE_CATEGORY_SHELF_ENDPOINT,
     }),
     pageRoutesPlugin(routes),
+    // 预压缩产物（.zst/.br/.gz）：product 静态服务按 Accept-Encoding 回发。
+    compressArtifacts(),
     solid(),
   ],
   root,

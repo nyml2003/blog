@@ -13,6 +13,12 @@
 //! `Cache-Control: public, max-age=31536000, immutable`；页面 HTML 返回
 //! `Cache-Control: no-cache`，保证发布后下一次导航即拿到新入口。
 //!
+//! 压缩契约（2026-10-05 引入）：构建期由 `@fluvient-loom/page-build-kit` 的
+//! `compressArtifacts()` 为产物生成 `<file>.zst|.br|.gz` 预压缩兄弟文件；
+//! 本服务按 `Accept-Encoding`（含 q 值与 q=0 排除）协商直接回发对应变体，
+//! 零运行时压缩 CPU。所有静态响应（压缩与原始）都带 `Vary: Accept-Encoding`。
+//! 客户端可接受的编码在磁盘上没有对应变体时回退原始产物。
+//!
 //! SPIKE-001（回退行为观察）见 `WORKSTREAM-OPS-RUNTIME-BACKEND.md` 交付记录。
 
 use std::collections::HashMap;
@@ -97,22 +103,32 @@ impl StaticFiles {
     }
 
     /// 静态解析入口；未知路径、目录路径、深层刷新路径都到这里。
-    pub async fn serve(&self, method: &Method, path: &str) -> Response {
+    /// `accept_encoding` 为请求的 `Accept-Encoding` 原始值（缺省 → 原始产物）。
+    pub async fn serve(
+        &self,
+        method: &Method,
+        path: &str,
+        accept_encoding: Option<&str>,
+    ) -> Response {
         if method != Method::GET && method != Method::HEAD {
             return plain(StatusCode::METHOD_NOT_ALLOWED, "method not allowed\n");
         }
         // 精确页面映射（含 `/m`、`/admin` 这类无尾斜杠目录路径）。
         if let Some(relative) = self.pages.get(path) {
-            return self.read_file(relative, true).await;
+            return self.read_file(relative, true, accept_encoding).await;
         }
         if path == "/mobile-prefetch-sw.js" {
-            return self.read_file("mobile-prefetch-sw.js", false).await;
+            return self
+                .read_file("mobile-prefetch-sw.js", false, accept_encoding)
+                .await;
         }
         if let Some(asset) = path.strip_prefix(ASSETS_PREFIX) {
             if asset.is_empty() || asset.contains("..") || asset.contains('\\') {
                 return plain(StatusCode::NOT_FOUND, "404 page not found\n");
             }
-            return self.read_file(&format!("assets/{asset}"), false).await;
+            return self
+                .read_file(&format!("assets/{asset}"), false, accept_encoding)
+                .await;
         }
         if let Some(error) = &self.route_manifest_error {
             crate::product_error!("page route manifest unavailable error={error}");
@@ -121,7 +137,19 @@ impl StaticFiles {
         plain(StatusCode::NOT_FOUND, "404 page not found\n")
     }
 
-    async fn read_file(&self, relative: &str, is_page: bool) -> Response {
+    async fn read_file(
+        &self,
+        relative: &str,
+        is_page: bool,
+        accept_encoding: Option<&str>,
+    ) -> Response {
+        // 按客户端接受度依次尝试预压缩变体；磁盘上没有就回退原始产物。
+        for (encoding, suffix) in accepted_encodings(accept_encoding) {
+            let variant = self.root.join(format!("{relative}{suffix}"));
+            if let Ok(bytes) = tokio::fs::read(&variant).await {
+                return encoded_response(relative, is_page, encoding, bytes);
+            }
+        }
         let path = self.root.join(relative);
         match tokio::fs::read(&path).await {
             Ok(bytes) => {
@@ -136,6 +164,7 @@ impl StaticFiles {
                     [
                         (header::CONTENT_TYPE, content_type),
                         (header::CACHE_CONTROL, cache_control),
+                        (header::VARY, "Accept-Encoding"),
                     ],
                     bytes,
                 )
@@ -159,6 +188,89 @@ impl StaticFiles {
             }
         }
     }
+}
+
+/// 预压缩编码表：产物后缀与 `Content-Encoding` 值的唯一对照
+/// （与构建期 `compressArtifacts()` 约定一致）。
+const PRECOMPRESSED: [(&str, &str); 3] = [("zstd", ".zst"), ("br", ".br"), ("gzip", ".gz")];
+
+/// Accept-Encoding 协商：返回客户端可接受（q>0）的编码，按
+/// 「q 降序、服务器偏好（zstd > br > gzip）升序」排列。
+/// 解析规则：逗号分段；`;q=` 只认数字（非法值按 1.0）；显式 token 优先于 `*`。
+fn accepted_encodings(accept: Option<&str>) -> Vec<(&'static str, &'static str)> {
+    let Some(accept) = accept else {
+        return Vec::new();
+    };
+    let mut entries: Vec<(String, f32)> = Vec::new();
+    for part in accept.split(',') {
+        let mut fields = part.split(';');
+        let token = fields.next().unwrap_or("").trim().to_ascii_lowercase();
+        if token.is_empty() {
+            continue;
+        }
+        let mut quality = 1.0f32;
+        for field in fields {
+            let field = field.trim();
+            if let Some(value) = field
+                .strip_prefix(['q', 'Q'])
+                .and_then(|rest| rest.strip_prefix('='))
+            {
+                if let Ok(parsed) = value.trim().parse::<f32>() {
+                    quality = parsed;
+                }
+            }
+        }
+        entries.push((token, quality));
+    }
+    let quality_of = |encoding: &str| -> Option<f32> {
+        if let Some((_, quality)) = entries.iter().find(|(token, _)| token == encoding) {
+            return Some(*quality);
+        }
+        entries
+            .iter()
+            .find(|(token, _)| token == "*")
+            .map(|(_, q)| *q)
+    };
+    let mut accepted: Vec<(f32, usize)> = PRECOMPRESSED
+        .iter()
+        .enumerate()
+        .filter_map(|(index, (encoding, _))| {
+            let quality = quality_of(encoding)?;
+            (quality > 0.0).then_some((quality, index))
+        })
+        .collect();
+    accepted.sort_by(|left, right| {
+        right
+            .0
+            .partial_cmp(&left.0)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then(left.1.cmp(&right.1))
+    });
+    accepted
+        .into_iter()
+        .map(|(_, index)| PRECOMPRESSED[index])
+        .collect()
+}
+
+fn encoded_response(relative: &str, is_page: bool, encoding: &str, bytes: Vec<u8>) -> Response {
+    (
+        StatusCode::OK,
+        [
+            (header::CONTENT_TYPE, content_type_of(relative, is_page)),
+            (
+                header::CACHE_CONTROL,
+                if is_page {
+                    PAGE_CACHE_CONTROL
+                } else {
+                    ASSETS_CACHE_CONTROL
+                },
+            ),
+            (header::CONTENT_ENCODING, encoding),
+            (header::VARY, "Accept-Encoding"),
+        ],
+        bytes,
+    )
+        .into_response()
 }
 
 fn plain(status: StatusCode, body: &str) -> Response {
@@ -242,8 +354,9 @@ mod tests {
         files: &StaticFiles,
         method: &Method,
         path: &str,
-    ) -> (StatusCode, String, String, String) {
-        let response = files.serve(method, path).await;
+        accept_encoding: Option<&str>,
+    ) -> (StatusCode, String, String, String, String, Vec<u8>) {
+        let response = files.serve(method, path, accept_encoding).await;
         let status = response.status();
         let header_of = |name: &str| {
             response
@@ -255,6 +368,8 @@ mod tests {
         };
         let content_type = header_of("content-type");
         let cache_control = header_of("cache-control");
+        let content_encoding = header_of("content-encoding");
+        let vary = header_of("vary");
         let bytes = axum::body::to_bytes(response.into_body(), 1 << 20)
             .await
             .unwrap();
@@ -262,7 +377,9 @@ mod tests {
             status,
             content_type,
             cache_control,
-            String::from_utf8_lossy(&bytes).to_string(),
+            content_encoding,
+            vary,
+            bytes.to_vec(),
         )
     }
 
@@ -270,12 +387,16 @@ mod tests {
     async fn serves_mapped_pages_assets_and_404_fallback() {
         let files = static_files();
 
-        let (status, content_type, cache_control, body) =
-            status_of(&files, &Method::GET, "/").await;
+        let (status, content_type, cache_control, _, vary, body) =
+            status_of(&files, &Method::GET, "/", None).await;
         assert_eq!(status, StatusCode::OK);
         assert!(content_type.starts_with("text/html"));
         assert_eq!(cache_control, "no-cache");
-        assert_eq!(body, "<html>desktop/pages/public-home/index.html</html>");
+        assert_eq!(vary, "Accept-Encoding");
+        assert_eq!(
+            body,
+            b"<html>desktop/pages/public-home/index.html</html>".to_vec()
+        );
 
         // 无尾斜杠目录路径与显式 index 路径命中同一页面。
         for path in [
@@ -286,20 +407,20 @@ mod tests {
             "/admin/",
             "/admin/index.html",
         ] {
-            let (status, content_type, cache_control, _) =
-                status_of(&files, &Method::GET, path).await;
+            let (status, content_type, cache_control, _, _, _) =
+                status_of(&files, &Method::GET, path, None).await;
             assert_eq!(status, StatusCode::OK, "path={path}");
             assert!(content_type.starts_with("text/html"), "path={path}");
             assert_eq!(cache_control, "no-cache", "path={path}");
         }
 
-        let (status, content_type, _, body) =
-            status_of(&files, &Method::GET, "/admin/editor-guide/index.html").await;
+        let (status, content_type, _, _, _, body) =
+            status_of(&files, &Method::GET, "/admin/editor-guide/index.html", None).await;
         assert_eq!(status, StatusCode::OK);
         assert!(content_type.starts_with("text/html"));
         assert_eq!(
             body,
-            "<html>desktop/pages/admin-editor-guide/index.html</html>"
+            b"<html>desktop/pages/admin-editor-guide/index.html</html>".to_vec()
         );
 
         for (path, expected) in [
@@ -316,18 +437,25 @@ mod tests {
                 "mobile/pages/admin-article-preview-content/index.html",
             ),
         ] {
-            let (status, content_type, _, body) = status_of(&files, &Method::GET, path).await;
+            let (status, content_type, _, _, _, body) =
+                status_of(&files, &Method::GET, path, None).await;
             assert_eq!(status, StatusCode::OK, "path={path}");
             assert!(content_type.starts_with("text/html"), "path={path}");
-            assert_eq!(body, format!("<html>{expected}</html>"), "path={path}");
+            assert_eq!(
+                body,
+                format!("<html>{expected}</html>").into_bytes(),
+                "path={path}"
+            );
         }
 
-        let (status, content_type, cache_control, body) =
-            status_of(&files, &Method::GET, "/assets/app-abc123.js").await;
+        let (status, content_type, cache_control, content_encoding, vary, body) =
+            status_of(&files, &Method::GET, "/assets/app-abc123.js", None).await;
         assert_eq!(status, StatusCode::OK);
         assert!(content_type.starts_with("text/javascript"));
         assert_eq!(cache_control, "public, max-age=31536000, immutable");
-        assert_eq!(body, "console.log(1)");
+        assert_eq!(content_encoding, "", "无 Accept-Encoding → 原始产物");
+        assert_eq!(vary, "Accept-Encoding");
+        assert_eq!(body, b"console.log(1)".to_vec());
 
         // 未知路径 / 目录穿越 / 缺失资源 → 404（text/plain，与 Go 参考实现一致）。
         for path in [
@@ -339,17 +467,92 @@ mod tests {
             "/assets/../desktop/pages/public-home/index.html",
             "/assets/nope.js",
         ] {
-            let (status, content_type, _, body) = status_of(&files, &Method::GET, path).await;
+            let (status, content_type, _, _, _, body) =
+                status_of(&files, &Method::GET, path, None).await;
             assert_eq!(status, StatusCode::NOT_FOUND, "path={path}");
             assert!(content_type.starts_with("text/plain"), "path={path}");
-            assert_eq!(body, "404 page not found\n", "path={path}");
+            assert_eq!(body, b"404 page not found\n".to_vec(), "path={path}");
         }
 
         // 非 GET/HEAD → 405。
-        let (status, _, _, _) = status_of(&files, &Method::POST, "/").await;
+        let (status, _, _, _, _, _) = status_of(&files, &Method::POST, "/", None).await;
         assert_eq!(status, StatusCode::METHOD_NOT_ALLOWED);
 
         let _ = std::fs::remove_dir_all(files.root());
+    }
+
+    /// `zstdCompressSync(Buffer.from("console.log(1)"), { level: 19 })` 的
+    /// 确定性输出（Node 24.x zlib；与构建期 compressArtifacts 同参数）。
+    const FIXTURE_ZSTD: [u8; 23] = [
+        40, 181, 47, 253, 32, 14, 113, 0, 0, 99, 111, 110, 115, 111, 108, 101, 46, 108, 111, 103,
+        40, 49, 41,
+    ];
+    /// `gzipSync(Buffer.from("console.log(1)"), { level: 9 })` 的确定性输出。
+    const FIXTURE_GZIP: [u8; 34] = [
+        31, 139, 8, 0, 0, 0, 0, 0, 2, 19, 75, 206, 207, 43, 206, 207, 73, 213, 203, 201, 79, 215,
+        48, 212, 4, 0, 104, 254, 1, 67, 14, 0, 0, 0,
+    ];
+
+    /// 预压缩协商：优先序、缺失变体回退、q=0 排除、Vary 标注。
+    #[tokio::test(flavor = "current_thread")]
+    async fn serves_precompressed_variants_by_accept_encoding() {
+        let files = static_files();
+        let root = files.root();
+        // 磁盘上备齐 zstd 与 gzip 变体（缺 brotli，用于验证回退顺序）。
+        std::fs::write(root.join("assets/app-abc123.js.zst"), FIXTURE_ZSTD).unwrap();
+        std::fs::write(root.join("assets/app-abc123.js.gz"), FIXTURE_GZIP).unwrap();
+
+        // 全部可接受 → 服务器偏好 zstd 优先，逐字节等于预压缩变体。
+        let (status, _, _, content_encoding, vary, body) = status_of(
+            &files,
+            &Method::GET,
+            "/assets/app-abc123.js",
+            Some("zstd, br, gzip"),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(content_encoding, "zstd");
+        assert_eq!(vary, "Accept-Encoding");
+        assert_eq!(body, FIXTURE_ZSTD.to_vec());
+
+        // zstd 被排除（q=0）→ 依接受度回退 gzip。
+        let (_, _, _, content_encoding, _, body) = status_of(
+            &files,
+            &Method::GET,
+            "/assets/app-abc123.js",
+            Some("zstd;q=0, gzip"),
+        )
+        .await;
+        assert_eq!(content_encoding, "gzip");
+        assert_eq!(body, FIXTURE_GZIP.to_vec());
+
+        // 只接受缺失的 br 变体 → 落到也接受的 gzip；仅有的变体缺失则回退原始产物。
+        let (_, _, _, content_encoding, _, body) = status_of(
+            &files,
+            &Method::GET,
+            "/assets/app-abc123.js",
+            Some("br;q=0.8, gzip;q=0.5"),
+        )
+        .await;
+        assert_eq!(content_encoding, "gzip");
+        assert_eq!(body, FIXTURE_GZIP.to_vec());
+
+        let (status, _, _, content_encoding, _, body) =
+            status_of(&files, &Method::GET, "/assets/app-abc123.js", Some("br")).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(content_encoding, "", "唯一可接受变体缺失 → 原始产物");
+        assert_eq!(body, b"console.log(1)".to_vec());
+
+        // 页面 HTML 同样参与协商。
+        std::fs::write(root.join("mobile/pages/home/index.html.gz"), FIXTURE_GZIP).unwrap();
+        let (status, content_type, _, content_encoding, _, body) =
+            status_of(&files, &Method::GET, "/m", Some("gzip")).await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(content_type.starts_with("text/html"));
+        assert_eq!(content_encoding, "gzip");
+        assert_eq!(body, FIXTURE_GZIP.to_vec());
+
+        let _ = std::fs::remove_dir_all(root);
     }
 
     #[test]
@@ -392,11 +595,12 @@ mod tests {
         std::fs::write(root.join("assets/app.js"), "asset").unwrap();
         let files = StaticFiles::new(root);
 
-        let (status, _, _, _) = status_of(&files, &Method::GET, "/").await;
+        let (status, _, _, _, _, _) = status_of(&files, &Method::GET, "/", None).await;
         assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
-        let (status, _, _, body) = status_of(&files, &Method::GET, "/assets/app.js").await;
+        let (status, _, _, _, _, body) =
+            status_of(&files, &Method::GET, "/assets/app.js", None).await;
         assert_eq!(status, StatusCode::OK);
-        assert_eq!(body, "asset");
+        assert_eq!(body, b"asset".to_vec());
 
         let _ = std::fs::remove_dir_all(files.root());
     }

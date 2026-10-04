@@ -209,7 +209,9 @@ test("platform main entries mount pages and mobile imports CSS once", () => {
     resolve(frontendRoot, "styles/mobile.css"),
     "utf8",
   );
-  assert.deepEqual(mobileStyles.trim().split("\n"), [
+  // mobile.css = 聚合 @import 清单 + 少量全局规则（如换页转场）；
+  // 契约锁定导入的集合与顺序，不冻结文件其余内容。
+  assert.deepEqual(mobileStyles.match(/^@import .*$/gm), [
     '@import "@blog/mobile-h5-solid-atoms/styles.css";',
     '@import "@fluvient-loom/app-shell/styles.css";',
     '@import "./tokens.css";',
