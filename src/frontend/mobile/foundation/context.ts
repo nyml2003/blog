@@ -1,6 +1,6 @@
 import { type DataResource } from "@fluvient-loom/query";
 import type { WebMobilePorts } from "@fluvient-loom/page-kit/mobile";
-import type { MobileApi, SiteRoutes } from "./api";
+import type { MobileApi, SiteRoutes } from "@blog/mobile-api";
 
 // 端口形状的唯一声明在 page-kit/mobile（WebMobilePorts）；
 // 端内 context 只追加应用声明（api 客户端与路由清单）。

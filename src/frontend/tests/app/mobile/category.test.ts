@@ -9,7 +9,7 @@ import {
 import {
   displayDate,
   positiveFilterIdFromSearch,
-} from "../../../validation/route-input";
+} from "@blog/route-input";
 
 const model = {
   taxonomy: {

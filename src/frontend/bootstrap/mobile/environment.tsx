@@ -11,7 +11,7 @@ import {
   type MobileApiFailure,
   type SiteRoutes,
   siteRoutesSchema,
-} from "../../mobile/foundation/api";
+} from "@blog/mobile-api";
 import type { MobilePageContext } from "../../mobile/foundation/context";
 // 路由清单在构建期由 pages.registry 投影生成（与后端 /api/public/site-routes 同源，
 // 有重新生成比对守卫），直接内嵌进包，避免每次导航阻塞首绘的串行请求。

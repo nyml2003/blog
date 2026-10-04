@@ -17,8 +17,8 @@ import {
   renderPageHtml,
   validatePageRegistry,
 } from "@fluvient-loom/page-build-kit";
-import { siteRoutesSchema as desktopSiteRoutesSchema } from "../../desktop/foundation/api";
-import { siteRoutesSchema } from "../../mobile/foundation/api";
+import { siteRoutesSchema as desktopSiteRoutesSchema } from "@blog/desktop-api";
+import { siteRoutesSchema } from "@blog/mobile-api";
 import { pageRegistry } from "../../pages.registry";
 import { realEntryExists } from "../../page-registry/host";
 

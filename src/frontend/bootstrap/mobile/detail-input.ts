@@ -1,4 +1,4 @@
-import { positiveIdFromSearch } from "../../validation/route-input";
+import { positiveIdFromSearch } from "@blog/route-input";
 
 export function articleIdFromSearch(search: string): number | undefined {
   return positiveIdFromSearch(search, "id");

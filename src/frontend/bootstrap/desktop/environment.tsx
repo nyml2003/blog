@@ -9,7 +9,7 @@ import {
   type DesktopApiFailure,
   type SiteRoutes,
   siteRoutesSchema,
-} from "../../desktop/foundation/api";
+} from "@blog/desktop-api";
 import type { DesktopPageContext } from "../../desktop/foundation/context";
 // 路由清单在构建期由 pages.registry 投影生成（与后端 /api/public/site-routes 同源，
 // 有重新生成比对守卫），直接内嵌进包，首绘不再等待网络请求；端点保留给外部消费。

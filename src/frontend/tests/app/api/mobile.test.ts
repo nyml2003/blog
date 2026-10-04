@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createMobileApi } from "../../../mobile/foundation/api";
+import { createMobileApi } from "@blog/mobile-api";
 import {
   navigationFromModule,
   supportedNavigationIcons,
-} from "../../../mobile/foundation/api";
+} from "@blog/mobile-api";
 import {
   articleIdFromSearch,
   canReturnToSite,
