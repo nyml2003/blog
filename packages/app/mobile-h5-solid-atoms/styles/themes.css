@@ -21,6 +21,7 @@ html[data-theme="dark"] .mobile-shell {
   --coral: #ffad95;
   --teal: #8ed6c4;
   --danger: #ff9692;
+  --tab-rail: #3a3d42;
   color-scheme: dark;
 }
 
@@ -39,6 +40,7 @@ html[data-theme="sepia"] .mobile-shell {
   --coral: #a6442c;
   --teal: #256b5e;
   --danger: #ab3535;
+  --tab-rail: #e3d5b8;
   color-scheme: light;
 }
 

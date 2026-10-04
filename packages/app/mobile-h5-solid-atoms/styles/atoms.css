@@ -198,10 +198,13 @@
   white-space: nowrap;
 }
 
-/* 竖排 tab 走「外卖侧栏」形态：躺在灰色轨道上（轨道由页面布局提供），
-   选中项是 ink 色块：左侧两角普通内圆角，右侧与相邻项的交界由
-   ::after 的 ink 凹弧外扩连接。 */
+/* 竖排 tab 走「外卖侧栏」形态，全程只有两种颜色：
+   未选中项自涂轨道色（--tab-rail，独立令牌可单独配置），
+   选中项是页面底色（--paper）——左侧圆角、右侧平边，像从灰色轨道里
+   挖出来的一块。相邻项各圆掉一个朝向选中块的右侧角，被切掉的角
+   露出页面底色，与选中块连成内圆弧，柔化交界。 */
 .m-atom-tab--vertical {
+  background: var(--tab-rail);
   border-bottom: 0;
   border-left: 0;
   font-size: 12px;
@@ -226,38 +229,18 @@
 }
 
 .m-atom-tab--vertical.is-selected {
-  background: var(--ink);
+  background: var(--paper);
   border-color: transparent;
   border-radius: 14px 0 0 14px;
-  color: var(--paper);
+  color: var(--ink);
 }
 
-.m-atom-tab--vertical:not(.is-selected):active {
-  background: var(--surface-pressed);
+.m-atom-tab--vertical:has(+ .m-atom-tab--vertical.is-selected) {
+  border-bottom-right-radius: 14px;
 }
 
-/* 交界内圆角：选中项上一项的右下、下一项的右上，各放一个纸色块并
-   圆掉朝向轨道外缘的那个角——灰轨道的角收成圆头、恰好点到选中块，
-   纸色凹弧嵌在灰与选中块之间。轨道零间隙（gap: 0）保证贴合。 */
-.m-atom-tab--vertical:has(+ .m-atom-tab--vertical.is-selected)::after,
-.m-atom-tab--vertical.is-selected + .m-atom-tab--vertical::after {
-  content: "";
-  position: absolute;
-  right: 0;
-  width: 14px;
-  height: 14px;
-  background: var(--paper);
-  pointer-events: none;
-}
-
-.m-atom-tab--vertical:has(+ .m-atom-tab--vertical.is-selected)::after {
-  bottom: 0;
-  border-radius: 0 14px 0 0;
-}
-
-.m-atom-tab--vertical.is-selected + .m-atom-tab--vertical::after {
-  top: 0;
-  border-radius: 0 14px 0 0;
+.m-atom-tab--vertical.is-selected + .m-atom-tab--vertical {
+  border-top-right-radius: 14px;
 }
 
 .m-atom-chip {

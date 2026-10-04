@@ -148,12 +148,12 @@
   display: contents;
 }
 
-/* 左栏一级分类 = 灰色轨道（surface），铺满货架两行、零间隙；
-   选中纸色块与相邻项凹角的形态在 atom 层（m-atom-tab--vertical）。 */
+/* 左栏一级分类：外观（两色 + 圆角）全部在 atom 层（m-atom-tab--vertical，
+   未选中自涂 --tab-rail）；这里只负责栅格定位、粘性与滚动。零间隙让
+   相邻项的切角贴住选中块。 */
 .category-root-list {
   grid-column: 1;
   grid-row: 1 / span 2;
-  align-self: stretch;
   grid-auto-rows: min-content;
   position: sticky;
   top: var(--shell-header-sticky-top);
@@ -161,7 +161,6 @@
   gap: 0;
   max-height: calc(100svh - 178px);
   overflow-y: auto;
-  background: var(--surface);
   scrollbar-width: thin;
 }
 
