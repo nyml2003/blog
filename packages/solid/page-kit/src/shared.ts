@@ -59,7 +59,6 @@ export interface PageRegistration {
   readonly id: string;
   readonly platform: PagePlatform;
   readonly outputPath: string;
-  readonly entry: string;
   readonly title: string;
   readonly description: string | undefined;
   readonly aliases: readonly string[];
@@ -86,7 +85,6 @@ export interface DefinePageInput {
   readonly id: string;
   readonly platform: PagePlatform;
   readonly outputPath: string;
-  readonly entry: string;
   readonly title: string;
   readonly aliases: readonly string[];
   readonly description?: string;
@@ -99,7 +97,6 @@ export function definePage(definition: DefinePageInput): PageRegistration {
     id: definition.id,
     platform: definition.platform,
     outputPath: definition.outputPath,
-    entry: definition.entry,
     title: definition.title,
     description: definition.description,
     aliases: definition.aliases,

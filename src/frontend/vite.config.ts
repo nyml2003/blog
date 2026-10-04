@@ -11,19 +11,14 @@ import { defineConfig } from "vite";
 import solid from "vite-plugin-solid";
 import { pageRegistry } from "./pages.registry.ts";
 import { mobilePrefetchServiceWorker } from "./vite-plugins/mobile-prefetch.ts";
-import {
-  realEntryExists,
-  syncSiteRoutesManifest,
-} from "./page-registry/host.ts";
+import { syncSiteRoutesManifest } from "./page-registry/host.ts";
 
 const root = resolve(import.meta.dirname);
 const apiOrigin = process.env.BLOG_API_ORIGIN ?? "http://127.0.0.1:8080";
 
 // 注册表校验先于任何构建副作用：坏注册表让 dev 拒绝启动、build 直接失败，
 // 而不是等到测试期或后端启动期（同一校验器也供 ops page check 复用）。
-const registryViolations = validatePageRegistry(pageRegistry, {
-  entryExists: realEntryExists,
-});
+const registryViolations = validatePageRegistry(pageRegistry);
 if (registryViolations.length > 0) {
   const detail = registryViolations
     .map(

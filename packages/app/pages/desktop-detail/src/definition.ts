@@ -7,7 +7,6 @@ export const desktopDetailPage = definePage({
   id: "desktop-public-detail",
   platform: "desktop",
   outputPath: "desktop/pages/public-detail/index.html",
-  entry: "/bootstrap/desktop/detail.tsx",
   title: "文章详情 - 技术知识库",
   aliases: ["/articles/detail.html"],
 });

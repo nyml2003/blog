@@ -7,6 +7,8 @@ created: 2026-10-03
 last_reviewed: 2026-10-03
 ---
 
+> **后续状态标注（2026-10-04）**：本计划交付的校验器/生成器已搬入 `@fluvient-loom/page-build-kit` 包（PLAN-PAGE-PACKAGING-001 P3a）；校验器的 `entryExists` 依赖随统一入口落地退役（纯函数化）；CI 步骤经 `nix develop ./nix -c ops page check` 实跑验证。本文保留为历史执行记录。
+
 # 页面接入 P1：校验、生成与桌面端首绘内嵌（试点：桌面文章详情页）
 
 ## 目标

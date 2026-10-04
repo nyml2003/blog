@@ -31,7 +31,6 @@ export const mobileArticleDetailPage = definePage({
   id: "mobile-article-detail",
   platform: "mobile",
   outputPath: "mobile/pages/article-detail/index.html",
-  entry: "/bootstrap/mobile/detail.tsx",
   title: "文章详情 - 技术知识库",
   aliases: ["/m/articles/detail.html"],
   bootstrap: true,

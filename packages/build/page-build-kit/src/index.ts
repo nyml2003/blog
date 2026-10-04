@@ -10,7 +10,6 @@ export {
   platformFromOutputPath,
 } from "./normalize.ts";
 export {
-  type PageValidationDependencies,
   type PageValidationRule,
   pageValidationRules,
   type PageViolation,

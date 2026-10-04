@@ -9,7 +9,6 @@ export interface PageImplementation {
   readonly variant: string;
   readonly platform: PagePlatform;
   readonly outputPath: string;
-  readonly entry: string;
 }
 
 const PLATFORMS = ["desktop", "mobile"] as const;
@@ -33,7 +32,6 @@ export function normalizePageRegistry(
       variant: platform,
       platform,
       outputPath: page.outputPath,
-      entry: page.entry,
     };
   });
 }

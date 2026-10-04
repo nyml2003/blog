@@ -4,7 +4,6 @@ export const desktopHomePage = definePage({
   id: "desktop-public-home",
   platform: "desktop",
   outputPath: "desktop/pages/public-home/index.html",
-  entry: "/bootstrap/desktop/home.tsx",
   title: "首页 - 技术知识库",
   aliases: ["/"],
 });

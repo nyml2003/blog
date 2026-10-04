@@ -58,6 +58,10 @@ P3a/P3b 串行（后者动 bootstrap 依赖前者稳定）；P3c 有闸门（fou
 
 - 2026-10-04 接口化注册落地（用户裁定"抽象单位是接口，不是模板"）：definePage 扩为完整 PageRegistration（outputPath/entry 进页面包 definition）；契约类型唯一声明移至 page-kit（build-kit re-export）；pages.registry.ts 收为显式 import 注册（3 页包一页一行 + 14 页内联共存）；**脚手架全家退役**（ops page new、scaffold 模块、templates、三个文本手术函数、冻结清单测试）；build-kit 瘦回校验器/生成器/插件三件。全绿：page:check 清单零 diff、fe 47/47、build ✓、ops 117 项 0 失败、package check 三段 OK。
 
+## 执行记录（收尾）
+
+- 2026-10-04 P3d 完成、计划收尾（见 RESULT-P3D.md）：17/17 全量包化；收尾期间随后续决议落地 bootstrap 统一入口（32→3 文件）、entry 字段全链退役、模板 hyperscript 化、页面 BFF 跳链 bug 修复、shim 清理。全部门禁绿（清单零 diff / 前端 47+7+18 / root typecheck 0 / ops 117 / package check 三段 / CI 同款命令实跑）。
+
 ## 未决项
 
 - foundation 归属（P3b 闸门）；

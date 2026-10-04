@@ -4,7 +4,6 @@ export const mobileAdminArticlePreviewPage = definePage({
   id: "mobile-admin-article-preview",
   platform: "mobile",
   outputPath: "mobile/pages/admin-article-preview-content/index.html",
-  entry: "/bootstrap/mobile/admin-preview-content.tsx",
   title: "手机预览 - 管理台",
   aliases: [
     "/admin/articles/preview/mobile.html",

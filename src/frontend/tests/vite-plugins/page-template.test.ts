@@ -20,7 +20,6 @@ import {
 import { siteRoutesSchema as desktopSiteRoutesSchema } from "@blog/desktop-api";
 import { siteRoutesSchema } from "@blog/mobile-api";
 import { pageRegistry } from "../../pages.registry";
-import { realEntryExists } from "../../page-registry/host";
 
 const frontendRoot = fileURLToPath(new URL("../../", import.meta.url));
 
@@ -39,7 +38,7 @@ function sourceHtmlFiles(directory: string): readonly string[] {
 
 test("the real registry passes the build-kit validator", () => {
   assert.deepEqual(
-    [...validatePageRegistry(pageRegistry, { entryExists: realEntryExists })],
+    [...validatePageRegistry(pageRegistry)],
     [],
   );
 });

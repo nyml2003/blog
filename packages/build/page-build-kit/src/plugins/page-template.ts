@@ -9,7 +9,7 @@ import { dirname, resolve } from "node:path";
 import { renderAppShell } from "@fluvient-loom/app-shell";
 import type { Plugin } from "vite";
 import { pageRoutes, type PageRegistration } from "../types.ts";
-import { h } from "./jsx-html.ts";
+import { h, raw } from "./jsx-html.ts";
 
 export const generatedPagesDirectory = ".generated/pages";
 export const pageRoutesManifest = "page-routes.json";
@@ -35,7 +35,10 @@ export function renderPageHtml(page: PageRegistration): string {
 
   const body = h("body", null,
     shell ? h("style", { "data-loom-app-shell": true, dangerouslySetInnerHTML: shell.criticalCss }) : null,
-    shell ? h("div", { "data-loom-app-shell": "true", "aria-hidden": "true", dangerouslySetInnerHTML: shell.html }) : null,
+    // shell.html 已是完整预渲染元素（含 data-loom-app-shell 与 aria-hidden）：
+    // 原样注入，不得再包一层 div——相邻兄弟选择器 `.loom-app-shell + #app`
+    // 依赖它与 #app 的直接相邻关系（e2e no-JS 契约会验证）。
+    shell ? raw(shell.html) : null,
     h("div", { id: "app" }),
     h("script", { type: "module", src: platformEntry(page.platform) }),
   );

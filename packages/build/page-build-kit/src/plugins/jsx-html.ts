@@ -28,6 +28,11 @@ export interface Html {
   readonly html: string;
 }
 
+/** 预渲染的受信 HTML（如 app shell 骨架）原样注入：不转义、不加包装。 */
+export function raw(html: string): Html {
+  return { html };
+}
+
 type Child = Html | string | number | boolean | null | undefined | readonly Child[];
 
 function flatten(children: readonly Child[]): string {

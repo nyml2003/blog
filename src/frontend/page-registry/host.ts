@@ -12,10 +12,6 @@ import { pageRegistry } from "../pages.registry.ts";
 // 包本体保持纯函数（平台中立门禁要求），Node 侧副作用全部收敛在这里。
 export const frontendRoot = resolve(import.meta.dirname, "..");
 
-export function realEntryExists(entry: string): boolean {
-  return existsSync(resolve(frontendRoot, entry.replace(/^\//, "")));
-}
-
 export interface ManifestSync {
   readonly path: string;
   readonly changed: boolean;

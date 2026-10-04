@@ -1,19 +1,13 @@
 import { resolve } from "node:path";
 import { pageRegistry, pageRoutes } from "../pages.registry.ts";
-import {
-  realEntryExists,
-  syncSiteRoutesManifest,
-  validatePageRegistry,
-} from "./host.ts";
+import { syncSiteRoutesManifest, validatePageRegistry } from "./host.ts";
 
 // CLI 入口：pnpm -C src/frontend run page:check（校验 + 清单同步检查）
 // 与 page:generate（校验 + 重新写出清单）。ops page check 包装前者。
 const write = process.argv.includes("--write");
 const root = resolve(import.meta.dirname, "..");
 
-const violations = validatePageRegistry(pageRegistry, {
-  entryExists: realEntryExists,
-});
+const violations = validatePageRegistry(pageRegistry);
 if (violations.length > 0) {
   console.error(`页面注册表校验失败（${violations.length} 项）：`);
   for (const violation of violations) {

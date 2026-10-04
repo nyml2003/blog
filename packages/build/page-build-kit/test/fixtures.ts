@@ -1,9 +1,6 @@
 import type { AppShellSpec } from "@fluvient-loom/app-shell";
 import type { PageRegistration } from "../src/types.ts";
 
-export const alwaysExists = (): boolean => true;
-export const neverExists = (): boolean => false;
-
 export const desktopShell: AppShellSpec = {
   id: "desktop-shell-test",
   platform: "desktop",
@@ -19,7 +16,6 @@ export const fixtureRegistrations: readonly PageRegistration[] = [
     id: "desktop-home",
     platform: "desktop",
     outputPath: "desktop/pages/home/index.html",
-    entry: "/bootstrap/desktop/home.tsx",
     title: "首页",
     description: undefined,
     aliases: ["/"],
@@ -29,7 +25,6 @@ export const fixtureRegistrations: readonly PageRegistration[] = [
     id: "desktop-archive",
     platform: "desktop",
     outputPath: "desktop/pages/archive/index.html",
-    entry: "/bootstrap/desktop/archive.tsx",
     title: "档案",
     description: undefined,
     aliases: ["/archive/index.html"],
@@ -39,7 +34,6 @@ export const fixtureRegistrations: readonly PageRegistration[] = [
     id: "mobile-home",
     platform: "mobile",
     outputPath: "mobile/pages/home/index.html",
-    entry: "/bootstrap/mobile/home.tsx",
     title: "首页",
     description: undefined,
     aliases: ["/m/", "/m"],

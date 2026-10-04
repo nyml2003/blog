@@ -10,11 +10,7 @@ Plan 面向一个跨职能、可验收的产品结果，不面向单个文件或
 
 当前 active：
 
-- [PLAN-PAGE-PACKAGING-001](./active/PLAN-PAGE-PACKAGING-001/PLAN.md)：页面与基建 npm 包化——落实用户 2026-10-03 晚间推翻性修订：P3a `@fluvient-loom/page-build-kit`（构建链半边）**完成**；P3b `@fluvient-loom/page-kit`（运行时半边，唯一装配点）**完成**；P3c 试点页面包**完成**——registry 演进为聚合产物，definePage 定为"元数据 + 组件"双出口，foundation 闸门按依赖面落定；P3d 完成——17/17 页面包化、注册表 100% 显式 import 聚合（零内联）；支撑包：mobile-api/mobile-shared/kernel/validation/route-input/desktop-api/desktop-shared；接口化注册落地（definePage 全形状、脚手架退役、文本手术清零）。private workspace 包，不发布公共 npm。2026-10-03 立项，in-progress（收尾文档待补）。
-- [PLAN-PAGE-ONBOARDING-002](./active/PLAN-PAGE-ONBOARDING-002/PLAN.md)：页面接入 P2——脚手架 `ops page new`：一条命令生成 bootstrap 入口 + 最小页面组件 + 注册表条目（同平台组末尾）+ 冻结清单行 + 再生 site-routes.json；写入前以"现有注册表 + 假想条目"过校验器，违例零落盘。真实树集成验证：脚手架执行后 18 页全绿（check/test 69/build）→ 重复 id 被拦 → 现场恢复。单测 9/9、ops 126/126、typecheck 零错；顺带把冻结测试的冗余计数改为派生（补丁面收敛到一处）。2026-10-03 立项并同日以 `completed` 收尾（RESULT.md）；其机制代码将按 PLAN-PAGE-PACKAGING-001 搬入 page-build-kit。
 
-- [PLAN-PAGE-ONBOARDING-001](./active/PLAN-PAGE-ONBOARDING-001/PLAN.md)：页面接入 P1——校验、生成与桌面首绘内嵌：注册表校验器（归一化形态 + 平台世界派生校验 + alias×outputPath 交叉冲突，14 规则 13 单测）、site-routes.json 生成器（`aliases[0]` canonical，落地即与现状零 diff）、vite 配置加载期 fail fast（变红证据留档）、`ops page check` 新命令域 + CI 步骤、Desktop 构建期内嵌（e2e 断言红绿对：旧版两请求被捕获、内嵌版零请求）、SPEC-SITE-ROUTES-001 修订。typecheck/test:frontend 60 项/build/ops 套件 123 项全绿；lint/format/source-layout/e2e 全量存在进行中计划（persisted-state）未提交改动引入的既有失败，归属已逐一核实，quality check 全量复跑待该计划收尾。2026-10-03 立项并同日以 `completed` 收尾（RESULT.md）。
-- [PLAN-PAGE-DISCOVERY-001](./active/PLAN-PAGE-DISCOVERY-001/PLAN.md)：页面发现机制与低成本接入（设计讨论）——事实探查（INVENTORY：7 项开放问题逐项回答）+ 决策（DECISIONS：D1–D11，含"该重复时重复、该复用时复用"设计原则与同 URL 双端分流目标模型）；D11 停泊待触发，Rust UA 分流另立计划。2026-10-03 立项并同日以 `completed` 收尾，决策文档保留为 P2/P3 活引用，已派生 PLAN-PAGE-ONBOARDING-001。
 - [PLAN-MOBILE-PERSISTED-STATE-001](./active/PLAN-MOBILE-PERSISTED-STATE-001/PLAN.md)：Mobile 持久化 UI 状态能力与 SOP——修复详情页收藏状态不恢复（组件创建时 `favoriteKey` 未到达导致读路径死代码），沉淀 `createPersistedRecord` 轻量原语 + favorites 单文档 store + `MobileNav` 状态/回调契约，配 source-layout 执法测试、e2e 刷新恢复回归与 `persisted-ui-state` SOP 文档；与 PLAN-FRONTEND-CODEC-PERSISTENCE-001 写集零重叠，theme 双真相记为后续项。2026-10-02 立项，状态 ready。
 - [PLAN-QUALITY-GOVERNANCE-001](./active/PLAN-QUALITY-GOVERNANCE-001/PLAN.md)：质量治理——修复 `ops package check` 中立性误报，补齐真实 runtime 与浏览器验收证据，并统一 active/archive 计划状态和质量命令分层。2026-10-02 立项，状态 ready。
 - [PLAN-FRONTEND-FSD-RESTRUCTURE-001](./archive/PLAN-FRONTEND-FSD-RESTRUCTURE-001/PLAN.md)：前端目录重组——从按技术层改为按功能切片（两平台世界 pages/widgets/features/foundation + kernel/domain/protocol/validation 底层），行为零变化的纯位置重构；核心交付"依赖只向下、同层不互引、两端互不导入"的层序门禁已落地并经变红演练；`SPEC-ARCH-BOUNDARY-001` 已修订生效。2026-10-01 立项并同日以 `completed` 收尾；遗留跟进项见其 RESULT.md（architecture.ts 旧样例收敛、CSS 按 slice 拆分暂缓）。
@@ -25,6 +21,12 @@ Plan 面向一个跨职能、可验收的产品结果，不面向单个文件或
 - [PLAN-CONTAINER-DEPLOYMENT-001](./active/PLAN-CONTAINER-DEPLOYMENT-001/PLAN.md)：低资源单机容器部署——结合现有 Product/Data、SQLite、nginx、systemd 和 Release，设计 2 核 2 GB 服务器上的可靠容器运行、备份、升级与回滚方案。2026-09-29 立项，状态 ready。
 
 已归档：
+
+- [PLAN-PAGE-DISCOVERY-001](./archive/PLAN-PAGE-DISCOVERY-001/PLAN.md)：页面发现机制与低成本接入（设计讨论）——事实探查（INVENTORY：7 项开放问题逐项回答）+ 决策（DECISIONS：D1–D11，含设计原则与同 URL 双端分流目标模型）；D11 停泊待触发，Rust UA 分流另立计划。2026-10-03 立项并同日以 `completed` 收尾；决策文档保留为后续计划活引用。
+- [PLAN-PAGE-ONBOARDING-001](./archive/PLAN-PAGE-ONBOARDING-001/PLAN.md)：页面接入 P1——校验、生成与桌面首绘内嵌：注册表校验器（14 规则）、site-routes.json 生成器（落地即零 diff）、vite 配置加载期 fail fast（变红证据）、`ops page check` + CI 步骤、Desktop 构建期内嵌（e2e 红绿对）。2026-10-03 立项并同日以 `completed` 收尾；交付物已搬入 @fluvient-loom/page-build-kit（P3a）。
+- [PLAN-PAGE-ONBOARDING-002](./archive/PLAN-PAGE-ONBOARDING-002/PLAN.md)：页面接入 P2——脚手架 `ops page new`（校验先行、违例零落盘、真实树回环验证）。2026-10-03 立项并同日以 `completed` 收尾；其后脚手架被"接口而非模板"决策退役（见 DISCOVERY-001 DECISIONS 修订），本文为历史执行记录。
+- [PLAN-PAGE-PACKAGING-001](./archive/PLAN-PAGE-PACKAGING-001/PLAN.md)：页面与基建 npm 包化——三层包形态落地：`@fluvient-loom/page-build-kit`（构建链半边）、`@fluvient-loom/page-kit`（运行时半边，唯一装配点）与 `@blog/page-*` 页面包（apps/pages/*，17/17 全量）；注册表 100% 显式 import 聚合；收尾后演进含 bootstrap 统一入口（32→3 文件）、entry 字段退役、模板 hyperscript 化。全门禁绿（清单零 diff / 前端 47+7+18 / ops 117 / package check 三段 / CI 同款命令实跑）。2026-10-03 立项，2026-10-04 以 `completed` 收尾（RESULT-P3A/P3B/P3C/STRUCTURE/P3D）。
+
 
 - [PLAN-DEPLOY-DOWNLOAD-PREFLIGHT-001](./archive/PLAN-DEPLOY-DOWNLOAD-PREFLIGHT-001/PLAN.md)：部署预检与产物下载可观测性——`@fluvient/core` 统一 Result/取消原语并新增 `/http` 传输内核（分档超时/流式进度/错误分类/可选重试），`@fluvient-loom/net` 收敛重复 fetch 适配器；三个下载型命令统一网络预检（DNS/TCP/TLS/API/资产探测）、进度条与 `--json` 事件流、稳定错误码、`--package` 离线安装。blog-deploy 21/21 测试、全仓 typecheck/test、bundle 冒烟、真实受限网络服务器实测均通过。2026-09-30 立项，2026-10-01 以 `completed` 收尾。
 

@@ -12,8 +12,6 @@ export const pageValidationRules = [
   "output-path-format",
   "output-path-unique",
   "platform-consistency",
-  "entry-format",
-  "entry-exists",
   "bootstrap-mobile-only",
   "shell-mobile-only",
 ] as const;
@@ -24,11 +22,6 @@ export interface PageViolation {
   readonly rule: PageValidationRule;
   readonly pageId: string | undefined;
   readonly message: string;
-}
-
-export interface PageValidationDependencies {
-  /** entry（形如 "/bootstrap/desktop/home.tsx"）对应文件是否存在；宿主提供真实实现。 */
-  readonly entryExists: (entry: string) => boolean;
 }
 
 // bootstrap/shell 只允许 mobile 的依据：宿主构建链的内联引导与 app shell
@@ -44,7 +37,6 @@ function segmentsOf(path: string): readonly string[] {
 
 export function validatePageRegistry(
   registrations: readonly PageRegistration[],
-  dependencies: PageValidationDependencies,
 ): readonly PageViolation[] {
   const violations: PageViolation[] = [];
   const seenIds = new Map<string, string>();
@@ -146,9 +138,6 @@ export function validatePageRegistry(
           `声明的 platform "${page.platform}" 与 outputPath 首段 "${derivedPlatform ?? "(无平台前缀)"}" 必须指向同一平台世界`,
       });
     }
-
-    // 入口已按平台统一（main.tsx + data-page-id），不再逐页检查入口文件。
-    // page.entry 字段保留为文档值，构建系统用 platformEntry() 派生实际入口。
 
     if (page.bootstrap && page.platform !== "mobile") {
       violations.push({
