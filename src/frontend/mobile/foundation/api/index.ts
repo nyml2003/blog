@@ -1,29 +1,3 @@
-export { createMobileApi } from "./client";
-export {
-  mobileNavigationIconSchema,
-  mobileNavigationSchema,
-  mobilePageSchema,
-  articleFromPageModule,
-  moduleByKey,
-  navigationFromModule,
-  navigationFromPage,
-  tShelfFromPageModule,
-  categoryShelfFromPageModule,
-  siteRoutesSchema,
-  supportedNavigationIcons,
-} from "./types";
-export type {
-  CategoryShelf,
-  AdminArticle,
-  ArticleSearch,
-  MobileApi,
-  MobileApiFailure,
-  MobileArticle,
-  SiteRoutes,
-  TShelf,
-  TShelfInput,
-  MobileModule,
-  MobileNavigation,
-  MobileNavigationIcon,
-  MobilePage,
-} from "./client";
+// 薄转发：实现已抽入 @blog/mobile-api（api client + 类型 + 数据资源钩子）。
+// 保留路径使既有消费者零改动；迁移完成后再逐步直连。
+export * from "@blog/mobile-api";

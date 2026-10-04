@@ -1,6 +1,6 @@
 import { err, ok } from "@fluvient/core";
 import { createDataTask } from "@fluvient-loom/query";
-import { cancellationFailure } from "@fluvient/core";
+import { cancellationFailure, toErrorInfo } from "@fluvient/core";
 import {
   type DataTask,
   type NetworkPort,
@@ -22,7 +22,7 @@ import {
   type Taxonomy,
   type TShelfInput,
   type Workspace,
-} from "./types";
+} from "./types.ts";
 
 const envelopeSchema = z.object({
   code: z.string(),
@@ -128,6 +128,7 @@ function failure(
     code: details.code,
     status: details.status,
     issues: details.issues,
+    cause: details.cause,
   };
 }
 
@@ -297,6 +298,7 @@ function request<T>(
           failure(
             response.error.kind === "timeout" ? "timeout" : response.error.kind,
             response.error.message,
+            { cause: response.error.cause },
           ),
         );
       }
@@ -306,6 +308,9 @@ function request<T>(
       return failure(
         "network",
         cause instanceof Error ? cause.message : "请求执行失败",
+        {
+          cause: toErrorInfo(cause),
+        },
       );
     },
   });

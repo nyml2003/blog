@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createDesiredStateMutation } from "../../../kernel/desired-state";
+import { createDesiredStateMutation } from "@blog/kernel";
 import {
   type OperationIdPort,
   type PreparedCommand,

@@ -21,17 +21,6 @@ export {
   siteRoutesManifestFilename,
 } from "./generate.ts";
 export {
-  type ScaffoldFile,
-  type ScaffoldIo,
-  type ScaffoldPlan,
-  type ScaffoldSpec,
-  insertExpectedRoute,
-  insertRegistration,
-  insertRegistryEntry,
-  planScaffoldPage,
-  writeScaffold,
-} from "./scaffold.ts";
-export {
   generatedPagePath,
   generatedPagesDirectory,
   generatePageInputs,

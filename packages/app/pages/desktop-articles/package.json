@@ -1,0 +1,21 @@
+{
+  "name": "@blog/page-desktop-articles",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/definition.ts",
+    "./page": "./src/page.tsx"
+  },
+  "dependencies": {
+    "@blog/desktop-api": "workspace:*",
+    "@blog/desktop-shared": "workspace:*",
+    "@blog/route-input": "workspace:*",
+    "@fluvient/core": "workspace:*",
+    "@fluvient-loom/page-kit": "workspace:*",
+    "@fluvient-loom/text-highlight": "workspace:*"
+  },
+  "peerDependencies": {
+    "solid-js": "^1.9.0"
+  }
+}

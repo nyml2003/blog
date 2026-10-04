@@ -86,9 +86,138 @@ importers:
       '@blog/desktop-api':
         specifier: workspace:*
         version: link:../desktop-api
+      '@fluvient-loom/page-kit':
+        specifier: workspace:*
+        version: link:../../solid/page-kit
       '@fluvient-loom/text-highlight':
         specifier: workspace:*
         version: link:../../web/text-highlight
+      solid-js:
+        specifier: ^1.9.0
+        version: 1.9.15
+
+  packages/app/kernel: {}
+
+  packages/app/mobile-api:
+    dependencies:
+      '@fluvient-loom/port':
+        specifier: workspace:*
+        version: link:../../ts/port
+      '@fluvient-loom/query':
+        specifier: workspace:*
+        version: link:../../ts/query
+      '@fluvient/core':
+        specifier: workspace:*
+        version: link:../../ts/core
+      solid-js:
+        specifier: ^1.9.0
+        version: 1.9.15
+      zod:
+        specifier: ^4.5.4
+        version: 4.6.5
+
+  packages/app/mobile-h5-solid-atoms:
+    dependencies:
+      solid-js:
+        specifier: ^1.9.0
+        version: 1.9.15
+    devDependencies:
+      '@types/node':
+        specifier: 26.4.1
+        version: 26.4.1
+      tsx:
+        specifier: ^4.23.13
+        version: 4.23.13
+      typescript:
+        specifier: 7.0.2
+        version: 7.0.2
+
+  packages/app/mobile-shared:
+    dependencies:
+      '@blog/mobile-api':
+        specifier: workspace:*
+        version: link:../mobile-api
+      '@blog/mobile-h5-solid-atoms':
+        specifier: workspace:*
+        version: link:../mobile-h5-solid-atoms
+      '@fluvient-loom/page-kit':
+        specifier: workspace:*
+        version: link:../../solid/page-kit
+      '@fluvient-loom/port':
+        specifier: workspace:*
+        version: link:../../ts/port
+      '@fluvient-loom/query':
+        specifier: workspace:*
+        version: link:../../ts/query
+      '@fluvient-loom/text-highlight':
+        specifier: workspace:*
+        version: link:../../web/text-highlight
+      '@fluvient/core':
+        specifier: workspace:*
+        version: link:../../ts/core
+      lucide-solid:
+        specifier: 1.48.0
+        version: 1.48.0(solid-js@1.9.15)
+      solid-js:
+        specifier: ^1.9.0
+        version: 1.9.15
+
+  packages/app/pages/desktop-admin-home:
+    dependencies:
+      '@blog/desktop-api':
+        specifier: workspace:*
+        version: link:../../desktop-api
+      '@blog/desktop-shared':
+        specifier: workspace:*
+        version: link:../../desktop-shared
+      '@fluvient-loom/page-kit':
+        specifier: workspace:*
+        version: link:../../../solid/page-kit
+      solid-js:
+        specifier: ^1.9.0
+        version: 1.9.15
+
+  packages/app/pages/desktop-admin-preview:
+    dependencies:
+      '@blog/desktop-api':
+        specifier: workspace:*
+        version: link:../../desktop-api
+      '@blog/desktop-shared':
+        specifier: workspace:*
+        version: link:../../desktop-shared
+      '@blog/route-input':
+        specifier: workspace:*
+        version: link:../../route-input
+      '@fluvient-loom/page-kit':
+        specifier: workspace:*
+        version: link:../../../solid/page-kit
+      lucide-solid:
+        specifier: 1.48.0
+        version: 1.48.0(solid-js@1.9.15)
+      solid-js:
+        specifier: ^1.9.0
+        version: 1.9.15
+
+  packages/app/pages/desktop-articles:
+    dependencies:
+      '@blog/desktop-api':
+        specifier: workspace:*
+        version: link:../../desktop-api
+      '@blog/desktop-shared':
+        specifier: workspace:*
+        version: link:../../desktop-shared
+      '@blog/route-input':
+        specifier: workspace:*
+        version: link:../../route-input
+      '@fluvient-loom/page-kit':
+        specifier: workspace:*
+        version: link:../../../solid/page-kit
+      '@fluvient-loom/text-highlight':
+        specifier: workspace:*
+        version: link:../../../web/text-highlight
+      '@fluvient/core':
+        specifier: workspace:*
+        version: link:../../../ts/core
       solid-js:
         specifier: ^1.9.0
         version: 1.9.15
@@ -114,13 +243,238 @@ importers:
         specifier: ^1.9.0
         version: 1.9.15
 
+  packages/app/pages/desktop-editor:
+    dependencies:
+      '@blog/desktop-api':
+        specifier: workspace:*
+        version: link:../../desktop-api
+      '@blog/desktop-shared':
+        specifier: workspace:*
+        version: link:../../desktop-shared
+      '@blog/route-input':
+        specifier: workspace:*
+        version: link:../../route-input
+      '@blog/validation':
+        specifier: workspace:*
+        version: link:../../validation
+      '@codemirror/commands':
+        specifier: 6.8.1
+        version: 6.8.1
+      '@codemirror/lang-html':
+        specifier: 6.4.9
+        version: 6.4.9
+      '@codemirror/language':
+        specifier: 6.12.4
+        version: 6.12.4
+      '@codemirror/lint':
+        specifier: 6.8.5
+        version: 6.8.5
+      '@codemirror/state':
+        specifier: 6.5.2
+        version: 6.5.2
+      '@codemirror/view':
+        specifier: 6.36.5
+        version: 6.36.5
+      '@fluvient-loom/page-kit':
+        specifier: workspace:*
+        version: link:../../../solid/page-kit
+      '@fluvient-loom/query':
+        specifier: workspace:*
+        version: link:../../../ts/query
+      '@fluvient/core':
+        specifier: workspace:*
+        version: link:../../../ts/core
+      solid-js:
+        specifier: ^1.9.0
+        version: 1.9.15
+
+  packages/app/pages/desktop-editor-guide:
+    dependencies:
+      '@blog/desktop-shared':
+        specifier: workspace:*
+        version: link:../../desktop-shared
+      '@fluvient-loom/page-kit':
+        specifier: workspace:*
+        version: link:../../../solid/page-kit
+      solid-js:
+        specifier: ^1.9.0
+        version: 1.9.15
+
+  packages/app/pages/desktop-home:
+    dependencies:
+      '@blog/desktop-api':
+        specifier: workspace:*
+        version: link:../../desktop-api
+      '@fluvient-loom/page-kit':
+        specifier: workspace:*
+        version: link:../../../solid/page-kit
+      '@fluvient/core':
+        specifier: workspace:*
+        version: link:../../../ts/core
+      solid-js:
+        specifier: ^1.9.0
+        version: 1.9.15
+
+  packages/app/pages/desktop-login:
+    dependencies:
+      '@blog/desktop-api':
+        specifier: workspace:*
+        version: link:../../desktop-api
+      '@blog/desktop-shared':
+        specifier: workspace:*
+        version: link:../../desktop-shared
+      '@fluvient-loom/page-kit':
+        specifier: workspace:*
+        version: link:../../../solid/page-kit
+      solid-js:
+        specifier: ^1.9.0
+        version: 1.9.15
+
+  packages/app/pages/desktop-taxonomy:
+    dependencies:
+      '@blog/desktop-api':
+        specifier: workspace:*
+        version: link:../../desktop-api
+      '@blog/desktop-shared':
+        specifier: workspace:*
+        version: link:../../desktop-shared
+      '@fluvient-loom/page-kit':
+        specifier: workspace:*
+        version: link:../../../solid/page-kit
+      solid-js:
+        specifier: ^1.9.0
+        version: 1.9.15
+
+  packages/app/pages/mobile-admin-preview:
+    dependencies:
+      '@blog/mobile-api':
+        specifier: workspace:*
+        version: link:../../mobile-api
+      '@blog/mobile-shared':
+        specifier: workspace:*
+        version: link:../../mobile-shared
+      '@blog/route-input':
+        specifier: workspace:*
+        version: link:../../route-input
+      '@fluvient-loom/page-kit':
+        specifier: workspace:*
+        version: link:../../../solid/page-kit
+      lucide-solid:
+        specifier: 1.48.0
+        version: 1.48.0(solid-js@1.9.15)
+      solid-js:
+        specifier: ^1.9.0
+        version: 1.9.15
+
+  packages/app/pages/mobile-articles:
+    dependencies:
+      '@blog/mobile-api':
+        specifier: workspace:*
+        version: link:../../mobile-api
+      '@blog/mobile-shared':
+        specifier: workspace:*
+        version: link:../../mobile-shared
+      '@blog/route-input':
+        specifier: workspace:*
+        version: link:../../route-input
+      '@fluvient-loom/page-kit':
+        specifier: workspace:*
+        version: link:../../../solid/page-kit
+      '@fluvient-loom/text-highlight':
+        specifier: workspace:*
+        version: link:../../../web/text-highlight
+      '@fluvient/core':
+        specifier: workspace:*
+        version: link:../../../ts/core
+      solid-js:
+        specifier: ^1.9.0
+        version: 1.9.15
+
+  packages/app/pages/mobile-detail:
+    dependencies:
+      '@blog/mobile-api':
+        specifier: workspace:*
+        version: link:../../mobile-api
+      '@blog/mobile-shared':
+        specifier: workspace:*
+        version: link:../../mobile-shared
+      '@blog/route-input':
+        specifier: workspace:*
+        version: link:../../route-input
+      '@fluvient-loom/page-kit':
+        specifier: workspace:*
+        version: link:../../../solid/page-kit
+      '@fluvient-loom/persisted-state':
+        specifier: workspace:*
+        version: link:../../../solid/persisted-state
+      '@fluvient-loom/port':
+        specifier: workspace:*
+        version: link:../../../ts/port
+      solid-js:
+        specifier: ^1.9.0
+        version: 1.9.15
+
+  packages/app/pages/mobile-home:
+    dependencies:
+      '@blog/mobile-api':
+        specifier: workspace:*
+        version: link:../../mobile-api
+      '@blog/mobile-shared':
+        specifier: workspace:*
+        version: link:../../mobile-shared
+      '@fluvient-loom/page-kit':
+        specifier: workspace:*
+        version: link:../../../solid/page-kit
+      lucide-solid:
+        specifier: 1.48.0
+        version: 1.48.0(solid-js@1.9.15)
+      solid-js:
+        specifier: ^1.9.0
+        version: 1.9.15
+
+  packages/app/pages/mobile-settings:
+    dependencies:
+      '@blog/kernel':
+        specifier: workspace:*
+        version: link:../../kernel
+      '@blog/mobile-api':
+        specifier: workspace:*
+        version: link:../../mobile-api
+      '@blog/mobile-shared':
+        specifier: workspace:*
+        version: link:../../mobile-shared
+      '@fluvient-loom/page-kit':
+        specifier: workspace:*
+        version: link:../../../solid/page-kit
+      '@fluvient-loom/port':
+        specifier: workspace:*
+        version: link:../../../ts/port
+      '@fluvient-loom/query':
+        specifier: workspace:*
+        version: link:../../../ts/query
+      '@fluvient/core':
+        specifier: workspace:*
+        version: link:../../../ts/core
+      solid-js:
+        specifier: ^1.9.0
+        version: 1.9.15
+
   packages/app/route-input: {}
+
+  packages/app/validation:
+    dependencies:
+      zod:
+        specifier: ^4.5.4
+        version: 4.6.5
 
   packages/build/page-build-kit:
     dependencies:
       '@fluvient-loom/app-shell':
         specifier: workspace:*
         version: link:../../web/app-shell
+      '@fluvient-loom/page-kit':
+        specifier: workspace:*
+        version: link:../../solid/page-kit
     devDependencies:
       '@types/node':
         specifier: 26.4.1
@@ -162,24 +516,11 @@ importers:
         specifier: workspace:*
         version: link:../../ts/core
 
-  packages/solid/mobile-h5-solid-atoms:
-    dependencies:
-      solid-js:
-        specifier: ^1.9.0
-        version: 1.9.15
-    devDependencies:
-      '@types/node':
-        specifier: 26.4.1
-        version: 26.4.1
-      tsx:
-        specifier: ^4.23.13
-        version: 4.23.13
-      typescript:
-        specifier: 7.0.2
-        version: 7.0.2
-
   packages/solid/page-kit:
     dependencies:
+      '@fluvient-loom/app-shell':
+        specifier: workspace:*
+        version: link:../../web/app-shell
       '@fluvient-loom/net':
         specifier: workspace:*
         version: link:../../ts/net
@@ -227,6 +568,12 @@ importers:
       typescript:
         specifier: 7.0.2
         version: 7.0.2
+
+  packages/ts/codec:
+    dependencies:
+      '@fluvient/core':
+        specifier: workspace:*
+        version: link:../core
 
   packages/ts/command:
     dependencies:
@@ -290,7 +637,11 @@ importers:
         specifier: workspace:*
         version: link:../nested-gesture
 
-  packages/web/mobile-prefetch: {}
+  packages/web/mobile-prefetch:
+    dependencies:
+      '@fluvient/core':
+        specifier: workspace:*
+        version: link:../../ts/core
 
   packages/web/nested-gesture: {}
 
@@ -313,12 +664,66 @@ importers:
       '@blog/desktop-shared':
         specifier: workspace:*
         version: link:../../packages/app/desktop-shared
+      '@blog/kernel':
+        specifier: workspace:*
+        version: link:../../packages/app/kernel
+      '@blog/mobile-api':
+        specifier: workspace:*
+        version: link:../../packages/app/mobile-api
+      '@blog/mobile-h5-solid-atoms':
+        specifier: workspace:*
+        version: link:../../packages/app/mobile-h5-solid-atoms
+      '@blog/mobile-shared':
+        specifier: workspace:*
+        version: link:../../packages/app/mobile-shared
+      '@blog/page-desktop-admin-home':
+        specifier: workspace:*
+        version: link:../../packages/app/pages/desktop-admin-home
+      '@blog/page-desktop-admin-preview':
+        specifier: workspace:*
+        version: link:../../packages/app/pages/desktop-admin-preview
+      '@blog/page-desktop-articles':
+        specifier: workspace:*
+        version: link:../../packages/app/pages/desktop-articles
       '@blog/page-desktop-detail':
         specifier: workspace:*
         version: link:../../packages/app/pages/desktop-detail
+      '@blog/page-desktop-editor':
+        specifier: workspace:*
+        version: link:../../packages/app/pages/desktop-editor
+      '@blog/page-desktop-editor-guide':
+        specifier: workspace:*
+        version: link:../../packages/app/pages/desktop-editor-guide
+      '@blog/page-desktop-home':
+        specifier: workspace:*
+        version: link:../../packages/app/pages/desktop-home
+      '@blog/page-desktop-login':
+        specifier: workspace:*
+        version: link:../../packages/app/pages/desktop-login
+      '@blog/page-desktop-taxonomy':
+        specifier: workspace:*
+        version: link:../../packages/app/pages/desktop-taxonomy
+      '@blog/page-mobile-admin-preview':
+        specifier: workspace:*
+        version: link:../../packages/app/pages/mobile-admin-preview
+      '@blog/page-mobile-articles':
+        specifier: workspace:*
+        version: link:../../packages/app/pages/mobile-articles
+      '@blog/page-mobile-detail':
+        specifier: workspace:*
+        version: link:../../packages/app/pages/mobile-detail
+      '@blog/page-mobile-home':
+        specifier: workspace:*
+        version: link:../../packages/app/pages/mobile-home
+      '@blog/page-mobile-settings':
+        specifier: workspace:*
+        version: link:../../packages/app/pages/mobile-settings
       '@blog/route-input':
         specifier: workspace:*
         version: link:../../packages/app/route-input
+      '@blog/validation':
+        specifier: workspace:*
+        version: link:../../packages/app/validation
       '@codemirror/commands':
         specifier: 6.8.1
         version: 6.8.1
@@ -340,9 +745,6 @@ importers:
       '@fluvient-loom/app-shell':
         specifier: workspace:*
         version: link:../../packages/web/app-shell
-      '@fluvient-loom/mobile-h5-solid-atoms':
-        specifier: workspace:*
-        version: link:../../packages/solid/mobile-h5-solid-atoms
       '@fluvient-loom/mobile-prefetch':
         specifier: workspace:*
         version: link:../../packages/web/mobile-prefetch

@@ -1,4 +1,4 @@
-import { ScrollView } from "./scroll-view";
+import { ScrollView } from "./scroll-view.ts";
 
 /**
  * <sticky-list-view> — a scroll-view whose content is grouped under

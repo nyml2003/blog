@@ -1,0 +1,32 @@
+{
+  "name": "@blog/page-desktop-editor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./page": "./src/page.tsx",
+    "./state": "./src/state.ts",
+    "./session-draft": "./src/session-draft.ts",
+    "./persistence": "./src/persistence.ts",
+    "./codemirror": "./src/codemirror.ts"
+  },
+  "dependencies": {
+    "@blog/desktop-api": "workspace:*",
+    "@blog/desktop-shared": "workspace:*",
+    "@blog/route-input": "workspace:*",
+    "@blog/validation": "workspace:*",
+    "@codemirror/commands": "6.8.1",
+    "@codemirror/lang-html": "6.4.9",
+    "@codemirror/language": "6.12.4",
+    "@codemirror/lint": "6.8.5",
+    "@codemirror/state": "6.5.2",
+    "@codemirror/view": "6.36.5",
+    "@fluvient-loom/page-kit": "workspace:*",
+    "@fluvient-loom/query": "workspace:*",
+    "@fluvient/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "solid-js": "^1.9.0"
+  }
+}

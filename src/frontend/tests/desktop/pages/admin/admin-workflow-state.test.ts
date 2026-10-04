@@ -4,18 +4,18 @@ import test from "node:test";
 import {
   editorSnapshot,
   valueForCurrentSource,
-} from "../../../../desktop/features/editor/state";
+} from "@blog/page-desktop-editor/state";
 import {
   takeEditorSessionDraft,
   writeEditorSessionDraft,
   type EditorDraftStorage,
-} from "../../../../desktop/features/editor/session-draft";
+} from "@blog/page-desktop-editor/session-draft";
 import {
   canAbandonWorkspace,
   canSubmitWorkspace,
   workspaceActionPending,
   workspaceStatusLabel,
-} from "../../../../desktop/features/taxonomy/state";
+} from "@blog/page-desktop-taxonomy/state";
 
 const memoryStorage = (): EditorDraftStorage => {
   const values = new Map<string, string>();
@@ -76,11 +76,11 @@ test("workspace actions follow the finite server status matrix", () => {
 
 test("editor keeps its form mounted after save and public navigation has no admin entry", () => {
   const editorSource = readFileSync(
-    new URL("../../../../desktop/pages/editor/page.tsx", import.meta.url),
+    new URL("../../../../../../packages/app/pages/desktop-editor/src/page.tsx", import.meta.url),
     "utf8",
   );
   const headerSource = readFileSync(
-    new URL("../../../../desktop/pages/admin-home/page.tsx", import.meta.url),
+    new URL("../../../../../../packages/app/pages/desktop-admin-home/src/page.tsx", import.meta.url),
     "utf8",
   );
 

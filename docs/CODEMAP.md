@@ -49,12 +49,19 @@ blog/
 │       ├── mobile/  desktop/ ← 平台世界：pages/<slice> → widgets/<slice> → features/<slice> → foundation/{api,styles,ui}
 │       ├── kernel/          ← 纯机制：desired-state 状态原语（ports/Result/Task 已归 @fluvient-loom 包）
 │       ├── domain/ protocol/ validation/ ← 跨端契约与输入校验（route-input、article-html、WASM 产物 generated/）
-│       ├── pages.registry.ts ← 全部 17 个页面的登记表（单一事实源）
-│       ├── page-registry/    ← 注册表机制：校验器（14 规则，vite 加载期/ops page check/测试三入口）、site-routes 生成器与新页面脚手架（ops page new）
+│       ├── pages.registry.ts ← 页面登记表（聚合产物：@blog 页面包声明 + 宿主内联定义）
+│       ├── page-registry/    ← 注册表宿主 glue：校验/生成/脚手架 CLI（机制在 @fluvient-loom/page-build-kit）
 │       ├── site-routes.json  ← 页面路由清单（registry 生成物，两端构建期内嵌；后端 /api/public/site-routes 保留）
 │       ├── vite-plugins/   ← Vite 插件（页面模板生成、bootstrap 注入、dev 路由重写、Mobile prefetch SW）
 │       └── build/          ← 非 Vite 构建工具（article HTML 的 wasm 构建）
-├── packages/               ← 可复用包：@fluvient-loom（前端运行时 ports/query/command/web/gesture/net 等）、@fluvient-loom/page-build-kit（页面接入构建链：校验/生成/vite 插件/脚手架）与 @fluvient/core（cli/loom 共享的 Result、取消原语与 http 传输内核）
+├── packages/               ← 全部 npm 包，按类别分目录（目录即门禁策略，未知类别 fail-closed）：
+│   ├── ts/                 ← 真通用基础件：core port query command mock net
+│   ├── web/                ← web 域：web gesture-web mobile-prefetch nested-gesture text-highlight app-shell
+│   ├── solid/              ← web+solid UI：persisted-state page-kit
+│   ├── cli/                ← node 侧：cli-kit cli-core cli-plugins node
+│   ├── build/              ← 构建链（node+vite）：page-build-kit（校验/生成/vite 插件/脚手架）
+│   └── app/                ← @blog 应用私有包：route-input desktop-api desktop-shared
+│                           　mobile-h5-solid-atoms（mobile 专属设计系统）+ pages/（页面包）
 │   └── cli-kit / cli-core / cli-plugins ← ops CLI 的框架能力（参数/输出/进程/端口分配）
 ├── apps/blog/              ← ops 命令实现（src/registry.ts 是命令登记表）
 │   └── src/{admin,content,delivery,e2e,quality,release,runtime}/ ← 各命令域模块

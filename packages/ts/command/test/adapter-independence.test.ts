@@ -72,10 +72,10 @@ function assemble(input: {
       async prepare(input2) {
         return ok({
           async execute() {
-            const written = input.persistence.write(
-              KEY,
-              JSON.stringify(input2.next),
-            );
+            const written = input.persistence.write({
+              key: KEY,
+              value: JSON.stringify(input2.next),
+            });
             return written.ok ? ok(undefined) : err(new Error("write failed"));
           },
           async compensate() {
@@ -122,7 +122,7 @@ test("the same factory and script produce identical projections on the Node adap
     projected,
   });
   await runScript(state, projected, () =>
-    persistence.write(KEY, JSON.stringify({ theme: "dark", font: "sans" })),
+    persistence.write({ key: KEY, value: JSON.stringify({ theme: "dark", font: "sans" }) }),
   );
 });
 
@@ -158,7 +158,7 @@ test("adapters are interchangeable: both runs share one projection sequence", as
       projected,
     });
     return runScript(state, projected, () =>
-      persistence.write(KEY, JSON.stringify({ theme: "dark", font: "sans" })),
+      persistence.write({ key: KEY, value: JSON.stringify({ theme: "dark", font: "sans" }) }),
     );
   };
   const webRun = async () => {
@@ -200,7 +200,7 @@ test("web wiring projects the lifecycle onto root attributes", async () => {
     document,
     projected,
   });
-  persistence.write(KEY, JSON.stringify({ theme: "dark", font: "sans" }));
+  persistence.write({ key: KEY, value: JSON.stringify({ theme: "dark", font: "sans" }) });
   await state.reconcile();
   await state.update({ font: "serif" });
   assert.equal(attributes.get("data-theme"), "dark");

@@ -80,9 +80,12 @@ export function checkPackageNeutrality(
         violations.push({ file, message });
       }
     }
+    // 平台全局检测前剥离字符串字面量：import 路径（如 "./ports/document.ts"）
+    // 不是宿主访问。
+    const codeOnly = source.replace(/"[^"]*"/g, '""').replace(/'[^']*'/g, "''");
     const platformGlobalsAllowed =
       category === 'web' || category === 'solid' || category === 'cli' || category === 'app';
-    if (!platformGlobalsAllowed && PLATFORM_GLOBAL_PATTERN.test(source)) {
+    if (!platformGlobalsAllowed && PLATFORM_GLOBAL_PATTERN.test(codeOnly)) {
       violations.push({
         file,
         message: `平台全局访问不允许出现在 ${category} 域包 src/（包 ${pkg}）`,

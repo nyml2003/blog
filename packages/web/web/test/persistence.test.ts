@@ -30,7 +30,7 @@ test("web persistence round-trips through an injected storage", () => {
   const fake = fakeStorage();
   const persistence = createWebPersistence({ storage: fake.storage });
   assert.deepEqual(persistence.read("missing"), { ok: true, value: undefined });
-  assert.deepEqual(persistence.write("theme", "dark"), {
+  assert.deepEqual(persistence.write({ key: "theme", value: "dark" }), {
     ok: true,
     value: undefined,
   });
@@ -48,7 +48,7 @@ test("storage exceptions settle as typed persistence failures", () => {
       op === "read"
         ? persistence.read("k")
         : op === "write"
-          ? persistence.write("k", "v")
+          ? persistence.write({ key: "k", value: "v" })
           : persistence.remove("k");
     assert.equal(result.ok, false);
     assert.ok(!result.ok);

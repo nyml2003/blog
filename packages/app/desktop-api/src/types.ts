@@ -172,6 +172,7 @@ export interface DesktopApiFailure {
   readonly code: string | undefined;
   readonly status: number | undefined;
   readonly issues: readonly string[] | undefined;
+  readonly cause?: import("@fluvient/core").ErrorInfo;
 }
 
 export interface DesktopApi {

@@ -60,7 +60,7 @@ test('package smoke: lifecycle factory + real Node adapter, all paths projected 
     async prepare(input) {
       return ok({
         async execute() {
-          persistence.write(KEY, JSON.stringify(input.next));
+          persistence.write({ key: KEY, value: JSON.stringify(input.next) });
           return ok(undefined);
         },
         async compensate() {
@@ -92,7 +92,10 @@ test('package smoke: lifecycle factory + real Node adapter, all paths projected 
   assert.deepEqual(projected[0], DEFAULT);
 
   // 2. reconcile projects the stored truth
-  persistence.write(KEY, JSON.stringify({ theme: 'dark', font: 'sans' }));
+  persistence.write({
+    key: KEY,
+    value: JSON.stringify({ theme: 'dark', font: 'sans' }),
+  });
   const reconciled = await state.reconcile();
   assert.equal(reconciled.ok, true);
   assert.deepEqual(projected.at(-1), { theme: 'dark', font: 'sans' });

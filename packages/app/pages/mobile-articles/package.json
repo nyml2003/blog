@@ -1,0 +1,21 @@
+{
+  "name": "@blog/page-mobile-articles",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./page": "./src/page.tsx"
+  },
+  "dependencies": {
+    "@blog/mobile-api": "workspace:*",
+    "@blog/mobile-shared": "workspace:*",
+    "@blog/route-input": "workspace:*",
+    "@fluvient-loom/page-kit": "workspace:*",
+    "@fluvient-loom/text-highlight": "workspace:*",
+    "@fluvient/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "solid-js": "^1.9.0"
+  }
+}

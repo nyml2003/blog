@@ -1,0 +1,18 @@
+{
+  "name": "@blog/mobile-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@fluvient/core": "workspace:*",
+    "@fluvient-loom/port": "workspace:*",
+    "@fluvient-loom/query": "workspace:*",
+    "zod": "^4.5.4"
+  },
+  "peerDependencies": {
+    "solid-js": "^1.9.0"
+  }
+}

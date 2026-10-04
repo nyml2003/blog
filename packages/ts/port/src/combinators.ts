@@ -1,7 +1,7 @@
 import type {
   AsyncPersistencePort,
   PersistencePort,
-} from "./ports/persistence";
+} from "./ports/persistence.ts";
 
 /**
  * Port-level combinator: lifts any synchronous PersistencePort into its
@@ -15,8 +15,8 @@ export function asAsyncPersistence(
     async read(key) {
       return persistence.read(key);
     },
-    async write(key, value) {
-      return persistence.write(key, value);
+    async write(plan) {
+      return persistence.write(plan);
     },
     async remove(key) {
       return persistence.remove(key);

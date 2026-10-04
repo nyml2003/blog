@@ -16,8 +16,8 @@ export function createMemoryPersistence(
   const store = new Map<string, string>(Object.entries(initial));
   return {
     read: (key) => ok(store.get(key)),
-    write: (key, value) => {
-      store.set(key, value);
+    write: (plan) => {
+      store.set(plan.key, plan.value);
       return ok(undefined);
     },
     remove: (key) => {

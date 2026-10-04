@@ -10,5 +10,8 @@
   },
   "scripts": {
     "test": "tsx --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@fluvient/core": "workspace:*"
   }
 }

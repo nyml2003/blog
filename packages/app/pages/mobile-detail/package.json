@@ -1,0 +1,22 @@
+{
+  "name": "@blog/page-mobile-detail",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./page": "./src/page.tsx",
+    "./favorites": "./src/favorites.ts"
+  },
+  "dependencies": {
+    "@blog/mobile-api": "workspace:*",
+    "@blog/mobile-shared": "workspace:*",
+    "@blog/route-input": "workspace:*",
+    "@fluvient-loom/page-kit": "workspace:*",
+    "@fluvient-loom/persisted-state": "workspace:*",
+    "@fluvient-loom/port": "workspace:*"
+  },
+  "peerDependencies": {
+    "solid-js": "^1.9.0"
+  }
+}

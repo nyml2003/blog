@@ -18,7 +18,7 @@ function fakePersistence(
   return {
     store,
     read: (key) => ok(store.get(key)),
-    write(key, value) {
+    write(plan) {
       if (options.throwWrite === true) {
         throw new Error("injected write exception");
       }
@@ -29,7 +29,7 @@ function fakePersistence(
           message: "injected write failure",
         });
       }
-      store.set(key, value);
+      store.set(plan.key, plan.value);
       return ok(undefined);
     },
     remove: (key) => {

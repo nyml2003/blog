@@ -5,10 +5,10 @@ export {
   type DesiredStateMutationOptions,
   type DesiredStateMutationState,
   type DesiredStateMutationStatus,
-} from "./desired-state";
+} from "./desired-state.ts";
 export {
   createPersistentDesiredState,
   type PersistentDesiredState,
   type PersistentDesiredStateOptions,
   type ReconcileResult,
-} from "./persistent-desired-state";
+} from "./persistent-desired-state.ts";

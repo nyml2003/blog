@@ -1,4 +1,4 @@
-import type { MotionSample } from "./velocity";
+import type { MotionSample } from "./velocity.ts";
 
 /**
  * LSQ2 velocity tracking (Android VelocityTracker / Chromium strategy):

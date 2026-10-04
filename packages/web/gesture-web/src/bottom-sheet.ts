@@ -5,7 +5,7 @@ import {
   type SnapPoint,
   type VelocityTracker,
 } from "@fluvient-loom/nested-gesture";
-import { gestureLog } from "./sink";
+import { gestureLog } from "./sink.ts";
 
 export type SheetState = "closed" | "half" | "full";
 

@@ -8,7 +8,7 @@ import {
 test("memory persistence round-trips synchronously", () => {
   const persistence = createMemoryPersistence();
   assert.deepEqual(persistence.read("missing"), { ok: true, value: undefined });
-  assert.deepEqual(persistence.write("theme", "dark"), {
+  assert.deepEqual(persistence.write({ key: "theme", value: "dark" }), {
     ok: true,
     value: undefined,
   });
@@ -28,7 +28,7 @@ test("memory async persistence composes the sync port", async () => {
     ok: true,
     value: "serif",
   });
-  assert.deepEqual(await persistence.write("font", "mono"), {
+  assert.deepEqual(await persistence.write({ key: "font", value: "mono" }), {
     ok: true,
     value: undefined,
   });

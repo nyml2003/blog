@@ -5,7 +5,7 @@ import {
   categoryIdFromSearch,
   categoryRequestId,
   categorySelection,
-} from "../../../mobile/features/articles/category";
+} from "@blog/page-mobile-articles";
 import {
   displayDate,
   positiveFilterIdFromSearch,

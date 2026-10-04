@@ -9,8 +9,8 @@ test("asAsyncPersistence lifts any sync port into its async shape", async () => 
       values.get(key) === undefined
         ? { ok: true, value: undefined }
         : { ok: true, value: values.get(key) },
-    write: (key, value) => {
-      values.set(key, value);
+    write: (plan) => {
+      values.set(plan.key, plan.value);
       return { ok: true, value: undefined };
     },
     remove: (key) => {
@@ -18,7 +18,7 @@ test("asAsyncPersistence lifts any sync port into its async shape", async () => 
       return { ok: true, value: undefined };
     },
   });
-  assert.deepEqual(await persistence.write("font", "serif"), {
+  assert.deepEqual(await persistence.write({ key: "font", value: "serif" }), {
     ok: true,
     value: undefined,
   });

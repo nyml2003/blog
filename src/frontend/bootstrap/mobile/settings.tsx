@@ -2,7 +2,7 @@ import { createWebPersistence } from "@fluvient-loom/web";
 import {
   defaultMobileSettings,
   readMobileSettings,
-} from "../../mobile/features/settings/model";
+} from "@blog/page-mobile-settings";
 
 let settings = defaultMobileSettings;
 try {

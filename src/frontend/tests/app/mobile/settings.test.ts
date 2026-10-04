@@ -10,7 +10,7 @@ import {
   mobileSettingsKeys,
   readMobileSettings,
   readMobileSettingsAsync,
-} from "../../../mobile/features/settings/model";
+} from "@blog/page-mobile-settings";
 
 test("settings query migrates legacy keys into one snapshot", async () => {
   const persistence = createMemoryAsyncPersistence({

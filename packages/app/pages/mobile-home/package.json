@@ -1,0 +1,19 @@
+{
+  "name": "@blog/page-mobile-home",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./page": "./src/page.tsx"
+  },
+  "dependencies": {
+    "@blog/mobile-api": "workspace:*",
+    "@blog/mobile-shared": "workspace:*",
+    "@fluvient-loom/page-kit": "workspace:*",
+    "lucide-solid": "1.48.0"
+  },
+  "peerDependencies": {
+    "solid-js": "^1.9.0"
+  }
+}

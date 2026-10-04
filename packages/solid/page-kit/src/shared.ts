@@ -1,5 +1,8 @@
-// 纯共享逻辑：无平台全局、无 UI 实现——两端子路径各自持有自己的组件与装配
-// （Desktop/Mobile UI 隔离边界在包内同样成立）。
+import type { AppShellSpec } from "@fluvient-loom/app-shell";
+
+// 页面契约模块：页面包的唯一依赖点。页面的抽象单位是接口——
+// 写页面 = 实现这里的类型，没有模板、没有生成器、没有工具碰人的源文件。
+// 构建链（@fluvient-loom/page-build-kit）re-export 这些类型并消费。
 
 export const PAGE_MOUNT_ELEMENT_ID = "app";
 
@@ -34,18 +37,73 @@ export function siteRoute<Routes extends SiteRoutesLike>(
   return value;
 }
 
-// 页面包的声明契约（definePage）：页面只说"我是谁"（纯元数据，node 安全——
-// 注册表在构建期 CLI/测试中被 import，不得拉起组件实现与样式副作用）；
-// 组件工厂由包的 "./page" 子路径单独导出，构建域（outputPath/entry）由宿主
-// 注册表聚合时补充。与 page-build-kit 的 PageRegistration 的对齐由聚合处
-// 的 satisfies 编译锚定。
-export interface PageMetadata {
-  readonly id: string;
-  readonly platform: "desktop" | "mobile";
-  readonly aliases: readonly string[];
-  readonly title: string;
+/** 语义路由 + 查询串（与宿主 foundation 的 routeWithQuery() 同语义）。 */
+export function siteRouteWithQuery<Routes extends SiteRoutesLike>(
+  routes: Routes,
+  id: string,
+  parameters: Readonly<Record<string, string | number>>,
+): string {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(parameters))
+    search.set(key, String(value));
+  const query = search.toString();
+  return query === ""
+    ? siteRoute(routes, id)
+    : `${siteRoute(routes, id)}?${query}`;
 }
 
-export function definePage(metadata: PageMetadata): PageMetadata {
-  return metadata;
+export type PagePlatform = "desktop" | "mobile";
+
+/** 页面登记：页面存在 ⇔ 页面包声明了这份契约。 */
+export interface PageRegistration {
+  readonly id: string;
+  readonly platform: PagePlatform;
+  readonly outputPath: string;
+  readonly entry: string;
+  readonly title: string;
+  readonly description: string | undefined;
+  readonly aliases: readonly string[];
+  readonly bootstrap: boolean;
+  readonly shell?: AppShellSpec;
+}
+
+export interface PageRoute {
+  readonly alias: string;
+  readonly outputPath: string;
+}
+
+/** 把登记展平为 alias → outputPath 的有序投影。 */
+export function pageRoutes(
+  registrations: readonly PageRegistration[],
+): readonly PageRoute[] {
+  return registrations.flatMap((page) =>
+    page.aliases.map((alias) => ({ alias, outputPath: page.outputPath })),
+  );
+}
+
+/** 页面作者入口：可选字段给默认值，产出完整 PageRegistration。 */
+export interface DefinePageInput {
+  readonly id: string;
+  readonly platform: PagePlatform;
+  readonly outputPath: string;
+  readonly entry: string;
+  readonly title: string;
+  readonly aliases: readonly string[];
+  readonly description?: string;
+  readonly bootstrap?: boolean;
+  readonly shell?: AppShellSpec;
+}
+
+export function definePage(definition: DefinePageInput): PageRegistration {
+  return {
+    id: definition.id,
+    platform: definition.platform,
+    outputPath: definition.outputPath,
+    entry: definition.entry,
+    title: definition.title,
+    description: definition.description,
+    aliases: definition.aliases,
+    bootstrap: definition.bootstrap ?? false,
+    shell: definition.shell,
+  };
 }

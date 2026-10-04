@@ -1,3 +1,5 @@
+import { toErrorInfo, type ErrorInfo } from "@fluvient/core";
+
 export interface MobilePrefetchClient {
   readonly supported: boolean;
   register(): Promise<void>;
@@ -17,6 +19,7 @@ export interface MobilePrefetchResult {
   readonly status: "accepted" | "unsupported" | "failed";
   readonly prefetched: number;
   readonly error?: string;
+  readonly cause?: ErrorInfo;
 }
 
 interface ServiceWorkerLike {
@@ -107,6 +110,7 @@ export function createMobilePrefetchClient(
         status: "failed",
         prefetched: 0,
         error: cause instanceof Error ? cause.message : String(cause),
+        cause: toErrorInfo(cause),
       };
     }
   }

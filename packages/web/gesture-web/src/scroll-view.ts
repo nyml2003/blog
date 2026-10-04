@@ -2,7 +2,7 @@ import {
   createChainSession,
   type ChainSession,
 } from "@fluvient-loom/nested-gesture";
-import { gestureLog } from "./sink";
+import { gestureLog } from "./sink.ts";
 
 /**
  * <scroll-view> — the NestedGesture child role on the Web.

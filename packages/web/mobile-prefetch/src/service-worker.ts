@@ -1,3 +1,5 @@
+import { toErrorInfo } from "@fluvient/core";
+
 export interface MobilePrefetchServiceWorkerOptions {
   readonly apiPathPrefix: string;
   readonly cacheName?: string;
@@ -129,7 +131,12 @@ export function createMobilePrefetchServiceWorker(
         port.close?.();
       },
       (cause: unknown) => {
-        port.postMessage({ status: "failed", prefetched: 0, error: errorMessage(cause) });
+        port.postMessage({
+          status: "failed",
+          prefetched: 0,
+          error: errorMessage(cause),
+          cause: toErrorInfo(cause),
+        });
         port.close?.();
       },
     );

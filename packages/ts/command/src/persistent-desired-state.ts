@@ -16,7 +16,7 @@ import {
   type DesiredStateCommandInput,
   type DesiredStateMutation,
   type DesiredStateMutationState,
-} from "./desired-state";
+} from "./desired-state.ts";
 
 export type ReconcileResult<T, E> = Result<
   DeepReadonly<T>,

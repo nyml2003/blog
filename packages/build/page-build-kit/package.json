@@ -17,7 +17,8 @@
     "smoke": "test -s src/index.ts"
   },
   "dependencies": {
-    "@fluvient-loom/app-shell": "workspace:*"
+    "@fluvient-loom/app-shell": "workspace:*",
+    "@fluvient-loom/page-kit": "workspace:*"
   },
   "peerDependencies": {
     "vite": "^8.0.0"

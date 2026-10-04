@@ -769,7 +769,7 @@ async fn mobile_page(
                 }
             }
         }
-        match bff::t_shelf::assemble(&plan, outcomes) {
+        match bff::t_shelf::assemble(&plan, protocol::wire::ArticleCardSurface::Mobile, outcomes) {
             Ok(value) => {
                 modules.push(serde_json::json!({ "moduleKey": "mobile.t-shelf", "data": value }))
             }
@@ -1026,7 +1026,7 @@ async fn t_shelf(
             Err(error) => return data_failure(&error, "t_shelf"),
         }
     }
-    match bff::t_shelf::assemble(&plan, outcomes) {
+    match bff::t_shelf::assemble(&plan, protocol::wire::ArticleCardSurface::Desktop, outcomes) {
         Ok(body) => {
             crate::product_info!(
                 "GET /api/public/t-shelf scene={} items={} total={} data_calls={} data_queries={} data_elapsed_ms={} elapsed_ms={}",

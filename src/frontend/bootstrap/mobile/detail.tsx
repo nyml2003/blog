@@ -1,7 +1,7 @@
 import "../../mobile/foundation/styles/app.css";
-import { createFavoriteStore } from "../../mobile/features/favorites/favorites-model";
+import { createFavoriteStore } from "@blog/page-mobile-detail/favorites";
 import { route } from "../../mobile/foundation/context";
-import { createMobileDetailPage } from "../../mobile/pages/detail/page";
+import { createMobileDetailPage } from "@blog/page-mobile-detail/page";
 import { articleIdFromSearch, canReturnToSite } from "./detail-input";
 import { mountMobilePage, removeMobileAppShell } from "./environment";
 

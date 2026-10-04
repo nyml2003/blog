@@ -7,7 +7,7 @@ import type {
   NetworkFailure,
   NetworkPort,
   NetworkResponse,
-} from "./ports/network";
+} from "./ports/network.ts";
 
 export interface JsonRequestCallOptions {
   readonly signal?: CancellationSignal;

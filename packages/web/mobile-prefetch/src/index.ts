@@ -5,7 +5,7 @@ export {
   type MobilePrefetchResult,
   type RequestIdleCallbackLike,
   type ServiceWorkerContainerLike,
-} from "./client";
+} from "./client.ts";
 export {
   createMobilePrefetchServiceWorker,
   type CacheLike,
@@ -15,4 +15,4 @@ export {
   type MobilePrefetchServiceWorker,
   type MobilePrefetchServiceWorkerOptions,
   type ServiceWorkerScopeLike,
-} from "./service-worker";
+} from "./service-worker.ts";

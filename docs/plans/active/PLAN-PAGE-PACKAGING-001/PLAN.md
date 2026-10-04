@@ -45,7 +45,7 @@ last_reviewed: 2026-10-03
 | P3a build-kit 抽取 | frontend | - | `packages/page-build-kit/`（新）、`src/frontend/vite-plugins/`、`src/frontend/page-registry/`、vite.config、package.json、apps/blog 包装层、相关测试迁移 | completed（见 RESULT-P3A.md；顺带修复脚手架清单键序 bug 与 package-guard 历史误杀 bug，`ops package check` 首次全绿） |
 | P3b page-kit 抽取 | frontend | P3a | `packages/page-kit/`（新）、`bootstrap/*/environment.tsx`、SPEC-ARCH-BOUNDARY-001、source-layout 门禁、e2e | completed（见 RESULT-P3B.md：装配收敛进包、SPEC 修订为"page-kit 唯一装配点/bootstrap 唯一调用点"、e2e 运行时验证；definePage 随 P3c 试点成形） |
 | P3c 试点页面包 + registry 聚合 | frontend | P3b | `packages/pages/desktop-detail/` 或 apps 内页面包位、聚合器、pages.registry 演进、脚手架改造 | completed（见 RESULT-P3C.md：`src/frontend/packages/` 新 workspace 域四包；registry 聚合保序零清单 diff；definePage 定为元数据双出口形态；foundation 闸门按依赖面定：api/纯函数/共享件抽包、styles 留宿主；e2e 试点页包形态实跑通过） |
-| P3d 批量迁移 | frontend | P3c 闸门 | 其余页面 | pending |
+| P3d 批量迁移 | frontend | P3c 闸门 | 其余页面 | in-progress完成（2026-10-04 全量 17/17 页面包化：mobile 侧抽 @blog/mobile-api + @blog/mobile-shared（shell/卡片/正文/ui/导航/搜索一站式 + context 别名）+ @blog/kernel（desired-state）；admin 侧抽 @blog/validation（article-html/wasm/generated）+ desktop-shared 增 context 别名；六 mobile 包 + 六 admin 包（editor/taxonomy 各双定义）；注册表内联清零，100% 显式 import 聚合；顺带修 guard 平台全局误报（剥离字符串字面量）、框架包相对导入补扩展名（47 文件）。全门禁绿 + e2e 仅余 mobile-home 既有失败） |
 
 P3a/P3b 串行（后者动 bootstrap 依赖前者稳定）；P3c 有闸门（foundation 归属 + definePage 形状）。
 
@@ -53,6 +53,10 @@ P3a/P3b 串行（后者动 bootstrap 依赖前者稳定）；P3c 有闸门（fou
 
 - 每阶段：`ops quality check` 前端部分 + `ops package check`（包门禁）+ `ops e2e`（受 persisted-state 既有失败限制时按 001/002 先例记录归属）；
 - P3c：聚合产物等价性守卫（与手写注册表 diff 为零或语义等价）+ 试点页 e2e 全绿。
+
+## 执行记录（追加）
+
+- 2026-10-04 接口化注册落地（用户裁定"抽象单位是接口，不是模板"）：definePage 扩为完整 PageRegistration（outputPath/entry 进页面包 definition）；契约类型唯一声明移至 page-kit（build-kit re-export）；pages.registry.ts 收为显式 import 注册（3 页包一页一行 + 14 页内联共存）；**脚手架全家退役**（ops page new、scaffold 模块、templates、三个文本手术函数、冻结清单测试）；build-kit 瘦回校验器/生成器/插件三件。全绿：page:check 清单零 diff、fe 47/47、build ✓、ops 117 项 0 失败、package check 三段 OK。
 
 ## 未决项
 

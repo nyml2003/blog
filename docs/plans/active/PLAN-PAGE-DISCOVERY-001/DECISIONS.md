@@ -9,6 +9,7 @@
 > 3. **D6 提前且扩围**：`@fluvient-loom/page-kit`（运行时装配/mount/definePage/页面定义类型）从 P3 提前，与 build-kit 同期抽取；
 > 4. **页面 = 包**：框架从第一天按"每页一个包、只声明页面是什么"设计；批量迁移以试点页（desktop-public-detail，用户点名）趟路后推进；
 > 5. P1/P2 已交付的机制（校验器/生成器/脚手架）是 build-kit 的核心内容，**搬家进包，不重写**；ops 命令保留为宿主 CLI 的包装。
+> 6. **D5 脚手架退役（2026-10-04 用户裁定："抽象单位是接口，不是模板"）**：`ops page new`、模板渲染与全部源码文本手术（insertRegistryEntry/insertExpectedRoute/insertRegistration）删除；注册表改为显式 import 注册（Angular/React Router 一派），definePage 类型扩为完整 PageRegistration（构建字段进页面包 definition），契约类型唯一声明移至 page-kit（build-kit re-export）。加页面 = 建包 + 实现接口 + 注册表两行，全部人写、类型执法；冻结清单测试随之退役（守卫 = 校验器 + manifest 比对）。
 > 执行计划：PLAN-PAGE-PACKAGING-001。
 >
 > 以下原文保留作历史记录，冲突条目以上方修订为准。

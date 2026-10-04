@@ -1,15 +1,15 @@
-import { ScrollView } from "./scroll-view";
-import { StickyListView } from "./sticky-list-view";
-import { BottomSheet } from "./bottom-sheet";
+import { ScrollView } from "./scroll-view.ts";
+import { StickyListView } from "./sticky-list-view.ts";
+import { BottomSheet } from "./bottom-sheet.ts";
 
 customElements.define("scroll-view", ScrollView);
 customElements.define("sticky-list-view", StickyListView);
 customElements.define("bottom-sheet", BottomSheet);
 
-export { setLogSink, type GestureLogSink } from "./sink";
-export { ScrollView } from "./scroll-view";
-export { StickyListView } from "./sticky-list-view";
-export { BottomSheet, SHEET_POSITION, type SheetState } from "./bottom-sheet";
+export { setLogSink, type GestureLogSink } from "./sink.ts";
+export { ScrollView } from "./scroll-view.ts";
+export { StickyListView } from "./sticky-list-view.ts";
+export { BottomSheet, SHEET_POSITION, type SheetState } from "./bottom-sheet.ts";
 
 declare global {
   interface HTMLElementTagNameMap {

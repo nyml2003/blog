@@ -4,7 +4,7 @@ import { createMemoryPersistence } from "@fluvient-loom/node";
 import {
   createFavoriteStore,
   mobileFavoritesKey,
-} from "../../../mobile/features/favorites/favorites-model";
+} from "@blog/page-mobile-detail/favorites";
 
 test("favorite toggle persists and restores article ids", () => {
   const persistence = createMemoryPersistence();

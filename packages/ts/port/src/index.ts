@@ -1,30 +1,30 @@
-export { asAsyncPersistence } from "./combinators";
+export { asAsyncPersistence } from "./combinators.ts";
 export {
   createJsonRequester,
   type JsonRequestCallOptions,
   type JsonRequester,
-} from "./requester";
-export type { SchedulerPort } from "./ports/scheduler";
-export type { SpaceTimePort } from "./ports/space-time";
-export type { ViewportPort } from "./ports/viewport";
+} from "./requester.ts";
+export type { SchedulerPort } from "./ports/scheduler.ts";
+export type { SpaceTimePort } from "./ports/space-time.ts";
+export type { ViewportPort } from "./ports/viewport.ts";
 export type {
   NetworkFailure,
   NetworkMethod,
   NetworkPort,
   NetworkRequest,
   NetworkResponse,
-} from "./ports/network";
-export type { DocumentPort } from "./ports/document";
+} from "./ports/network.ts";
+export type { DocumentPort } from "./ports/document.ts";
 export type {
   NavigationPort,
   NavigationSnapshot,
-} from "./ports/navigation";
+} from "./ports/navigation.ts";
 export type {
   CancellationSourceFactory,
   DataTask,
   DataTaskDefinition,
   TaskFailure,
-} from "./ports/task";
+} from "./ports/task.ts";
 export type {
   CommandContext,
   CommandKind,
@@ -32,9 +32,10 @@ export type {
   OperationIdPort,
   PreparedCommand,
   ReversibleCommand,
-} from "./ports/command";
+} from "./ports/command.ts";
 export type {
   AsyncPersistencePort,
   PersistenceFailure,
   PersistencePort,
-} from "./ports/persistence";
+  PersistPlan,
+} from "./ports/persistence.ts";

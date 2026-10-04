@@ -1,7 +1,7 @@
 //! T-shelf orchestration for public recommendation and archive surfaces.
 
 use protocol::envelope::codes;
-use protocol::wire::{self, TShelfData};
+use protocol::wire::{self, ArticleCardSurface, TShelfData};
 use protocol::{ArticleListQuery, ArticleType, DataOperation, DataOutcome, OperationFailure};
 
 pub const T_SHELF_LIMIT: usize = 20;
@@ -62,6 +62,7 @@ pub fn plan(
 
 pub fn assemble(
     plan: &TShelfPlan,
+    surface: ArticleCardSurface,
     outcomes: Vec<DataOutcome>,
 ) -> Result<TShelfData, OperationFailure> {
     match (plan.surface, outcomes.as_slice()) {
@@ -78,7 +79,7 @@ pub fn assemble(
             Ok(TShelfData {
                 filters: wire::to_t_shelf_filters(types),
                 selected_filter_id: plan.selected_filter_id.clone(),
-                articles: wire::to_shelf_cards(&page.items, wire::ArticleCardSurface::Desktop)
+                articles: wire::to_shelf_cards(&page.items, surface)
                     .into_iter()
                     .take(T_SHELF_LIMIT)
                     .collect(),
@@ -105,10 +106,7 @@ pub fn assemble(
             Ok(TShelfData {
                 filters: wire::to_t_shelf_filters(types),
                 selected_filter_id: plan.selected_filter_id.clone(),
-                articles: wire::to_shelf_cards_from_details(
-                    &matching,
-                    wire::ArticleCardSurface::Desktop,
-                )
+                articles: wire::to_shelf_cards_from_details(&matching, surface)
                 .into_iter()
                 .take(T_SHELF_LIMIT)
                 .collect(),
@@ -213,6 +211,7 @@ mod tests {
         let articles: Vec<_> = (1..=25).map(|id| list_item(id, 1)).collect();
         let data = assemble(
             &plan,
+            ArticleCardSurface::Desktop,
             vec![
                 DataOutcome::ArticleTypes(vec![article_type(1, "Engineering")]),
                 DataOutcome::ArticleList(ArticleListPage {
@@ -236,6 +235,7 @@ mod tests {
         let plan = plan(Some("recommendation"), Some("2")).unwrap();
         let data = assemble(
             &plan,
+            ArticleCardSurface::Desktop,
             vec![
                 DataOutcome::ArticleTypes(vec![
                     article_type(1, "Engineering"),
@@ -257,6 +257,28 @@ mod tests {
     }
 
     #[test]
+    fn mobile_surface_cards_use_mobile_detail_href() {
+        // 回归：mobile.page 货架卡片曾拿到桌面 href（surface 被写死为 Desktop）。
+        let plan = plan(Some("archive"), None).unwrap();
+        let data = assemble(
+            &plan,
+            ArticleCardSurface::Mobile,
+            vec![
+                DataOutcome::ArticleTypes(vec![article_type(1, "Engineering")]),
+                DataOutcome::ArticleList(ArticleListPage {
+                    total: 1,
+                    items: vec![list_item(7, 1)],
+                    page: 1,
+                    page_size: T_SHELF_LIMIT as u32,
+                    has_more: false,
+                }),
+            ],
+        )
+        .unwrap();
+        assert_eq!(data.articles[0].href, "/m/articles/detail.html?id=7");
+    }
+
+    #[test]
     fn invalid_surface_filter_and_unknown_type_are_rejected() {
         assert_eq!(plan(None, None).unwrap_err().code, codes::INVALID_PAYLOAD);
         assert_eq!(
@@ -266,6 +288,7 @@ mod tests {
         let plan = plan(Some("archive"), Some("9")).unwrap();
         let error = assemble(
             &plan,
+            ArticleCardSurface::Desktop,
             vec![
                 DataOutcome::ArticleTypes(vec![article_type(1, "Engineering")]),
                 DataOutcome::ArticleList(ArticleListPage {

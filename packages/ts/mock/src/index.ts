@@ -4,4 +4,4 @@ export {
   type MockResponseContext,
   type MockResult,
   type MockRoute,
-} from "./network";
+} from "./network.ts";

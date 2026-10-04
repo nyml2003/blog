@@ -2,12 +2,12 @@ export {
   sampleVelocity,
   VELOCITY_WINDOW_MS,
   type MotionSample,
-} from "./velocity";
+} from "./velocity.ts";
 export {
   createVelocityTracker,
   TRACKER_WINDOW_MS,
   type VelocityTracker,
-} from "./tracker";
+} from "./tracker.ts";
 export {
   createChainSession,
   handOverDecision,
@@ -19,13 +19,13 @@ export {
   type ChainSessionOptions,
   type ConsumedBreakdown,
   type HandOverDirection,
-} from "./session";
+} from "./session.ts";
 export {
   createFling,
   FLING_DECAY_TAU_MS,
   FLING_FLOOR_PX_PER_MS,
   type Fling,
-} from "./fling";
+} from "./fling.ts";
 export {
   dragPercent,
   flingWithSlop,
@@ -35,4 +35,4 @@ export {
   type ProjectedSettlement,
   type ProjectSettlementInput,
   type SnapPoint,
-} from "./settle";
+} from "./settle.ts";

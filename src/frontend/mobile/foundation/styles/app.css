@@ -1,4 +1,4 @@
-@import "@fluvient-loom/mobile-h5-solid-atoms/styles.css";
+@import "@blog/mobile-h5-solid-atoms/styles.css";
 @import "@fluvient-loom/app-shell/styles.css";
 @import "./tokens.css";
 @import "./base.css";
@@ -10,5 +10,4 @@
 @import "./article-body.css";
 @import "./browse.css";
 @import "./pages.css";
-@import "../ui/styles/themes.css";
-@import "../ui/styles/molecules.css";
+@import "@blog/mobile-shared/styles.css";

@@ -1,0 +1,23 @@
+{
+  "name": "@blog/mobile-shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles.css": "./src/styles.css"
+  },
+  "dependencies": {
+    "@blog/mobile-api": "workspace:*",
+    "@blog/mobile-h5-solid-atoms": "workspace:*",
+    "@fluvient-loom/page-kit": "workspace:*",
+    "@fluvient-loom/port": "workspace:*",
+    "@fluvient-loom/query": "workspace:*",
+    "@fluvient-loom/text-highlight": "workspace:*",
+    "@fluvient/core": "workspace:*",
+    "lucide-solid": "1.48.0"
+  },
+  "peerDependencies": {
+    "solid-js": "^1.9.0"
+  }
+}

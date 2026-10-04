@@ -1,4 +1,4 @@
-import { createFling, FLING_DECAY_TAU_MS } from "./fling";
+import { createFling, FLING_DECAY_TAU_MS } from "./fling.ts";
 
 /**
  * Release-time settlement.

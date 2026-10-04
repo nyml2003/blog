@@ -103,7 +103,7 @@ export function createPersistedRecord<T>(
 
     let written: ReturnType<PersistencePort["write"]>;
     try {
-      written = persistence.write(options.key, serialized);
+      written = persistence.write({ key: options.key, value: serialized });
     } catch (cause: unknown) {
       written = err({
         kind: "persistence",

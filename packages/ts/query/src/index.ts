@@ -1,7 +1,7 @@
-export { createDataTask } from "./task";
+export { createDataTask } from "./task.ts";
 export {
   createDataResource,
   type DataResource,
   type DataResourceState,
   type DataResourceStatus,
-} from "./resource";
+} from "./resource.ts";

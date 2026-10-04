@@ -1,5 +1,5 @@
 import "../../desktop/foundation/styles/home.css";
-import { createDesktopEditorPage } from "../../desktop/pages/editor/page";
+import { createDesktopEditorPage } from "@blog/page-desktop-editor/page";
 import { mountDesktopPage } from "./environment";
 
 mountDesktopPage((context) => createDesktopEditorPage(context, true));

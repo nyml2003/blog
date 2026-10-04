@@ -4,7 +4,7 @@ id: PLAN-FRONTEND-CODEC-PERSISTENCE-001
 status: partial
 owner: project-manager
 created: 2026-10-01
-last_reviewed: 2026-10-02
+last_reviewed: 2026-10-04
 ---
 
 # Codec/Persistence 原语包抽取
@@ -28,7 +28,36 @@ last_reviewed: 2026-10-02
 - **保留故障证据**：当前多个边界把异常压成字符串，调用方丢失错误名、错误码和错误链；统一的可序列化投影后，日志、重试和上层错误映射可以保留上下文，同时不会把运行时对象泄漏到 Port、Codec 或 UI 进程。
 - **控制架构漂移**：ADR 把本轮取舍写成可追溯事实，后续新增存储实现或业务接入不必重新解释分层边界。
 
-## 当前执行记录（2026-10-02）
+## 当前执行记录（2026-10-04）
+
+本次已交付：
+
+- 新建 `@fluvient-loom/codec`（`packages/ts/codec`，按分类目录新布局落位，plan 原文的 `packages/codec` 路径已由 workspace 现状取代）：`Codec<T>`、`createJsonCodec`、`CodecFailure`、`CodecHooks`、`CodecRejection`。9 个单测覆盖 round-trip、非法 JSON、循环引用、`JSON.stringify` 返回 `undefined`、`validate` 双侧拒绝（字符串与结构化）、`normalize` 裁剪、钩子顺序锚定和异常钩子注入。
+- 固定 Codec 契约（闸门 3）：`encode = normalize → validate → serialize`、`decode = parse → validate → normalize`；`CodecFailure` 带 `operation`/`stage`/`code?`/`cause?`，结构上是 `SerializableFailure` 成员；无 `validate` 钩子时 decode 是信任式收窄，接入方必须自带 validate。
+- ADR 落地（闸门 5）：`docs/architecture/codec-persistence.md` + 架构索引入口；已生效契约与未决决策分开记录。产品评审尚未进行。
+- **Persistence 归属闸门通过（闸门 1）**：决策为演进 `@fluvient-loom/port`，不新建独立包。理由：现有 `web`、`node`、`query`、`command`、`persisted-state` 和前端全部从 port 消费，无独立发布需求。
+- **`PersistPlan` 落地（闸门 2）**：`PersistPlan { key, value, version?, createdAt? }`，`version`/`createdAt` 为预留字段，本轮存储实现忽略；批处理表示方式固定为 `readonly PersistPlan[]`（入口名预留 `writeBatch`，本轮不落）。`PersistencePort`/`AsyncPersistencePort` 写入口切换为 `write(plan: PersistPlan)`，无兼容期（消费者全部在 workspace 内，一次性迁移）。迁移面：port 接口与 `asAsyncPersistence`、web `localStorage` 适配器、node 内存适配器、`persisted-record`、settings（persistence.ts、model.ts）、`mobile-nav.tsx`、`navigator-icons.tsx` 及对应测试、`apps/blog/test/packages/package-smoke.ts`。
+- 验证（并发环境下的直接调用，避开 `pnpm` 自动 install）：`tsc --noEmit` 通过；codec 9/9、port 5/5、web 19/19、node 10/10、persisted-state 12/12、command 12/12、package smoke 1/1 全部通过；`ops package check` 在并发开始前曾全绿（platform neutrality guard、package smoke、pnpm check，退出码 0）。
+
+已知遗留与外部状态：
+
+- `apps/blog/test/` 不在根 tsconfig include 内，`package-smoke.ts` 等文件不参与 typecheck（本次签名切换的漏网点即源于此）。曾尝试纳入 include，但该目录存在多处与本计划无关的既有类型错误，已回退，仅在此记录。
+- 本轮执行期间有另一工作流并发操作同一工作树（desktop 页面抽取，`packages/app/pages/desktop-*` 与 `src/frontend/package.json` 引用 `@fluvient-loom/mobile-h5-solid-atoms`）。恢复 stash 时对 `page-kit/shared.ts`、`src/frontend/package.json`、`pnpm-lock.yaml` 做了双方内容合并；截至本轮结束时，对方 `frontend/package.json` 引用的 atoms 新包名尚未在工作区存在，`pnpm install` 会失败——属于对方工作流的中间态，不是本计划引入的失败。
+- `ops quality check` 的 lint/format 失败为 HEAD 既有漂移（如 `navigator-icons.tsx` 未触及区域的格式问题），与本计划改动无关；本计划未引入新的 lint/format 失败。
+
+错误压扁点迁移（2026-10-04 第二批，闸门 4）：
+
+- **已迁移（6 处，均补 `cause?: ErrorInfo`，message 与用户可见行为不变）**：`desktop-api`（`DesktopApiFailure` + `mapRejected`/execute 透传 `response.error.cause`）；`foundation/api`（`MobileApiFailure` + 同上）；`detail/model.ts`、`pages/settings/page.tsx` 的 `mapRejected`；settings 链路（`MobileSettingsError` + persistence/model 全部失败路径透传）；`validation/wasm.ts`（`HtmlInspectionFailure` 两处）。均为可选字段的增量变更，不影响消费者。
+- **已合格（5 处，message 压扁但 `cause: toErrorInfo` 并存）**：`net/network.ts` ×2、`core/http/error.ts`、`query/task.ts`、`web/persistence.ts`。
+- **书面例外（4 处）**：`cli-kit/errors.ts` ×2 与 `entry.ts`——OPS 输出契约受 `SPEC-OPS-OUTPUT-001` 冻结且 stderr 为人类可读展示边界；`page-build-kit/scaffold.ts`——脚手架 issues 是面向人的报告。
+- **延后后已补齐（2 处）**：`mobile-prefetch`（service-worker + client）在并发工作流收尾、`pnpm install` 恢复后完成迁移——`MobilePrefetchResult` 补 `cause?: ErrorInfo`，包新增 `@fluvient/core` 依赖，MessageChannel 两端均经 `toErrorInfo` 附加 cause；守卫与既有测试不受影响。
+- 验证：根 typecheck 与 `src/frontend` typecheck 均 0 错误；api/settings 21/21、desktop admin/kernel/source-layout 20/20 通过；补齐后 `ops package check` 全绿（platform neutrality guard、package smoke、pnpm check，退出码 0），frontend api/settings/admin 33/33。
+
+错误压扁点清单至此全部关闭：6 迁移 + 2 补齐 + 5 合格 + 4 书面例外，无遗留。
+
+尚未交付：ADR 产品评审和 settings 接入。
+
+## 历史执行记录（2026-10-02）
 
 本次已交付：
 
@@ -102,11 +131,11 @@ last_reviewed: 2026-10-02
 | --- | --- | --- | --- | --- |
 | 基线清单与错误点分类 | frontend+qa | - | 本计划执行记录或 `RESULT.md` | ready |
 | core 可序列化错误原语 | frontend | - | `packages/core/src/`、`packages/core/test/` | completed |
-| codec 包实现与单测 | frontend | core 错误原语的类型/错误约定 | `packages/codec/`（新建） | blocked by core |
-| ADR 起草 | frontend+pm | - | `docs/architecture/codec-persistence.md`、架构索引 | ready |
-| Persistence 归属与契约闸门 | 产品+pm | 基线清单、codec 契约草案 | 本计划决策记录 | blocked |
-| persistence 原语落地 | frontend | 闸门通过 | `packages/port/` 或闸门选定的新包 | blocked by gate |
-| 错误消费改造 | frontend | core 错误原语、错误契约 | 清单中列出的 `src/`、`packages/` 文件及测试 | blocked by core/contract |
+| codec 包实现与单测 | frontend | core 错误原语的类型/错误约定 | `packages/ts/codec/`（新建） | completed |
+| ADR 起草 | frontend+pm | - | `docs/architecture/codec-persistence.md`、架构索引 | completed（产品评审待做） |
+| Persistence 归属与契约闸门 | 产品+pm | 基线清单、codec 契约草案 | 本计划决策记录 | completed（决策：演进 port） |
+| persistence 原语落地 | frontend | 闸门通过 | `packages/ts/port/` | completed |
+| 错误消费改造 | frontend | core 错误原语、错误契约 | 清单中列出的 `src/`、`packages/` 文件及测试 | completed |
 | 收尾与移交 | pm | 全部工作流、质量证据 | `RESULT.md`、后续 settings 接入说明 | pending |
 
 ## 验收证据

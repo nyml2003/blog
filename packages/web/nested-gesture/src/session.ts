@@ -1,7 +1,7 @@
 import {
   createVelocityTracker,
   type VelocityTracker,
-} from "./tracker";
+} from "./tracker.ts";
 
 /**
  * NestedGesture child-role state machine: one gesture session, the

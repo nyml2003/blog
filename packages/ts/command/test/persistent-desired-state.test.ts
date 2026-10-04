@@ -39,8 +39,8 @@ function memoryPersistence(initial?: string): {
   return {
     persistence: {
       read: () => ok(stored),
-      write: (_key, value) => {
-        stored = value;
+      write: (plan) => {
+        stored = plan.value;
         return ok(undefined);
       },
       remove: () => {
@@ -130,7 +130,7 @@ function harness(options: { stored?: string; failFirstWrite?: boolean } = {}): H
   const queued = queuedScheduler();
   const projected: Settings[] = [];
   const command = commandWritingTo(
-    (next) => void store.persistence.write(KEY, JSON.stringify(next)),
+    (next) => void store.persistence.write({ key: KEY, value: JSON.stringify(next) }),
     options.failFirstWrite ?? false,
   );
   const state = createPersistentDesiredState<Settings, Error>({
@@ -155,7 +155,7 @@ function harness(options: { stored?: string; failFirstWrite?: boolean } = {}): H
     projected,
     runNext: queued.runNext,
     writes: command.writes,
-    seed: (value) => void store.persistence.write(KEY, JSON.stringify(value)),
+    seed: (value) => void store.persistence.write({ key: KEY, value: JSON.stringify(value) }),
   };
 }
 

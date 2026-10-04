@@ -46,9 +46,9 @@ export function createWebPersistence(
         return err(failure("read", cause));
       }
     },
-    write(key, value) {
+    write(plan) {
       try {
-        storage.setItem(key, value);
+        storage.setItem(plan.key, plan.value);
         return ok(undefined);
       } catch (cause) {
         return err(failure("write", cause));

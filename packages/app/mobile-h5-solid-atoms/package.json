@@ -1,0 +1,39 @@
+{
+  "name": "@blog/mobile-h5-solid-atoms",
+  "version": "0.1.0",
+  "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    },
+    "./field-context": {
+      "types": "./src/field-context.ts",
+      "import": "./src/field-context.ts"
+    },
+    "./styles.css": "./styles.css"
+  },
+  "files": [
+    "src",
+    "styles",
+    "styles.css",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "pnpm typecheck",
+    "build": "pnpm typecheck && test -s styles.css && rg -q '\\.m-atom-button' styles/atoms.css && rg -q -- '--paper' styles.css",
+    "smoke": "test -f src/index.ts && test -s styles.css"
+  },
+  "peerDependencies": {
+    "solid-js": "^1.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "26.4.1",
+    "tsx": "^4.23.13",
+    "typescript": "7.0.2"
+  }
+}
