@@ -13,6 +13,7 @@ import { useMobileSearch } from "@blog/mobile-shared";
 import type { CategoryShelf, MobileApi } from "@blog/mobile-api";
 import type { MobileRouteContext } from "@blog/mobile-shared";
 import { routeWithQuery } from "@blog/mobile-shared";
+import { ChipGroup } from "@blog/mobile-shared";
 import { Heading, StateMessage, Text } from "@blog/mobile-shared";
 import { ArticleCard } from "@blog/mobile-shared";
 import { MobileShell } from "@blog/mobile-shared";
@@ -246,38 +247,27 @@ function ForCategories(props: {
         ))}
       </div>
       <div class="category-child-list">
-        <button
-          type="button"
-          class={
-            !props.selection.childId ? "m-atom-chip is-selected" : "m-atom-chip"
-          }
-          onClick={() =>
+        <ChipGroup
+          ariaLabel="子分类筛选"
+          items={[
+            { id: "all", label: "全部" },
+            ...children.map((child) => ({
+              id: String(child.id),
+              label: child.name,
+            })),
+          ]}
+          onChange={(id) =>
             props.onSelect({
               rootId: props.selection.rootId,
-              childId: undefined,
+              childId: id === "all" ? undefined : Number(id),
             })
           }
-        >
-          全部
-        </button>
-        {children.map((child) => (
-          <button
-            type="button"
-            class={
-              child.id === props.selection.childId
-                ? "m-atom-chip is-selected"
-                : "m-atom-chip"
-            }
-            onClick={() =>
-              props.onSelect({
-                rootId: props.selection.rootId,
-                childId: child.id,
-              })
-            }
-          >
-            {child.name}
-          </button>
-        ))}
+          selectedId={
+            props.selection.childId === undefined
+              ? "all"
+              : String(props.selection.childId)
+          }
+        />
       </div>
     </div>
   );

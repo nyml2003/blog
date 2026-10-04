@@ -13,6 +13,8 @@ export type TabProps = {
   onSelect: JSX.EventHandlerUnion<HTMLButtonElement, MouseEvent>;
   selected: boolean;
   options: Partial<TabOptions>;
+  /** 元素回调：组合原语（TabGroup）借此建立 id → 元素直连，不做 DOM 反查。 */
+  ref?: (element: HTMLButtonElement) => void;
 };
 
 export const Tab = defineAtom<TabProps>({
@@ -26,6 +28,7 @@ export const Tab = defineAtom<TabProps>({
     return (
       <button
         aria-controls={props.options.ariaControls}
+        ref={props.ref}
         aria-selected={props.selected ? "true" : "false"}
         class={classNames(
           "m-atom-tab",

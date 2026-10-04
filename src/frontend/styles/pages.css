@@ -174,10 +174,6 @@
   min-height: 49px;
 }
 
-.mobile-t-shelf-filters .m-atom-tab {
-  flex: 0 0 auto;
-  white-space: nowrap;
-}
 .mobile-t-shelf-content {
   min-height: 260px;
 }

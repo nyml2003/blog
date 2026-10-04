@@ -148,32 +148,35 @@
   display: contents;
 }
 
+/* 左栏一级分类 = 灰色轨道（surface），铺满货架两行、零间隙；
+   选中纸色块与相邻项凹角的形态在 atom 层（m-atom-tab--vertical）。 */
 .category-root-list {
   grid-column: 1;
   grid-row: 1 / span 2;
+  align-self: stretch;
+  grid-auto-rows: min-content;
   position: sticky;
   top: var(--shell-header-sticky-top);
   display: grid;
-  gap: 4px;
+  gap: 0;
   max-height: calc(100svh - 178px);
-  padding-right: 9px;
   overflow-y: auto;
-}
-
-.category-child-list {
-  grid-column: 2;
-  grid-row: 1;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  padding-bottom: 2px;
-  overflow-x: auto;
+  background: var(--surface);
   scrollbar-width: thin;
 }
 
-.category-child-list .m-atom-chip {
-  flex: 0 0 auto;
+/* 只负责栅格定位与外观；横向滚动/滚动条隐藏/选中滚入视野由 .m-chip-group
+   （@blog/mobile-h5-solid-atoms）承担。 */
+.category-child-list {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  padding-bottom: 2px;
+}
+
+.category-child-list .m-chip-group {
+  gap: 6px;
+  padding: 0;
 }
 
 .category-shelf .article-list {

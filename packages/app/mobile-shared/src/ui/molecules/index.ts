@@ -5,4 +5,3 @@ export {
   type StateMessageKind,
   type StateMessageProps,
 } from "./state-message.tsx";
-export { TabGroup, type TabGroupProps, type TabItem } from "./tab-group.tsx";

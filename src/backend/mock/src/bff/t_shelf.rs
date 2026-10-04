@@ -1,7 +1,7 @@
 //! T-shelf orchestration for the session-local Mock domain.
 
 use protocol::envelope::codes;
-use protocol::wire::{self, TShelfData};
+use protocol::wire::{self, ArticleCardSurface, TShelfData};
 use protocol::{ArticleListQuery, ArticleTypeListQuery, OperationFailure};
 
 use crate::domain::DomainState;
@@ -43,7 +43,11 @@ pub fn request(
     })
 }
 
-pub fn load(domain: &DomainState, request: &TShelfRequest) -> Result<TShelfData, OperationFailure> {
+pub fn load(
+    domain: &DomainState,
+    request: &TShelfRequest,
+    surface: ArticleCardSurface,
+) -> Result<TShelfData, OperationFailure> {
     let types = domain.article_type_list(&ArticleTypeListQuery::default());
     validate_selected_type(&types, request.selected_type_id)?;
     let (articles, total) = match request.surface {
@@ -59,7 +63,7 @@ pub fn load(domain: &DomainState, request: &TShelfRequest) -> Result<TShelfData,
                 .collect();
             let total = matching.len();
             (
-                wire::to_shelf_cards_from_details(&matching, wire::ArticleCardSurface::Desktop)
+                wire::to_shelf_cards_from_details(&matching, surface)
                     .into_iter()
                     .take(T_SHELF_LIMIT)
                     .collect(),
@@ -77,7 +81,7 @@ pub fn load(domain: &DomainState, request: &TShelfRequest) -> Result<TShelfData,
             let total = usize::try_from(page.total)
                 .map_err(|_| internal("archive shelf returned a negative total"))?;
             (
-                wire::to_shelf_cards(&page.items, wire::ArticleCardSurface::Desktop)
+                wire::to_shelf_cards(&page.items, surface)
                     .into_iter()
                     .take(T_SHELF_LIMIT)
                     .collect(),
@@ -140,10 +144,30 @@ mod tests {
     fn recommendation_filter_stays_inside_the_recommendation_set() {
         let domain = DomainState::new(SeedKind::Full);
         let request = request(Some("recommendation"), Some("1")).unwrap();
-        let shelf = load(&domain, &request).unwrap();
+        let shelf = load(&domain, &request, ArticleCardSurface::Desktop).unwrap();
         assert_eq!(shelf.filters[0].id, "all");
         assert_eq!(shelf.selected_filter_id, "1");
         assert!(shelf.total <= protocol::RECOMMENDATION_LIMIT);
         assert!(shelf.articles.len() <= protocol::RECOMMENDATION_LIMIT);
+    }
+
+    #[test]
+    fn card_surface_follows_the_calling_endpoint() {
+        let domain = DomainState::new(SeedKind::Full);
+        let request = request(Some("recommendation"), Some("all")).unwrap();
+        let mobile = load(&domain, &request, ArticleCardSurface::Mobile).unwrap();
+        let desktop = load(&domain, &request, ArticleCardSurface::Desktop).unwrap();
+        assert!(
+            mobile.articles[0]
+                .href
+                .starts_with("/m/articles/detail.html"),
+            "mobile surface card href: {}",
+            mobile.articles[0].href
+        );
+        assert!(
+            desktop.articles[0].href.starts_with("/articles/detail.html"),
+            "desktop surface card href: {}",
+            desktop.articles[0].href
+        );
     }
 }

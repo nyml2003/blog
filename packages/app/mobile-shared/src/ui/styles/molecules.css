@@ -92,29 +92,6 @@
   }
 }
 
-.m-tab-group {
-  display: flex;
-  min-width: 0;
-}
-
-.m-tab-group--horizontal {
-  overflow-x: auto;
-  scrollbar-width: thin;
-}
-
-.m-tab-group--vertical {
-  flex-direction: column;
-}
-
-.m-chip-group {
-  display: flex;
-  gap: 8px;
-  min-width: 0;
-  overflow-x: auto;
-  padding: 2px;
-  scrollbar-width: thin;
-}
-
 .m-state-message {
   align-items: center;
   color: var(--muted);
@@ -151,12 +128,5 @@
 @keyframes m-state-spin {
   to {
     transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .m-tab-group,
-  .m-chip-group {
-    scroll-behavior: auto;
   }
 }

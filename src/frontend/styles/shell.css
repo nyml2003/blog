@@ -29,13 +29,18 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  margin-left: auto;
+  /* 占满头行：左组（如返回）贴左，右组靠 margin-left:auto 推到右缘。 */
+  flex: 1 1 auto;
+  min-width: 0;
 }
 .mobile-actions-left,
 .mobile-actions-right {
   display: flex;
   align-items: center;
   gap: 2px;
+}
+.mobile-actions-right {
+  margin-left: auto;
 }
 .mobile-actions button,
 .mobile-more-menu button,

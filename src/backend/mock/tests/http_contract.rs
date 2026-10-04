@@ -529,6 +529,51 @@ fn default_scenario_serves_the_product_response_surface() {
         module["moduleKey"] == "mobile.category-shelf" && module["data"]["total"] == 45
     }));
 
+    // 卡面链接是端契约：mobile page 首页的 t-shelf 必须下发 mobile 详情
+    // href（回归：Mock 曾硬编码 Desktop 卡面，/m/ 首页点进桌面详情页）。
+    let mobile_home = get(
+        port,
+        "/api/public/mobile/page?sceneCode=public.mobile_page&page=home&surface=recommendation&filter_id=all",
+    );
+    assert_eq!(mobile_home.status, 200, "{}", mobile_home.body);
+    let mobile_home = assert_envelope(&mobile_home, "OK");
+    let shelf = mobile_home["data"]["modules"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|module| module["moduleKey"] == "mobile.t-shelf")
+        .expect("home page embeds a mobile.t-shelf module")["data"]
+        .clone();
+    let cards = shelf["articles"].as_array().unwrap();
+    assert!(!cards.is_empty());
+    for card in cards {
+        assert!(
+            card["href"]
+                .as_str()
+                .unwrap()
+                .starts_with("/m/articles/detail.html"),
+            "mobile page card href must be mobile: {}",
+            card["href"]
+        );
+    }
+    // 桌面 t-shelf 端点不受影响：仍是桌面详情 href。
+    let desktop_shelf = get(
+        port,
+        "/api/public/t-shelf?sceneCode=public.t_shelf&surface=recommendation&filter_id=all",
+    );
+    assert_eq!(desktop_shelf.status, 200, "{}", desktop_shelf.body);
+    let desktop_cards = assert_envelope(&desktop_shelf, "OK")["data"]["articles"].clone();
+    for card in desktop_cards.as_array().unwrap() {
+        assert!(
+            card["href"]
+                .as_str()
+                .unwrap()
+                .starts_with("/articles/detail.html"),
+            "desktop t-shelf card href must be desktop: {}",
+            card["href"]
+        );
+    }
+
     // page < 1 归一化为 1；越界页返回空页且 hasMore=false。
     let response = get(
         port,

@@ -33,7 +33,7 @@
 .m-atom-tag {
   background: color-mix(in srgb, var(--coral) 14%, var(--paper));
   border: 1px solid color-mix(in srgb, var(--coral) 40%, var(--border));
-  border-radius: 999px;
+  border-radius: 12px;
   color: var(--coral);
   display: inline-block;
   font-size: 12px;
@@ -192,35 +192,31 @@
     transform 220ms var(--motion-emphasized);
 }
 
+/* 水平 tab 写死一行：不换行、不被压缩，溢出交给外层横向滚动。 */
+.m-atom-tab--horizontal {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* 竖排 tab 走「外卖侧栏」形态：躺在灰色轨道上（轨道由页面布局提供），
+   选中项是 ink 色块：左侧两角普通内圆角，右侧与相邻项的交界由
+   ::after 的 ink 凹弧外扩连接。 */
 .m-atom-tab--vertical {
   border-bottom: 0;
-  border-left: 2px solid transparent;
+  border-left: 0;
   font-size: 12px;
   font-weight: 700;
   justify-content: flex-start;
   line-height: 1.25;
   overflow: hidden;
-  padding: 8px 7px 8px 2px;
+  padding: 9px 10px;
   text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
   width: 100%;
-}
-
-.m-atom-tab--vertical::before {
-  position: absolute;
-  top: 8px;
-  bottom: 8px;
-  left: 0;
-  width: 3px;
-  background: var(--coral);
-  content: "";
-  opacity: 0;
-  transform: scaleY(0.2);
-  transform-origin: center;
   transition:
-    opacity 140ms ease,
-    transform 220ms var(--motion-emphasized);
+    color 180ms ease,
+    background-color 180ms ease;
 }
 
 .m-atom-tab.is-selected {
@@ -230,19 +226,44 @@
 }
 
 .m-atom-tab--vertical.is-selected {
+  background: var(--ink);
   border-color: transparent;
-  transform: translateX(2px);
+  border-radius: 14px 0 0 14px;
+  color: var(--paper);
 }
 
-.m-atom-tab--vertical.is-selected::before {
-  opacity: 1;
-  transform: scaleY(1);
+.m-atom-tab--vertical:not(.is-selected):active {
+  background: var(--surface-pressed);
+}
+
+/* 交界内圆角：选中项上一项的右下、下一项的右上，各放一个纸色块并
+   圆掉朝向轨道外缘的那个角——灰轨道的角收成圆头、恰好点到选中块，
+   纸色凹弧嵌在灰与选中块之间。轨道零间隙（gap: 0）保证贴合。 */
+.m-atom-tab--vertical:has(+ .m-atom-tab--vertical.is-selected)::after,
+.m-atom-tab--vertical.is-selected + .m-atom-tab--vertical::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  width: 14px;
+  height: 14px;
+  background: var(--paper);
+  pointer-events: none;
+}
+
+.m-atom-tab--vertical:has(+ .m-atom-tab--vertical.is-selected)::after {
+  bottom: 0;
+  border-radius: 0 14px 0 0;
+}
+
+.m-atom-tab--vertical.is-selected + .m-atom-tab--vertical::after {
+  top: 0;
+  border-radius: 0 14px 0 0;
 }
 
 .m-atom-chip {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 12px;
   padding: 8px 14px;
   white-space: nowrap;
 }
@@ -312,7 +333,47 @@
     transition: none;
   }
 
-  .m-atom-tab--vertical::before {
-    transition: none;
+  .m-tab-group,
+  .m-chip-group {
+    scroll-behavior: auto;
   }
+}
+
+/* ── 组合原语（同一包内的原子组合：tab 行 / chip 行）────────────────── */
+
+.m-tab-group {
+  display: flex;
+  min-width: 0;
+}
+
+.m-tab-group--horizontal {
+  overflow-x: auto;
+  /* 单行 tab 靠横向滚动收纳溢出；滚动条隐藏（标准属性 + WebKit 私有兜底）。 */
+  scrollbar-width: none;
+}
+
+.m-tab-group--horizontal::-webkit-scrollbar {
+  display: none;
+}
+
+.m-tab-group--vertical {
+  flex-direction: column;
+}
+
+.m-chip-group {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+  overflow-x: auto;
+  padding: 2px;
+  /* 滚动条隐藏同 tab 行；选中滚入视野由组件（chip-group.tsx）负责。 */
+  scrollbar-width: none;
+}
+
+.m-chip-group::-webkit-scrollbar {
+  display: none;
+}
+
+.m-chip-group .m-atom-chip {
+  flex: 0 0 auto;
 }

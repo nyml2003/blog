@@ -469,9 +469,9 @@ async fn t_shelf(
         Ok(request) => request,
         Err(failure) => return domain_failure(&state, label, &failure, started),
     };
-    let outcome = state
-        .store
-        .read(&scope, |domain| bff::t_shelf::load(domain, &request));
+    let outcome = state.store.read(&scope, |domain| {
+        bff::t_shelf::load(domain, &request, wire::ArticleCardSurface::Desktop)
+    });
     match outcome {
         Ok(shelf) => {
             crate::mock_info!(
@@ -1029,9 +1029,11 @@ async fn mobile_page(
                 Ok(value) => value,
                 Err(failure) => return domain_failure(&state, label, &failure, started),
             };
-            let result = state
-                .store
-                .read(&scope, |domain| bff::t_shelf::load(domain, &request));
+            // 卡面链接是端契约：mobile page 模块必须下发 mobile 详情 href
+            // （Product 侧同规则，见 product http.rs mobile_page）。
+            let result = state.store.read(&scope, |domain| {
+                bff::t_shelf::load(domain, &request, wire::ArticleCardSurface::Mobile)
+            });
             match result {
                 Ok(shelf) => modules.push(serde_json::json!({
                     "moduleKey": "mobile.t-shelf",
