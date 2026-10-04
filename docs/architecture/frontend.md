@@ -23,7 +23,7 @@ src/frontend/
 ├── bootstrap/{desktop,mobile}/ # 组合根：页面入口与首绘装配
 ├── mobile/  desktop/           # 平台世界：pages/<slice> → widgets/<slice> → features/<slice> → foundation/{api,styles,ui}
 ├── kernel/                      # 纯机制：desired-state 状态原语
-├── domain/ protocol/ validation/ # 跨端契约与输入校验（route-input、article-html、WASM generated/）
+├── domain/ protocol/ validation/ # 跨端契约与输入校验（article-html、WASM generated/）
 ├── build/        # WASM 构建脚本等非插件工具
 ├── vite-plugins/ # Vite 页面生成插件
 ├── sw/           # Service Worker（Mobile 预取）

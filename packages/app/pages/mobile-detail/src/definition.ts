@@ -1,4 +1,15 @@
+import { z } from "zod";
+import type { MobilePageContext } from "@blog/mobile-shared";
 import { definePage } from "@fluvient-loom/page-kit";
+
+/**
+ * URL 参数：id 必须是安全正整数（缺失/非法 → 页面按 invalid 态消费）；
+ * q 是搜索高亮词，trim 后使用，缺失为空串。
+ */
+const params = z.object({
+  id: z.coerce.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+  q: z.string().trim().catch(""),
+});
 
 const detailShell = {
   platform: "mobile",
@@ -35,4 +46,9 @@ export const mobileArticleDetailPage = definePage({
   aliases: ["/m/articles/detail.html"],
   bootstrap: true,
   shell: { id: "mobile-detail-shell", ...detailShell },
+  params,
+  load: () =>
+    import("./entry.ts").then(
+      (m) => (context: MobilePageContext) => m.createMobileDetailEntry(context),
+    ),
 });

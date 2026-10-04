@@ -1,7 +1,6 @@
 import { type Component, createEffect, For, Show } from "solid-js";
-import { displayDate } from "@blog/route-input";
 import { type MobileDetailInput, useMobileDetail } from "./feature.ts";
-import { searchQuery } from "@blog/mobile-shared";
+import { displayDate } from "@blog/mobile-shared";
 import { Heading, StateMessage, Tag, Text } from "@blog/mobile-shared";
 import { ArticleBody } from "@blog/mobile-shared";
 import { StandardNavigator } from "@blog/mobile-shared";
@@ -17,7 +16,7 @@ export function createMobileDetailPage(input: MobileDetailInput): Component {
       const status = detail.state().status;
       if (status !== "idle" && status !== "loading") input.onAppShellReady();
     });
-    const query = searchQuery(input.navigation.current().search);
+    const query = input.query;
     if (detail.kind === "invalid") {
       return (
         <div class="mobile-shell">

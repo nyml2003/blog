@@ -1,5 +1,5 @@
 {
-  "name": "@fluvient-loom/codec",
+  "name": "@fluvient-loom/serde",
   "version": "0.0.0",
   "private": true,
   "type": "module",

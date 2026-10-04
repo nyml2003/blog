@@ -1,16 +1,17 @@
 import { type Component } from "solid-js";
 import type { MobilePageContext } from "@blog/mobile-shared";
 import { route } from "@blog/mobile-shared";
-import { positiveIdFromSearch } from "@blog/route-input";
+import { removeMobileAppShell } from "@fluvient-loom/page-kit/mobile";
 import { createFavoriteStore } from "./favorites.ts";
 import { createMobileDetailPage } from "./page.tsx";
+import { mobileArticleDetailPage } from "./definition.ts";
 
-// 页面自己的组合根：从完整 context 出发组装自己的输入（id 解析、收藏、返回策略）。
-// main.tsx 只按 id 路由到这里，不知道页面的内部依赖。
-export function createMobileDetailEntry(
-  context: MobilePageContext,
-  onAppShellReady: () => void,
-): Component {
+// 页面自己的组合根：从完整 context 出发组装自己的输入（参数解析、收藏、返回策略、
+// 预渲染骨架清理）。注册表的 load 只按 id 路由到这里，不知道页面的内部依赖。
+export function createMobileDetailEntry(context: MobilePageContext): Component {
+  const params = mobileArticleDetailPage.parseParams(
+    context.navigation.current().search,
+  );
   return createMobileDetailPage({
     context,
     navigation: context.navigation,
@@ -18,8 +19,9 @@ export function createMobileDetailEntry(
     favorites: createFavoriteStore(context.persistence),
     document: context.document,
     share: context.share,
-    onAppShellReady,
-    id: positiveIdFromSearch(context.navigation.current().search, "id"),
+    onAppShellReady: removeMobileAppShell,
+    id: params.ok ? params.value.id : undefined,
+    query: params.ok ? params.value.q : "",
     api: context.api,
     articleListHref: route(context.routes, "mobile-articles"),
     onBack() {

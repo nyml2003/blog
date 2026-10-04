@@ -23,6 +23,8 @@ import type { FavoriteStore } from "./favorites.ts";
 
 export interface MobileDetailInput {
   readonly id: number | undefined;
+  /** 搜索高亮词（URL 参数 q，entry 解析后传入）。 */
+  readonly query: string;
   readonly api: Pick<MobileApi, "page">;
   readonly articleListHref: string;
   readonly onBack: () => void;

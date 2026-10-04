@@ -10,10 +10,10 @@
   "dependencies": {
     "@blog/mobile-api": "workspace:*",
     "@blog/mobile-shared": "workspace:*",
-    "@blog/route-input": "workspace:*",
     "@fluvient-loom/page-kit": "workspace:*",
     "@fluvient-loom/text-highlight": "workspace:*",
-    "@fluvient/core": "workspace:*"
+    "@fluvient/core": "workspace:*",
+    "zod": "^4.5.4"
   },
   "peerDependencies": {
     "solid-js": "^1.9.0"

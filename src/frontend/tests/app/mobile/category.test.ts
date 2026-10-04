@@ -2,11 +2,23 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   categoryHref,
-  categoryIdFromSearch,
   categoryRequestId,
   categorySelection,
+  mobileArticlesPage,
 } from "@blog/page-mobile-articles";
-import { displayDate, positiveFilterIdFromSearch } from "@blog/route-input";
+import { desktopArticlesPage } from "@blog/page-desktop-articles";
+import { displayDate } from "@blog/mobile-shared/date";
+
+/** 页面参数的读取辅助：非法/缺失 id 归一为 undefined，便于断言。 */
+function readCategoryId(search: string): number | undefined {
+  const params = mobileArticlesPage.parseParams(search);
+  return params.ok ? params.value.category_id : undefined;
+}
+
+function readFilterId(search: string): string {
+  const params = desktopArticlesPage.parseParams(search);
+  return params.ok ? params.value.type_id : "all";
+}
 
 const model = {
   taxonomy: {
@@ -26,18 +38,15 @@ const model = {
 } as const;
 
 test("category input accepts only positive safe integer ids", () => {
-  assert.equal(categoryIdFromSearch("?category_id=3"), 3);
-  assert.equal(categoryIdFromSearch("?category_id=0"), undefined);
-  assert.equal(categoryIdFromSearch("?category_id=1.5"), undefined);
-  assert.equal(
-    categoryIdFromSearch("?category_id=9007199254740992"),
-    undefined,
-  );
+  assert.equal(readCategoryId("?category_id=3"), 3);
+  assert.equal(readCategoryId("?category_id=0"), undefined);
+  assert.equal(readCategoryId("?category_id=1.5"), undefined);
+  assert.equal(readCategoryId("?category_id=9007199254740992"), undefined);
 });
 
-test("shared route input normalizes filters and invalid dates", () => {
-  assert.equal(positiveFilterIdFromSearch("?type_id=3", "type_id"), "3");
-  assert.equal(positiveFilterIdFromSearch("?type_id=0", "type_id"), "all");
+test("shared param schemas normalize filters and invalid dates", () => {
+  assert.equal(readFilterId("?type_id=3"), "3");
+  assert.equal(readFilterId("?type_id=0"), "all");
   assert.equal(displayDate("not-a-date"), "-");
 });
 

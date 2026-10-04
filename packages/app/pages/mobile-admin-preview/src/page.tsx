@@ -1,10 +1,10 @@
 import { ArrowLeft } from "lucide-solid";
 import { type Component, For, Show } from "solid-js";
-import { displayDate, positiveIdFromSearch } from "@blog/route-input";
 import { useMobileAdminPreview } from "./feature.ts";
+import { mobileAdminArticlePreviewPage } from "./definition.ts";
 import type { MobileApi } from "@blog/mobile-api";
 import type { MobilePageContext } from "@blog/mobile-shared";
-import { routeWithQuery } from "@blog/mobile-shared";
+import { displayDate, routeWithQuery } from "@blog/mobile-shared";
 import { Heading, Link, StateMessage, Tag, Text } from "@blog/mobile-shared";
 import { ArticleBody } from "@blog/mobile-shared";
 import { StandardNavigator } from "@blog/mobile-shared";
@@ -17,9 +17,12 @@ export function createMobileAdminPreviewPage(
   input: MobileAdminPreviewInput,
 ): Component {
   return function MobileAdminPreviewPage() {
+    const params = mobileAdminArticlePreviewPage.parseParams(
+      input.navigation.current().search,
+    );
     const detail = useMobileAdminPreview(
       input.api,
-      positiveIdFromSearch(input.navigation.current().search, "id"),
+      params.ok ? params.value.id : undefined,
     );
     const editHref = (id: number) =>
       routeWithQuery(input.routes, "desktop-admin-article-edit", { id });

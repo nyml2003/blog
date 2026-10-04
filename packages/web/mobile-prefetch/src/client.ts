@@ -63,11 +63,13 @@ export function createMobilePrefetchClient(
     options.navigator ??
     (typeof navigator === "undefined" ? undefined : navigator.serviceWorker);
   const supported = navigatorBinding !== undefined;
-  const idle = options.requestIdleCallback ??
+  const idle =
+    options.requestIdleCallback ??
     (typeof requestIdleCallback === "function"
       ? (callback) => requestIdleCallback(callback)
       : undefined);
-  const setTimeoutFn = options.setTimeoutFn ??
+  const setTimeoutFn =
+    options.setTimeoutFn ??
     (typeof setTimeout === "function" ? setTimeout : undefined);
 
   async function register(): Promise<void> {
@@ -88,14 +90,22 @@ export function createMobilePrefetchClient(
       const registration = await navigatorBinding.ready;
       const worker = registration.active;
       if (worker === null) {
-        return { status: "failed", prefetched: 0, error: "Service Worker 未激活" };
+        return {
+          status: "failed",
+          prefetched: 0,
+          error: "Service Worker 未激活",
+        };
       }
       const channel = createMessageChannel();
       const result = new Promise<MobilePrefetchResult>((resolve) => {
         channel.port1.onmessage = (event) => {
           const data = event.data;
           if (!isPrefetchResult(data)) {
-            resolve({ status: "failed", prefetched: 0, error: "Service Worker 响应无效" });
+            resolve({
+              status: "failed",
+              prefetched: 0,
+              error: "Service Worker 响应无效",
+            });
             return;
           }
           resolve(data);
@@ -144,6 +154,8 @@ function createMessageChannel(): MessageChannelLike {
 function isPrefetchResult(value: unknown): value is MobilePrefetchResult {
   if (typeof value !== "object" || value === null) return false;
   const result = value as Partial<MobilePrefetchResult>;
-  return (result.status === "accepted" || result.status === "failed") &&
-    typeof result.prefetched === "number";
+  return (
+    (result.status === "accepted" || result.status === "failed") &&
+    typeof result.prefetched === "number"
+  );
 }

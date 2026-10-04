@@ -1,11 +1,11 @@
 import { ArrowLeft } from "lucide-solid";
 import { type Component, For, Show } from "solid-js";
 import type { DesktopApi, SiteRoutes } from "@blog/desktop-api";
-import { ArticleBody, searchQuery } from "@blog/desktop-shared";
-import { positiveIdFromSearch } from "@blog/route-input";
+import { ArticleBody } from "@blog/desktop-shared";
 import { siteRoute } from "@fluvient-loom/page-kit";
 import type { NavigationPort } from "@fluvient-loom/port";
 import { useDesktopArticle } from "./feature.ts";
+import { desktopDetailPage } from "./definition.ts";
 
 // 页面包声明自己需要的 context 切面（definePage 第一样本）：
 // 宿主传入的完整 DesktopPageContext 结构兼容即可，页面不依赖全集。
@@ -17,11 +17,14 @@ export interface DesktopDetailInput {
 
 export function createDesktopDetailPage(input: DesktopDetailInput): Component {
   return function DesktopDetailPage() {
+    const params = desktopDetailPage.parseParams(
+      input.navigation.current().search,
+    );
     const page = useDesktopArticle(
       input.api,
-      positiveIdFromSearch(input.navigation.current().search, "id"),
+      params.ok ? params.value.id : undefined,
     );
-    const query = searchQuery(input.navigation.current().search);
+    const query = params.ok ? params.value.q : "";
     const archiveHref = siteRoute(input.routes, "desktop-public-articles");
     const homeHref = siteRoute(input.routes, "desktop-public-home");
     if (page.kind === "invalid")

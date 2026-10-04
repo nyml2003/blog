@@ -1,3 +1,4 @@
+import type { MobilePageContext } from "@blog/mobile-shared";
 import { definePage } from "@fluvient-loom/page-kit";
 
 export const mobileSettingsPage = definePage({
@@ -7,4 +8,8 @@ export const mobileSettingsPage = definePage({
   title: "设置 - 技术知识库",
   aliases: ["/m/settings/index.html"],
   bootstrap: true,
+  load: () =>
+    import("./page.tsx").then(
+      (m) => (context: MobilePageContext) => m.createMobileSettingsPage(context),
+    ),
 });

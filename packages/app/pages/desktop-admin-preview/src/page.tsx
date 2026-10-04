@@ -4,15 +4,18 @@ import type { DesktopPageContext } from "@blog/desktop-shared";
 import { route, routeWithQuery } from "@blog/desktop-shared";
 import { useDesktopAdminPreview } from "./feature";
 import { ArticleBody } from "@blog/desktop-shared";
-import { positiveIdFromSearch } from "@blog/route-input";
+import { desktopAdminArticlePreviewPage } from "./definition.ts";
 
 export function createDesktopAdminPreviewPage(
   input: DesktopPageContext,
 ): Component {
   return function DesktopAdminPreviewPage() {
+    const params = desktopAdminArticlePreviewPage.parseParams(
+      input.navigation.current().search,
+    );
     const page = useDesktopAdminPreview(
       input.api,
-      positiveIdFromSearch(input.navigation.current().search, "id"),
+      params.ok ? params.value.id : undefined,
     );
     const adminHref = route(input.routes, "desktop-admin-home");
     const editHref = (id: number) =>

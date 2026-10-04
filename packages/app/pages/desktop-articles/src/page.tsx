@@ -2,11 +2,11 @@ import { type DeepReadonly } from "@fluvient/core";
 import { findTextMatches } from "@fluvient-loom/text-highlight";
 import { type Component, For, Show } from "solid-js";
 import type { DesktopApi, SiteRoutes, TShelf } from "@blog/desktop-api";
-import { searchQuery, useDesktopSearch } from "@blog/desktop-shared";
-import { positiveFilterIdFromSearch } from "@blog/route-input";
+import { useDesktopSearch } from "@blog/desktop-shared";
 import { siteRoute, siteRouteWithQuery } from "@fluvient-loom/page-kit";
 import type { NavigationPort } from "@fluvient-loom/port";
 import { useDesktopArticles } from "./feature.ts";
+import { desktopArticlesPage } from "./definition.ts";
 
 export interface DesktopArticlesInput {
   readonly api: DesktopApi;
@@ -18,11 +18,14 @@ export function createDesktopArticlesPage(
   input: DesktopArticlesInput,
 ): Component {
   return function DesktopArticlesPage() {
+    const params = desktopArticlesPage.parseParams(
+      input.navigation.current().search,
+    );
     const page = useDesktopArticles(
       input.api,
-      positiveFilterIdFromSearch(input.navigation.current().search, "type_id"),
+      params.ok ? params.value.type_id : "all",
     );
-    const query = searchQuery(input.navigation.current().search);
+    const query = params.ok ? params.value.q : "";
     const search = useDesktopSearch(input.api, query);
     const archiveHref = siteRoute(input.routes, "desktop-public-articles");
     const homeHref = siteRoute(input.routes, "desktop-public-home");

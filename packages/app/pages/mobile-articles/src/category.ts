@@ -1,8 +1,6 @@
 import type { CategoryShelf } from "@blog/mobile-api";
 import { type DeepReadonly } from "@fluvient/core";
 
-export { categoryIdFromSearch } from "./category-input.ts";
-
 export interface CategorySelection {
   readonly rootId: number;
   readonly childId: number | undefined;

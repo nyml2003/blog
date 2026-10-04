@@ -145,11 +145,20 @@ last_reviewed: 2026-10-04
 3. 前端构建产物和运行行为无用户可见变化；本轮不以“未 import 新包”替代错误消费改造的证据；
 4. ADR 的取舍、Persistence 迁移路径、错误点清单和例外理由均可从仓库文件追溯。
 
+## 决策记录
+
+- **2026-10-04（Standard Schema 修订）**：codec 的校验入口从手写 `validate` 钩子改为 **Standard Schema v1** 结构接口，类型在包内内联（不引入 `@standard-schema/spec` 依赖，中立性 guard 与 lockfile 不变）；schema 必填，信任边界用宽松 schema 表达；**encode 不重跑 schema**（带 transform 的 schema 会对已投影值二次变换）；新增 URL 媒介 `parseSearchParams` / `withSearchParams`；移除 `CodecRejection` 与 `CodecFailure.code`，新增 `CodecFailure.issues`。本条取代"已确认的设计输入"中 Codec 铁律的手写钩子表述、非目标中"不提供 zod 适配"的表述，以及闸门 3 的钩子顺序固定项。证据：`packages/ts/codec/`（17 项单测 + 编译期兼容夹具），`ops package check` 通过（中立性 guard / smoke / workspace typecheck+test，退出码 0）。
+- **2026-10-04（使用体验修订，取代上一条的 API 形态；设计原则不变）**：包改为媒介无关的 `decoder` / `encoder` / `codec` 三个常量对象；schema 从工厂移到调用点——`decode({ type, source, parser })`、`encode({ value, serializer, normalize? })`，**请求字段全部必填、包内零默认**，绑定默认留给各端 SDK 层；json / search-params 降级为具名解析器实现（`parseJsonText` / `serializeJson` / `parseQueryString`），移除 `createJsonCodec` / `parseSearchParams` / `CodecHooks` / `Codec<T>`；解析函数抛出归一为 stage `"parse"`（URL 媒介同样可能产生该 stage）；`parseQueryString` 保留无原型记录与 first-wins 语义。证据：`packages/ts/codec/`（19 项单测 + 编译期兼容夹具），`pnpm typecheck` 通过。
+- **2026-10-04（改名与拆分）**：`@fluvient-loom/codec`（`packages/ts/codec`）更名为 **`@fluvient-loom/serde`**（`packages/ts/serde`），只保留接口、机制与 Standard Schema 声明；具体媒介实现移入新包 **`@fluvient-loom/serde-web`**（`packages/web/serde-web`，`parseJsonText` / `serializeJson` / `parseQueryString` / `withSearchParams`），serde-web 以 workspace 依赖引用 serde 的 `Parser` / `Serializer` 契约（编译期夹具锚定）。概念名（`Codec` / `CodecFailure` / 请求类型）不变。证据：serde 11 项 + serde-web 12 项单测通过，`pnpm typecheck` 与 `ops package check` 通过（退出码 0）；`pnpm-lock.yaml` 的 importer 变更仅限这两个包。
+- **2026-10-04（标识符改名）**：代码标识符全套对齐包名（取代上一条"概念名不变"的表述）——`CodecFailure` → `SerdeFailure`（`kind: "serde"`）、`Codec` → `Serde`、`codec` 常量 → `serde`、`src/codec.ts` → `src/serde.ts`、`test/codec.test.ts` → `test/serde.test.ts`；`Decoder` / `Encoder` / `Parser` / `Serializer` / 请求类型不含 codec 字样，不变。架构文档只更新标识符引用，ADR 文件名、标题与 id 不动（持久化分层的架构记录）。证据：serde 11 项 + serde-web 12 项单测、`pnpm typecheck` 通过。
+- **2026-10-04（URL 参数消费点迁移，删除 `@blog/route-input`）**：`page-kit` 的 `definePage` 新增 `params`（Standard Schema，schema 库由页面包自选，当前用 zod）并产出 `parseParams(search)`——惰性解析、返回 `Result<输出, SerdeFailure>`；7 个页面在 `definition.ts` 声明参数 schema、按结果消费，逐条保留既有行为（detail/admin 的 invalid 态、desktop-articles 的 `"all"` 哨兵、desktop-editor 的 `?? 0` 新建哨兵、`q` 的 trim 语义）；`displayDate` 移入 `@blog/mobile-shared`（含 `./date` 子路径出口，node 测试不拉 CSS 链）；两份 `searchQuery` 随各页 `q` 字段收口。证据：`pnpm typecheck`、`blog-web test:mobile`（22 项）、`test:frontend`（48 项）、`page:check`（17 页 / 22 alias 与投影一致）通过。
+- 未交付（本轮范围外）：`categoryHref` 写侧、desktop-api / mobile-api 手写 `safeParse`、`persisted-state` 的 `parse`/`serialize` 平移。
+
 ## 未决项
 
 - Persistence 原语继续演进 `@fluvient-loom/port`，还是新建独立包；
 - `PersistPlan` 的最小字段和旧 Port 的兼容过渡方式；
-- `Codec<T>`/`CodecError` 的最终字段和钩子顺序；
+- `Codec<T>`/`CodecError` 的最终字段和钩子顺序（2026-10-04 已决，见"决策记录"）；
 - 各错误消费者公开 failure 的 `kind`、`code`、`details` 和 `cause` 最小字段；
 - ADR 产品评审结论；
 - npm 发布时机（沿用既有基础设施包收尾记录）。

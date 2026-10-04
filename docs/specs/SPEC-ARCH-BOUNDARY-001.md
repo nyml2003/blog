@@ -26,14 +26,20 @@ last_reviewed: 2026-10-04
 ```text
 src/frontend/                应用壳（48 文件级）
 ├── bootstrap/               每端一个统一入口（page-kit 唯一调用点；data-page-id 路由）
-│   ├── desktop.tsx  mobile.tsx        只组合应用声明（api 工厂、内嵌清单）并挂载
+│   ├── desktop.tsx  mobile.tsx        只组合应用声明（api 工厂、内嵌清单）；页面
+│   │                                  id → 懒装载从注册表派生，不枚举页面
 │   └── mobile-settings.tsx            内联主题引导（构建期注入 <head>）
 ├── styles/                  mobile.css（聚合 10 分片）+ desktop.css
-├── pages.registry.ts        17 行显式 import 聚合（页面包 definePage 产出）
-├── page-registry/           宿主 glue（校验 + 清单同步 CLI）
-└── vite-mobile-prefetch.ts / mobile-prefetch-sw.ts / build-article-html-wasm.mjs
+├── pages.registry.ts        「有哪些页面」的唯一枚举（17 行显式 import 聚合；
+│                            构建投影与入口装载视图 desktopPageLoaders/
+│                            mobilePageLoaders 均由此派生）
+└── page-registry/           宿主 glue（校验 + 清单同步 CLI）
 
-packages/app/pages/<name>/   页面包（每页一包）：definition.ts（node 安全声明）+
+（mobile-prefetch 的插件、SW 入口生成与注册编排全部在 @fluvient-loom/mobile-prefetch
+包内，应用零 SW 入口文件；wasm 构建脚本随产物所有者 @blog/validation。）
+
+packages/app/pages/<name>/   页面包（每页一包）：definition.ts（node 安全声明 +
+                             懒装载 load，只允许 import() 表达式）+
                              page.tsx（组件工厂）；平台世界（pages/widgets/features/
                              foundation 的切片纵深）在包内自由组织
 packages/app/                mobile-api desktop-api desktop-shared mobile-shared kernel validation
@@ -157,6 +163,8 @@ Then 评审不通过；kernel 引入宿主能力由 DOM-free 编译拦截
 
 ## 修订记录
 
+- 2026-10-04（页面唯一声明源）：页面清单的唯一真相收敛到页面包 `definition.ts`——`definePage` 登记携带懒装载 `load`（只允许 `import()` 表达式，"." 出口维持 node 安全）；bootstrap 入口的 id → 工厂映射改为从 `pages.registry.ts` 派生（`desktopPageLoaders`/`mobilePageLoaders`），入口不再枚举页面；app 特定装配（editor 新建/编辑、articles 标题、detail 组合根）随之下沉进页面包。
+- 2026-10-04（mobile-prefetch 闭环）：`src/frontend/mobile-prefetch/` 目录删除；SW 入口由 Vite 插件自产（虚拟模块）、注册编排收进包（`registerMobilePrefetch`）；应用侧仅剩 vite.config 配置与 bootstrap 调用。
 - 2026-10-04（页面壳扁平化）：`src/frontend` 移除最后的平台世界残留（mobile/desktop 目录、单文件目录、双 context 文件），收敛为"每端一个统一入口 + styles + 注册表 + 工具"的壳形态；页面与平台世界的切片结构随页面包迁入 `packages/app/`。
 - 2026-10-04（PLAN-PAGE-PACKAGING-001 P3b）："bootstrap 是唯一允许装配宿主适配器的层" 修订为 "page-kit 是宿主适配器的唯一装配点，bootstrap 是唯一调用点"——装配代码从 bootstrap 文件收敛进 `@fluvient-loom/page-kit` 包（两端子路径，UI 隔离边界在包内成立）；不变式强度增加（装配从 17 个入口收敛为包内一处）。
 - 2026-10-04：源码内容扫描门禁整体退役（前端 import 建图与 Rust 内容启发式，含已删除目录的墓碑规则）；依赖禁令收敛到 Cargo manifest 层（data 禁 HTML 解析器与外部 HTTP/GitHub 客户端、product 禁直连 SQLite）；前端层序与内容级规则转为设计意图，豁免机制随门禁一并移除。

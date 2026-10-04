@@ -6,6 +6,13 @@ export {
   type RequestIdleCallbackLike,
   type ServiceWorkerContainerLike,
 } from "./client.ts";
+export { DEFAULT_SERVED_PATH } from "./constants.ts";
+export {
+  registerMobilePrefetch,
+  type MobilePrefetchMarker,
+  type MobilePrefetchMarkerRoot,
+  type RegisterMobilePrefetchOptions,
+} from "./register.ts";
 export {
   createMobilePrefetchServiceWorker,
   type CacheLike,

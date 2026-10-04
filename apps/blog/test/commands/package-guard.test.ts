@@ -72,6 +72,18 @@ test('build domain: vite and node imports allowed, platform globals rejected', (
   assert.ok(violations[0].message.includes('平台全局'));
 });
 
+test('build-integration packages may import vite/node for their ./vite subpath', () => {
+  assert.deepEqual(guard({
+    '/ws/packages/web/mobile-prefetch/src/vite.ts':
+      'import { build, type Plugin } from "vite";\nimport { resolve } from "node:path";',
+  }), []);
+  // 例外只对登记包生效：同域其它包仍然禁止
+  const violations = guard({
+    '/ws/packages/web/web/src/other.ts': 'import type { Plugin } from "vite";',
+  });
+  assert.equal(violations.length, 1);
+});
+
 test('unknown category fails closed (placement is the policy)', () => {
   const violations = guard({
     '/ws/packages/loose/x/src/a.ts': 'export const a = 1;',

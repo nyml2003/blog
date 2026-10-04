@@ -12,7 +12,13 @@ export interface PageBootstrapDependencies {
 export interface PageBootstrapOptions {
   /** 参与 HTML 生成的页面登记（宿主注册表）。 */
   readonly registrations: readonly PageRegistration[];
-  /** 内联引导脚本的构建入口（宿主提供，如 "bootstrap/mobile-settings.tsx"）。 */
+  /**
+   * 内联引导脚本的构建入口（宿主提供，如 "bootstrap/mobile-settings.tsx"）。
+   * 该入口经 configFile:false 的独立构建打包（无宿主框架插件，JSX 不可用）：
+   * 其静态 import 图必须保持纯 TS——不得触达页面包根的登记（definition.load
+   * 的动态 import 目标 page.tsx 需要 JSX 转换；引导入口要取页面模型时走
+   * 页面包的模型子路径）。
+   */
   readonly bootstrapEntry: string;
   readonly dependencies?: PageBootstrapDependencies;
 }

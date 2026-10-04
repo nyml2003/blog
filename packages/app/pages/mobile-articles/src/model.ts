@@ -16,11 +16,19 @@ import type { MobileRouteContext } from "@blog/mobile-shared";
 import { useMobileResource } from "@blog/mobile-api";
 import {
   categoryHref,
-  categoryIdFromSearch,
   categoryRequestId,
   categorySelection,
   type CategorySelection,
 } from "./category.ts";
+import { mobileArticlesPage } from "./definition.ts";
+
+/**
+ * 从当前 URL 读取分类筛选 id；缺失/非法 → undefined（无过滤，回退首个根分类）。
+ */
+function readCategoryId(search: string): number | undefined {
+  const params = mobileArticlesPage.parseParams(search);
+  return params.ok ? params.value.category_id : undefined;
+}
 
 export interface MobileArticlesLogicInput extends MobileRouteContext {
   readonly api: Pick<MobileApi, "page">;
@@ -46,7 +54,7 @@ function navigateToCategory(
 
 export function useMobileArticles(input: MobileArticlesLogicInput) {
   const [requestedId, setRequestedId] = createSignal(
-    categoryIdFromSearch(input.navigation.current().search),
+    readCategoryId(input.navigation.current().search),
   );
   const resource = useMobileResource(() =>
     createDataTask<MobileArticlesPayload, MobileApiFailure | TaskFailure>({
@@ -115,7 +123,7 @@ export function useMobileArticles(input: MobileArticlesLogicInput) {
       : categorySelection(model, requestedId());
   });
   const onPopState = () =>
-    setRequestedId(categoryIdFromSearch(input.navigation.current().search));
+    setRequestedId(readCategoryId(input.navigation.current().search));
   const popHandle = input.navigation.subscribePopState(onPopState);
   onCleanup(() => popHandle.release());
 

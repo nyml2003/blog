@@ -5,7 +5,9 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./page": "./src/page.tsx"
+    "./page": "./src/page.tsx",
+    "./persistence": "./src/persistence.ts",
+    "./settings-model": "./src/settings-model.ts"
   },
   "dependencies": {
     "@blog/kernel": "workspace:*",

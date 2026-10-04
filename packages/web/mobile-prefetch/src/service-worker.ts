@@ -4,7 +4,10 @@ export interface MobilePrefetchServiceWorkerOptions {
   readonly apiPathPrefix: string;
   readonly cacheName?: string;
   readonly ttlMs?: number;
-  readonly fetcher?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+  readonly fetcher?: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response>;
   readonly caches?: CacheStorageLike;
   readonly origin?: string;
   readonly now?: () => number;
@@ -18,7 +21,10 @@ export interface MobilePrefetchServiceWorker {
 
 export interface ServiceWorkerScopeLike {
   skipWaiting(): Promise<void>;
-  addEventListener(type: string, listener: (event: ExtendableEventLike) => void): void;
+  addEventListener(
+    type: string,
+    listener: (event: ExtendableEventLike) => void,
+  ): void;
 }
 
 export interface ExtendableEventLike {
@@ -58,40 +64,47 @@ export function createMobilePrefetchServiceWorker(
   const fetcher = options.fetcher ?? fetch;
   const cacheStorage = options.caches ?? caches;
   const now = options.now ?? Date.now;
-  const origin = options.origin ??
+  const origin =
+    options.origin ??
     (typeof location === "undefined" ? "http://localhost" : location.origin);
   const inFlight = new Map<string, Promise<Response>>();
 
   function isAllowedUrl(value: string): boolean {
     const url = new URL(value, origin);
-    return url.origin === origin &&
-      url.pathname.startsWith(options.apiPathPrefix);
+    return (
+      url.origin === origin && url.pathname.startsWith(options.apiPathPrefix)
+    );
   }
 
   async function fetchAndStore(url: string): Promise<Response> {
     const existing = inFlight.get(url);
-    if (existing !== undefined) return existing.then((response) => response.clone());
-    const task = fetcher(url, { method: "GET", credentials: "same-origin" }).then(async (response) => {
-      if (response.ok) {
-        const headers = new Headers(response.headers);
-        headers.set(TIMESTAMP_HEADER, String(now()));
-        const stored = new Response(await response.clone().arrayBuffer(), {
-          status: response.status,
-          statusText: response.statusText,
-          headers,
-        });
-        const cache = await cacheStorage.open(cacheName);
-        await cache.put(url, stored);
-      }
-      return response;
-    }).finally(() => {
-      inFlight.delete(url);
-    });
+    if (existing !== undefined)
+      return existing.then((response) => response.clone());
+    const task = fetcher(url, { method: "GET", credentials: "same-origin" })
+      .then(async (response) => {
+        if (response.ok) {
+          const headers = new Headers(response.headers);
+          headers.set(TIMESTAMP_HEADER, String(now()));
+          const stored = new Response(await response.clone().arrayBuffer(), {
+            status: response.status,
+            statusText: response.statusText,
+            headers,
+          });
+          const cache = await cacheStorage.open(cacheName);
+          await cache.put(url, stored);
+        }
+        return response;
+      })
+      .finally(() => {
+        inFlight.delete(url);
+      });
     inFlight.set(url, task);
     return task.then((response) => response.clone());
   }
 
-  async function cachedResponse(request: Request): Promise<Response | undefined> {
+  async function cachedResponse(
+    request: Request,
+  ): Promise<Response | undefined> {
     const cache = await cacheStorage.open(cacheName);
     const response = await cache.match(request);
     if (response === undefined) return undefined;
@@ -104,7 +117,8 @@ export function createMobilePrefetchServiceWorker(
   }
 
   async function handleFetch(request: Request): Promise<Response> {
-    if (request.method !== "GET" || !isAllowedUrl(request.url)) return fetcher(request);
+    if (request.method !== "GET" || !isAllowedUrl(request.url))
+      return fetcher(request);
     const cached = await cachedResponse(request);
     if (cached !== undefined) return cached;
     return fetchAndStore(request.url);
@@ -151,13 +165,63 @@ export function createMobilePrefetchServiceWorker(
   return { install, handleFetch, handleMessage };
 }
 
-function isCommand(value: unknown): value is { readonly type: string; readonly urls: readonly string[] } {
+function isCommand(
+  value: unknown,
+): value is { readonly type: string; readonly urls: readonly string[] } {
   if (typeof value !== "object" || value === null) return false;
   const command = value as { readonly type?: unknown; readonly urls?: unknown };
-  return command.type === COMMAND && Array.isArray(command.urls) &&
-    command.urls.every((url) => typeof url === "string");
+  return (
+    command.type === COMMAND &&
+    Array.isArray(command.urls) &&
+    command.urls.every((url) => typeof url === "string")
+  );
 }
 
 function errorMessage(cause: unknown): string {
   return cause instanceof Error ? cause.message : String(cause);
+}
+
+// ── SW 入口接线（应用侧 3 行的背后）─────────────────────────────────
+// 平台边界：Service Worker 全局不在 DOM lib 的类型面内（也不为此把
+// WebWorker lib 拉进主程序——两套 lib 互相冲突），边界处手写最小切面。
+interface FetchEventLike {
+  readonly request: Request;
+  respondWith(response: Promise<Response>): void;
+}
+interface MessageEventLike {
+  readonly data: unknown;
+  readonly ports: readonly MessagePortLike[];
+}
+interface ServiceWorkerGlobalLike {
+  skipWaiting(): Promise<void>;
+  addEventListener(
+    type: "fetch",
+    listener: (event: FetchEventLike) => void,
+  ): void;
+  addEventListener(
+    type: "message",
+    listener: (event: MessageEventLike) => void,
+  ): void;
+  addEventListener(
+    type: string,
+    listener: (event: ExtendableEventLike) => void,
+  ): void;
+}
+
+/**
+ * 在 Service Worker 全局上完成全部接线（install 跳过等待、fetch 响应复用、
+ * message 预取命令）。SW 入口文件只需：
+ * `attachMobilePrefetch(self, { apiPathPrefix: "/api/..." })`。
+ */
+export function attachMobilePrefetch(
+  scope: unknown,
+  options: MobilePrefetchServiceWorkerOptions,
+): void {
+  const runtime = createMobilePrefetchServiceWorker(options);
+  const sw = scope as ServiceWorkerGlobalLike; // 边界收窄：调用方传入 SW 全局 self
+  runtime.install(sw);
+  sw.addEventListener("fetch", (event) => {
+    event.respondWith(runtime.handleFetch(event.request));
+  });
+  sw.addEventListener("message", (event) => runtime.handleMessage(event));
 }

@@ -19,7 +19,11 @@ import {
 } from "@fluvient-loom/page-build-kit";
 import { siteRoutesSchema as desktopSiteRoutesSchema } from "@blog/desktop-api";
 import { siteRoutesSchema } from "@blog/mobile-api";
-import { pageRegistry } from "../../pages.registry";
+import {
+  desktopPageLoaders,
+  mobilePageLoaders,
+  pageRegistry,
+} from "../../pages.registry";
 
 const frontendRoot = fileURLToPath(new URL("../../", import.meta.url));
 
@@ -38,6 +42,32 @@ function sourceHtmlFiles(directory: string): readonly string[] {
 
 test("the real registry passes the build-kit validator", () => {
   assert.deepEqual([...validatePageRegistry(pageRegistry)], []);
+});
+
+test("every registered page carries a lazy load and platform loader views cover it", () => {
+  // 唯一真相的可执行检查：登记必须自带 load（定义文件的懒装载），
+  // 两个平台视图完整覆盖注册表、不重不漏。
+  for (const page of pageRegistry) {
+    assert.equal(typeof page.load, "function", page.id);
+  }
+  const desktop = desktopPageLoaders();
+  const mobile = mobilePageLoaders();
+  assert.equal(
+    desktop.size,
+    pageRegistry.filter((page) => page.platform === "desktop").length,
+  );
+  assert.equal(
+    mobile.size,
+    pageRegistry.filter((page) => page.platform === "mobile").length,
+  );
+  assert.equal(desktop.size + mobile.size, pageRegistry.length);
+  assert.ok(
+    [...desktop.keys()].every((id) =>
+      pageRegistry.some(
+        (page) => page.id === id && page.platform === "desktop",
+      ),
+    ),
+  );
 });
 
 test("site-routes.json manifest matches the registry projection", () => {
@@ -165,6 +195,15 @@ test("platform main entries mount pages and mobile imports CSS once", () => {
   assert.match(mobileMain, /mountMobileApplication/);
   assert.match(mobileMain, /mobile\.css/);
   assert.doesNotMatch(mobileMain, /getElementById\("app"\)/);
+
+  // 唯一真相：入口不枚举页面——id 字面量与页面包 import 只能出现在
+  // definition.ts / pages.registry.ts；入口只用注册表派生的装载视图。
+  assert.match(desktopMain, /desktopPageLoaders/);
+  assert.doesNotMatch(desktopMain, /@blog\/page-/);
+  assert.doesNotMatch(desktopMain, /"desktop-[a-z-]+"/);
+  assert.match(mobileMain, /mobilePageLoaders/);
+  assert.doesNotMatch(mobileMain, /@blog\/page-/);
+  assert.doesNotMatch(mobileMain, /"mobile-[a-z-]+"/);
 
   const mobileStyles = readFileSync(
     resolve(frontendRoot, "styles/mobile.css"),

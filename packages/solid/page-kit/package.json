@@ -29,6 +29,8 @@
     "@fluvient-loom/app-shell": "workspace:*",
     "@fluvient-loom/net": "workspace:*",
     "@fluvient-loom/port": "workspace:*",
+    "@fluvient-loom/serde": "workspace:*",
+    "@fluvient-loom/serde-web": "workspace:*",
     "@fluvient-loom/web": "workspace:*"
   },
   "peerDependencies": {

@@ -12,7 +12,9 @@ test("client registers and sends prefetch URLs through the active worker", async
     active: {
       postMessage(message: unknown, transfer?: readonly unknown[]) {
         messages.push(message);
-        const port = transfer?.[0] as { postMessage(message: unknown): void } | undefined;
+        const port = transfer?.[0] as
+          | { postMessage(message: unknown): void }
+          | undefined;
         port?.postMessage({ status: "accepted", prefetched: 2 });
       },
     },
@@ -36,12 +38,20 @@ test("client registers and sends prefetch URLs through the active worker", async
   assert.equal(client.supported, true);
   assert.equal(idleCalled, true);
   assert.deepEqual(result, { status: "accepted", prefetched: 2 });
-  assert.deepEqual(messages, [{ type: "mobile-prefetch/prefetch", urls: ["/api/a", "/api/b"] }]);
+  assert.deepEqual(messages, [
+    { type: "mobile-prefetch/prefetch", urls: ["/api/a", "/api/b"] },
+  ]);
 });
 
 test("client degrades without Service Worker support", async () => {
-  const client = createMobilePrefetchClient({ serviceWorkerUrl: "/mobile-prefetch.js", navigator: undefined });
+  const client = createMobilePrefetchClient({
+    serviceWorkerUrl: "/mobile-prefetch.js",
+    navigator: undefined,
+  });
   assert.equal(client.supported, false);
-  assert.deepEqual(await client.prefetchAll([]), { status: "unsupported", prefetched: 0 });
+  assert.deepEqual(await client.prefetchAll([]), {
+    status: "unsupported",
+    prefetched: 0,
+  });
   await client.register();
 });

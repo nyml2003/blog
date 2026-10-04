@@ -5,7 +5,7 @@ import {
   navigationFromModule,
   supportedNavigationIcons,
 } from "@blog/mobile-api";
-import { positiveIdFromSearch } from "@blog/route-input";
+import { mobileArticleDetailPage } from "@blog/page-mobile-detail";
 import { ok } from "@fluvient/core";
 import {
   type NetworkPort,
@@ -237,8 +237,13 @@ test("mobile admin preview reads the management article contract", async () => {
   );
 });
 
-test("route input rejects invalid IDs", () => {
-  assert.equal(positiveIdFromSearch("?id=7", "id"), 7);
+test("page params reject invalid IDs", () => {
+  const readId = (search: string) => {
+    const params = mobileArticleDetailPage.parseParams(search);
+    return params.ok ? params.value.id : undefined;
+  };
+
+  assert.equal(readId("?id=7"), 7);
   for (const search of [
     "",
     "?id=0",
@@ -246,6 +251,6 @@ test("route input rejects invalid IDs", () => {
     "?id=1.5",
     "?id=9007199254740992",
   ]) {
-    assert.equal(positiveIdFromSearch(search, "id"), undefined);
+    assert.equal(readId(search), undefined);
   }
 });

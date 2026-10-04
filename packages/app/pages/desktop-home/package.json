@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@blog/desktop-api": "workspace:*",
+    "@blog/desktop-shared": "workspace:*",
     "@fluvient/core": "workspace:*",
     "@fluvient-loom/page-kit": "workspace:*"
   },

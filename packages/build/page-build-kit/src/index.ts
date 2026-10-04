@@ -1,4 +1,6 @@
 export {
+  type PageEntry,
+  type PageFactory,
   type PagePlatform,
   type PageRegistration,
   type PageRoute,
@@ -19,6 +21,10 @@ export {
   generateSiteRoutesManifest,
   siteRoutesManifestFilename,
 } from "./generate.ts";
+export {
+  type SiteRoutesManifestSync,
+  syncSiteRoutesManifest,
+} from "./sync.ts";
 export {
   generatedPagePath,
   generatedPagesDirectory,

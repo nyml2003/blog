@@ -12,7 +12,7 @@
 
 ## 与 Codec/Persistence 原语计划的关系
 
-序列化语义刻意与 `PLAN-FRONTEND-CODEC-PERSISTENCE-001` 已确认的铁律对齐（只认 string、永不抛错、normalize 可裁剪）。该计划落地 `@fluvient-loom/codec` 后，`parse`/`serialize` 应平移到 `createJsonCodec`；响应式包装是否上收为共享原语届时另行决策。
+序列化语义刻意与 `PLAN-FRONTEND-CODEC-PERSISTENCE-001` 已确认的铁律对齐（只认 string、永不抛错、normalize 可裁剪）。`@fluvient-loom/serde`（具体解析器在 `@fluvient-loom/serde-web`）已落地为媒介无关的 `decoder`/`encoder` 对象（`decode({ type, source, parser })`，解析器与 schema 都在调用点）：`parse`/`serialize` 若平移，需要在其上补出本包的"损坏即默认值"全量语义（codec 返回 `Result`）；响应式包装是否上收为共享原语届时另行决策。
 
 ## 开发
 

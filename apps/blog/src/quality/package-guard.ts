@@ -23,6 +23,9 @@ const CATEGORIES = new Set<string>([
   'app',
 ]);
 
+/** 随运行时同包发布的 Vite 集成（./vite 子路径）：允许构建工具导入。 */
+const BUILD_INTEGRATION_PACKAGES = new Set(['mobile-prefetch']);
+
 function isScopeAllowed(specifier: string): boolean {
   return KERNEL_SCOPES.some(
     (scope) => specifier === scope || specifier.startsWith(`${scope}/`),
@@ -32,6 +35,12 @@ function isScopeAllowed(specifier: string): boolean {
 function importViolation(category: PackageCategory, pkg: string, specifier: string): string | undefined {
   if (specifier.startsWith('./') || specifier.startsWith('../')) return undefined;
   if (category === 'cli' || category === 'app') return undefined;
+  if (
+    BUILD_INTEGRATION_PACKAGES.has(pkg) &&
+    (specifier === 'vite' || specifier.startsWith('node:'))
+  ) {
+    return undefined;
+  }
   if (category === 'build') {
     if (specifier === 'vite' || specifier.startsWith('node:')) return undefined;
     if (isScopeAllowed(specifier)) return undefined;

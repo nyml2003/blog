@@ -8,4 +8,5 @@ export { MobileNav } from "./shell/mobile-nav.tsx";
 export { StandardNavigator } from "./shell/navigator-icons.tsx";
 export { MobileShell } from "./shell/ui.tsx";
 export { mobileNavigationItems } from "./navigation/model.ts";
-export { searchQuery, useMobileSearch } from "./search/model.ts";
+export { useMobileSearch } from "./search/model.ts";
+export { displayDate } from "./date.ts";

@@ -6,12 +6,19 @@
   "exports": {
     ".": "./src/index.ts",
     "./client": "./src/client.ts",
-    "./service-worker": "./src/service-worker.ts"
+    "./service-worker": "./src/service-worker.ts",
+    "./vite": "./src/vite.ts"
   },
   "scripts": {
     "test": "tsx --test test/*.test.ts"
   },
   "dependencies": {
     "@fluvient/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "vite": "^8.0.0"
+  },
+  "devDependencies": {
+    "vite": "8.2.2"
   }
 }

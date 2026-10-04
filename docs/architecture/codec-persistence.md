@@ -13,7 +13,7 @@ last_reviewed: 2026-10-04
 ## 分层边界
 
 - 业务只认领域类型；
-- Codec 做对象与字符串之间的纯转换；
+- Codec 做对象与文本媒介之间的纯转换（JSON 文本、查询串）；
 - 编排层把业务意图转换为 `PersistPlan`；
 - Port 只认 key 和 string；
 - 存储实现只处理字节或宿主 API。
@@ -21,7 +21,8 @@ last_reviewed: 2026-10-04
 ## 已落地原语
 
 - `@fluvient/core`（`packages/ts/core`）：`ErrorInfo`、`SerializableFailure`、`SerializableResult`、`toErrorInfo`、`isJsonValue`、`isSerializableFailure`；`PersistencePort`、`NetworkPort`、`JsonRequester` 的失败返回已约束到 `SerializableResult`。
-- `@fluvient-loom/codec`（`packages/ts/codec`）：`Codec<T>`、`createJsonCodec`、`CodecFailure`、`CodecHooks`、`CodecRejection`。
+- `@fluvient-loom/serde`（`packages/ts/serde`）：媒介无关的 `decoder` / `encoder` / `serde` 对象与请求类型（`DecodeRequest` / `EncodeRequest`）、`SerdeFailure`，以及内联的 Standard Schema v1 结构声明（`StandardSchemaV1`）——零媒介实现、零解析器默认。
+- `@fluvient-loom/serde-web`（`packages/web/serde-web`）：具体媒介实现 `parseJsonText` / `serializeJson` / `parseQueryString` / `withSearchParams`，注入 serde 的调用点使用。
 - `@fluvient-loom/port`（`packages/ts/port`）：`PersistPlan` 原语与 `write(plan)` 写入口。
 
 ## PersistPlan 契约
@@ -33,21 +34,34 @@ last_reviewed: 2026-10-04
 
 ## Codec 契约
 
+形态（2026-10-04 第二次修订）：包提供媒介无关的 `decoder` / `encoder` / `serde` 三个对象，**请求自携全部输入，包内零默认**：
+
+- `decode({ type, source, parser })`：`type` 是 Standard Schema，`source` 是原料，`parser` 是注入的解析函数，三者必填；
+- `encode({ value, serializer, normalize? })`：`serializer` 必填，`normalize` 是可选纯投影；
+- 本包不绑定任何媒介解析器/序列化器，也不做回退；json / search-params 只是包内提供的具名实现，**绑定默认留给各端 SDK 层**。
+
 铁律：
 
-- 只认 `string`；二进制另设 transport codec；
-- `encode`/`decode` 全路径返回 `Result`，不得抛出；钩子抛出和 `JSON.parse`/`JSON.stringify` 异常一律转换为 `err`；
-- `validate`/`normalize` 是可选钩子，Codec 本体不依赖 schema 库；zod 等由业务边界自行使用；
-- `normalize` 可裁掉未知字段，避免旧数据被原样写回。
+- 只认文本原料与 `string` 结果；二进制另设 transport codec；
+- 全路径返回 `Result`，不得抛出；注入函数抛出、schema 抛出/拒绝一律转换为 `err`；
+- 校验由 **Standard Schema v1**（`~standard.validate`）承担：类型是包内内联的结构声明，不引入 `@standard-schema/spec` 依赖，也不绑定任何 schema 库；zod、valibot 等实现因结构兼容可直接使用，换库不改公共接口；
+- schema 必须同步：`decode` 全路径同步返回，schema 返回 thenable 视为接入错误；
+- 解析函数抛出 → stage `"parse"`；schema 失败 → stage `"validate"`。
 
-钩子调用顺序（固定，有单测锚定）：
+调用顺序（固定，有单测锚定）：
 
-- `encode = normalize → validate → serialize`：先把内存形态投影为持久化形态，validate 守卫的正是即将写入的内容；
-- `decode = parse → validate → normalize`：validate 守卫原始线上形态，通过后 normalize 才把已验证的值投影回内存形态；因此 `normalize` 永不接触未经验证的任意输入。
+- `decode = parser(source) → schema`：解析由注入函数完成，其输出交给 schema，校验与投影（transform/strip）都由 schema 完成，`T` 即 schema 的输出类型；
+- `encode = normalize → serializer`：**encode 不跑 schema**（2026-10-04 决策）——带 transform 的 schema 会对已投影的值二次变换（decode `"a"` → `"a!"`，encode 再变成 `"a!!"`），静默写坏比不校验更糟；写入形态由 `normalize` 与调用方负责。
 
-`CodecFailure` 字段：`kind: "codec"`、`operation: "encode" | "decode"`、`stage: "normalize" | "validate" | "serialize" | "parse"`、`message`，可选 `code`（结构化拒绝透传）、`cause`（`toErrorInfo` 投影）。结构上是 `SerializableFailure` 成员，可用 `isSerializableFailure` 校验。
+`SerdeFailure` 字段：`kind: "serde"`、`operation: "encode" | "decode"`、`stage: "normalize" | "validate" | "serialize" | "parse"`、`message`，可选 `issues`（schema 拒绝的逐条问题，路径 + 消息，`message` 取第一条）与 `cause`（`toErrorInfo` 投影）。结构上是 `SerializableFailure` 成员，可用 `isSerializableFailure` 校验。
 
-信任边界：无 `validate` 钩子时，`decode` 返回的 `T` 是对线上数据的信任式收窄（实现中的唯一显式收窄点）；接入方必须自带 `validate` 才能获得形态保证。
+## 媒介解析器
+
+以下实现位于 `@fluvient-loom/serde-web`，由调用方注入 serde 的请求；serde 本体不含任何解析器：
+
+- `parseJsonText` / `serializeJson`：`JSON.parse` / `JSON.stringify` 的封装。
+- `parseQueryString`（search-params）：字符串按查询串解释（前导 "?" 由 `URLSearchParams` 剥离），完整 URL / 路径传 `URL` 实例或调用方自取 `url.search`；重复 key first-wins（对齐 `URLSearchParams.get`）；记录原型为 null——防止被污染的环境（`Object.prototype` 上的注入）经原型链渗入边界记录（校验器用属性访问读取）。宿主需要别的策略时整体替换该解析器。
+- `withSearchParams`：URL 写侧（追加式、跳过 `undefined` 与空串）。写方向无法由 schema 驱动（Standard Schema 没有内省能力），保持独立纯函数，不套 `encoder`。
 
 ## 错误模型
 

@@ -9,10 +9,6 @@ import type {
 } from "@blog/mobile-api";
 import { useMobileResource } from "@blog/mobile-api";
 
-export function searchQuery(search: string): string {
-  return new URLSearchParams(search).get("q")?.trim() ?? "";
-}
-
 export function useMobileSearch(input: {
   readonly api: Pick<MobileApi, "search">;
   readonly query: string;

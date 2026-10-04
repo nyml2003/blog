@@ -8,7 +8,8 @@ import {
 import { type Component, For, Show } from "solid-js";
 import type { CategorySelection } from "./category.ts";
 import { rootCategoryName, useMobileArticles } from "./model.ts";
-import { searchQuery, useMobileSearch } from "@blog/mobile-shared";
+import { mobileArticlesPage } from "./definition.ts";
+import { useMobileSearch } from "@blog/mobile-shared";
 import type { CategoryShelf, MobileApi } from "@blog/mobile-api";
 import type { MobileRouteContext } from "@blog/mobile-shared";
 import { routeWithQuery } from "@blog/mobile-shared";
@@ -30,7 +31,10 @@ export function createMobileArticlesPage(
 ): Component {
   return function MobileArticlesPage() {
     const articles = useMobileArticles(input);
-    const query = searchQuery(input.navigation.current().search);
+    const params = mobileArticlesPage.parseParams(
+      input.navigation.current().search,
+    );
+    const query = params.ok ? params.value.q : "";
     const search = useMobileSearch({ api: input.api, query });
     const detailHref = (id: number) =>
       routeWithQuery(input.routes, "mobile-article-detail", { id, q: query });

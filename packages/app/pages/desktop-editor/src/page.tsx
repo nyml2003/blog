@@ -14,7 +14,10 @@ import {
 } from "./persistence.ts";
 import { editorSnapshot } from "./state.ts";
 import { DesktopSourceEditor } from "./source-editor.tsx";
-import { positiveIdFromSearch } from "@blog/route-input";
+import {
+  desktopAdminArticleEditPage,
+  desktopAdminArticleNewPage,
+} from "./definition.ts";
 
 function numberList(value: string): number[] {
   return value
@@ -29,8 +32,9 @@ export function createDesktopEditorPage(
 ) {
   return function DesktopEditorPage() {
     const draftStorage = createBrowserEditorDraftStorage();
-    const articleId =
-      positiveIdFromSearch(context.navigation.current().search, "id") ?? 0;
+    const entry = creation ? desktopAdminArticleNewPage : desktopAdminArticleEditPage;
+    const params = entry.parseParams(context.navigation.current().search);
+    const articleId = params.ok ? params.value.id ?? 0 : 0;
     const workspace = useDesktopResource(() => context.api.content.workspace());
     const article = useDesktopResource(() =>
       context.api.content.getArticle(articleId),

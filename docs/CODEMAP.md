@@ -47,20 +47,17 @@ blog/
  │   └── frontend/           ← 应用壳（页面本体全在 packages/app/ 页面包）
 │       ├── bootstrap/      ← 每端一个统一入口（page-kit 唯一调用点）：desktop.tsx / mobile.tsx / mobile-settings.tsx（内联主题引导）
 │       ├── styles/         ← 应用样式：mobile.css（聚合 10 个分片）+ desktop.css
-│       ├── pages.registry.ts ← 页面登记表（17 行显式 import 聚合，页面包 definePage 产出）
-│       ├── page-registry/  ← 注册表宿主 glue：校验/清单同步 CLI（机制在 @fluvient-loom/page-build-kit）
-│       ├── site-routes.json ← 页面路由清单（registry 生成物，两端构建期内嵌）
-│       ├── vite-mobile-prefetch.ts ← Mobile prefetch SW 的 Vite 插件
-│       ├── mobile-prefetch-sw.ts   ← Service Worker 源（由插件单独打包）
-│       └── build-article-html-wasm.mjs ← article HTML wasm 构建脚本
+│       ├── pages.registry.ts ← 页面唯一枚举（17 行显式 import 聚合，页面包 definePage 产出；desktop/mobile 装载视图由此派生）
+│       ├── page-registry/  ← 注册表校验/清单同步 CLI（机制与同步实现在 @fluvient-loom/page-build-kit）
+│       └── site-routes.json ← 页面路由清单（registry 生成物，两端构建期内嵌）
 ├── packages/               ← 全部 npm 包，按类别分目录（目录即门禁策略，未知类别 fail-closed）：
-│   ├── ts/                 ← 真通用基础件：core port query command mock net
-│   ├── web/                ← web 域：web gesture-web mobile-prefetch nested-gesture text-highlight app-shell
+│   ├── ts/                 ← 真通用基础件：core port query command mock net serde
+│   ├── web/                ← web 域：web gesture-web mobile-prefetch nested-gesture text-highlight app-shell serde-web
 │   ├── solid/              ← web+solid UI：persisted-state page-kit
 │   ├── cli/                ← node 侧：cli-kit cli-core cli-plugins node
 │   ├── build/              ← 构建链（node+vite）：page-build-kit（校验/生成/vite 插件/脚手架）
-│   └── app/                ← @blog 应用私有包：route-input desktop-api desktop-shared
-│                           　mobile-h5-solid-atoms（mobile 专属设计系统）+ pages/（页面包）
+│   └── app/                ← @blog 应用私有包：desktop-api desktop-shared kernel mobile-api mobile-shared
+│                           　mobile-h5-solid-atoms（mobile 专属设计系统）validation + pages/（页面包）
 │   └── cli-kit / cli-core / cli-plugins ← ops CLI 的框架能力（参数/输出/进程/端口分配）
 ├── apps/blog/              ← ops 命令实现（src/registry.ts 是命令登记表）
 │   └── src/{admin,content,delivery,e2e,quality,release,runtime}/ ← 各命令域模块
@@ -82,7 +79,7 @@ blog/
 
 ```
 浏览器 → /articles/detail.html?id=7（HTML 由构建期从 pages.registry 生成）
-  → bootstrap/desktop/detail.tsx 挂载
+  → bootstrap/desktop.tsx 按 data-page-id 取注册表派生的懒装载并挂载
   → desktop/pages/detail/page.tsx
   → desktop/foundation/api 发 GET /api/public/articles
   → Product http.rs 路由 → 校验 sceneCode → BFF/data 读取
@@ -134,14 +131,14 @@ pages.registry.ts（页面登记表）
 
 | 目录 | 内容 | 规则 |
 | --- | --- | --- |
-| `pages.registry.ts` | 17 个页面的登记表 | 加页面只改这里 + 建入口文件 |
-| `bootstrap/{desktop,mobile}/` | 页面入口与首绘装配 | 只做 composition root，唯一允许装配 `@fluvient-loom/web` 适配器的层 |
+| `pages.registry.ts` | 17 个页面的唯一枚举（平台装载视图由此派生） | 加页面 = 建包（definition 写全）+ 这里两行 |
+| `bootstrap/{desktop,mobile}.tsx` | 每端统一入口：环境装配 + 按 `data-page-id` 挂载 | 只做 composition root（page-kit 唯一调用点）；页面 id → 懒装载从注册表派生 |
 | `{mobile,desktop}/pages/<slice>/` | 页面（UI 编排） | 不触碰宿主能力；数据经 features 与注入 ports |
 | `{mobile,desktop}/widgets/<slice>/` | 复合组件（shell、article-card、source-editor 等） | 只依赖本端 foundation 与 features |
 | `{mobile,desktop}/features/<slice>/` | 业务模型（model/persistence） | 数据获取与领域状态在此 |
 | `{mobile,desktop}/foundation/{api,styles,ui}/` | 端内基础层：API 客户端与 BFF 归一化、全局样式、原子 UI | 不访问 UI 之外的宿主适配器 |
 | `kernel/` | 纯机制：desired-state 状态原语 | ports/Task/Resource 来自 `@fluvient-loom/port|query`；禁宿主能力 |
-| `validation/` | 跨端输入校验（route-input、article-html、WASM 产物） | 纯函数与契约，无 UI |
+| `validation/` | 跨端输入校验（article-html、WASM 产物） | 纯函数与契约，无 UI |
 
 依赖方向与 slice 隔离的源码扫描门禁已于 2026-10-04 移除，包内导入不设路径级限制；`tests/app/architecture/source-layout.test.ts` 仅保留目录形态与 mobile 页面契约检查。两端隔离与底层纯度（`SPEC-ARCH-BOUNDARY-001`）由包结构与评审承载，逐步迁移至 workspace 包（`src/frontend/packages/`）。
 
