@@ -107,9 +107,9 @@ pub fn assemble(
                 filters: wire::to_t_shelf_filters(types),
                 selected_filter_id: plan.selected_filter_id.clone(),
                 articles: wire::to_shelf_cards_from_details(&matching, surface)
-                .into_iter()
-                .take(T_SHELF_LIMIT)
-                .collect(),
+                    .into_iter()
+                    .take(T_SHELF_LIMIT)
+                    .collect(),
                 total,
             })
         }
