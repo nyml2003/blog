@@ -42,6 +42,16 @@
 .mobile-actions-right {
   margin-left: auto;
 }
+.mobile-header-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-left: 6px;
+  font-size: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .mobile-actions button,
 .mobile-more-menu button,
 .mobile-more-menu a {
@@ -99,5 +109,6 @@
 .mobile-main {
   max-width: var(--shell-content-max-width);
   margin: 0 auto;
-  padding: 28px 18px calc(var(--shell-nav-reserve) + var(--safe-area-bottom));
+  padding: 28px var(--shell-gutter)
+    calc(var(--shell-nav-reserve) + var(--safe-area-bottom));
 }

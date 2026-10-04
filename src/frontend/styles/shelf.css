@@ -132,12 +132,16 @@
 /* Mobile app migration: category shelf markup (pages/articles.tsx) uses these
    wrapper classes; the tab buttons themselves consume the shared `.m-atom-tab`
    atoms. This block only owns layout. */
+/* F 型货架破出 .mobile-main 的 gutter 拉满屏宽：左栏贴屏幕左缘（外卖
+   轨道形态），右列把 gutter 补回来，内容不贴右缘。 */
 .category-shelf {
   display: grid;
   grid-template-columns: minmax(72px, 21%) minmax(0, 1fr);
   column-gap: 14px;
   row-gap: 10px;
   align-items: start;
+  margin-inline: calc(var(--shell-gutter) * -1);
+  padding-inline-end: var(--shell-gutter);
   min-width: 0;
 }
 
@@ -149,7 +153,8 @@
 }
 
 /* 左栏一级分类：外观（两色 + 圆角）全部在 atom 层（m-atom-tab--vertical，
-   未选中自涂 --tab-rail）；这里只负责栅格定位、粘性与滚动。零间隙让
+   未选中自涂 --tab-rail）；这里只负责栅格定位、粘性与滚动。吸顶让出
+   Navigator 头部（--shell-header-sticky-top）与底部导航。零间隙让
    相邻项的切角贴住选中块。 */
 .category-root-list {
   grid-column: 1;

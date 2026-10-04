@@ -49,6 +49,7 @@
   --shell-content-max-width: 760px;
   --shell-header-sticky-top: 84px;
   --shell-nav-reserve: 92px;
+  --shell-gutter: 18px;
   --touch-target: 44px;
 
   /* Safe area */

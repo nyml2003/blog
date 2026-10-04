@@ -14,7 +14,7 @@ import type { CategoryShelf, MobileApi } from "@blog/mobile-api";
 import type { MobileRouteContext } from "@blog/mobile-shared";
 import { routeWithQuery } from "@blog/mobile-shared";
 import { ChipGroup } from "@blog/mobile-shared";
-import { Heading, StateMessage, Text } from "@blog/mobile-shared";
+import { StateMessage } from "@blog/mobile-shared";
 import { ArticleCard } from "@blog/mobile-shared";
 import { MobileShell } from "@blog/mobile-shared";
 
@@ -48,26 +48,20 @@ export function createMobileArticlesPage(
         persistence={input.persistence}
         document={input.document}
         share={input.share}
+        title={title}
+        rightIcons={["share", "more"]}
       >
-        <header class="page-heading">
-          <Text content="文章库" options={{ tone: "accent", size: "meta" }} />
-          <Heading content={title} options={{ as: "h1", size: "page" }} />
-          <Text
-            content="从一级领域进入，再用二级分类收窄文章。"
-            options={{ as: "p", tone: "muted", size: "meta" }}
+        <form class="article-search" method="get">
+          <label for="article-search-query">搜索文章</label>
+          <input
+            id="article-search-query"
+            name="q"
+            type="search"
+            value={query}
+            placeholder="标题、摘要或正文"
           />
-          <form class="article-search" method="get">
-            <label for="article-search-query">搜索文章</label>
-            <input
-              id="article-search-query"
-              name="q"
-              type="search"
-              value={query}
-              placeholder="标题、摘要或正文"
-            />
-            <button type="submit">搜索</button>
-          </form>
-        </header>
+          <button type="submit">搜索</button>
+        </form>
         <div class="category-shelf-content">
           <Show when={query !== ""}>
             <section class="search-results" aria-live="polite">

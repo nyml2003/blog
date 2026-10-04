@@ -70,13 +70,13 @@ export function Navigator<Context extends object>(
             label={props.leftLabel}
             href={props.leftHref}
           />
+          <Show when={props.title !== undefined}>
+            <span class="mobile-header-title">{props.title}</span>
+          </Show>
           <div class="mobile-actions-right">
             <NavigatorActions icons={rightIcons()} contextFor={contextFor} />
           </div>
         </nav>
-        <Show when={props.title !== undefined}>
-          <span>{props.title}</span>
-        </Show>
         <For each={allIcons()}>
           {(icon) => {
             const context = () => contextFor(icon);
