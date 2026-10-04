@@ -1,5 +1,5 @@
-import { Show, onMount, type Component } from "solid-js";
-import type { MobileRouteContext } from "../../foundation/context";
+import { err } from "@fluvient/core";
+import type { TaskFailure } from "@fluvient-loom/port";
 import {
   type AsyncPersistencePort,
   type DocumentPort,
@@ -8,22 +8,22 @@ import {
   type PersistencePort,
   type SchedulerPort,
 } from "@fluvient-loom/port";
+import { createDataTask } from "@fluvient-loom/query";
+import { type Component, onMount, Show } from "solid-js";
 import { mobileNavigationItems } from "../../features/navigation/model";
 import { mobileSettingsOptions } from "../../features/settings/model";
 import { useMobileSettings } from "../../features/settings/page-model";
-import { Navigator } from "../../widgets/shell/navigator";
-import { Field, Heading, Select, Text } from "../../foundation/ui";
-import { BottomNav } from "../../widgets/shell/bottom-nav";
-import { createDataTask } from "@fluvient-loom/query";
-import { err } from "@fluvient/core";
+import type { MobileNavigation } from "../../foundation/api";
 import {
-  navigationFromPage,
   type MobileApi,
   type MobileApiFailure,
+  navigationFromPage,
 } from "../../foundation/api";
-import type { MobileNavigation } from "../../foundation/api";
-import type { TaskFailure } from "@fluvient-loom/port";
+import type { MobileRouteContext } from "../../foundation/context";
 import { useMobileResource } from "../../foundation/resource";
+import { Field, Heading, Select, Text } from "../../foundation/ui";
+import { BottomNav } from "../../widgets/shell/bottom-nav";
+import { StandardNavigator } from "../../widgets/shell/navigator-icons";
 
 export interface MobileSettingsPageInput extends MobileRouteContext {
   readonly api: Pick<MobileApi, "page">;
@@ -72,7 +72,7 @@ export function createMobileSettingsPage(
     onMount(() => void page.start());
     return (
       <div class="mobile-shell">
-        <Navigator
+        <StandardNavigator
           context={input}
           navigation={page.state()?.snapshot}
           browserNavigation={input.navigation}

@@ -1,0 +1,5 @@
+import "../../mobile/foundation/styles/app.css";
+import { create{{component}} } from "../../mobile/pages/{{slice}}/page";
+import { mountMobilePage } from "./environment";
+
+mountMobilePage((context) => create{{component}}({ routes: context.routes }));

@@ -7,6 +7,8 @@ import { runDeliveryBuild, runRuntimeMode, type RuntimePorts } from './runtime/r
 import { runDeployPackage, type DeployPorts } from './delivery/deploy-package.ts';
 import { runDeployInstaller } from './delivery/deploy-installer.ts';
 import { runPackageCheck } from './quality/package-check.ts';
+import { runPageCheck } from './page/page-check.ts';
+import { PAGE_PLATFORMS, runPageNew } from './page/page-new.ts';
 import { planMode, MOCK_SCENARIOS, DATA_MODES, CONTENT_SOURCES } from './runtime/runtime-plan.ts';
 import { DEPLOY_TARGETS } from './delivery/deploy-plan.ts';
 import { RELEASE_KINDS, runRelease } from './release/release.ts';
@@ -95,6 +97,13 @@ export const commandDefinitions: readonly CommandDefinition[] = [
   defineCommand({ path: ['quality', 'lint'], summary: '运行前端 Oxlint', description: '使用 pnpm 执行 blog-web 的 lint 脚本，并将 warning 视为失败。', examples: ['ops quality lint'], exitCodes: [{ code: 0, meaning: 'lint 通过' }, { code: 20, meaning: 'lint 失败' }] }, ({ workspace, process, reporter, dryRun }) => { if (dryRun) { reporter.section('quality lint dry-run'); reporter.info('pnpm -C src/frontend run lint'); return commandResult(true); } return runWebQuality(workspace, process, reporter, 'lint').then((passed) => commandResult(passed)); }),
   defineCommand({ path: ['quality', 'format'], summary: '格式化前端源文件', description: '不带 --check 时写入 Biome 格式化结果；带 --check 时只检查、不修改文件。', examples: ['ops quality format --check'], options: [{ name: 'check', model: { kind: 'switch' }, description: '只检查格式，不写入文件' }], exitCodes: [{ code: 0, meaning: '格式化通过' }, { code: 20, meaning: '格式化失败或存在未格式化文件' }] }, ({ workspace, process, reporter, dryRun }, args) => { const check = args.check === true; if (dryRun) { reporter.section('quality format dry-run'); reporter.info(`pnpm -C src/frontend run ${check ? 'format:check' : 'format'}`); return commandResult(true); } return runWebQuality(workspace, process, reporter, check ? 'format:check' : 'format').then((passed) => commandResult(passed)); }),
   defineCommand({ path: ['package', 'check'], summary: '执行 @fluvient-loom 包门禁', description: '平台中立护栏（packages/*/src 零 node/web/solid 依赖）+ package smoke + workspace typecheck/test；独立于 ops quality check。', examples: ['ops package check'], exitCodes: [{ code: 0, meaning: '检查通过' }, FAILURE] }, ({ workspace, process, fs, reporter, dryRun }) => { if (dryRun) { reporter.section('package check dry-run'); reporter.info('将执行平台中立护栏扫描、package smoke（tsx apps/blog/test/packages/package-smoke.ts）与 pnpm run check（typecheck + test）'); return commandResult(true); } return runPackageCheck(workspace, process, fs, reporter).then((passed) => commandResult(passed)); }),
+  defineCommand({ path: ['page', 'check'], summary: '校验页面注册表与路由清单', description: '校验 pages.registry.ts 语义（id/alias/outputPath 唯一、alias 与产物路径交叉冲突、entry 存在、平台世界一致）并确认 site-routes.json 与注册表投影一致；vite 配置加载期与前端测试守卫共用同一校验器。', examples: ['ops page check'], exitCodes: [{ code: 0, meaning: '注册表合法且清单同步' }, { code: 20, meaning: '存在违例或清单漂移' }] }, ({ workspace, process, reporter, dryRun }) => runPageCheck(workspace, process, reporter, { dryRun }).then((passed) => commandResult(passed))),
+  defineCommand({ path: ['page', 'new'], summary: '脚手架生成新页面接入文件', description: '一条命令完成新页面接入：生成 bootstrap 入口与最小页面组件、插入注册表条目（同平台组末尾）、追加冻结 alias 清单、重新生成 site-routes.json；写入前先过注册表校验器，违例不落任何文件。四个参数全部必填。', examples: ['ops page new --platform mobile --id mobile-about --title 关于 --alias /m/about', 'ops page new --platform desktop --id desktop-about --title 关于 --alias /about/index.html --dry-run'], options: [
+    { name: 'platform', description: '目标平台世界', model: { kind: 'enum', values: PAGE_PLATFORMS } },
+    { name: 'id', description: '页面 id（必须以 <platform>- 开头）', model: { kind: 'path' } },
+    { name: 'title', description: '页面标题（渲染进 <title>，不含英文品牌词）', model: { kind: 'path' } },
+    { name: 'alias', description: '对外 URL alias（以 / 开头）', model: { kind: 'path' } },
+  ], exitCodes: [{ code: 0, meaning: '脚手架完成且清单已重新生成' }, { code: 20, meaning: '参数非法、校验违例或目标文件已存在' }] }, (context, args) => runPageNew({ platform: args.platform as 'mobile' | 'desktop', id: String(args.id), title: String(args.title), alias: String(args.alias) }, context.workspace, context.process, context.reporter, { dryRun: context.dryRun }).then((passed) => commandResult(passed))),
   defineCommand({
     path: ['admin', 'credentials', 'init'],
     summary: '初始化管理端密码、TOTP 与恢复码',
@@ -192,6 +201,7 @@ export const groupDefinitions = [
   defineGroup({ path: ['workspace'], summary: '检查', description: '确认本地开发依赖是否齐全。', order: 10, workflow: '首次进入仓库' }),
   defineGroup({ path: ['quality'], summary: '质量', description: '运行格式、静态检查、测试和前端质量任务。', order: 20, workflow: '提交前验证' }),
   defineGroup({ path: ['package'], summary: '内核包', description: '@fluvient-loom workspace 包门禁：平台中立护栏 + typecheck/test/smoke，独立于 quality 全量检查。', order: 25, workflow: '内核包开发期验证' }),
+  defineGroup({ path: ['page'], summary: '页面接入', description: '页面注册表校验（check）与新页面脚手架（new）；同一校验器在 vite 配置加载期与前端测试守卫中执行。', order: 26, workflow: '页面接入验证' }),
   defineGroup({ path: ['e2e'], summary: '浏览器验收', description: '通过隔离运行栈执行显式的 Playwright 浏览器回归测试，不并入快速质量门禁。', order: 28, workflow: '浏览器回归验收' }),
   defineGroup({ path: ['perf'], summary: '性能度量', description: '对页面加载做可重复的 Playwright 性能采样（冷加载/底栏切换 × 网络档位），输出耗时、传输与缓存命中指标，支撑体验优化的基线对比。', order: 29, workflow: '体验优化度量' }),
   defineGroup({

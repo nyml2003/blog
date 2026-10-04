@@ -39,13 +39,6 @@ pnpm -C src/frontend run build
 
 ## 架构边界门禁
 
-`ops quality check` 还扫描前端 TypeScript/TSX 与 Rust 源码，执行 `SPEC-ARCH-BOUNDARY-001` 的长期边界规则：
+`ops quality check` 对 Cargo manifest 执行 `SPEC-ARCH-BOUNDARY-001` 的依赖禁令：data 不依赖 HTML 解析器与外部 HTTP/GitHub 客户端，product 不直连 SQLite。规则的正负样例位于 `apps/blog/test/commands/architecture.test.ts`，违规会让 `ops quality check` 返回 `20`，报告包含文件路径与对应边界说明。
 
-- Desktop 与 Mobile 不互相导入 UI；平台 UI 不依赖网络、存储或其他平台；
-- 页面只从各端 `foundation/api` 与 `features` 注入的 API、resource 和 ports 取得业务数据，不直接装配网络、存储或 wire DTO；
-- 前端遵守层序边界（`tests/app/architecture/source-layout.test.ts` 门禁）：bootstrap → pages → widgets → features → foundation → kernel/domain/protocol/validation，同层 slice 互不 import、两端互不 import，kernel 不依赖宿主或框架，bootstrap 是唯一装配宿主适配器（`@fluvient-loom/web`/`node`）的层；
-- 任一 `app/` 模块不导入旧前端运行时（`common/`、`solid/`、`desktop/`、`mobile/` 等）；
-- `app/kernel` 保持框架和宿主无关；
-- protocol 不承载货架编排，Product 不直接访问 SQLite，Data 不解析 HTML 或访问 GitHub。
-
-规则的正负样例位于 `apps/blog/test/commands/architecture.test.ts`。违规会让 `ops quality check` 返回 `20`，报告包含文件路径与对应边界说明。
+前端层序、两端 UI 隔离、页面数据访问与 Rust 内容级规则（BFF 决策位置、protocol 职责）是设计意图：源码内容扫描已于 2026-10-04 退役，由评审与包结构承载（跨端硬隔离逐步落到 workspace 包）；kernel 宿主纯度由 `tests/app/kernel/tsconfig.json`（无 DOM lib）编译保证。

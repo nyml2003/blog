@@ -1,18 +1,11 @@
 import { type Result } from "@fluvient/core";
 import { createMobilePrefetchClient } from "@fluvient-loom/mobile-prefetch";
-import { createFetchNetwork } from "@fluvient-loom/net";
-import { asAsyncPersistence } from "@fluvient-loom/port";
 import {
-  createWebDocument,
-  createWebNavigation,
-  createWebOperationId,
-  createWebPersistence,
-  createWebScheduler,
-  createWebSpaceTime,
-  createWebViewport,
-} from "@fluvient-loom/web";
-import { type Component, createComponent } from "solid-js";
-import { render } from "solid-js/web";
+  createWebMobilePorts,
+  mountMobileApplication,
+  removeMobileAppShell,
+} from "@fluvient-loom/page-kit/mobile";
+import { type Component } from "solid-js";
 import {
   createMobileApi,
   type MobileApiFailure,
@@ -21,56 +14,11 @@ import {
 } from "../../mobile/foundation/api";
 import type { MobilePageContext } from "../../mobile/foundation/context";
 // 路由清单在构建期由 pages.registry 投影生成（与后端 /api/public/site-routes 同源，
-// 有测试守卫同步），直接内嵌进包，避免每次导航阻塞首绘的串行请求。
+// 有重新生成比对守卫），直接内嵌进包，避免每次导航阻塞首绘的串行请求。
 import siteRoutesManifest from "../../site-routes.json";
 
-function browserContextWithoutRoutes(): Omit<MobilePageContext, "routes"> {
-  const network = createFetchNetwork({
-    fetcher: window.fetch.bind(window),
-    setTimeoutFn: (callback, delayMs) => window.setTimeout(callback, delayMs),
-    clearTimeoutFn: (handle) => window.clearTimeout(handle as number),
-  });
-  const navigation = createWebNavigation({
-    history: window.history,
-    location: window.location,
-    events: window,
-  });
-  const persistence = createWebPersistence({
-    storage: window.localStorage,
-  });
-  const share = async (url: string): Promise<void> => {
-    if (navigator.share) {
-      await navigator.share({ url }).catch(() => undefined);
-      return;
-    }
-    await navigator.clipboard?.writeText(url);
-  };
-  return {
-    api: createMobileApi(network),
-    persistence,
-    asyncPersistence: asAsyncPersistence(persistence),
-    operationId: createWebOperationId(),
-    scheduler: createWebScheduler({
-      queueMicrotaskFn: (callback) => window.queueMicrotask(callback),
-      setTimeoutFn: (callback, delayMs) => window.setTimeout(callback, delayMs),
-      clearTimeoutFn: (handle) => window.clearTimeout(handle as number),
-      requestAnimationFrameFn: (callback) =>
-        window.requestAnimationFrame(callback),
-      cancelAnimationFrameFn: (handle) =>
-        window.cancelAnimationFrame(handle as number),
-    }),
-    spaceTime: createWebSpaceTime({ now: () => Date.now() }),
-    navigation,
-    document: createWebDocument({ root: window.document.documentElement }),
-    viewport: createWebViewport({
-      readScrollY: () => window.scrollY,
-      scrollTo: (scrollY) =>
-        window.scrollTo({ top: scrollY, behavior: "auto" }),
-    }),
-    share,
-  };
-}
-
+// bootstrap 是 page-kit 的唯一调用点：端口装配在包内完成，
+// 这里只组合应用声明（api 工厂、内嵌清单）并挂载页面。
 function embeddedSiteRoutes(): Result<SiteRoutes, MobileApiFailure> {
   const parsed = siteRoutesSchema.safeParse(siteRoutesManifest);
   if (!parsed.success) {
@@ -94,45 +42,33 @@ export function createBrowserMobileContext(): Result<
   MobilePageContext,
   MobileApiFailure
 > {
-  const base = browserContextWithoutRoutes();
+  const ports = createWebMobilePorts();
   const routes = embeddedSiteRoutes();
   if (!routes.ok) return { ok: false, error: routes.error };
-  return { ok: true, value: { ...base, routes: routes.value } };
-}
-
-function StartupError() {
-  return (
-    <main>
-      <p role="alert">页面初始化失败，请重试。</p>
-      <button type="button" onClick={() => window.location.reload()}>
-        重试
-      </button>
-    </main>
-  );
+  return {
+    ok: true,
+    value: {
+      ...ports,
+      api: createMobileApi(ports.network),
+      routes: routes.value,
+    },
+  };
 }
 
 export function mountMobilePage(
   createPage: (context: MobilePageContext) => Component,
 ): void {
-  const mount = document.getElementById("app");
-  if (!mount) throw new Error('Page mount element "#app" is missing');
-  const result = createBrowserMobileContext();
-  if (!result.ok) {
-    removeMobileAppShell();
-    render(() => createComponent(StartupError, {}), mount);
-    return;
-  }
-  const Page = createPage(result.value);
-  render(() => createComponent(Page, {}), mount);
-  void registerMobilePrefetch(window.location.pathname);
+  mountMobileApplication({
+    context: createBrowserMobileContext(),
+    createPage,
+    onContextFailure: removeMobileAppShell,
+    afterMount: () => {
+      void registerMobilePrefetch(window.location.pathname);
+    },
+  });
 }
 
-export function removeMobileAppShell(): void {
-  const shell = document.querySelector<HTMLElement>(
-    '[data-loom-app-shell="true"]',
-  );
-  shell?.remove();
-}
+export { removeMobileAppShell };
 
 async function registerMobilePrefetch(pathname: string): Promise<void> {
   const client = createMobilePrefetchClient({

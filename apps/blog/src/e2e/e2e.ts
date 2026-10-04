@@ -47,11 +47,16 @@ interface BrowserPage {
   close(): Promise<void>;
   on(event: 'console', listener: (message: BrowserConsoleMessage) => void): void;
   on(event: 'pageerror', listener: (error: Error) => void): void;
+  on(event: 'request', listener: (request: BrowserRequest) => void): void;
 }
 
 interface BrowserConsoleMessage {
   type(): string;
   text(): string;
+}
+
+interface BrowserRequest {
+  url(): string;
 }
 
 interface BrowserLocator {
@@ -231,6 +236,14 @@ async function runBrowserJourneys(
 
 async function runIntegrationJourneys(browser: Browser, origin: string, artifactDir: string, failures: string[]): Promise<void> {
   const desktop = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  // Desktop 与 Mobile 同为构建期内嵌路由清单（SPEC-SITE-ROUTES-001），
+  // 整个桌面旅程不允许出现运行时 site-routes 请求（首绘零网络前置）。
+  const desktopSiteRoutesRequests: string[] = [];
+  desktop.on('request', (request) => {
+    if (request.url().includes('/api/public/site-routes')) {
+      desktopSiteRoutesRequests.push(request.url());
+    }
+  });
   await assertPage(desktop, 'desktop-articles', `${origin}/articles/index.html`, artifactDir, failures, async (page) => {
     await page.getByRole('heading', { name: '全部文章', exact: true }).waitFor();
     if (await page.locator('a.archive-row').count() === 0) throw new Error('desktop article archive is empty');
@@ -238,6 +251,11 @@ async function runIntegrationJourneys(browser: Browser, origin: string, artifact
   await desktop.goto(`${origin}/articles/detail.html?id=12`, { waitUntil: 'domcontentloaded' });
   await desktop.locator('h1').waitFor();
   await desktop.screenshot({ path: join(artifactDir, 'desktop-detail.png'), fullPage: true });
+  if (desktopSiteRoutesRequests.length > 0) {
+    throw new Error(
+      `desktop pages must embed site routes at build time, requested: ${desktopSiteRoutesRequests.join(', ')}`,
+    );
+  }
 
   const mobile = await browser.newPage({ viewport: { width: 375, height: 812 } });
   const shellOnly = await browser.newPage({

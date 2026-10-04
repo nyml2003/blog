@@ -18,6 +18,7 @@
     "domain",
     "kernel",
     "mobile",
+    "page-registry",
     "protocol",
     "tests",
     "validation",

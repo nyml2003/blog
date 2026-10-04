@@ -8,12 +8,7 @@ import {
 import { dirname, resolve } from "node:path";
 import { renderAppShell } from "@fluvient-loom/app-shell";
 import type { Plugin } from "vite";
-import {
-  type PageRegistration,
-  type PageRoute,
-  pageRegistry,
-  pageRoutes,
-} from "../pages.registry.ts";
+import { pageRoutes, type PageRegistration } from "../types.ts";
 
 export const generatedPagesDirectory = ".generated/pages";
 export const pageRoutesManifest = "page-routes.json";
@@ -63,7 +58,7 @@ export function generatedPagePath(
 
 export function generatePageInputs(
   root: string,
-  registrations: readonly PageRegistration[] = pageRegistry,
+  registrations: readonly PageRegistration[],
 ): Record<string, string> {
   const generatedRoot = resolve(root, generatedPagesDirectory);
   rmSync(generatedRoot, { recursive: true, force: true });
@@ -79,7 +74,7 @@ export function generatePageInputs(
 }
 
 export function pageRouteMap(
-  registrations: readonly PageRegistration[] = pageRegistry,
+  registrations: readonly PageRegistration[],
 ): ReadonlyMap<string, string> {
   return new Map(
     pageRoutes(registrations).map((route) => [
@@ -89,12 +84,14 @@ export function pageRouteMap(
   );
 }
 
-export function serializePageRoutes(routes: readonly PageRoute[]): string {
+export function serializePageRoutes(
+  routes: readonly ReturnType<typeof pageRoutes>[number][],
+): string {
   return `${JSON.stringify(routes, undefined, 2)}\n`;
 }
 
 export function pageTemplatePlugin(
-  registrations: readonly PageRegistration[] = pageRegistry,
+  registrations: readonly PageRegistration[],
 ): Plugin {
   let outputDirectory: string | undefined;
   return {

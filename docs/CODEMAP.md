@@ -50,10 +50,11 @@ blog/
 │       ├── kernel/          ← 纯机制：desired-state 状态原语（ports/Result/Task 已归 @fluvient-loom 包）
 │       ├── domain/ protocol/ validation/ ← 跨端契约与输入校验（route-input、article-html、WASM 产物 generated/）
 │       ├── pages.registry.ts ← 全部 17 个页面的登记表（单一事实源）
-│       ├── site-routes.json  ← 页面路由清单（后端经 /api/public/site-routes 下发）
+│       ├── page-registry/    ← 注册表机制：校验器（14 规则，vite 加载期/ops page check/测试三入口）、site-routes 生成器与新页面脚手架（ops page new）
+│       ├── site-routes.json  ← 页面路由清单（registry 生成物，两端构建期内嵌；后端 /api/public/site-routes 保留）
 │       ├── vite-plugins/   ← Vite 插件（页面模板生成、bootstrap 注入、dev 路由重写、Mobile prefetch SW）
 │       └── build/          ← 非 Vite 构建工具（article HTML 的 wasm 构建）
-├── packages/               ← 可复用包：@fluvient-loom（前端运行时 ports/query/command/web/gesture/net 等）与 @fluvient/core（cli/loom 共享的 Result、取消原语与 http 传输内核）
+├── packages/               ← 可复用包：@fluvient-loom（前端运行时 ports/query/command/web/gesture/net 等）、@fluvient-loom/page-build-kit（页面接入构建链：校验/生成/vite 插件/脚手架）与 @fluvient/core（cli/loom 共享的 Result、取消原语与 http 传输内核）
 │   └── cli-kit / cli-core / cli-plugins ← ops CLI 的框架能力（参数/输出/进程/端口分配）
 ├── apps/blog/              ← ops 命令实现（src/registry.ts 是命令登记表）
 │   └── src/{admin,content,delivery,e2e,quality,release,runtime}/ ← 各命令域模块
@@ -97,12 +98,11 @@ Desktop 管理端 /admin → 登录（auth/ 校验密码+TOTP）
 
 ```
 pages.registry.ts（页面登记表）
-  → site-routes.json（路由投影，测试守卫同步）
+  → site-routes.json（page-registry 生成物，逐字节比对守卫）
   → protocol/site_routes.rs 编译期内嵌
-  → GET /api/public/site-routes 下发（Product 与 Mock 同一份）
-  → Desktop 与 Mobile 均由 bootstrap environment 运行时装配；
-    Mobile 入口在构建期内嵌同一份清单（bootstrap/mobile/environment.tsx），
-    首绘不再等待该请求
+  → GET /api/public/site-routes 下发（Product 与 Mock 同一份，端点保留）
+  → Desktop 与 Mobile 均在构建期内嵌同一份清单（bootstrap environment），
+    首绘零清单请求；registry 违例在 vite 配置加载期被校验器拦截
   → 页面调语义函数（如 `categoryHref()`）得到路径 → 渲染 <a href>
 ```
 
@@ -137,7 +137,7 @@ pages.registry.ts（页面登记表）
 | `kernel/` | 纯机制：desired-state 状态原语 | ports/Task/Resource 来自 `@fluvient-loom/port|query`；禁宿主能力 |
 | `validation/` | 跨端输入校验（route-input、article-html、WASM 产物） | 纯函数与契约，无 UI |
 
-依赖方向由 `tests/app/architecture/source-layout.test.ts` 门禁机械化：bootstrap → pages → widgets → features → foundation → kernel/domain/protocol/validation，同层 slice 互不 import，两端互不 import（详见 `SPEC-ARCH-BOUNDARY-001`）。
+依赖方向与 slice 隔离的源码扫描门禁已于 2026-10-04 移除，包内导入不设路径级限制；`tests/app/architecture/source-layout.test.ts` 仅保留目录形态与 mobile 页面契约检查。两端隔离与底层纯度（`SPEC-ARCH-BOUNDARY-001`）由包结构与评审承载，逐步迁移至 workspace 包（`src/frontend/packages/`）。
 
 ### packages/ 与 apps/ —— 可复用能力与 ops 命令工作区
 
@@ -148,7 +148,7 @@ pages.registry.ts（页面登记表）
 
 ### apps/blog —— ops 命令实现
 
-`apps/blog/src/registry.ts` 是命令登记表（命令面以 `ops help` 为准）；各命令域模块位于 `admin/`、`content/`、`delivery/`、`e2e/`、`quality/`、`release/`、`runtime/`。质量门禁的全部规则在 `quality/architecture.ts`。`apps/blog-deploy/` 提供部署器与安装器。
+`apps/blog/src/registry.ts` 是命令登记表（命令面以 `ops help` 为准）；各命令域模块位于 `admin/`、`content/`、`delivery/`、`e2e/`、`quality/`、`release/`、`runtime/`。质量门禁编排于 `quality/quality-check.ts`，架构扫描仅剩 Cargo manifest 依赖禁令（`quality/architecture.ts`）。`apps/blog-deploy/` 提供部署器与安装器。
 
 ## 当前布局状态
 

@@ -1,15 +1,16 @@
-import { For, Show, type Component } from "solid-js";
-import type { MobilePageContext } from "../../foundation/context";
-import type { MobileApi } from "../../foundation/api";
-import { routeWithQuery } from "../../foundation/context";
-import { useMobileAdminPreview } from "../../features/admin-preview/model";
-import { ArticleBody } from "../../widgets/article-body/ui";
-import { Navigator } from "../../widgets/shell/navigator";
-import { Heading, Link, StateMessage, Tag, Text } from "../../foundation/ui";
+import { ArrowLeft } from "lucide-solid";
+import { type Component, For, Show } from "solid-js";
 import {
   displayDate,
   positiveIdFromSearch,
 } from "../../../validation/route-input";
+import { useMobileAdminPreview } from "../../features/admin-preview/model";
+import type { MobileApi } from "../../foundation/api";
+import type { MobilePageContext } from "../../foundation/context";
+import { routeWithQuery } from "../../foundation/context";
+import { Heading, Link, StateMessage, Tag, Text } from "../../foundation/ui";
+import { ArticleBody } from "../../widgets/article-body/ui";
+import { StandardNavigator } from "../../widgets/shell/navigator-icons";
 
 type MobileAdminPreviewInput = MobilePageContext & {
   readonly api: MobileApi;
@@ -43,7 +44,7 @@ export function createMobileAdminPreviewPage(
     };
     return (
       <div class="mobile-shell mobile-preview-page">
-        <Navigator
+        <StandardNavigator
           context={input}
           leftIcons={["back"]}
           leftLabel="返回编辑"

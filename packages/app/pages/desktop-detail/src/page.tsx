@@ -1,21 +1,29 @@
 import { ArrowLeft } from "lucide-solid";
 import { type Component, For, Show } from "solid-js";
-import { positiveIdFromSearch } from "../../../validation/route-input";
-import { useDesktopArticle } from "../../features/detail/model";
-import { searchQuery } from "../../features/search/model";
-import type { DesktopPageContext } from "../../foundation/context";
-import { route } from "../../foundation/context";
-import { ArticleBody } from "../../widgets/article-body/ui";
+import type { DesktopApi, SiteRoutes } from "@blog/desktop-api";
+import { ArticleBody, searchQuery } from "@blog/desktop-shared";
+import { positiveIdFromSearch } from "@blog/route-input";
+import { siteRoute } from "@fluvient-loom/page-kit";
+import type { NavigationPort } from "@fluvient-loom/port";
+import { useDesktopArticle } from "./feature.ts";
 
-export function createDesktopDetailPage(input: DesktopPageContext): Component {
+// 页面包声明自己需要的 context 切面（definePage 第一样本）：
+// 宿主传入的完整 DesktopPageContext 结构兼容即可，页面不依赖全集。
+export interface DesktopDetailInput {
+  readonly api: DesktopApi;
+  readonly routes: SiteRoutes;
+  readonly navigation: NavigationPort;
+}
+
+export function createDesktopDetailPage(input: DesktopDetailInput): Component {
   return function DesktopDetailPage() {
     const page = useDesktopArticle(
       input.api,
       positiveIdFromSearch(input.navigation.current().search, "id"),
     );
     const query = searchQuery(input.navigation.current().search);
-    const archiveHref = route(input.routes, "desktop-public-articles");
-    const homeHref = route(input.routes, "desktop-public-home");
+    const archiveHref = siteRoute(input.routes, "desktop-public-articles");
+    const homeHref = siteRoute(input.routes, "desktop-public-home");
     if (page.kind === "invalid")
       return (
         <div class="desktop-home">

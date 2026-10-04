@@ -1,27 +1,7 @@
-export function positiveIdFromSearch(
-  search: string,
-  parameter: string,
-): number | undefined {
-  const raw = new URLSearchParams(search).get(parameter);
-  if (raw === null || !/^\d+$/.test(raw)) return undefined;
-  const value = Number(raw);
-  return Number.isSafeInteger(value) && value > 0 ? value : undefined;
-}
-
-export function positiveFilterIdFromSearch(
-  search: string,
-  parameter: string,
-): string {
-  const raw = new URLSearchParams(search).get(parameter);
-  return raw !== null && /^\d+$/.test(raw) && Number(raw) > 0 ? raw : "all";
-}
-
-export function displayDate(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-  return new Intl.DateTimeFormat("zh-CN", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  }).format(date);
-}
+// 薄转发：实现已抽入 @blog/route-input（两端共享纯函数）。
+// 保留路径使既有消费者（8 处，两端）零改动；P3d 批量迁移时可逐步直连。
+export {
+  displayDate,
+  positiveFilterIdFromSearch,
+  positiveIdFromSearch,
+} from "@blog/route-input";

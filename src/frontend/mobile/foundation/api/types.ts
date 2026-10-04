@@ -129,6 +129,14 @@ export type SiteRoutes = z.output<typeof siteRoutesSchema>;
 export const mobileNavigationIconSchema = z.string().trim().min(1);
 export type MobileNavigationIcon = z.output<typeof mobileNavigationIconSchema>;
 
+const supportedMobileNavigationIconIds = new Set([
+  "back",
+  "search",
+  "favorite",
+  "share",
+  "more",
+]);
+
 export const mobileNavigationSchema = z.object({
   leftIcons: z.array(z.string()),
   rightIcons: z.array(z.string()),
@@ -156,7 +164,9 @@ export function supportedNavigationIcons(
 ): MobileNavigationIcon[] {
   return values.flatMap((value) => {
     const parsed = mobileNavigationIconSchema.safeParse(value);
-    return parsed.success ? [parsed.data] : [];
+    return parsed.success && supportedMobileNavigationIconIds.has(parsed.data)
+      ? [parsed.data]
+      : [];
   });
 }
 

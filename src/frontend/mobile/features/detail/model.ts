@@ -19,6 +19,7 @@ import {
 } from "../../foundation/api";
 import type { MobileRouteContext } from "../../foundation/context";
 import { useMobileResource } from "../../foundation/resource";
+import type { FavoriteStore } from "../favorites/favorites-model";
 
 export interface MobileDetailInput {
   readonly id: number | undefined;
@@ -30,6 +31,7 @@ export interface MobileDetailInput {
   readonly persistence: PersistencePort;
   readonly document: DocumentPort;
   readonly share: (url: string) => Promise<void>;
+  readonly favorites: FavoriteStore;
   readonly onAppShellReady: () => void;
 }
 

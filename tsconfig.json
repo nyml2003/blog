@@ -10,11 +10,15 @@
     "skipLibCheck": true,
     "jsx": "preserve",
     "jsxImportSource": "solid-js",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": ["node"]
   },
   "include": [
-    "packages/*/src",
-    "packages/*/test",
+    "css-modules.d.ts",
+    "packages/*/*/src",
+    "packages/*/*/test",
+    "packages/app/pages/*/src",
+    "packages/app/pages/*/test",
     "apps/blog/src",
     "apps/blog-deploy/src",
     "apps/playground/src",

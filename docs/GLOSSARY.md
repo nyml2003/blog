@@ -67,7 +67,7 @@ last_reviewed: 2026-10-01
 | 术语 | 人话 | 落点 |
 | --- | --- | --- |
 | **门禁（quality gate）** | `ops quality check`：Rust 三件套 + ops 契约测试 + 前端五件套 + 架构边界扫描，任一红即失败 | `apps/blog/src/quality/quality-check.ts` |
-| **架构边界扫描** | 用规则检查"谁不许 import 谁"（页面不许碰数据层、Data 不许解析 HTML 等），违规即红 | `apps/blog/src/quality/architecture.ts` |
+| **架构边界扫描** | Cargo manifest 依赖禁令（data 禁 HTML 解析器与外部 HTTP/GitHub 客户端、product 禁直连 SQLite），违规即红；源码内容扫描已于 2026-10-04 退役 | `apps/blog/src/quality/architecture.ts` |
 | **golden 测试** | 把契约写成"标准答案文件"（如 `docs/api/routes.json`），测试对照文件与代码完全一致，防止两边漂移 | `src/backend/product/tests/api_routes.rs`、`src/frontend/tests/app/api/desktop.test.ts` |
 | **数据语义（mock/test/prod）** | Data 进程的三种启动姿势：mock=内存无磁盘；test=临时库用完即删；prod=显式路径库文件（必须提供 `--database-path`），退出不删 | `src/backend/data/src/semantics.rs` |
 | **fail-closed** | 出问题时宁可拒绝服务也不放行/降级。登录、凭证读取、启动检查都遵循 | `src/backend/product/src/auth/`、`apps/blog/src/admin/admin-auth.ts` |

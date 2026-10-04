@@ -1,31 +1,41 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { pageRegistry } from "../../pages.registry";
-import { pageBootstrap } from "../../vite-plugins/page-bootstrap";
 import {
   generatedPagePath,
+  pageBootstrap,
   renderPageHtml,
-} from "../../vite-plugins/page-template";
+} from "@fluvient-loom/page-build-kit";
+import { pageRegistry } from "../../pages.registry";
 
 const frontendRoot = fileURLToPath(new URL("../../", import.meta.url));
 
 test("one bootstrap build is shared by every registered mobile page", async () => {
   let bundleCount = 0;
-  const plugin = pageBootstrap(frontendRoot, pageRegistry, {
-    bundle: async () => {
-      bundleCount += 1;
-      return 'window.bootstrap = "</script>";';
+  const plugin = pageBootstrap(frontendRoot, {
+    registrations: pageRegistry,
+    bootstrapEntry: "bootstrap/mobile/settings.tsx",
+    dependencies: {
+      bundle: async () => {
+        bundleCount += 1;
+        return 'window.bootstrap = "</script>";';
+      },
     },
   });
   const transform = plugin.transformIndexHtml;
   assert.ok(
     transform && typeof transform === "object" && "handler" in transform,
   );
+  // vite 的 handler 类型是携带 this 的递归 union（Hook | { handler }），
+  // 读取位无法收窄；此处按实际实现签名显式收窄后调用。
+  const invoke = transform.handler as (
+    html: string,
+    context: { path: string; filename: string },
+  ) => Promise<unknown>;
 
   const results = await Promise.all(
     pageRegistry.map((page) =>
-      transform.handler(renderPageHtml(page), {
+      invoke(renderPageHtml(page), {
         path: page.aliases[0],
         filename: generatedPagePath(frontendRoot, page),
       }),

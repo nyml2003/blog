@@ -1,0 +1,16 @@
+import { type Component } from "solid-js";
+import type { DesktopPageContext } from "../../foundation/context";
+import { route } from "../../foundation/context";
+
+export function create{{component}}(context: DesktopPageContext): Component {
+  return function {{component}}() {
+    return (
+      <main>
+        <h1>{{title}}</h1>
+        <p>
+          <a href={route(context.routes, "desktop-public-home")}>返回首页</a>
+        </p>
+      </main>
+    );
+  };
+}

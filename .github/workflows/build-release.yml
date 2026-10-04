@@ -22,6 +22,8 @@ jobs:
           target: x86_64-unknown-linux-musl
       - name: Install workspace dependencies
         run: nix develop ./nix -c pnpm install --frozen-lockfile
+      - name: Page registry check
+        run: nix develop ./nix -c ops page check
       - name: Package x86_64
         run: nix develop ./nix -c ops delivery package --target x86_64-unknown-linux-musl
       - name: Validate release package

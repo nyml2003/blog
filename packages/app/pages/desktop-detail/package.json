@@ -1,0 +1,20 @@
+{
+  "name": "@blog/page-desktop-detail",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/definition.ts",
+    "./page": "./src/page.tsx"
+  },
+  "dependencies": {
+    "@blog/desktop-api": "workspace:*",
+    "@blog/desktop-shared": "workspace:*",
+    "@blog/route-input": "workspace:*",
+    "@fluvient-loom/page-kit": "workspace:*",
+    "lucide-solid": "1.48.0"
+  },
+  "peerDependencies": {
+    "solid-js": "^1.9.0"
+  }
+}

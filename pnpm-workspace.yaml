@@ -1,5 +1,6 @@
 packages:
-  - "packages/*"
+  - "packages/*/*"
+  - "packages/app/pages/*"
   - "apps/*"
   - "src/frontend"
 allowBuilds:

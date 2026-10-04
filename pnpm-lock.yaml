@@ -10,19 +10,19 @@ importers:
     devDependencies:
       '@fluvient-loom/command':
         specifier: workspace:*
-        version: link:packages/command
+        version: link:packages/ts/command
       '@fluvient-loom/node':
         specifier: workspace:*
-        version: link:packages/node
+        version: link:packages/cli/node
       '@fluvient-loom/port':
         specifier: workspace:*
-        version: link:packages/port
+        version: link:packages/ts/port
       '@fluvient-loom/query':
         specifier: workspace:*
-        version: link:packages/query
+        version: link:packages/ts/query
       '@fluvient/core':
         specifier: workspace:*
-        version: link:packages/core
+        version: link:packages/ts/core
       '@types/node':
         specifier: 26.4.1
         version: 26.4.1
@@ -37,53 +37,198 @@ importers:
     dependencies:
       '@fluvient-cli/cli-core':
         specifier: workspace:*
-        version: link:../../packages/cli-core
+        version: link:../../packages/cli/cli-core
       '@fluvient-cli/cli-kit':
         specifier: workspace:*
-        version: link:../../packages/cli-kit
+        version: link:../../packages/cli/cli-kit
       '@fluvient-cli/cli-plugins':
         specifier: workspace:*
-        version: link:../../packages/cli-plugins
+        version: link:../../packages/cli/cli-plugins
       '@fluvient/core':
         specifier: workspace:*
-        version: link:../../packages/core
+        version: link:../../packages/ts/core
 
   apps/blog-deploy:
     dependencies:
       '@fluvient-cli/cli-core':
         specifier: workspace:*
-        version: link:../../packages/cli-core
+        version: link:../../packages/cli/cli-core
       '@fluvient-cli/cli-kit':
         specifier: workspace:*
-        version: link:../../packages/cli-kit
+        version: link:../../packages/cli/cli-kit
       '@fluvient-cli/cli-plugins':
         specifier: workspace:*
-        version: link:../../packages/cli-plugins
+        version: link:../../packages/cli/cli-plugins
       '@fluvient/core':
         specifier: workspace:*
-        version: link:../../packages/core
+        version: link:../../packages/ts/core
 
-  packages/app-shell: {}
+  packages/app/desktop-api:
+    dependencies:
+      '@fluvient-loom/port':
+        specifier: workspace:*
+        version: link:../../ts/port
+      '@fluvient-loom/query':
+        specifier: workspace:*
+        version: link:../../ts/query
+      '@fluvient/core':
+        specifier: workspace:*
+        version: link:../../ts/core
+      solid-js:
+        specifier: ^1.9.0
+        version: 1.9.15
+      zod:
+        specifier: ^4.5.4
+        version: 4.6.5
 
-  packages/cli-core:
+  packages/app/desktop-shared:
+    dependencies:
+      '@blog/desktop-api':
+        specifier: workspace:*
+        version: link:../desktop-api
+      '@fluvient-loom/text-highlight':
+        specifier: workspace:*
+        version: link:../../web/text-highlight
+      solid-js:
+        specifier: ^1.9.0
+        version: 1.9.15
+
+  packages/app/pages/desktop-detail:
+    dependencies:
+      '@blog/desktop-api':
+        specifier: workspace:*
+        version: link:../../desktop-api
+      '@blog/desktop-shared':
+        specifier: workspace:*
+        version: link:../../desktop-shared
+      '@blog/route-input':
+        specifier: workspace:*
+        version: link:../../route-input
+      '@fluvient-loom/page-kit':
+        specifier: workspace:*
+        version: link:../../../solid/page-kit
+      lucide-solid:
+        specifier: 1.48.0
+        version: 1.48.0(solid-js@1.9.15)
+      solid-js:
+        specifier: ^1.9.0
+        version: 1.9.15
+
+  packages/app/route-input: {}
+
+  packages/build/page-build-kit:
+    dependencies:
+      '@fluvient-loom/app-shell':
+        specifier: workspace:*
+        version: link:../../web/app-shell
+    devDependencies:
+      '@types/node':
+        specifier: 26.4.1
+        version: 26.4.1
+      tsx:
+        specifier: ^4.23.13
+        version: 4.23.13
+      typescript:
+        specifier: 7.0.2
+        version: 7.0.2
+      vite:
+        specifier: 8.2.2
+        version: 8.2.2(@types/node@26.4.1)(esbuild@0.28.2)(tsx@4.23.13)
+
+  packages/cli/cli-core:
     dependencies:
       '@fluvient-cli/cli-kit':
         specifier: workspace:*
         version: link:../cli-kit
 
-  packages/cli-kit:
+  packages/cli/cli-kit:
     dependencies:
       '@fluvient/core':
         specifier: workspace:*
-        version: link:../core
+        version: link:../../ts/core
 
-  packages/cli-plugins:
+  packages/cli/cli-plugins:
     dependencies:
       '@fluvient-cli/cli-kit':
         specifier: workspace:*
         version: link:../cli-kit
 
-  packages/command:
+  packages/cli/node:
+    dependencies:
+      '@fluvient-loom/port':
+        specifier: workspace:*
+        version: link:../../ts/port
+      '@fluvient/core':
+        specifier: workspace:*
+        version: link:../../ts/core
+
+  packages/solid/mobile-h5-solid-atoms:
+    dependencies:
+      solid-js:
+        specifier: ^1.9.0
+        version: 1.9.15
+    devDependencies:
+      '@types/node':
+        specifier: 26.4.1
+        version: 26.4.1
+      tsx:
+        specifier: ^4.23.13
+        version: 4.23.13
+      typescript:
+        specifier: 7.0.2
+        version: 7.0.2
+
+  packages/solid/page-kit:
+    dependencies:
+      '@fluvient-loom/net':
+        specifier: workspace:*
+        version: link:../../ts/net
+      '@fluvient-loom/port':
+        specifier: workspace:*
+        version: link:../../ts/port
+      '@fluvient-loom/web':
+        specifier: workspace:*
+        version: link:../../web/web
+      '@fluvient/core':
+        specifier: workspace:*
+        version: link:../../ts/core
+      solid-js:
+        specifier: ^1.9.0
+        version: 1.9.15
+    devDependencies:
+      '@types/node':
+        specifier: 26.4.1
+        version: 26.4.1
+      tsx:
+        specifier: ^4.23.13
+        version: 4.23.13
+      typescript:
+        specifier: 7.0.2
+        version: 7.0.2
+
+  packages/solid/persisted-state:
+    dependencies:
+      '@fluvient-loom/port':
+        specifier: workspace:*
+        version: link:../../ts/port
+      '@fluvient/core':
+        specifier: workspace:*
+        version: link:../../ts/core
+      solid-js:
+        specifier: ^1.9.0
+        version: 1.9.15
+    devDependencies:
+      '@types/node':
+        specifier: 26.4.1
+        version: 26.4.1
+      tsx:
+        specifier: ^4.23.13
+        version: 4.23.13
+      typescript:
+        specifier: 7.0.2
+        version: 7.0.2
+
+  packages/ts/command:
     dependencies:
       '@fluvient-loom/port':
         specifier: workspace:*
@@ -94,119 +239,86 @@ importers:
     devDependencies:
       '@fluvient-loom/node':
         specifier: workspace:*
-        version: link:../node
+        version: link:../../cli/node
       '@fluvient-loom/query':
         specifier: workspace:*
         version: link:../query
       '@fluvient-loom/web':
         specifier: workspace:*
-        version: link:../web
+        version: link:../../web/web
 
-  packages/core: {}
+  packages/ts/core: {}
 
-  packages/gesture-web:
+  packages/ts/mock:
+    dependencies:
+      '@fluvient-loom/port':
+        specifier: workspace:*
+        version: link:../port
+      '@fluvient/core':
+        specifier: workspace:*
+        version: link:../core
+
+  packages/ts/net:
+    dependencies:
+      '@fluvient-loom/port':
+        specifier: workspace:*
+        version: link:../port
+      '@fluvient/core':
+        specifier: workspace:*
+        version: link:../core
+
+  packages/ts/port:
+    dependencies:
+      '@fluvient/core':
+        specifier: workspace:*
+        version: link:../core
+
+  packages/ts/query:
+    dependencies:
+      '@fluvient-loom/port':
+        specifier: workspace:*
+        version: link:../port
+      '@fluvient/core':
+        specifier: workspace:*
+        version: link:../core
+
+  packages/web/app-shell: {}
+
+  packages/web/gesture-web:
     dependencies:
       '@fluvient-loom/nested-gesture':
         specifier: workspace:*
         version: link:../nested-gesture
 
-  packages/mobile-h5-solid-atoms:
-    dependencies:
-      solid-js:
-        specifier: ^1.9.0
-        version: 1.9.15
-    devDependencies:
-      '@types/node':
-        specifier: 26.4.1
-        version: 26.4.1
-      tsx:
-        specifier: ^4.23.13
-        version: 4.23.13
-      typescript:
-        specifier: 7.0.2
-        version: 7.0.2
+  packages/web/mobile-prefetch: {}
 
-  packages/mobile-prefetch: {}
+  packages/web/nested-gesture: {}
 
-  packages/mock:
+  packages/web/text-highlight: {}
+
+  packages/web/web:
     dependencies:
       '@fluvient-loom/port':
         specifier: workspace:*
-        version: link:../port
+        version: link:../../ts/port
       '@fluvient/core':
         specifier: workspace:*
-        version: link:../core
-
-  packages/nested-gesture: {}
-
-  packages/net:
-    dependencies:
-      '@fluvient-loom/port':
-        specifier: workspace:*
-        version: link:../port
-      '@fluvient/core':
-        specifier: workspace:*
-        version: link:../core
-
-  packages/node:
-    dependencies:
-      '@fluvient-loom/port':
-        specifier: workspace:*
-        version: link:../port
-      '@fluvient/core':
-        specifier: workspace:*
-        version: link:../core
-
-  packages/persisted-state:
-    dependencies:
-      '@fluvient-loom/port':
-        specifier: workspace:*
-        version: link:../port
-      '@fluvient/core':
-        specifier: workspace:*
-        version: link:../core
-      solid-js:
-        specifier: ^1.9.0
-        version: 1.9.15
-    devDependencies:
-      '@types/node':
-        specifier: 26.4.1
-        version: 26.4.1
-      tsx:
-        specifier: ^4.23.13
-        version: 4.23.13
-      typescript:
-        specifier: 7.0.2
-        version: 7.0.2
-
-  packages/port:
-    dependencies:
-      '@fluvient/core':
-        specifier: workspace:*
-        version: link:../core
-
-  packages/query:
-    dependencies:
-      '@fluvient-loom/port':
-        specifier: workspace:*
-        version: link:../port
-      '@fluvient/core':
-        specifier: workspace:*
-        version: link:../core
-
-  packages/text-highlight: {}
-
-  packages/web:
-    dependencies:
-      '@fluvient-loom/port':
-        specifier: workspace:*
-        version: link:../port
-      '@fluvient/core':
-        specifier: workspace:*
-        version: link:../core
+        version: link:../../ts/core
 
   src/frontend:
     dependencies:
+      '@blog/desktop-api':
+        specifier: workspace:*
+        version: link:../../packages/app/desktop-api
+      '@blog/desktop-shared':
+        specifier: workspace:*
+        version: link:../../packages/app/desktop-shared
+      '@blog/page-desktop-detail':
+        specifier: workspace:*
+        version: link:../../packages/app/pages/desktop-detail
+      '@blog/route-input':
+        specifier: workspace:*
+        version: link:../../packages/app/route-input
       '@codemirror/commands':
         specifier: 6.8.1
         version: 6.8.1
@@ -227,37 +339,43 @@ importers:
         version: 6.36.5
       '@fluvient-loom/app-shell':
         specifier: workspace:*
-        version: link:../../packages/app-shell
+        version: link:../../packages/web/app-shell
       '@fluvient-loom/mobile-h5-solid-atoms':
         specifier: workspace:*
-        version: link:../../packages/mobile-h5-solid-atoms
+        version: link:../../packages/solid/mobile-h5-solid-atoms
       '@fluvient-loom/mobile-prefetch':
         specifier: workspace:*
-        version: link:../../packages/mobile-prefetch
+        version: link:../../packages/web/mobile-prefetch
       '@fluvient-loom/net':
         specifier: workspace:*
-        version: link:../../packages/net
+        version: link:../../packages/ts/net
       '@fluvient-loom/node':
         specifier: workspace:*
-        version: link:../../packages/node
+        version: link:../../packages/cli/node
+      '@fluvient-loom/page-build-kit':
+        specifier: workspace:*
+        version: link:../../packages/build/page-build-kit
+      '@fluvient-loom/page-kit':
+        specifier: workspace:*
+        version: link:../../packages/solid/page-kit
       '@fluvient-loom/persisted-state':
         specifier: workspace:*
-        version: link:../../packages/persisted-state
+        version: link:../../packages/solid/persisted-state
       '@fluvient-loom/port':
         specifier: workspace:*
-        version: link:../../packages/port
+        version: link:../../packages/ts/port
       '@fluvient-loom/query':
         specifier: workspace:*
-        version: link:../../packages/query
+        version: link:../../packages/ts/query
       '@fluvient-loom/text-highlight':
         specifier: workspace:*
-        version: link:../../packages/text-highlight
+        version: link:../../packages/web/text-highlight
       '@fluvient-loom/web':
         specifier: workspace:*
-        version: link:../../packages/web
+        version: link:../../packages/web/web
       '@fluvient/core':
         specifier: workspace:*
-        version: link:../../packages/core
+        version: link:../../packages/ts/core
       lucide-solid:
         specifier: 1.48.0
         version: 1.48.0(solid-js@1.9.15)

@@ -1,6 +1,8 @@
-import { type NavigationPort } from "@fluvient-loom/port";
+import type { NavigationPort } from "@fluvient-loom/port";
 import type { DesktopApi, SiteRoutes } from "./api";
 
+// Desktop context 是应用声明（api 客户端消化 network，不进 context）；
+// 端口装配的唯一声明在 page-kit/desktop（createWebDesktopPorts）。
 export interface DesktopPageContext {
   readonly api: DesktopApi;
   readonly routes: SiteRoutes;

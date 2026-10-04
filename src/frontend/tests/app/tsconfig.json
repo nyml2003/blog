@@ -9,6 +9,7 @@
     "../../mobile/**/*.ts",
     "../../protocol/**/*.ts",
     "../../validation/**/*.ts",
+    "../../vite-env.d.ts",
     "./**/*.ts"
   ]
 }

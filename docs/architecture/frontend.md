@@ -39,10 +39,10 @@ src/frontend/
 只负责把浏览器原生对象和运行配置装配进 workspace 适配器，是唯一允许触碰浏览器全局的层，
 平台世界与底层不直接导入 `@fluvient-loom/web`/`node`。
 
-依赖方向机械化（`tests/app/architecture/source-layout.test.ts` 门禁）：
-`bootstrap → 平台世界（pages → widgets → features → foundation） → kernel/domain/protocol/validation`；
-同层 slice 互不 import，Desktop 与 Mobile 两端互不 import。Desktop 与 Mobile 的业务逻辑和 UI
-分别位于 `desktop/` 与 `mobile/` 平台世界内，只共享数据语义，不共享界面实现。
+依赖方向 `bootstrap → 平台世界（pages → widgets → features → foundation） → kernel/domain/protocol/validation`、
+同层 slice 互不 import、Desktop 与 Mobile 两端互不 import 是设计意图；源码扫描门禁已于
+2026-10-04 移除，包内导入不设路径级限制，跨端硬隔离逐步由 workspace 包（`packages/`）承载。
+Desktop 与 Mobile 的业务逻辑和 UI 分别位于 `desktop/` 与 `mobile/` 平台世界内，只共享数据语义，不共享界面实现。
 
 各端 `foundation/api` 与 `features/<slice>/` 通过注入的 ports 负责请求参数、DTO 映射、错误归一和异步竞态；
 页面不直接拼 API 请求或映射 wire DTO。

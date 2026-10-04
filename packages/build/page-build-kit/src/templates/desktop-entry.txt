@@ -1,0 +1,4 @@
+import { create{{component}} } from "../../desktop/pages/{{slice}}/page";
+import { mountDesktopPage } from "./environment";
+
+mountDesktopPage((context) => create{{component}}(context));

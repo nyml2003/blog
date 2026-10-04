@@ -1,5 +1,5 @@
-import type { DesktopApi } from "../../foundation/api";
-import { useDesktopResource } from "../../foundation/resource";
+import type { DesktopApi } from "@blog/desktop-api";
+import { useDesktopResource } from "@blog/desktop-api";
 
 export function useDesktopArticle(
   api: Pick<DesktopApi, "article">,

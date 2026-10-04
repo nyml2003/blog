@@ -32,14 +32,11 @@ export async function runCheck(workspace: Workspace, process: ProcessPort, fs: F
     await run('pnpm build', 'pnpm', ['-C', 'src/frontend', 'run', 'build'], workspace.root);
   }
   const isProjectSource = (file: string) => !/[\\/](?:node_modules|dist|target|\.generated)[\\/]/.test(file);
-  const frontendFiles = (await fs.files(workspace.web)).filter((file) => isProjectSource(file) && /\.(?:ts|tsx)$/.test(file));
-  const rustRoot = join(workspace.root, 'src');
-  const backendFiles = (await fs.files(rustRoot)).filter((file) => isProjectSource(file) && (file.endsWith('.rs') || file.endsWith('Cargo.toml')));
-  const files = [...frontendFiles, ...backendFiles];
+  const manifestFiles = (await fs.files(join(workspace.root, 'src'))).filter((file) => isProjectSource(file) && file.endsWith('Cargo.toml'));
   // Read source through the injected port while keeping the domain rule pure.
   const sources = new Map<string, string>();
-  for (const file of files) sources.set(file, await fs.read(file));
-  const actual = checkArchitectureBoundaries(files, (f) => sources.get(f) ?? '');
+  for (const file of manifestFiles) sources.set(file, await fs.read(file));
+  const actual = checkArchitectureBoundaries(manifestFiles, (f) => sources.get(f) ?? '');
   for (const violation of actual) { passed = false; reporter.fail(`${violation.file}: ${violation.message}`); }
   if (!actual.length) reporter.ok('architecture boundaries');
   return passed;

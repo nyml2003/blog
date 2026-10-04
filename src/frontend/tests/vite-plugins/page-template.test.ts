@@ -10,14 +10,18 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { siteRoutesSchema } from "../../mobile/foundation/api";
-import { pageRegistry, pageRoutes } from "../../pages.registry";
 import {
-  generatedPagePath,
   generatePageInputs,
+  generateSiteRoutesManifest,
+  generatedPagePath,
   renderPageHtml,
   serializePageRoutes,
-} from "../../vite-plugins/page-template";
+  validatePageRegistry,
+} from "@fluvient-loom/page-build-kit";
+import { siteRoutesSchema as desktopSiteRoutesSchema } from "../../desktop/foundation/api";
+import { siteRoutesSchema } from "../../mobile/foundation/api";
+import { pageRegistry, pageRoutes } from "../../pages.registry";
+import { realEntryExists } from "../../page-registry/host";
 
 const frontendRoot = fileURLToPath(new URL("../../", import.meta.url));
 
@@ -39,9 +43,9 @@ const expectedRoutes = [
   ["/articles/index.html", "desktop/pages/public-articles/index.html"],
   ["/articles/detail.html", "desktop/pages/public-detail/index.html"],
   ["/admin/login.html", "desktop/pages/admin-login/index.html"],
+  ["/admin/index.html", "desktop/pages/admin-home/index.html"],
   ["/admin", "desktop/pages/admin-home/index.html"],
   ["/admin/", "desktop/pages/admin-home/index.html"],
-  ["/admin/index.html", "desktop/pages/admin-home/index.html"],
   ["/admin/articles/new.html", "desktop/pages/admin-article-new/index.html"],
   ["/admin/articles/edit.html", "desktop/pages/admin-article-edit/index.html"],
   [
@@ -61,8 +65,8 @@ const expectedRoutes = [
     "/admin/articles/preview/desktop.html",
     "desktop/pages/admin-article-preview-desktop/index.html",
   ],
-  ["/m", "mobile/pages/home/index.html"],
   ["/m/", "mobile/pages/home/index.html"],
+  ["/m", "mobile/pages/home/index.html"],
   ["/m/articles/index.html", "mobile/pages/articles/index.html"],
   ["/m/articles/list.html", "mobile/pages/article-list/index.html"],
   ["/m/articles/detail.html", "mobile/pages/article-detail/index.html"],
@@ -77,61 +81,52 @@ const expectedRoutes = [
   ],
 ] as const;
 
-test("the registry covers 17 pages and the frozen 22 aliases", () => {
-  assert.equal(pageRegistry.length, 17);
+test("the real registry passes the build-kit validator", () => {
+  assert.deepEqual(
+    [...validatePageRegistry(pageRegistry, { entryExists: realEntryExists })],
+    [],
+  );
+});
+
+test("the frozen alias list matches the registry projection in order", () => {
+  // 冻结清单是页面集合的唯一 tripwire：新增/改动页面必须同步这里
+  // （ops page new 会代为追加行）。重复 id/alias 等语义违例由
+  // page-registry 校验器负责，不在这里重复。
   assert.deepEqual(
     pageRoutes().map((route) => [route.alias, route.outputPath]),
     expectedRoutes,
   );
-  assert.equal(new Set(pageRegistry.map((page) => page.id)).size, 17);
-  assert.equal(new Set(pageRegistry.map((page) => page.outputPath)).size, 17);
-  assert.equal(new Set(pageRoutes().map((route) => route.alias)).size, 22);
   assert.doesNotThrow(() => JSON.parse(serializePageRoutes(pageRoutes())));
 });
 
-test("site-routes.json manifest stays in sync with the page registry", () => {
-  // 清单是后端下发路由的唯一来源（protocol include_str! 内嵌），
-  // 键必须是注册表页面 id，值必须是该页面的已注册 alias。
-  const manifest = JSON.parse(
-    readFileSync(resolve(frontendRoot, "site-routes.json"), "utf8"),
-  ) as { version: number; routes: Record<string, string> };
-  assert.equal(manifest.version, 1);
-  assert.deepEqual(
-    Object.keys(manifest.routes).sort(),
-    pageRegistry.map((page) => page.id).sort(),
+test("site-routes.json manifest matches the registry projection", () => {
+  // 清单是生成物（canonical = aliases[0]，由 page-registry/generate.ts 产出），
+  // 守卫从"集合一致"升级为"重新生成逐字节一致"；漂移时运行
+  // pnpm -C src/frontend run page:generate 并提交。
+  const onDisk = readFileSync(
+    resolve(frontendRoot, "site-routes.json"),
+    "utf8",
   );
-  for (const [id, path] of Object.entries(manifest.routes)) {
-    const aliases: readonly string[] =
-      pageRegistry.find((page) => page.id === id)?.aliases ?? [];
-    assert.ok(
-      aliases.includes(path),
-      `manifest route ${id} -> ${path} must be a registered alias`,
-    );
-  }
+  assert.equal(onDisk, generateSiteRoutesManifest(pageRegistry));
 });
 
-test("embedded site-routes manifest satisfies the mobile runtime schema", () => {
-  // Mobile bootstrap 在构建期内嵌这份清单，形状必须能通过运行时同一个
-  // zod schema（多余字段被剥离），且覆盖 Mobile 页面实际引用的路由 id。
+test("embedded site-routes manifest satisfies both runtime schemas", () => {
+  // Desktop 与 Mobile bootstrap 均在构建期内嵌这份清单（SPEC-SITE-ROUTES-001），
+  // 形状必须通过两端运行时同一个 zod schema（多余字段被剥离），
+  // 且覆盖全部注册页面 id。
   const manifest = JSON.parse(
     readFileSync(resolve(frontendRoot, "site-routes.json"), "utf8"),
   );
-  const parsed = siteRoutesSchema.safeParse(manifest);
-  assert.ok(parsed.success, `manifest must satisfy siteRoutesSchema`);
-  const mobileRouteIds = [
-    "mobile-home",
-    "mobile-articles",
-    "mobile-article-list",
-    "mobile-article-detail",
-    "mobile-settings",
-    "mobile-admin-article-preview",
-  ] as const;
-  for (const id of mobileRouteIds) {
-    assert.ok(
-      typeof parsed.data.routes[id] === "string" &&
-        parsed.data.routes[id] !== "",
-      `manifest must provide route: ${id}`,
-    );
+  for (const schema of [desktopSiteRoutesSchema, siteRoutesSchema]) {
+    const parsed = schema.safeParse(manifest);
+    assert.ok(parsed.success, "manifest must satisfy siteRoutesSchema");
+    for (const page of pageRegistry) {
+      assert.ok(
+        typeof parsed.data.routes[page.id] === "string" &&
+          parsed.data.routes[page.id] !== "",
+        `manifest must provide route: ${page.id}`,
+      );
+    }
   }
 });
 
@@ -179,8 +174,8 @@ test("mobile article detail injects an app shell before the application mount", 
 test("the generator writes one input per page without source HTML", () => {
   const tempRoot = mkdtempSync(resolve(tmpdir(), "blog-page-template-"));
   try {
-    const inputs = generatePageInputs(tempRoot);
-    assert.equal(Object.keys(inputs).length, 17);
+    const inputs = generatePageInputs(tempRoot, pageRegistry);
+    assert.equal(Object.keys(inputs).length, pageRegistry.length);
     for (const page of pageRegistry) {
       const filename = generatedPagePath(tempRoot, page);
       assert.equal(inputs[page.id], filename);

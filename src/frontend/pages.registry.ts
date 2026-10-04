@@ -1,6 +1,36 @@
-import type { AppShellSpec } from "@fluvient-loom/app-shell";
+import { desktopDetailPage } from "@blog/page-desktop-detail";
+import {
+  type PagePlatform,
+  type PageRegistration,
+  type PageRoute,
+  pageRoutes as flattenPageRoutes,
+} from "@fluvient-loom/page-build-kit";
+import type { PageMetadata } from "@fluvient-loom/page-kit";
 
-export type PagePlatform = "desktop" | "mobile";
+export type { PagePlatform, PageRegistration, PageRoute };
+
+// 聚合产物：页面包声明"页面是什么"（域元数据），注册表补充构建域（outputPath/entry）。
+// PageMetadata 与 PageRegistration 的对齐由下方 satisfies 编译锚定。
+function aggregatePage(
+  metadata: PageMetadata,
+  build: {
+    readonly outputPath: string;
+    readonly entry: string;
+    readonly description?: string;
+    readonly bootstrap?: boolean;
+  },
+): PageRegistration {
+  return {
+    id: metadata.id,
+    platform: metadata.platform,
+    outputPath: build.outputPath,
+    entry: build.entry,
+    title: metadata.title,
+    description: build.description,
+    aliases: metadata.aliases,
+    bootstrap: build.bootstrap ?? false,
+  } satisfies PageRegistration;
+}
 
 const mobileDetailShell = {
   platform: "mobile",
@@ -29,18 +59,6 @@ const mobileDetailShell = {
   ],
 } as const;
 
-export interface PageRegistration {
-  id: string;
-  platform: PagePlatform;
-  outputPath: string;
-  entry: string;
-  title: string;
-  description: string | undefined;
-  aliases: readonly string[];
-  bootstrap: boolean;
-  shell?: AppShellSpec;
-}
-
 export const pageRegistry: readonly PageRegistration[] = [
   {
     id: "desktop-public-home",
@@ -62,16 +80,10 @@ export const pageRegistry: readonly PageRegistration[] = [
     aliases: ["/articles/index.html"],
     bootstrap: false,
   },
-  {
-    id: "desktop-public-detail",
-    platform: "desktop",
+  aggregatePage(desktopDetailPage, {
     outputPath: "desktop/pages/public-detail/index.html",
     entry: "/bootstrap/desktop/detail.tsx",
-    title: "文章详情 - 技术知识库",
-    description: undefined,
-    aliases: ["/articles/detail.html"],
-    bootstrap: false,
-  },
+  }),
   {
     id: "desktop-admin-login",
     platform: "desktop",
@@ -89,7 +101,7 @@ export const pageRegistry: readonly PageRegistration[] = [
     entry: "/bootstrap/desktop/admin-home.tsx",
     title: "文章管理 - 管理台",
     description: undefined,
-    aliases: ["/admin", "/admin/", "/admin/index.html"],
+    aliases: ["/admin/index.html", "/admin", "/admin/"],
     bootstrap: false,
   },
   {
@@ -162,7 +174,7 @@ export const pageRegistry: readonly PageRegistration[] = [
     entry: "/bootstrap/mobile/home.tsx",
     title: "首页 - 技术知识库",
     description: undefined,
-    aliases: ["/m", "/m/"],
+    aliases: ["/m/", "/m"],
     bootstrap: true,
   },
   {
@@ -221,15 +233,9 @@ export const pageRegistry: readonly PageRegistration[] = [
   },
 ] as const satisfies readonly PageRegistration[];
 
-export interface PageRoute {
-  alias: string;
-  outputPath: string;
-}
-
+/** 宿主便捷包装：默认作用于本注册表（包内 pageRoutes 为显式纯函数）。 */
 export function pageRoutes(
   registrations: readonly PageRegistration[] = pageRegistry,
-): PageRoute[] {
-  return registrations.flatMap((page) =>
-    page.aliases.map((alias) => ({ alias, outputPath: page.outputPath })),
-  );
+): readonly PageRoute[] {
+  return flattenPageRoutes(registrations);
 }

@@ -1,0 +1,16 @@
+{
+  "name": "@blog/desktop-shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@blog/desktop-api": "workspace:*",
+    "@fluvient-loom/text-highlight": "workspace:*"
+  },
+  "peerDependencies": {
+    "solid-js": "^1.9.0"
+  }
+}

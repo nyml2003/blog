@@ -7,7 +7,7 @@ import {
 import { searchQuery } from "../../features/search/model";
 import { Heading, StateMessage, Tag, Text } from "../../foundation/ui";
 import { ArticleBody } from "../../widgets/article-body/ui";
-import { Navigator } from "../../widgets/shell/navigator";
+import { StandardNavigator } from "../../widgets/shell/navigator-icons";
 
 export function createMobileDetailPage(input: MobileDetailInput): Component {
   return function MobileDetailPage() {
@@ -24,7 +24,7 @@ export function createMobileDetailPage(input: MobileDetailInput): Component {
     if (detail.kind === "invalid") {
       return (
         <div class="mobile-shell">
-          <Navigator
+          <StandardNavigator
             context={input.context}
             leftIcons={["back"]}
             title="阅读"
@@ -44,9 +44,19 @@ export function createMobileDetailPage(input: MobileDetailInput): Component {
     }
     const payload = () => detail.state().snapshot;
     const article = () => payload()?.article;
+    const favorite = () => {
+      const current = article();
+      if (current === undefined) return undefined;
+      return {
+        active: input.favorites.has(String(current.id)),
+        toggle: () => {
+          void input.favorites.toggle(String(current.id));
+        },
+      };
+    };
     return (
       <div class="mobile-shell">
-        <Navigator
+        <StandardNavigator
           context={input.context}
           navigation={payload()?.navigation}
           leftIcons={["back"]}
@@ -54,7 +64,7 @@ export function createMobileDetailPage(input: MobileDetailInput): Component {
           persistence={input.persistence}
           document={input.document}
           share={input.share}
-          favoriteKey={article()?.id.toString()}
+          favorite={favorite()}
           onBack={detail.onBack}
         />
         <main id="main" class="mobile-main detail-main">

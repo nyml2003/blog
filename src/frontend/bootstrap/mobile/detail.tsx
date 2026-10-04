@@ -1,4 +1,5 @@
 import "../../mobile/foundation/styles/app.css";
+import { createFavoriteStore } from "../../mobile/features/favorites/favorites-model";
 import { route } from "../../mobile/foundation/context";
 import { createMobileDetailPage } from "../../mobile/pages/detail/page";
 import { articleIdFromSearch, canReturnToSite } from "./detail-input";
@@ -9,6 +10,7 @@ const createDetailPage: Parameters<typeof mountMobilePage>[0] = (context) =>
     context,
     navigation: context.navigation,
     persistence: context.persistence,
+    favorites: createFavoriteStore(context.persistence),
     document: context.document,
     share: context.share,
     onAppShellReady: removeMobileAppShell,

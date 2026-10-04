@@ -1,14 +1,14 @@
-import type { JSX } from "solid-js";
-import type { MobileRouteContext } from "../../foundation/context";
-import { mobileNavigationItems } from "../../features/navigation/model";
-import { BottomNav } from "./bottom-nav";
-import { Navigator } from "./navigator";
-import type { MobileNavigation } from "../../foundation/api";
 import type {
   DocumentPort,
   NavigationPort,
   PersistencePort,
 } from "@fluvient-loom/port";
+import type { JSX } from "solid-js";
+import { mobileNavigationItems } from "../../features/navigation/model";
+import type { MobileNavigation } from "../../foundation/api";
+import type { MobileRouteContext } from "../../foundation/context";
+import { BottomNav } from "./bottom-nav";
+import { StandardNavigator } from "./navigator-icons";
 
 export interface MobileShellProps {
   readonly context: MobileRouteContext;
@@ -24,7 +24,7 @@ export interface MobileShellProps {
 export function MobileShell(props: MobileShellProps) {
   return (
     <div class="mobile-shell">
-      <Navigator
+      <StandardNavigator
         context={props.context}
         navigation={props.navigation}
         browserNavigation={props.browserNavigation}
