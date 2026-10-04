@@ -10,7 +10,7 @@ import {
 import { defineConfig } from "vite";
 import solid from "vite-plugin-solid";
 import { pageRegistry } from "./pages.registry.ts";
-import { mobilePrefetchServiceWorker } from "./vite-plugins/mobile-prefetch.ts";
+import { mobilePrefetchServiceWorker } from "./vite-mobile-prefetch.ts";
 import { syncSiteRoutesManifest } from "./page-registry/host.ts";
 
 const root = resolve(import.meta.dirname);
@@ -39,7 +39,7 @@ export default defineConfig({
     pageTemplatePlugin(pageRegistry),
     pageBootstrap(root, {
       registrations: pageRegistry,
-      bootstrapEntry: "bootstrap/mobile/settings.tsx",
+      bootstrapEntry: "bootstrap/mobile-settings.tsx",
     }),
     mobilePrefetchServiceWorker(root),
     pageRoutesPlugin(routes),

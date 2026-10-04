@@ -37,10 +37,7 @@ function sourceHtmlFiles(directory: string): readonly string[] {
 }
 
 test("the real registry passes the build-kit validator", () => {
-  assert.deepEqual(
-    [...validatePageRegistry(pageRegistry)],
-    [],
-  );
+  assert.deepEqual([...validatePageRegistry(pageRegistry)], []);
 });
 
 test("site-routes.json manifest matches the registry projection", () => {
@@ -78,7 +75,10 @@ test("generated HTML has the shared head, page id, and platform entry", () => {
   for (const page of pageRegistry) {
     const html = renderPageHtml(page);
     assert.match(html, /^<!doctype html>/);
-    assert.match(html, new RegExp(`<html lang="zh-CN" data-page-id="${page.id}">`));
+    assert.match(
+      html,
+      new RegExp(`<html lang="zh-CN" data-page-id="${page.id}">`),
+    );
     assert.match(html, /<meta charset="UTF-8" \/>/);
     assert.match(
       html,
@@ -87,10 +87,14 @@ test("generated HTML has the shared head, page id, and platform entry", () => {
     assert.match(html, /<meta name="theme-color" content="#f4f1ea" \/>/);
     assert.ok(html.includes(`<title>${page.title}</title>`));
     // 统一入口：script 指向平台 main.tsx，不逐页建入口
-    const expectedEntry = page.platform === "desktop"
-      ? "/bootstrap/desktop/main.tsx"
-      : "/bootstrap/mobile/main.tsx";
-    assert.ok(html.includes(`src="${expectedEntry}"`), `entry mismatch for ${page.id}`);
+    const expectedEntry =
+      page.platform === "desktop"
+        ? "/bootstrap/desktop.tsx"
+        : "/bootstrap/mobile.tsx";
+    assert.ok(
+      html.includes(`src="${expectedEntry}"`),
+      `entry mismatch for ${page.id}`,
+    );
     assert.doesNotMatch(
       page.title,
       /\b(?:Blog|Admin|Article|Articles|New|Edit)\b/,
@@ -147,23 +151,23 @@ test("the generator writes one input per page without source HTML", () => {
 test("platform main entries mount pages and mobile imports CSS once", () => {
   // 统一入口：每端一个 main.tsx，含挂载调用和 CSS 引入
   const desktopMain = readFileSync(
-    resolve(frontendRoot, "bootstrap/desktop/main.tsx"),
+    resolve(frontendRoot, "bootstrap/desktop.tsx"),
     "utf8",
   );
   assert.match(desktopMain, /mountDesktopApplication/);
-  assert.match(desktopMain, /home\.css/);
+  assert.match(desktopMain, /desktop\.css/);
   assert.doesNotMatch(desktopMain, /getElementById\("app"\)/);
 
   const mobileMain = readFileSync(
-    resolve(frontendRoot, "bootstrap/mobile/main.tsx"),
+    resolve(frontendRoot, "bootstrap/mobile.tsx"),
     "utf8",
   );
   assert.match(mobileMain, /mountMobileApplication/);
-  assert.match(mobileMain, /app\.css/);
+  assert.match(mobileMain, /mobile\.css/);
   assert.doesNotMatch(mobileMain, /getElementById\("app"\)/);
 
   const mobileStyles = readFileSync(
-    resolve(frontendRoot, "mobile/foundation/styles/app.css"),
+    resolve(frontendRoot, "styles/mobile.css"),
     "utf8",
   );
   assert.deepEqual(mobileStyles.trim().split("\n"), [

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createDesktopApi } from "@blog/desktop-api";
-import { routeWithQuery } from "../../../desktop/foundation/context";
+import { routeWithQuery } from "@blog/desktop-shared/context";
 import { ok } from "@fluvient/core";
 import { type NetworkPort } from "@fluvient-loom/port";
 

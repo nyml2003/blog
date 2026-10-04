@@ -6,10 +6,7 @@ import {
   categoryRequestId,
   categorySelection,
 } from "@blog/page-mobile-articles";
-import {
-  displayDate,
-  positiveFilterIdFromSearch,
-} from "@blog/route-input";
+import { displayDate, positiveFilterIdFromSearch } from "@blog/route-input";
 
 const model = {
   taxonomy: {

@@ -21,23 +21,29 @@ last_reviewed: 2026-10-04
 
 ## 前端分层规则
 
-`src/frontend/` 采用功能切片 + 严格向下依赖（FSD 适配版，2026-10-01 重组，PLAN-FRONTEND-FSD-RESTRUCTURE-001）：
+`src/frontend/` 是应用壳；页面本体与平台世界归属 workspace 包（2026-10-04 全量包化 + 壳扁平化）：
 
 ```text
-bootstrap/{desktop,mobile}/   组合根：page-kit 的唯一调用点——只组合应用声明
-                              （api 工厂、内嵌路由清单、页面工厂）并挂载
-mobile/  desktop/             平台世界（UI 隔离边界）
-├── pages/<slice>/            页面（UI 编排；不触碰宿主能力）
-├── widgets/<slice>/          复合组件（shell、article-card 等）
-├── features/<slice>/         业务模型（model/persistence 等；数据获取在此）
-└── foundation/{api,styles,ui}/  端内基础层（api=端内 API 客户端与 BFF 归一化）
-kernel/                       纯机制（desired-state；ports/Task/Resource 来自 @fluvient-loom/port|query 包）
-domain/ protocol/ validation/ 跨端契约与输入校验（route-input、article-html 等）
+src/frontend/                应用壳（48 文件级）
+├── bootstrap/               每端一个统一入口（page-kit 唯一调用点；data-page-id 路由）
+│   ├── desktop.tsx  mobile.tsx        只组合应用声明（api 工厂、内嵌清单）并挂载
+│   └── mobile-settings.tsx            内联主题引导（构建期注入 <head>）
+├── styles/                  mobile.css（聚合 10 分片）+ desktop.css
+├── pages.registry.ts        17 行显式 import 聚合（页面包 definePage 产出）
+├── page-registry/           宿主 glue（校验 + 清单同步 CLI）
+└── vite-mobile-prefetch.ts / mobile-prefetch-sw.ts / build-article-html-wasm.mjs
+
+packages/app/pages/<name>/   页面包（每页一包）：definition.ts（node 安全声明）+
+                             page.tsx（组件工厂）；平台世界（pages/widgets/features/
+                             foundation 的切片纵深）在包内自由组织
+packages/app/                mobile-api desktop-api desktop-shared mobile-shared kernel validation
 ```
+
+层序意图（切片纵深、同层隔离、两端隔离）随页面迁入包内：包内不设路径级限制，跨端硬隔离由包的依赖面承载。
 
 **宿主适配器装配点（2026-10-04 修订）**：`@fluvient-loom/web`/`net` 等宿主适配器只允许在 `@fluvient-loom/page-kit`（`./mobile`、`./desktop` 子路径）内装配；bootstrap 不得直接装配适配器。端口形状的唯一声明在 page-kit（`WebMobilePorts`/`WebDesktopPorts`），端内 context 经 type-only 继承追加应用声明。构建链半边（校验/生成/插件/脚手架）在 `@fluvient-loom/page-build-kit`。
 
-依赖方向：`bootstrap → 平台世界（pages → widgets → features → foundation）→ kernel/domain/protocol/validation`，同层 slice 互不 import，跨端零 import。2026-10-04 起层序不再由源码扫描门禁拦截（`source-layout.test.ts` 已删除）：包内导入不设路径级限制，跨端硬隔离逐步由 workspace 包（`src/frontend/packages/`）承载，kernel 宿主纯度仍由 `tests/app/kernel/tsconfig.json`（无 DOM lib）编译保证。
+依赖方向：`bootstrap → 平台世界（pages → widgets → features → foundation）→ kernel/domain/protocol/validation`，同层 slice 互不 import，跨端零 import。2026-10-04 起层序不再由源码扫描门禁拦截（`source-layout.test.ts` 已删除）：包内导入不设路径级限制，跨端硬隔离由 workspace 包（`packages/app/`）承载，kernel 宿主纯度仍由 `tests/app/kernel/tsconfig.json`（无 DOM lib）编译保证。
 
 **禁令（2026-10-04 起为设计意图；机器执行仅限 Cargo manifest 依赖禁令与 kernel 的 DOM-free 编译）**：
 
@@ -151,5 +157,6 @@ Then 评审不通过；kernel 引入宿主能力由 DOM-free 编译拦截
 
 ## 修订记录
 
+- 2026-10-04（页面壳扁平化）：`src/frontend` 移除最后的平台世界残留（mobile/desktop 目录、单文件目录、双 context 文件），收敛为"每端一个统一入口 + styles + 注册表 + 工具"的壳形态；页面与平台世界的切片结构随页面包迁入 `packages/app/`。
 - 2026-10-04（PLAN-PAGE-PACKAGING-001 P3b）："bootstrap 是唯一允许装配宿主适配器的层" 修订为 "page-kit 是宿主适配器的唯一装配点，bootstrap 是唯一调用点"——装配代码从 bootstrap 文件收敛进 `@fluvient-loom/page-kit` 包（两端子路径，UI 隔离边界在包内成立）；不变式强度增加（装配从 17 个入口收敛为包内一处）。
 - 2026-10-04：源码内容扫描门禁整体退役（前端 import 建图与 Rust 内容启发式，含已删除目录的墓碑规则）；依赖禁令收敛到 Cargo manifest 层（data 禁 HTML 解析器与外部 HTTP/GitHub 客户端、product 禁直连 SQLite）；前端层序与内容级规则转为设计意图，豁免机制随门禁一并移除。

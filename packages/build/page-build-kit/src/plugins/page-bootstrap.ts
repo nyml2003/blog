@@ -12,7 +12,7 @@ export interface PageBootstrapDependencies {
 export interface PageBootstrapOptions {
   /** 参与 HTML 生成的页面登记（宿主注册表）。 */
   readonly registrations: readonly PageRegistration[];
-  /** 内联引导脚本的构建入口（宿主提供，如 "bootstrap/mobile/settings.tsx"）。 */
+  /** 内联引导脚本的构建入口（宿主提供，如 "bootstrap/mobile-settings.tsx"）。 */
   readonly bootstrapEntry: string;
   readonly dependencies?: PageBootstrapDependencies;
 }

@@ -13,7 +13,7 @@ async function bundleServiceWorker(root: string): Promise<string> {
       minify: true,
       target: "es2020",
       lib: {
-        entry: resolve(root, "sw/mobile-prefetch.ts"),
+        entry: resolve(root, "mobile-prefetch-sw.ts"),
         name: "MobilePrefetchServiceWorker",
         formats: ["iife"],
         fileName: () => "mobile-prefetch-sw.js",

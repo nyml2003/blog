@@ -14,11 +14,10 @@
   },
   "include": [
     "bootstrap",
-    "desktop",
-    "mobile",
     "page-registry",
     "tests",
     "vite-env.d.ts",
-    "vite.config.ts"
+    "vite.config.ts",
+    "vite-mobile-prefetch.ts"
   ]
 }

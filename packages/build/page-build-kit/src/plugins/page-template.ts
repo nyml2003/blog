@@ -17,8 +17,8 @@ export const pageRoutesManifest = "page-routes.json";
 /** 平台统一入口：所有页面共享同一 main.tsx，data-page-id 区分页面。 */
 export function platformEntry(platform: string): string {
   return platform === "desktop"
-    ? "/bootstrap/desktop/main.tsx"
-    : "/bootstrap/mobile/main.tsx";
+    ? "/bootstrap/desktop.tsx"
+    : "/bootstrap/mobile.tsx";
 }
 
 export function renderPageHtml(page: PageRegistration): string {

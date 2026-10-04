@@ -76,11 +76,17 @@ test("workspace actions follow the finite server status matrix", () => {
 
 test("editor keeps its form mounted after save and public navigation has no admin entry", () => {
   const editorSource = readFileSync(
-    new URL("../../../../../../packages/app/pages/desktop-editor/src/page.tsx", import.meta.url),
+    new URL(
+      "../../../../packages/app/pages/desktop-editor/src/page.tsx",
+      import.meta.url,
+    ),
     "utf8",
   );
   const headerSource = readFileSync(
-    new URL("../../../../../../packages/app/pages/desktop-admin-home/src/page.tsx", import.meta.url),
+    new URL(
+      "../../../../packages/app/pages/desktop-admin-home/src/page.tsx",
+      import.meta.url,
+    ),
     "utf8",
   );
 

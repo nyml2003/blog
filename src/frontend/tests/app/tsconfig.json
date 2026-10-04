@@ -1,11 +1,5 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": { "types": ["node"] },
-  "include": [
-    "../../bootstrap/**/*.ts",
-    "../../desktop/**/*.ts",
-    "../../mobile/**/*.ts",
-    "../../vite-env.d.ts",
-    "./**/*.ts"
-  ]
+  "include": ["../../bootstrap/**/*.ts", "../../vite-env.d.ts", "./**/*.ts"]
 }

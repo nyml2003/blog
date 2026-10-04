@@ -44,16 +44,15 @@ blog/
 │   │   │   └── github/     ← GitHub 传输（只在后台线程里跑）
 │   │   ├── data/           ← Data 进程：SQLite 持久化（8081），不懂业务
 │   │   └── mock/           ← Mock 进程：开发时顶替 Product（9090），5 种故障场景
- │   └── frontend/
-│       ├── bootstrap/{desktop,mobile}/ ← 页面入口与首绘装配（组合根，唯一触碰浏览器全局的层）
-│       ├── mobile/  desktop/ ← 平台世界：pages/<slice> → widgets/<slice> → features/<slice> → foundation/{api,styles,ui}
-│       ├── kernel/          ← 纯机制：desired-state 状态原语（ports/Result/Task 已归 @fluvient-loom 包）
-│       ├── domain/ protocol/ validation/ ← 跨端契约与输入校验（route-input、article-html、WASM 产物 generated/）
-│       ├── pages.registry.ts ← 页面登记表（聚合产物：@blog 页面包声明 + 宿主内联定义）
-│       ├── page-registry/    ← 注册表宿主 glue：校验/生成/脚手架 CLI（机制在 @fluvient-loom/page-build-kit）
-│       ├── site-routes.json  ← 页面路由清单（registry 生成物，两端构建期内嵌；后端 /api/public/site-routes 保留）
-│       ├── vite-plugins/   ← Vite 插件（页面模板生成、bootstrap 注入、dev 路由重写、Mobile prefetch SW）
-│       └── build/          ← 非 Vite 构建工具（article HTML 的 wasm 构建）
+ │   └── frontend/           ← 应用壳（页面本体全在 packages/app/ 页面包）
+│       ├── bootstrap/      ← 每端一个统一入口（page-kit 唯一调用点）：desktop.tsx / mobile.tsx / mobile-settings.tsx（内联主题引导）
+│       ├── styles/         ← 应用样式：mobile.css（聚合 10 个分片）+ desktop.css
+│       ├── pages.registry.ts ← 页面登记表（17 行显式 import 聚合，页面包 definePage 产出）
+│       ├── page-registry/  ← 注册表宿主 glue：校验/清单同步 CLI（机制在 @fluvient-loom/page-build-kit）
+│       ├── site-routes.json ← 页面路由清单（registry 生成物，两端构建期内嵌）
+│       ├── vite-mobile-prefetch.ts ← Mobile prefetch SW 的 Vite 插件
+│       ├── mobile-prefetch-sw.ts   ← Service Worker 源（由插件单独打包）
+│       └── build-article-html-wasm.mjs ← article HTML wasm 构建脚本
 ├── packages/               ← 全部 npm 包，按类别分目录（目录即门禁策略，未知类别 fail-closed）：
 │   ├── ts/                 ← 真通用基础件：core port query command mock net
 │   ├── web/                ← web 域：web gesture-web mobile-prefetch nested-gesture text-highlight app-shell

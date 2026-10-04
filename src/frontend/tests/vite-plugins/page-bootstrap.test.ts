@@ -14,7 +14,7 @@ test("one bootstrap build is shared by every registered mobile page", async () =
   let bundleCount = 0;
   const plugin = pageBootstrap(frontendRoot, {
     registrations: pageRegistry,
-    bootstrapEntry: "bootstrap/mobile/settings.tsx",
+    bootstrapEntry: "bootstrap/mobile-settings.tsx",
     dependencies: {
       bundle: async () => {
         bundleCount += 1;

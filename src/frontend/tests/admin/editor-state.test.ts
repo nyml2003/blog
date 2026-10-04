@@ -44,8 +44,8 @@ test("saved editor snapshots treat source changes as unsaved", () => {
 
 test("admin article pages do not invoke retired direct-write methods", () => {
   const sources = [
-    "../../../../../../packages/app/pages/desktop-editor/src/page.tsx",
-    "../../../../../../packages/app/pages/desktop-admin-home/src/page.tsx",
+    "../../../../packages/app/pages/desktop-editor/src/page.tsx",
+    "../../../../packages/app/pages/desktop-admin-home/src/page.tsx",
   ].map((path) => readFileSync(new URL(path, import.meta.url), "utf8"));
   const retiredWrites =
     /generateRecommendations|saveAdminEditorArticle|unpublishArticle|\.saveDraft\(|\.publish\(|\.unpublish\(|\.createType\(|\.renameType\(|\.createTerm\(|\.renameTerm\(/;
@@ -63,10 +63,7 @@ test("admin navigation uses the content workspace canonical path", () => {
   // canonical 路径的选择收敛到后端下发的路由清单，
   // 页面源码本身不出现任何页面路径字面量。
   const manifest = JSON.parse(
-    readFileSync(
-      new URL("../../../../site-routes.json", import.meta.url),
-      "utf8",
-    ),
+    readFileSync(new URL("../../site-routes.json", import.meta.url), "utf8"),
   ) as { routes: Record<string, string> };
   assert.equal(
     manifest.routes["desktop-admin-article-types"],
@@ -79,9 +76,9 @@ test("admin navigation uses the content workspace canonical path", () => {
   );
 
   const sources = [
-    "../../../../../../packages/app/pages/desktop-editor/src/page.tsx",
-    "../../../../../../packages/app/pages/desktop-admin-home/src/page.tsx",
-    "../../../../../../packages/app/pages/desktop-admin-home/src/page.tsx",
+    "../../../../packages/app/pages/desktop-editor/src/page.tsx",
+    "../../../../packages/app/pages/desktop-admin-home/src/page.tsx",
+    "../../../../packages/app/pages/desktop-admin-home/src/page.tsx",
   ].map((path) => readFileSync(new URL(path, import.meta.url), "utf8"));
   for (const source of sources) {
     assert.match(source, /desktop-admin-article-types/);
