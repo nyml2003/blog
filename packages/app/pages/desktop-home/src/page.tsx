@@ -100,6 +100,9 @@ export function createDesktopHomePage(input: DesktopHomeInput): Component {
               首页
             </a>
             <a href={archiveHref}>全部文章</a>
+            <Show when={__BLOG_ADMIN_ENTRY__}>
+              <a href={siteRoute(input.routes, "desktop-admin-home")}>工作台</a>
+            </Show>
           </nav>
         </header>
         <main id="main">

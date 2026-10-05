@@ -17,6 +17,9 @@ import { mobilePrefetchServiceWorker } from "@fluvient-loom/mobile-prefetch/vite
 
 const root = resolve(import.meta.dirname);
 const apiOrigin = process.env.BLOG_API_ORIGIN ?? "http://127.0.0.1:8080";
+// 工作台入口可见性是构建期决策：本地部署构建时设 BLOG_ADMIN_ENTRY=true，
+// 服务器发布包（ops delivery package）不设——线上产物经死代码消除后连入口字符串都不存在。
+const adminEntry = process.env.BLOG_ADMIN_ENTRY === "true";
 
 // 注册表校验先于任何构建副作用：坏注册表让 dev 拒绝启动、build 直接失败，
 // 而不是等到测试期或后端启动期（同一校验器也供 ops page check 复用）。
@@ -52,6 +55,9 @@ export default defineConfig({
     solid(),
   ],
   root,
+  define: {
+    __BLOG_ADMIN_ENTRY__: JSON.stringify(adminEntry),
+  },
   build: {
     rolldownOptions: {
       input: pageInputs,

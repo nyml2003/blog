@@ -40,6 +40,7 @@ export function loadConfig(configPath) {
     contentSource: raw.contentSource ?? 'fixture',
     contentRepo: raw.contentRepo ?? '',
     contentToken: raw.contentToken ?? '',
+    adminAuth: raw.adminAuth ?? 'on',
     dataBin: raw.dataBin ? expandHome(raw.dataBin) : null,
     productBin: raw.productBin ? expandHome(raw.productBin) : null,
     webDir: raw.webDir ? expandHome(raw.webDir) : null,
@@ -49,6 +50,10 @@ export function loadConfig(configPath) {
   if (config.productPort === config.dataPort) fail('productPort 与 dataPort 不能相同');
   if (config.contentSource !== 'fixture' && config.contentSource !== 'github') {
     fail('contentSource 只支持 fixture 或 github');
+  }
+  // bypass 免 GUI 登录：仅适合 loopback 的个人本地部署（二进制强制 loopback 监听）
+  if (config.adminAuth !== 'on' && config.adminAuth !== 'bypass') {
+    fail('adminAuth 只支持 on 或 bypass');
   }
   if (config.contentSource === 'github' && (!config.contentRepo || !config.contentToken)) {
     fail('contentSource=github 需要同时提供 contentRepo 与 contentToken');
@@ -193,7 +198,7 @@ async function main() {
         '--data-addr', `http://127.0.0.1:${config.dataPort}`,
         '--web-dir', artifacts.webDir,
         '--content-source', config.contentSource,
-        '--admin', 'on',
+        '--admin', config.adminAuth,
       ],
       productEnv,
     );

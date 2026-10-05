@@ -41,8 +41,24 @@ ops local uninstall    # 停止并移除系统单元（配置与数据库保留�
 | `productPort` / `dataPort` | 两个服务端口（都必须 loopback，二进制自身也强制校验） |
 | `contentSource` | `fixture`（进程内模拟远程，无法走完合并→公开闭环）或 `github` |
 | `contentRepo` / `contentToken` | `github` 时必填；对应 `ops content repository init` 用的仓库与 token |
+| `adminAuth` | `on`（密码+TOTP 登录）或 `bypass`（免 GUI 登录，默认；仅适合 loopback 个人机，两个二进制都强制 loopback 监听） |
 
 切到 GitHub 真源：编辑 `local.json` 填三个字段后重跑 `ops local install`（幂等，重启栈）。
+
+## 工作台入口（构建期开关）
+
+公开页面默认不显示任何管理入口。本地构建想显示"工作台"入口（桌面首页/全部文章页导航）：
+
+```sh
+BLOG_ADMIN_ENTRY=true pnpm -C src/frontend run build
+```
+
+注意：**不能用 `ops delivery build` 带这个变量**——ops 的进程包装会剥离所有 `BLOG_*` 环境变量（`packages/cli/cli-core/src/process.ts`），开关无法透传。直接跑 pnpm 构建即可（脚本自带 `wasm:build`）。Product 直接读 dist 目录，重新构建后刷新页面即生效；若想稳妥可在构建后 `ops local install` 重启。
+
+- 该开关是 `vite.config.ts` 的构建期 `define`（`__BLOG_ADMIN_ENTRY__`）：不带参数构建时常量折叠为 `false`，入口不渲染、路由解析不执行（注意是"不渲染"而非"字符串消除"——admin 页面本就打包在同一 dist，且 `/admin/login.html` 路由经由 site-routes 公开下发，入口可见性不是安全边界，真正的门是后端鉴权）；
+- 服务器发布链路（`ops delivery package`）不设此变量，线上公开页面永远不显示入口；
+- 入口指向 `/admin/index.html`：`adminAuth: on` 时会先 302 到登录页再跳回，`bypass` 时直达工作台；
+- 注意入口可见性由 dist 产物决定：之后不带参数重新 `ops delivery build` 会覆盖掉带入口的 dist。
 
 ## 日志
 

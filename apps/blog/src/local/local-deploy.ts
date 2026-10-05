@@ -76,6 +76,7 @@ async function loadOrCreateConfig(ports: LocalDeployPorts): Promise<LocalConfig 
       contentSource: 'fixture',
       contentRepo: '',
       contentToken: '',
+      adminAuth: 'bypass',
     };
     await ports.fs.write(configPath, `${JSON.stringify(template, null, 2)}\n`);
     await run(ports, 'chmod', ['600', configPath]);

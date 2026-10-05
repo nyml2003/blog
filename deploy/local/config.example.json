@@ -6,6 +6,7 @@
   "contentSource": "fixture",
   "contentRepo": "",
   "contentToken": "",
+  "adminAuth": "on",
   "dataBin": null,
   "productBin": null,
   "webDir": null
