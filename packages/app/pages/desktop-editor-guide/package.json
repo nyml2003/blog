@@ -8,6 +8,7 @@
     "./page": "./src/page.tsx"
   },
   "dependencies": {
+    "@blog/desktop-atoms": "workspace:*",
     "@blog/desktop-shared": "workspace:*",
     "@fluvient-loom/page-kit": "workspace:*"
   },

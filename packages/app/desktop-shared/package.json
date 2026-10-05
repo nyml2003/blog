@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@blog/desktop-api": "workspace:*",
+    "@blog/desktop-atoms": "workspace:*",
     "@fluvient-loom/text-highlight": "workspace:*",
     "@fluvient-loom/page-kit": "workspace:*"
   },

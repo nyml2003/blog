@@ -1,5 +1,6 @@
 import { For, Show, type Component } from "solid-js";
 import type { DesktopPageContext } from "@blog/desktop-shared";
+import { Button, Heading, Link, Text } from "@blog/desktop-atoms";
 import { route, routeWithQuery } from "@blog/desktop-shared";
 import { useDesktopAdminHome } from "./feature";
 import "./page.css";
@@ -33,13 +34,19 @@ export function createDesktopAdminHomePage(
         <main id="main">
           <header class="admin-page-head">
             <div>
-              <p class="eyebrow">CONTENT WORKSPACE</p>
-              <h1>文章管理</h1>
-              <p>编辑工作区文章，并在发布工作台统一预览和提交。</p>
+              <Text tone="accent">CONTENT WORKSPACE</Text>
+              <Heading level={1}>文章管理</Heading>
+              <Text tone="muted">
+                编辑工作区文章，并在发布工作台统一预览和提交。
+              </Text>
             </div>
             <div class="actions">
-              <a href={workspaceHref}>发布工作台</a>
-              <a href={newHref}>新建文章</a>
+              <Link href={workspaceHref} variant="action">
+                发布工作台
+              </Link>
+              <Link href={newHref} variant="cta">
+                新建文章
+              </Link>
             </div>
           </header>
           <Show when={page.message()}>
@@ -76,9 +83,8 @@ export function createDesktopAdminHomePage(
                             <span>{article.tagIds.length} 个标签</span>
                             <time>{article.updatedAt.slice(0, 10)}</time>
                             <div>
-                              <a href={editHref(article.id)}>编辑</a>
-                              <button
-                                type="button"
+                              <Link href={editHref(article.id)}>编辑</Link>
+                              <Button
                                 disabled={page.busyId() !== undefined}
                                 onClick={() =>
                                   void page.remove(article.id, article.title)
@@ -87,7 +93,7 @@ export function createDesktopAdminHomePage(
                                 {page.busyId() === article.id
                                   ? "暂存中..."
                                   : "暂存下架"}
-                              </button>
+                              </Button>
                             </div>
                           </article>
                         )}

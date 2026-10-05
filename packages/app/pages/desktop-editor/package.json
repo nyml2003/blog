@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@blog/desktop-api": "workspace:*",
+    "@blog/desktop-atoms": "workspace:*",
     "@blog/desktop-shared": "workspace:*",
     "@blog/validation": "workspace:*",
     "@codemirror/commands": "6.8.1",

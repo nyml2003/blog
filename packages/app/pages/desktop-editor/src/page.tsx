@@ -1,5 +1,15 @@
 import { createEffect, createSignal, onCleanup, onMount, Show } from "solid-js";
 import { useDesktopResource } from "@blog/desktop-api";
+import {
+  Button,
+  Field,
+  Form,
+  Heading,
+  Input,
+  Link,
+  Text,
+  Textarea,
+} from "@blog/desktop-atoms";
 import type { DesktopPageContext } from "@blog/desktop-shared";
 import { route } from "@blog/desktop-shared";
 import { createDataResource } from "@fluvient-loom/query";
@@ -192,71 +202,78 @@ export function createDesktopEditorPage(
       <main id="main" class="admin-page editor-page">
         <header class="admin-page-head">
           <div>
-            <p class="eyebrow">WORKSPACE ARTICLE</p>
-            <h1>{creation && articleId === 0 ? "新建文章" : "编辑文章"}</h1>
-            <p>保存会进入当前待提交批次，发布前请在工作台统一预览。</p>
+            <Text tone="accent">WORKSPACE ARTICLE</Text>
+            <Heading level={1}>
+              {creation && articleId === 0 ? "新建文章" : "编辑文章"}
+            </Heading>
+            <Text tone="muted">
+              保存会进入当前待提交批次，发布前请在工作台统一预览。
+            </Text>
           </div>
           <div class="actions">
-            <a
-              class="button secondary"
+            <Link
               href={route(context.routes, "desktop-admin-editor-guide")}
+              variant="action"
             >
               使用指南
-            </a>
-            <a
-              class="button secondary"
+            </Link>
+            <Link
               href={route(context.routes, "desktop-admin-article-types")}
+              variant="action"
             >
               发布工作台
-            </a>
+            </Link>
           </div>
         </header>
-        <Show when={!loading()} fallback={<p role="status">加载中...</p>}>
+        <Show
+          when={!loading()}
+          fallback={<Text role="status">加载中...</Text>}
+        >
           <Show
             when={
               !workspace.state().error && (creation || !article.state().error)
             }
-            fallback={<p role="alert">文章或工作区加载失败</p>}
+            fallback={
+              <Text role="alert" tone="danger">
+                文章或工作区加载失败
+              </Text>
+            }
           >
-            <form
+            <Form
               onSubmit={(event) => {
                 event.preventDefault();
                 void save();
               }}
             >
-              <label>
-                标题
-                <input
+              <Field label="标题">
+                <Input
                   value={title()}
                   onInput={(event) => setTitle(event.currentTarget.value)}
                   disabled={busy()}
                 />
-              </label>
-              <label>
-                摘要
-                <textarea
+              </Field>
+              <Field label="摘要">
+                <Textarea
                   rows={3}
                   value={summary()}
                   onInput={(event) => setSummary(event.currentTarget.value)}
                   disabled={busy()}
                 />
-              </label>
-              <label>
-                分类 ID（逗号分隔）
-                <input
+              </Field>
+              <Field label="分类 ID（逗号分隔）">
+                <Input
                   value={categories()}
                   onInput={(event) => setCategories(event.currentTarget.value)}
                   disabled={busy()}
                 />
-              </label>
-              <label>
-                标签 ID（逗号分隔）
-                <input
+              </Field>
+              <Field label="标签 ID（逗号分隔）">
+                <Input
                   value={tags()}
                   onInput={(event) => setTags(event.currentTarget.value)}
                   disabled={busy()}
                 />
-              </label>
+              </Field>
               <DesktopSourceEditor
                 value={contentHtml}
                 busy={busy}
@@ -271,12 +288,14 @@ export function createDesktopEditorPage(
                 }}
               />
               <div class="actions">
-                <button type="submit" disabled={busy()}>
+                <Button type="submit" variant="primary" disabled={busy()}>
                   {busy() ? "保存中..." : "保存到待提交批次"}
-                </button>
-                <span role="status">{error() || message()}</span>
+                </Button>
+                <Text as="span" role="status" tone="muted">
+                  {error() || message()}
+                </Text>
               </div>
-            </form>
+            </Form>
           </Show>
         </Show>
       </main>

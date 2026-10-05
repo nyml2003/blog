@@ -56,7 +56,7 @@ blog/
 │   ├── solid/              ← web+solid UI：persisted-state page-kit
 │   ├── cli/                ← node 侧：cli-kit cli-core cli-plugins node
 │   ├── build/              ← 构建链（node+vite）：page-build-kit（校验/生成/vite 插件/脚手架）
-│   └── app/                ← @blog 应用私有包：desktop-api desktop-shared kernel mobile-api mobile-shared
+│   └── app/                ← @blog 应用私有包：desktop-api desktop-atoms desktop-shared kernel mobile-api mobile-shared
 │                           　mobile-h5-solid-atoms（mobile 专属设计系统）validation + pages/（页面包）
 │   └── cli-kit / cli-core / cli-plugins ← ops CLI 的框架能力（参数/输出/进程/端口分配）
 ├── apps/blog/              ← ops 命令实现（src/registry.ts 是命令登记表）

@@ -1,4 +1,5 @@
 import { For, Show, type Component } from "solid-js";
+import { Button, Field, Heading, Link, Text, Textarea } from "@blog/desktop-atoms";
 import type { DesktopPageContext } from "@blog/desktop-shared";
 import { route } from "@blog/desktop-shared";
 import { useDesktopTaxonomy } from "./feature";
@@ -18,19 +19,25 @@ export function createDesktopTaxonomyPage(
             <span>管理台</span>
             <strong>技术知识库</strong>
           </a>
-          <a href={adminHref}>返回文章管理</a>
+          <Link href={adminHref}>返回文章管理</Link>
         </header>
         <main id="main">
           <header>
-            <p class="eyebrow">CONTENT WORKSPACE</p>
-            <h1>分类树与发布批次</h1>
-            <p>保存只进入工作区；分析、复核与提交在这里统一完成。</p>
+            <Text tone="accent">CONTENT WORKSPACE</Text>
+            <Heading level={1}>分类树与发布批次</Heading>
+            <Text tone="muted">
+              保存只进入工作区；分析、复核与提交在这里统一完成。
+            </Text>
           </header>
           <Show when={page.message()}>
-            <p role="status">{page.message()}</p>
+            <Text role="status" tone="muted">
+              {page.message()}
+            </Text>
           </Show>
           <Show when={page.error()}>
-            <p role="alert">{page.error()}</p>
+            <Text role="alert" tone="danger">
+              {page.error()}
+            </Text>
           </Show>
           <Show when={state()} fallback={<p>工作区加载中...</p>}>
             {(value) => (
@@ -38,60 +45,46 @@ export function createDesktopTaxonomyPage(
                 <p>
                   版本 {value().version} · {value().articles.length} 篇文章
                 </p>
-                <label for="taxonomy-source">
-                  分类树与标签 JSON
-                  <textarea
-                    id="taxonomy-source"
-                    rows="24"
+                <Field label="分类树与标签 JSON">
+                  <Textarea
+                    rows={24}
                     value={page.source()}
                     onInput={(event) =>
                       page.setSource(event.currentTarget.value)
                     }
                   />
-                </label>
+                </Field>
                 <div class="taxonomy-actions">
-                  <button
-                    type="button"
-                    onClick={page.save}
-                    disabled={page.busy()}
-                  >
+                  <Button onClick={page.save} disabled={page.busy()}>
                     保存到工作区
-                  </button>
-                  <button
-                    type="button"
+                  </Button>
+                  <Button
                     onClick={page.analyze}
                     disabled={page.busy() || page.dirty()}
                   >
                     分析并应用
-                  </button>
-                  <button
-                    type="button"
+                  </Button>
+                  <Button
                     onClick={page.review}
                     disabled={page.busy() || page.dirty()}
                   >
                     复核一次
-                  </button>
-                  <button
-                    type="button"
+                  </Button>
+                  <Button
                     onClick={() => void page.refreshPreview()}
                     disabled={page.busy() || page.dirty()}
                   >
                     刷新预览
-                  </button>
-                  <button
-                    type="button"
+                  </Button>
+                  <Button
                     onClick={page.submit}
                     disabled={page.busy() || page.dirty()}
                   >
                     提交 PR
-                  </button>
-                  <button
-                    type="button"
-                    onClick={page.abandon}
-                    disabled={page.busy()}
-                  >
+                  </Button>
+                  <Button onClick={page.abandon} disabled={page.busy()}>
                     放弃批次
-                  </button>
+                  </Button>
                 </div>
                 <Show when={page.preview()}>
                   {(preview) => (

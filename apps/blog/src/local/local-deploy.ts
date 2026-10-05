@@ -18,7 +18,8 @@ const UNIT_NAME = 'blog-local.service';
 const SERVE_SCRIPT = join('deploy', 'local', 'serve.mjs');
 const LABEL_GONE_TIMEOUT_MS = 15_000;
 const BOOTSTRAP_ATTEMPTS = 3;
-const HEALTH_TIMEOUT_MS = 20_000;
+// product 启动包含内容源同步（github 源可达数十秒），健康验证窗口需覆盖同步时间。
+const HEALTH_TIMEOUT_MS = 60_000;
 
 export type LocalDeployAction = 'install' | 'uninstall';
 

@@ -1,3 +1,4 @@
+import { Heading, Link, Text } from "@blog/desktop-atoms";
 import type { DesktopPageContext } from "@blog/desktop-shared";
 import { route } from "@blog/desktop-shared";
 import "./page.css";
@@ -8,23 +9,23 @@ export function createDesktopEditorGuidePage(context: DesktopPageContext) {
       <main id="main" class="admin-page editor-guide-page">
         <header class="admin-page-head">
           <div>
-            <p class="eyebrow">EDITOR GUIDE</p>
-            <h1>文章编辑器使用指南</h1>
-            <p>先完成正文与元数据，再保存到待提交批次。</p>
+            <Text tone="accent">EDITOR GUIDE</Text>
+            <Heading level={1}>文章编辑器使用指南</Heading>
+            <Text tone="muted">先完成正文与元数据，再保存到待提交批次。</Text>
           </div>
           <div class="actions">
-            <a
-              class="button secondary"
+            <Link
               href={route(context.routes, "desktop-admin-article-new")}
+              variant="cta"
             >
               新建文章
-            </a>
-            <a
-              class="button secondary"
+            </Link>
+            <Link
               href={route(context.routes, "desktop-admin-article-types")}
+              variant="action"
             >
               发布工作台
-            </a>
+            </Link>
           </div>
         </header>
         <section>

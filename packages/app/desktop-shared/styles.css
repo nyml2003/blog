@@ -1,3 +1,5 @@
+@import "@blog/desktop-atoms/styles.css";
+
 /* 换页淡入淡出：浏览器原生跨文档转场（root 交叉淡化），零 JS、渐进增强；
    不支持的浏览器正常跳转，无回归；reduced-motion 下退回瞬切。 */
 @view-transition {

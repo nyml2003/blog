@@ -1,0 +1,145 @@
+/* Desktop atom layer: Link / Button / Text / Heading / Form / Field / controls.
+   Consumes the desktop design tokens defined by @blog/desktop-shared. */
+
+.d-atom-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 9px 15px;
+  text-decoration: none;
+}
+.d-atom-link--inline {
+  min-height: 0;
+  padding: 0;
+  color: var(--blue);
+  text-underline-offset: 3px;
+}
+.d-atom-link--inline:hover,
+.d-atom-link--inline:focus-visible {
+  text-decoration: underline;
+}
+.d-atom-link--action {
+  border-color: var(--border);
+  background: var(--surface);
+  color: var(--ink);
+}
+.d-atom-link--action:hover,
+.d-atom-link--action:focus-visible {
+  border-color: var(--blue);
+  color: var(--blue);
+}
+.d-atom-link--cta {
+  border-color: var(--blue);
+  background: var(--blue);
+  color: #fff;
+}
+.d-atom-link--cta:hover,
+.d-atom-link--cta:focus-visible {
+  border-color: #2444ae;
+  background: #2444ae;
+  color: #fff;
+}
+
+.d-atom-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 9px 15px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.d-atom-button:hover,
+.d-atom-button:focus-visible {
+  border-color: var(--blue);
+  color: var(--blue);
+}
+.d-atom-button--primary {
+  border-color: var(--blue);
+  background: var(--blue);
+  color: #fff;
+}
+.d-atom-button--primary:hover,
+.d-atom-button--primary:focus-visible {
+  border-color: #2444ae;
+  background: #2444ae;
+  color: #fff;
+}
+.d-atom-button--quiet {
+  border-color: transparent;
+  background: transparent;
+}
+.d-atom-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.d-atom-text {
+  margin: 0;
+  line-height: 1.55;
+}
+.d-atom-text--meta {
+  font-size: 13px;
+}
+.d-atom-text--muted {
+  color: var(--muted);
+}
+.d-atom-text--accent {
+  color: var(--blue);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.d-atom-text--danger {
+  color: var(--danger);
+}
+
+.d-atom-heading {
+  margin: 0;
+  line-height: 1.15;
+}
+.d-atom-heading--1 {
+  font-size: 40px;
+}
+.d-atom-heading--2 {
+  font-size: 22px;
+}
+.d-atom-heading--3 {
+  font-size: 17px;
+}
+
+.d-atom-form {
+  display: grid;
+  gap: 18px;
+}
+.d-atom-field {
+  display: grid;
+  gap: 7px;
+  color: #4f5965;
+  font-size: 13px;
+}
+.d-atom-input,
+.d-atom-textarea,
+.d-atom-select {
+  box-sizing: border-box;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 10px 12px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+.d-atom-textarea {
+  resize: vertical;
+}
