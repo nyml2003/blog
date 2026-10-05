@@ -21,7 +21,7 @@ import {
 } from "@fluvient-loom/web";
 import { type Component, createComponent } from "solid-js";
 import { render } from "solid-js/web";
-import { requireMountTarget } from "./shared.ts";
+import { PAGE_MOUNT_ELEMENT_ID, requireMountTarget } from "./shared.ts";
 
 // Mobile 浏览器端口装配：宿主适配器（@fluvient-loom/web 等）只允许在
 // page-kit 内装配（SPEC-ARCH-BOUNDARY-001）；bootstrap 只组合应用声明
@@ -122,10 +122,34 @@ export function mountMobileApplication<Ctx>(
   options.afterMount?.();
 }
 
-/** 移除 app-shell 包注入的预渲染骨架（仅 mobile 世界的挂载流程使用）。 */
+/** 骨架撤除兜底时限：后台标签页的 rAF 会被暂停，超时后直接删壳避免骨架滞留。 */
+const APP_SHELL_REVEAL_FALLBACK_MS = 100;
+
+/**
+ * 移除 app-shell 包注入的预渲染骨架（仅 mobile 世界的挂载流程使用）。
+ *
+ * 壳存在期间 `#app` 是 `visibility:hidden`（仍参与布局）。删壳推迟到双 rAF：
+ * 第一帧强制同步布局，让正文的重布局发生在骨架仍可见的帧内；下一帧再删壳，
+ * 揭幕帧只剩可见性翻转与 paint，避免"骨架消失 → 空白 → 内容闪现"。
+ */
 export function removeMobileAppShell(): void {
-  const shell = document.querySelector<HTMLElement>(
+  const found = document.querySelector<HTMLElement>(
     '[data-loom-app-shell="true"]',
   );
-  shell?.remove();
+  if (found === null) return;
+  // 闭包内不保留上面的空值收窄，绑定成非空常量再使用。
+  const shell = found;
+  let removed = false;
+  const fallback = window.setTimeout(remove, APP_SHELL_REVEAL_FALLBACK_MS);
+  function remove(): void {
+    if (removed) return;
+    removed = true;
+    window.clearTimeout(fallback);
+    shell.remove();
+  }
+  window.requestAnimationFrame(() => {
+    // 强制同步布局：读取挂载点几何属性，确保隐藏态的正文在本帧完成布局。
+    void document.getElementById(PAGE_MOUNT_ELEMENT_ID)?.offsetHeight;
+    window.requestAnimationFrame(remove);
+  });
 }

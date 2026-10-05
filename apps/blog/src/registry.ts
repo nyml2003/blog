@@ -4,6 +4,7 @@ import { runCheck } from './quality/quality-check.ts';
 import { runAdminCredentialCommand } from './admin/admin-auth.ts';
 import { initializeContentRepository } from './content/content-repository.ts';
 import { runDeliveryBuild, runRuntimeMode, type RuntimePorts } from './runtime/runtime.ts';
+import { runLocalDeploy, type LocalDeployPorts } from './local/local-deploy.ts';
 import { runDeployPackage, type DeployPorts } from './delivery/deploy-package.ts';
 import { runDeployInstaller } from './delivery/deploy-installer.ts';
 import { runPackageCheck } from './quality/package-check.ts';
@@ -47,6 +48,15 @@ function runtimePorts(context: CommandContext): RuntimePorts {
 }
 
 function deployPorts(context: CommandContext): DeployPorts {
+  return {
+    process: context.process,
+    fs: context.fs,
+    reporter: context.reporter,
+    root: context.workspace.root,
+  };
+}
+
+function localDeployPorts(context: CommandContext): LocalDeployPorts {
   return {
     process: context.process,
     fs: context.fs,
@@ -143,12 +153,15 @@ export const commandDefinitions: readonly CommandDefinition[] = [
   defineCommand({
     path: ['release'],
     summary: '预检并发布 Script 或 Build tag',
-    description: '检查 main 分支和干净工作树，按发布类型自动递增 patch 版本，预览 tag 后在 --yes 下创建并推送；不会修改服务器。',
+    description: '检查 main 分支和干净工作树（--allow-dirty 跳过后者），按发布类型自动递增 patch 版本，预览 tag 后在 --yes 下创建并推送；不会修改服务器。',
     positionals: [{ name: 'kind', description: '发布类型', model: { kind: 'enum', values: RELEASE_KINDS } }],
-    options: [{ name: 'yes', model: { kind: 'switch' }, description: '确认创建并推送 tag' }],
-    examples: ['ops release script --dry-run', 'ops release build --yes', 'ops release both --yes'],
+    options: [
+      { name: 'yes', model: { kind: 'switch' }, description: '确认创建并推送 tag' },
+      { name: 'allow-dirty', model: { kind: 'switch' }, description: '跳过工作树干净检查（tag 指向 HEAD，未提交改动不会进入发布物）' },
+    ],
+    examples: ['ops release script --dry-run', 'ops release build --yes', 'ops release both --yes --allow-dirty'],
     exitCodes: [{ code: 0, meaning: '预检成功或 tag 已推送' }, { code: 10, meaning: '参数或命令用法错误' }, FAILURE],
-  }, (context, args) => runRelease(args.kind, { process: context.process, reporter: context.reporter, root: context.workspace.root }, { dryRun: context.dryRun, confirmed: args.yes }).then(commandExitResult)),
+  }, (context, args) => runRelease(args.kind, { process: context.process, reporter: context.reporter, root: context.workspace.root }, { dryRun: context.dryRun, confirmed: args.yes, allowDirty: args['allow-dirty'] }).then(commandExitResult)),
   defineCommand({
     path: ['runtime', 'dev'],
     summary: '前端开发栈: Vite + Mock Product API',
@@ -188,6 +201,20 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     ],
     exitCodes: [{ code: 0, meaning: '--dry-run 打印计划（运行中的模式没有 0 退出路径，正常停止只能是 130/143）' }, FAILURE, SIGINT, SIGTERM],
   }, (context, args) => runRuntimeMode(planMode({ mode: 'integration', watch: args.watch, contentSource: args['content-source'], productPort: args['product-port'], dataPort: args['data-port'] }), runtimePorts(context), { dryRun: context.dryRun, json: context.json }).then(commandExitResult)),
+  defineCommand({
+    path: ['local', 'install'],
+    summary: '注册并启动本地常驻服务',
+    description: '生成/复用 ~/.local/state/blog/local-deploy/local.json（0600），端口预检后注册 macOS LaunchAgent 或 Linux systemd 用户单元（入口 deploy/local/serve.mjs，Data(prod SQLite) + Product 同源挂载 dist），最后验证 /healthz。幂等，可重复执行以重启。',
+    examples: ['ops local install'],
+    exitCodes: [{ code: 0, meaning: '安装成功且健康检查通过' }, FAILURE],
+  }, (context) => runLocalDeploy(localDeployPorts(context), 'install', context.dryRun).then(commandExitResult)),
+  defineCommand({
+    path: ['local', 'uninstall'],
+    summary: '停止并移除本地常驻服务',
+    description: '移除系统单元并停止服务；local.json 配置与 SQLite 数据保留。',
+    examples: ['ops local uninstall'],
+    exitCodes: [{ code: 0, meaning: '卸载成功' }, FAILURE],
+  }, (context) => runLocalDeploy(localDeployPorts(context), 'uninstall', context.dryRun).then(commandExitResult)),
 ];
 
 export const groupDefinitions = [
@@ -203,6 +230,13 @@ export const groupDefinitions = [
     description: '三种运行模式：dev 只有 Vite + Mock（无真实后端，页面入口是 Vite 地址）；backend 只有 Product + Data（真实后端，无页面入口，API 基址是 Product 地址）；integration 先构建前端再由 Product 挂载 web/dist（真实后端，页面入口是 Product 地址）。端口以实际绑定结果为准，Ctrl-C 以 130 退出。',
     order: 30,
     workflow: '本地运行与联调',
+  }),
+  defineGroup({
+    path: ['local'],
+    summary: '本地常驻',
+    description: '把打包产物注册为系统常驻服务（macOS LaunchAgent / Linux systemd 用户单元）：登录自启、崩溃自动重启，入口是 deploy/local/serve.mjs。与 runtime 组的前台栈互补，配置见 deploy/local/README.md。',
+    order: 32,
+    workflow: '本地常驻部署',
   }),
   defineGroup({ path: ['admin'], summary: '管理鉴权', description: '初始化单管理员凭证并维护一次性恢复码。', order: 35, workflow: '管理端凭证运维' }),
   defineGroup({ path: ['content'], summary: '内容仓库', description: '初始化和维护 GitHub 内容真源。', order: 40, workflow: '内容仓库运维' }),

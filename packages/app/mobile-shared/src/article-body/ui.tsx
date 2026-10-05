@@ -25,13 +25,13 @@ export function ArticleBody(props: ArticleBodyProps) {
     session.focus(0);
     onCleanup(() => session.clear());
   });
+  // innerHTML 只由上面的 effect 写入：若 JSX prop 与 effect 双写，长文会在同一帧被解析两遍。
   return (
     <div
       ref={(element) => {
         root = element;
       }}
       class="article-body"
-      innerHTML={props.html}
     />
   );
 }

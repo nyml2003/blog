@@ -14,6 +14,8 @@ export interface ReleasePorts {
 interface ReleaseOptions {
   dryRun: boolean;
   confirmed: boolean;
+  /** --allow-dirty：跳过工作树干净检查；tag 仍指向 HEAD，未提交改动不会进入发布物。 */
+  allowDirty: boolean;
 }
 
 interface Version {
@@ -69,12 +71,19 @@ async function checkCommand(ports: ReleasePorts, args: string[], failure: string
   return result.stdout.trim();
 }
 
-async function buildPlan(kind: ReleaseKind, ports: ReleasePorts): Promise<ReleasePlan | undefined> {
+async function buildPlan(
+  kind: ReleaseKind,
+  ports: ReleasePorts,
+  allowDirty: boolean,
+): Promise<ReleasePlan | undefined> {
   const status = await checkCommand(ports, ['status', '--porcelain'], '无法检查工作树');
   if (status === undefined) return undefined;
-  if (status.length > 0) {
-    ports.reporter.fail('工作树不干净，请先提交或暂存所有改动');
+  if (status.length > 0 && !allowDirty) {
+    ports.reporter.fail('工作树不干净，请先提交或暂存所有改动，或使用 --allow-dirty 跳过检查');
     return undefined;
+  }
+  if (status.length > 0) {
+    ports.reporter.info('工作树不干净，已按 --allow-dirty 继续（tag 指向 HEAD，未提交改动不会进入发布物）');
   }
 
   const branch = await checkCommand(ports, ['branch', '--show-current'], '无法确定当前分支');
@@ -123,7 +132,7 @@ function workflowUrls(remote: string, kind: ReleaseKind): string[] {
 
 export async function runRelease(kind: ReleaseKind, ports: ReleasePorts, options: ReleaseOptions): Promise<number> {
   ports.reporter.section(options.dryRun ? 'release dry-run' : 'release');
-  const plan = await buildPlan(kind, ports);
+  const plan = await buildPlan(kind, ports, options.allowDirty);
   if (!plan) return EXIT_FAILURE;
 
   ports.reporter.info(`远程仓库: ${plan.remote}`);

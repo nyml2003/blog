@@ -30,7 +30,7 @@ function world(kind: ReleaseKind, options: { dirty?: string; tags?: string } = {
 
 test('release dry-run computes independent next patch tags without writing', async () => {
   const h = world('both', { tags: 'script-v0.1.1\nbuild-v0.3.4\n' });
-  const code = await runRelease(h.kind, h.ports, { dryRun: true, confirmed: false });
+  const code = await runRelease(h.kind, h.ports, { dryRun: true, confirmed: false, allowDirty: false });
   assert.equal(code, 0);
   assert.match(h.lines.join('\n'), /script-v0\.1\.2, build-v0\.3\.5/);
   assert.equal(h.calls.some(({ args }) => args[0] === 'push' || args[0] === 'tag' && args[1] !== '--list'), false);
@@ -38,15 +38,26 @@ test('release dry-run computes independent next patch tags without writing', asy
 
 test('release refuses a dirty worktree before checking tags', async () => {
   const h = world('script', { dirty: ' M apps/blog/src/release/release.ts\n' });
-  const code = await runRelease(h.kind, h.ports, { dryRun: false, confirmed: true });
+  const code = await runRelease(h.kind, h.ports, { dryRun: false, confirmed: true, allowDirty: false });
   assert.equal(code, 20);
   assert.match(h.lines.join('\n'), /工作树不干净/);
   assert.equal(h.calls.some(({ args }) => args[0] === 'push'), false);
 });
 
+test('release --allow-dirty proceeds on a dirty worktree and tags HEAD', async () => {
+  const h = world('script', { dirty: ' M apps/blog/src/release/release.ts\n', tags: 'script-v0.1.1\n' });
+  const code = await runRelease(h.kind, h.ports, { dryRun: false, confirmed: true, allowDirty: true });
+  assert.equal(code, 0);
+  assert.match(h.lines.join('\n'), /--allow-dirty 继续/);
+  assert.deepEqual(h.calls.filter(({ args }) => args[0] === 'tag' && args[1] !== '--list').map(({ args }) => args.slice(0, 3)), [
+    ['tag', 'script-v0.1.2', 'abc123'],
+  ]);
+  assert.deepEqual(h.calls.at(-1)?.args, ['push', 'origin', 'script-v0.1.2']);
+});
+
 test('release requires explicit confirmation before creating or pushing tags', async () => {
   const h = world('build');
-  const code = await runRelease(h.kind, h.ports, { dryRun: false, confirmed: false });
+  const code = await runRelease(h.kind, h.ports, { dryRun: false, confirmed: false, allowDirty: false });
   assert.equal(code, 10);
   assert.match(h.lines.join('\n'), /--yes/);
   assert.equal(h.calls.some(({ args }) => args[0] === 'push' || args[0] === 'tag' && args[1] !== '--list'), false);
@@ -54,7 +65,7 @@ test('release requires explicit confirmation before creating or pushing tags', a
 
 test('confirmed release creates then pushes all planned tags', async () => {
   const h = world('both');
-  const code = await runRelease(h.kind, h.ports, { dryRun: false, confirmed: true });
+  const code = await runRelease(h.kind, h.ports, { dryRun: false, confirmed: true, allowDirty: false });
   assert.equal(code, 0);
   assert.deepEqual(h.calls.filter(({ args }) => args[0] === 'tag' && args[1] !== '--list').map(({ args }) => args.slice(0, 3)), [
     ['tag', 'script-v0.1.0', 'abc123'],

@@ -151,7 +151,7 @@ pages.registry.ts（页面登记表）
 
 ### apps/blog —— ops 命令实现
 
-`apps/blog/src/registry.ts` 是命令登记表（命令面以 `ops help` 为准）；各命令域模块位于 `admin/`、`content/`、`delivery/`、`e2e/`、`quality/`、`release/`、`runtime/`。质量门禁编排于 `quality/quality-check.ts`，架构扫描仅剩 Cargo manifest 依赖禁令（`quality/architecture.ts`）。`apps/blog-deploy/` 提供部署器与安装器。
+`apps/blog/src/registry.ts` 是命令登记表（命令面以 `ops help` 为准）；各命令域模块位于 `admin/`、`content/`、`delivery/`、`e2e/`、`local/`、`quality/`、`release/`、`runtime/`。质量门禁编排于 `quality/quality-check.ts`，架构扫描仅剩 Cargo manifest 依赖禁令（`quality/architecture.ts`）。`apps/blog-deploy/` 提供部署器与安装器。
 
 ## 当前布局状态
 

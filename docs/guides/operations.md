@@ -42,6 +42,7 @@ BLOG_CONTENT_REPO=owner/repository BLOG_CONTENT_TOKEN=... ops content repository
 | `ops runtime dev --scenario <NAME> --web-port <PORT> --mock-port <PORT>` | Vite dev + Mock Product API | Mock（`default`/`empty`/`slow`/`server-error`/`malformed-response`） | Vite 实际绑定地址 |
 | `ops runtime backend --content-source <fixture\|github> --data <mock\|test\|prod> [--database-path <PATH>] --product-port <PORT> --data-port <PORT>` | Rust Product API-only + Rust Data | Data 为 `mock`（内存夹具）、`test`（临时 SQLite）或 `prod`（显式路径 SQLite，必须提供 `--database-path`，自动迁移、不加载 seed、退出不删除） | 无，API 基址即 Product 地址 |
 | `ops runtime integration --content-source <fixture\|github> --product-port <PORT> --data-port <PORT> [--watch]` | 先构建 `src/frontend/dist`，再启动 Rust Product（挂载 `src/frontend/dist`）+ Rust Data(test) | Data 固定为 `test`；内容来源单独显式选择 | Product 地址，页面与 `/api` 同源 |
+| `ops local install` | 注册并启动本地常驻服务（macOS LaunchAgent / Linux systemd 用户单元，守护本体 `deploy/local/serve.mjs`，配置 `~/.local/state/blog/local-deploy/local.json`）；幂等，运行中执行即重启 | Data(prod) + 打包产物，`ops local uninstall` 卸载（保留配置与数据） | Product 地址，页面与 `/api` 同源 |
 | `ops delivery build` | 无（只构建 `src/frontend/dist` 与 Rust Product/Data/Mock binary） | — | — |
 | `ops e2e --mode integration` | Ops 启动隔离的 integration 栈并在同一进程内执行 Playwright | fixture + Data(test) | Product 页面与 `/api` 同源 |
 | `ops e2e --mode dev --scenario <NAME>` | Ops 启动隔离的 Vite + Mock 栈并在同一进程内执行 Playwright | Mock 命名场景 | Vite 实际绑定地址 |
@@ -69,7 +70,7 @@ BLOG_CONTENT_REPO=owner/repository BLOG_CONTENT_TOKEN=... ops content repository
 
 ## 发布
 
-`ops release` 是唯一的发布入口。它只允许在 `main` 分支、干净工作树上运行，并按发布类型读取已有 tag 后自动递增 patch 版本：`script` 和 `build` 各自维护版本序列，`both` 使用同一提交但不要求两个版本号相同。
+`ops release` 是唯一的发布入口。它只允许在 `main` 分支上运行；默认要求干净工作树，`--allow-dirty` 可跳过该检查（tag 仍指向当前 HEAD，未提交改动不会进入发布物）。按发布类型读取已有 tag 后自动递增 patch 版本：`script` 和 `build` 各自维护版本序列，`both` 使用同一提交但不要求两个版本号相同。
 
 先用 dry-run 查看提交、远程仓库和将创建的 tag：
 

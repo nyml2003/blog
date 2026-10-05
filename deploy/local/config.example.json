@@ -1,0 +1,12 @@
+{
+  "repoRoot": "/absolute/path/to/blog",
+  "stateDir": "~/.local/state/blog",
+  "productPort": 8080,
+  "dataPort": 8081,
+  "contentSource": "fixture",
+  "contentRepo": "",
+  "contentToken": "",
+  "dataBin": null,
+  "productBin": null,
+  "webDir": null
+}
