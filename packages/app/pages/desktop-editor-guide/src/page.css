@@ -1,0 +1,16 @@
+.editor-guide-page {
+  padding-bottom: 40px;
+}
+.editor-guide-page section {
+  max-width: 780px;
+  padding: 22px 0;
+  border-bottom: 1px solid var(--border);
+}
+.editor-guide-page h2 {
+  margin: 0 0 10px;
+  font-size: 22px;
+}
+.editor-guide-page li,
+.editor-guide-page p {
+  color: var(--muted);
+}

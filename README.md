@@ -13,7 +13,7 @@
 
 ## 五分钟启动
 
-需要已启用 Flake 的 Nix；推荐同时使用 `direnv`。首次进入仓库：
+需要已启用 Flake 的 Nix（只提供 Rust 工具链与 `ops` wrapper）；Node 与 pnpm 来自用户环境，推荐用 nvm 管理 Node 24，pnpm 版本见根 `package.json`。推荐同时使用 `direnv`。首次进入仓库：
 
 ```sh
 cd <仓库路径>            # 本机检出位置，如 ~/monorepo/blog

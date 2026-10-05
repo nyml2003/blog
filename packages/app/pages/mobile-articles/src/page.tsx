@@ -9,6 +9,7 @@ import { type Component, For, Show } from "solid-js";
 import type { CategorySelection } from "./category.ts";
 import { rootCategoryName, useMobileArticles } from "./model.ts";
 import { mobileArticlesPage } from "./definition.ts";
+import "./page.css";
 import { useMobileSearch } from "@blog/mobile-shared";
 import type { CategoryShelf, MobileApi } from "@blog/mobile-api";
 import type { MobileRouteContext } from "@blog/mobile-shared";

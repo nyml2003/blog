@@ -2,6 +2,7 @@
   "name": "blog-workspace",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@11.26.0",
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "pnpm -r run test",

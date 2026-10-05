@@ -8,6 +8,7 @@ import { displayDate, routeWithQuery } from "@blog/mobile-shared";
 import { Heading, Link, StateMessage, Tag, Text } from "@blog/mobile-shared";
 import { ArticleBody } from "@blog/mobile-shared";
 import { StandardNavigator } from "@blog/mobile-shared";
+import "./page.css";
 
 type MobileAdminPreviewInput = MobilePageContext & {
   readonly api: MobileApi;

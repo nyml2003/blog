@@ -1,0 +1,23 @@
+.desktop-taxonomy > main textarea {
+  box-sizing: border-box;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 10px 12px;
+  background: var(--surface);
+  color: var(--ink);
+}
+.desktop-taxonomy > main textarea {
+  min-height: 520px;
+  margin-top: 8px;
+  resize: vertical;
+  font:
+    13px / 1.55 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    monospace;
+}
+.desktop-taxonomy .taxonomy-actions button {
+  text-decoration: none;
+}

@@ -1,0 +1,74 @@
+.editor-page textarea,
+.editor-page input {
+  box-sizing: border-box;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 10px 12px;
+  background: var(--surface);
+  color: var(--ink);
+}
+.editor-page form {
+  display: grid;
+  gap: 18px;
+}
+.editor-page form > label {
+  display: grid;
+  gap: 7px;
+  color: #4f5965;
+  font-size: 13px;
+}
+.editor-page form > label:nth-of-type(-n + 2) {
+  max-width: 760px;
+}
+.editor-page .editor-source {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+  gap: 22px;
+  margin-top: 4px;
+}
+.editor-codemirror {
+  min-height: 520px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: #fff;
+}
+.editor-codemirror .cm-editor {
+  min-height: 520px;
+}
+.html-diagnostics {
+  padding: 14px 16px;
+  border-top: 2px solid var(--ink);
+  color: var(--muted);
+  font-size: 13px;
+}
+.html-diagnostics p {
+  margin: 0 0 12px;
+  color: var(--ink);
+  font-weight: 700;
+}
+.html-diagnostics ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.html-diagnostics li {
+  line-height: 1.5;
+}
+.html-diagnostics button {
+  min-height: auto;
+  padding: 0;
+  border: 0;
+  color: var(--blue);
+  text-decoration: underline;
+}
+.editor-page {
+  padding-bottom: 40px;
+}
+@media (max-width: 850px) {
+  .editor-page .editor-source {
+    grid-template-columns: 1fr;
+  }
+}

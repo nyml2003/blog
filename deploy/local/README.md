@@ -68,5 +68,6 @@ BLOG_ADMIN_ENTRY=true pnpm -C src/frontend run build
 ## 已知边界
 
 - 产物更新（改了代码/dist）需重新 `ops delivery build`，然后重跑 `ops local install` 重启栈；守护不监听文件变化。
-- node 路径在安装时钉死在单元文件里；nix profile 升级或更换 node 后重跑 `ops local install`。
+- node 路径在安装时钉死在单元文件里（取运行 `ops local install` 时的全局 Node，如 nvm 当前默认版本）；nvm 切换/升级默认 node 后重跑 `ops local install`。
+- GitHub 内容源经代理访问时：systemd 用户单元不继承登录 shell 的 `HTTP(S)_PROXY`，需在 systemd 用户环境提供（如 `~/.config/environment.d/` 或 `systemctl --user set-environment`），否则启动同步报 `CONTENT_GITHUB_UNAVAILABLE`。
 - 手机等局域网设备无法访问（二进制强制 loopback）；对外服务走 `deploy/README.md` 的服务器链路。

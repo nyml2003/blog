@@ -10,6 +10,7 @@ import {
 } from "@fluvient-loom/port";
 import { createDataTask } from "@fluvient-loom/query";
 import { type Component, onMount, Show } from "solid-js";
+import "./page.css";
 import { mobileNavigationItems } from "@blog/mobile-shared";
 import { mobileSettingsOptions } from "./model.ts";
 import { useMobileSettings } from "./page-model.ts";

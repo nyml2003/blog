@@ -1,5 +1,6 @@
 import type { DesktopPageContext } from "@blog/desktop-shared";
 import { route } from "@blog/desktop-shared";
+import "./page.css";
 
 export function createDesktopEditorGuidePage(context: DesktopPageContext) {
   return function DesktopEditorGuidePage() {

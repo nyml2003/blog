@@ -10,7 +10,7 @@ import {
 } from "@fluvient-loom/page-kit/desktop";
 import type { DesktopPageContext } from "@blog/desktop-shared";
 import { desktopPageLoaders } from "../pages.registry";
-import "../styles/desktop.css";
+import "@blog/desktop-shared/styles.css";
 import siteRoutesManifest from "../site-routes.json";
 
 // ── 环境装配（page-kit 唯一调用点）────────────────────────────────────

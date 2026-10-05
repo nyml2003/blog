@@ -13,9 +13,9 @@
     in {
       devShells = forAllSystems (pkgs:
         let
+        # Node 与 pnpm 由用户环境提供（如 nvm），Flake 只提供 Rust 工具链与 ops wrapper。
         opsCommand = pkgs.writeShellApplication {
           name = "ops";
-          runtimeInputs = with pkgs; [ nodejs_24 ];
           text = ''
             set -euo pipefail
             workspace_root="''${DIRENV_DIR-}"
@@ -49,8 +49,6 @@
         in {
         default = pkgs.mkShell {
           packages = with pkgs; [
-            nodejs_24
-            pnpm
             rustc
             cargo
             rustfmt

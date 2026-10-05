@@ -310,9 +310,15 @@ fn content_type_of(relative: &str, is_page: bool) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     fn static_files() -> StaticFiles {
-        let root = std::env::temp_dir().join(format!("product-static-{}", std::process::id()));
+        static NEXT_ROOT: AtomicUsize = AtomicUsize::new(0);
+        let root = std::env::temp_dir().join(format!(
+            "product-static-{}-{}",
+            std::process::id(),
+            NEXT_ROOT.fetch_add(1, Ordering::Relaxed)
+        ));
         let _ = std::fs::remove_dir_all(&root);
         std::fs::create_dir_all(root.join("assets")).unwrap();
         for relative in [

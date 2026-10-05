@@ -19,7 +19,9 @@ import {
   resolveCategoryShelfUrls,
 } from "./mobile-prefetch-plan";
 import { mobilePageLoaders } from "../pages.registry";
-import "../styles/mobile.css";
+import "@blog/mobile-h5-solid-atoms/styles.css";
+import "@fluvient-loom/app-shell/styles.css";
+import "@blog/mobile-shared/styles.css";
 import siteRoutesManifest from "../site-routes.json";
 
 // ── 环境装配（page-kit 唯一调用点）────────────────────────────────────

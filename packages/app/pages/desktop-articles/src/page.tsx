@@ -6,6 +6,7 @@ import { useDesktopSearch } from "@blog/desktop-shared";
 import { siteRoute, siteRouteWithQuery } from "@fluvient-loom/page-kit";
 import type { NavigationPort } from "@fluvient-loom/port";
 import { useDesktopArticles } from "./feature.ts";
+import "./page.css";
 import { desktopArticlesPage } from "./definition.ts";
 
 export interface DesktopArticlesInput {

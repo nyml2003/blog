@@ -1,0 +1,78 @@
+/* C Mobile shared business components: ArticleList and ArticleCard.
+   Depends on tokens.css and base.css. No page rhythm or shelf layout lives
+   here; pages compose these primitives. */
+.article-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  border-top: 2px solid var(--ink);
+}
+.article-card {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+  min-height: 128px;
+  padding: 14px 0 12px;
+  border-bottom: 1px solid var(--border);
+  contain: layout style;
+  transition: background-color 160ms ease;
+}
+.article-card:active {
+  background: var(--surface-pressed);
+}
+.article-card-type {
+  margin: 0;
+  color: var(--teal);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+}
+.article-card h3 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 720;
+  line-height: 1.42;
+  overflow-wrap: anywhere;
+}
+.article-card-summary {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.48;
+}
+.article-card-summary.is-empty {
+  color: var(--foreground-empty);
+}
+.article-card-meta {
+  display: flex;
+  align-items: end;
+  gap: 6px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+.article-card-meta time {
+  margin-left: auto;
+  font-family: ui-monospace, monospace;
+  white-space: nowrap;
+}
+.article-card-tags {
+  display: flex;
+  gap: 5px;
+  min-width: 0;
+  overflow: hidden;
+}
+.article-card-tags span {
+  max-width: 8em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

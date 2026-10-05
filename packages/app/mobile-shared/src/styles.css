@@ -1,2 +1,9 @@
+@import "./ui/styles/tokens.css";
+@import "./ui/styles/base.css";
+@import "./ui/styles/shell.css";
+@import "./ui/styles/components.css";
+@import "./ui/styles/reading.css";
+@import "./ui/styles/article-body.css";
+@import "./ui/styles/pages.css";
 @import "./ui/styles/themes.css";
 @import "./ui/styles/molecules.css";

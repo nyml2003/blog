@@ -6,6 +6,7 @@ import { createDataResource } from "@fluvient-loom/query";
 import { type DeepReadonly } from "@fluvient/core";
 import type { HtmlInspection } from "@blog/validation";
 import { inspectHtml } from "@blog/validation";
+import "./page.css";
 import {
   createBrowserEditorDraftStorage,
   clearEditorSessionDraft,

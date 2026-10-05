@@ -185,7 +185,7 @@ test("platform main entries mount pages and mobile imports CSS once", () => {
     "utf8",
   );
   assert.match(desktopMain, /mountDesktopApplication/);
-  assert.match(desktopMain, /desktop\.css/);
+  assert.match(desktopMain, /desktop-shared\/styles\.css/);
   assert.doesNotMatch(desktopMain, /getElementById\("app"\)/);
 
   const mobileMain = readFileSync(
@@ -193,7 +193,7 @@ test("platform main entries mount pages and mobile imports CSS once", () => {
     "utf8",
   );
   assert.match(mobileMain, /mountMobileApplication/);
-  assert.match(mobileMain, /mobile\.css/);
+  assert.match(mobileMain, /mobile-shared\/styles\.css/);
   assert.doesNotMatch(mobileMain, /getElementById\("app"\)/);
 
   // 唯一真相：入口不枚举页面——id 字面量与页面包 import 只能出现在
@@ -205,25 +205,36 @@ test("platform main entries mount pages and mobile imports CSS once", () => {
   assert.doesNotMatch(mobileMain, /@blog\/page-/);
   assert.doesNotMatch(mobileMain, /"mobile-[a-z-]+"/);
 
-  const mobileStyles = readFileSync(
-    resolve(frontendRoot, "styles/mobile.css"),
+  assert.deepEqual(mobileMain.match(/^import ".*styles\.css";$/gm), [
+    'import "@blog/mobile-h5-solid-atoms/styles.css";',
+    'import "@fluvient-loom/app-shell/styles.css";',
+    'import "@blog/mobile-shared/styles.css";',
+  ]);
+
+  // mobile-shared/styles.css = 共享模块聚合 @import 清单；契约锁定集合与顺序，
+  // 页面私有样式由各页面包自己的 page.css 承担。
+  const sharedMobileStyles = readFileSync(
+    resolve(
+      frontendRoot,
+      "..",
+      "..",
+      "packages",
+      "app",
+      "mobile-shared",
+      "src",
+      "styles.css",
+    ),
     "utf8",
   );
-  // mobile.css = 聚合 @import 清单 + 少量全局规则（如换页转场）；
-  // 契约锁定导入的集合与顺序，不冻结文件其余内容。
-  assert.deepEqual(mobileStyles.match(/^@import .*$/gm), [
-    '@import "@blog/mobile-h5-solid-atoms/styles.css";',
-    '@import "@fluvient-loom/app-shell/styles.css";',
-    '@import "./tokens.css";',
-    '@import "./base.css";',
-    '@import "./shell.css";',
-    '@import "./layout.css";',
-    '@import "./components.css";',
-    '@import "./shelf.css";',
-    '@import "./detail.css";',
-    '@import "./article-body.css";',
-    '@import "./browse.css";',
-    '@import "./pages.css";',
-    '@import "@blog/mobile-shared/styles.css";',
+  assert.deepEqual(sharedMobileStyles.match(/^@import .*$/gm), [
+    '@import "./ui/styles/tokens.css";',
+    '@import "./ui/styles/base.css";',
+    '@import "./ui/styles/shell.css";',
+    '@import "./ui/styles/components.css";',
+    '@import "./ui/styles/reading.css";',
+    '@import "./ui/styles/article-body.css";',
+    '@import "./ui/styles/pages.css";',
+    '@import "./ui/styles/themes.css";',
+    '@import "./ui/styles/molecules.css";',
   ]);
 });

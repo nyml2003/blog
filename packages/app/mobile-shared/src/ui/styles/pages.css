@@ -1,0 +1,37 @@
+/* C Mobile shared page rhythm: heading and eyebrow roles used by more than
+   one page. Page-local rhythm lives in the page package's page.css. */
+.page-heading {
+  margin-bottom: 28px;
+}
+.page-heading .m-atom-text--accent {
+  display: block;
+  margin-bottom: 9px;
+}
+.page-heading .m-atom-heading--page {
+  margin-bottom: 11px;
+  font-size: 32px;
+  line-height: 1.16;
+}
+.page-heading .m-atom-text--muted {
+  font-size: 14px;
+  line-height: 1.55;
+}
+/* Eyebrow is a shared text role across the pages. STYLE-INVENTORY targets it
+   at the `Text` atom; the rule stays here until that consumption migration. */
+.eyebrow {
+  margin: 0 0 9px;
+  color: var(--blue);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+/* Page title appearance stays a page rule until the Heading atom consumption
+   migration replaces it with a size variant. See reading.css for the paired
+   `.detail-header h1` decision. */
+.page-heading h1 {
+  margin: 0 0 11px;
+  font-size: 32px;
+  line-height: 1.16;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}

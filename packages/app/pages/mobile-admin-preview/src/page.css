@@ -1,0 +1,7 @@
+.mobile-preview-page {
+  width: min(375px, 100%);
+  min-height: 100svh;
+  margin: 0 auto;
+  overflow-x: hidden;
+  box-shadow: 0 0 0 1px var(--border);
+}

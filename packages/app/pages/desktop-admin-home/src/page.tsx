@@ -2,6 +2,7 @@ import { For, Show, type Component } from "solid-js";
 import type { DesktopPageContext } from "@blog/desktop-shared";
 import { route, routeWithQuery } from "@blog/desktop-shared";
 import { useDesktopAdminHome } from "./feature";
+import "./page.css";
 
 export function createDesktopAdminHomePage(
   input: DesktopPageContext,

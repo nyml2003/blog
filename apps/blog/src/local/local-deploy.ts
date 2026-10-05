@@ -59,10 +59,9 @@ async function run(ports: LocalDeployPorts, command: string, args: readonly stri
   return ports.process.run(command, [...args], ports.root);
 }
 
-// 单元文件要钉住绝对路径；优先 nix profile 的稳定符号链接，避免 flake 更新后 store 路径漂移。
-async function resolveNodePath(ports: LocalDeployPorts): Promise<string> {
-  const nixProfileNode = join(homedir(), '.nix-profile', 'bin', 'node');
-  if (await ports.fs.exists(nixProfileNode)) return nixProfileNode;
+// 单元文件要钉住绝对路径；node 来自用户环境（如 nvm），取运行 ops 的 node，
+// nvm 切换/升级默认版本后需重跑 ops local install。
+function resolveNodePath(): string {
   return process.execPath;
 }
 
@@ -306,8 +305,8 @@ export async function runLocalDeploy(ports: LocalDeployPorts, action: LocalDeplo
   if (config === null) return EXIT_FAILURE;
   const uid = process.getuid();
   if (!await assertForeignPortsFree(ports, config, await ownServiceRunning(ports, uid))) return EXIT_FAILURE;
-  const nodePath = await resolveNodePath(ports);
-  ports.reporter.info(`node: ${nodePath}（node 升级/更换后需重跑 ops local install 重新钉住路径）`);
+  const nodePath = resolveNodePath();
+  ports.reporter.info(`node: ${nodePath}（nvm 切换/升级默认 node 后需重跑 ops local install 重新钉住路径）`);
   const installed = process.platform === 'darwin'
     ? await installDarwin(ports, uid, nodePath, servePath, config)
     : await installLinux(ports, nodePath, servePath);

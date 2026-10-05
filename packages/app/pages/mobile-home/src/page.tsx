@@ -7,6 +7,7 @@ import { ArrowRight } from "lucide-solid";
 import type { Component } from "solid-js";
 import { For, Show } from "solid-js";
 import { useMobileHome } from "./feature.ts";
+import "./page.css";
 import type { MobileApi } from "@blog/mobile-api";
 import type { MobileRouteContext } from "@blog/mobile-shared";
 import { route } from "@blog/mobile-shared";

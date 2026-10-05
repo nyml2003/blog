@@ -2,6 +2,7 @@ import { For, Show, type Component } from "solid-js";
 import type { DesktopPageContext } from "@blog/desktop-shared";
 import { route } from "@blog/desktop-shared";
 import { useDesktopTaxonomy } from "./feature";
+import "./page.css";
 
 export function createDesktopTaxonomyPage(
   input: DesktopPageContext,
