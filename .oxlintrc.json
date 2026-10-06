@@ -31,6 +31,15 @@
       "rules": {
         "fluvient/no-node-imports": "error"
       }
+    },
+    {
+      "files": [
+        "packages/app/pages/**/*.ts",
+        "packages/app/pages/**/*.tsx"
+      ],
+      "rules": {
+        "fluvient/no-platform-globals": "error"
+      }
     }
   ]
 }

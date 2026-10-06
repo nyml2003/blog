@@ -6,9 +6,20 @@
  *   whose explicit return type is `Promise<void>` is allowed: there is no result to consume.
  * - `no-node-imports`: command code must not import host APIs (`node:*`) directly; host
  *   capabilities arrive through ports (process/fs/path/hash/...).
+ * - `no-platform-globals`: no direct platform-global access in the scopes where the rule is
+ *   enabled (e.g. page packages); host capabilities must arrive through injected ports.
  */
 
 const VOID_TYPE = 'TSVoidKeyword';
+
+const PLATFORM_GLOBALS = new Set([
+  'window',
+  'document',
+  'globalThis',
+  'localStorage',
+  'sessionStorage',
+  'navigator',
+]);
 
 function isPromiseVoidType(typeNode) {
   if (!typeNode || typeNode.type !== 'TSTypeReference') return false;
@@ -29,6 +40,72 @@ function walk(node, visit) {
     } else {
       walk(value, visit);
     }
+  }
+}
+
+function walkWithAncestors(node, visit, ancestors = []) {
+  if (!node || typeof node !== 'object') return;
+  if (typeof node.type !== 'string') return;
+  visit(node, ancestors);
+  const next = [...ancestors, node];
+  for (const key of Object.keys(node)) {
+    if (key === 'parent') continue;
+    const value = node[key];
+    if (Array.isArray(value)) {
+      for (const item of value) walkWithAncestors(item, visit, next);
+    } else {
+      walkWithAncestors(value, visit, next);
+    }
+  }
+}
+
+/** 判断 Identifier 是否处在绑定/键位置（那里不是平台全局引用）。 */
+function isNonReferencePosition(node, ancestors) {
+  const parent = ancestors[ancestors.length - 1];
+  const grandparent = ancestors[ancestors.length - 2];
+  if (!parent) return false;
+  switch (parent.type) {
+    case 'MemberExpression':
+      return parent.property === node && parent.computed !== true;
+    case 'Property':
+      if (parent.key === node && parent.computed !== true && parent.shorthand !== true) return true;
+      // 解构绑定 `const { document } = input` 是取注入端口，不是全局引用。
+      return parent.shorthand === true && grandparent !== undefined && grandparent.type === 'ObjectPattern';
+    case 'PropertyDefinition':
+    case 'MethodDefinition':
+      return parent.key === node && parent.computed !== true;
+    case 'TSPropertySignature':
+    case 'TSMethodSignature':
+    case 'TSEnumMember':
+      return parent.key === node && parent.computed !== true;
+    case 'TSInterfaceDeclaration':
+    case 'TSTypeAliasDeclaration':
+    case 'TSEnumDeclaration':
+    case 'TSModuleDeclaration':
+      return parent.id === node;
+    case 'VariableDeclarator':
+      return parent.id === node;
+    case 'FunctionDeclaration':
+    case 'FunctionExpression':
+    case 'ArrowFunctionExpression':
+      return parent.id === node || (Array.isArray(parent.params) && parent.params.includes(node));
+    case 'ClassDeclaration':
+    case 'ClassExpression':
+      return parent.id === node;
+    case 'LabeledStatement':
+    case 'BreakStatement':
+    case 'ContinueStatement':
+      return parent.label === node;
+    case 'ImportSpecifier':
+    case 'ImportDefaultSpecifier':
+    case 'ImportNamespaceSpecifier':
+      return parent.local === node;
+    case 'TSQualifiedName':
+    case 'TSTypeQuery':
+    case 'TSTypeReference':
+      return true;
+    default:
+      return false;
   }
 }
 
@@ -100,6 +177,33 @@ export default {
           ExportAllDeclaration: report,
           ImportExpression(node) {
             if (node.source && node.source.type === 'Literal') report(node);
+          },
+        };
+      },
+    },
+    'no-platform-globals': {
+      meta: {
+        type: 'problem',
+        docs: {
+          description:
+            'Disallow direct platform-global access where enabled (page packages): use injected ports instead.',
+        },
+        messages: {
+          platformGlobal: '禁止直接访问平台全局 {{name}}；宿主能力应通过注入的端口取用。',
+        },
+      },
+      create(context) {
+        return {
+          Program(node) {
+            walkWithAncestors(node, (child, ancestors) => {
+              if (child.type !== 'Identifier' || !PLATFORM_GLOBALS.has(child.name)) return;
+              if (isNonReferencePosition(child, ancestors)) return;
+              context.report({
+                node: child,
+                messageId: 'platformGlobal',
+                data: { name: child.name },
+              });
+            });
           },
         };
       },

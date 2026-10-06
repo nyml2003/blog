@@ -6,6 +6,7 @@ import type { ResourceHandle } from "@fluvient/core";
 
 export interface WebHistoryLike {
   readonly state: unknown;
+  readonly length: number;
   pushState(state: unknown, unused: string, href: string): void;
   replaceState(state: unknown, unused: string, href: string): void;
   back(): void;
@@ -14,6 +15,8 @@ export interface WebHistoryLike {
 export interface WebLocationLike {
   readonly pathname: string;
   readonly search: string;
+  readonly origin: string;
+  assign(href: string): void;
 }
 
 export interface WebEventTargetLike {
@@ -29,6 +32,8 @@ export interface WebNavigationOptions {
   readonly location?: WebLocationLike;
   /** The window-ish event surface carrying popstate / pagehide. */
   readonly events?: WebEventTargetLike;
+  /** document.referrer；不注入时读全局（浏览器内使用）。 */
+  readonly referrer?: string;
 }
 
 export function createWebNavigation(
@@ -77,8 +82,21 @@ export function createWebNavigation(
     replace(href, state) {
       historyBinding.replaceState(state, "", href);
     },
+    assign(href) {
+      locationBinding.assign(href);
+    },
     back() {
       historyBinding.back();
+    },
+    canGoBack() {
+      return historyBinding.length > 1;
+    },
+    referrer() {
+      if (options.referrer !== undefined) return options.referrer;
+      return typeof document === "undefined" ? "" : document.referrer;
+    },
+    origin() {
+      return locationBinding.origin;
     },
     subscribePopState(listener) {
       return subscribe("popstate", listener);

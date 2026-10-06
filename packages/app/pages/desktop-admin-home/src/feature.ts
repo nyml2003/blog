@@ -1,8 +1,12 @@
 import { createSignal } from "solid-js";
 import type { DesktopApi } from "@blog/desktop-api";
 import { useDesktopResource } from "@blog/desktop-api";
+import type { DesktopPageContext } from "@blog/desktop-shared";
 
-export function useDesktopAdminHome(api: Pick<DesktopApi, "content">) {
+export function useDesktopAdminHome(
+  api: Pick<DesktopApi, "content">,
+  dialog: DesktopPageContext["dialog"],
+) {
   const articles = useDesktopResource(() => api.content.listArticles());
   const [busyId, setBusyId] = createSignal<number | undefined>();
   const [message, setMessage] = createSignal("");
@@ -12,7 +16,7 @@ export function useDesktopAdminHome(api: Pick<DesktopApi, "content">) {
     if (
       version === undefined ||
       busyId() !== undefined ||
-      !window.confirm(
+      !dialog.confirm(
         `将《${title || "未命名文章"}》暂存下架到当前待提交批次？`,
       )
     )

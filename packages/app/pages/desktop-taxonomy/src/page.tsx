@@ -8,7 +8,7 @@ export function createDesktopTaxonomyPage(
   input: DesktopPageContext,
 ): Component {
   return function DesktopTaxonomyPage() {
-    const page = useDesktopTaxonomy(input.api);
+    const page = useDesktopTaxonomy(input.api, input.dialog);
     const state = () => page.current();
     return (
       <div class="admin-page desktop-taxonomy">

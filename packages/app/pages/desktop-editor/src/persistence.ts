@@ -15,16 +15,6 @@ export type EditorDraftStorage = {
   readonly removeItem: (key: string) => void;
 };
 
-export function createBrowserEditorDraftStorage():
-  | EditorDraftStorage
-  | undefined {
-  try {
-    return window.sessionStorage;
-  } catch {
-    return undefined;
-  }
-}
-
 const isNonnegativeInteger = (value: unknown): value is number =>
   typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 

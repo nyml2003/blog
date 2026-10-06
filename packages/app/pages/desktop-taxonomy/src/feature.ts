@@ -1,6 +1,7 @@
 import { createSignal } from "solid-js";
 import type { DesktopApi, Taxonomy, Workspace } from "@blog/desktop-api";
 import { useDesktopResource } from "@blog/desktop-api";
+import type { DesktopPageContext } from "@blog/desktop-shared";
 import { parseTaxonomy } from "./input.ts";
 
 export { parseTaxonomy } from "./input.ts";
@@ -19,7 +20,10 @@ export function formatTaxonomy(taxonomy: Taxonomy): string {
   );
 }
 
-export function useDesktopTaxonomy(api: Pick<DesktopApi, "content">) {
+export function useDesktopTaxonomy(
+  api: Pick<DesktopApi, "content">,
+  dialog: DesktopPageContext["dialog"],
+) {
   const workspace = useDesktopResource(() => api.content.workspace());
   const [source, setSource] = createSignal("");
   const [dirty, setDirty] = createSignal(false);
@@ -116,7 +120,7 @@ export function useDesktopTaxonomy(api: Pick<DesktopApi, "content">) {
     },
     abandon: () => {
       const value = current();
-      if (value && window.confirm("确定放弃当前待提交批次？"))
+      if (value && dialog.confirm("确定放弃当前待提交批次？"))
         void run(
           () => api.content.abandon({ expectedVersion: value.version }),
           "已放弃待提交批次",

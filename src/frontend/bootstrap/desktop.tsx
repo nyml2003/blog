@@ -42,6 +42,8 @@ function createBrowserDesktopContext(): Result<
       api: createDesktopApi(ports.network),
       routes: parsed.data,
       navigation: ports.navigation,
+      dialog: ports.dialog,
+      sessionStorage: ports.sessionStorage,
     },
   };
 }

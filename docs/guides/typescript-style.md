@@ -227,6 +227,8 @@ await effects.run(command, input);
 
 同一插件还提供 `fluvient/no-node-imports`：命令代码不得直连 `node:*`，宿主能力通过 ports（`process`/`fs`/`path`/`hash` 等）注入。当前覆盖 release/delivery/quality/stats/page/content，宿主适配层 `packages/cli/cli-core` 负责实现这些端口。
 
+同一插件的 `fluvient/no-platform-globals` 禁止页面包（`packages/app/pages/**`，含 `.tsx`）直接访问 `window`/`document`/`globalThis`/`localStorage`/`sessionStorage`/`navigator`：宿主能力须从页面 context 注入的端口取用。该规则按 AST 引用判断，属性名与解构绑定（如 `input.document`、`const { document } = input`）不算全局访问；在根 `.oxlintrc.json` 的 overrides 中启用，并由 `ops quality check` 的 lint 步骤覆盖 `packages/app/pages` 目录。
+
 简单的纯异步映射可以保持简洁；当回调同时包含校验、转换和副作用时，拆成命名函数。
 
 ## 命名、函数职责和复杂条件

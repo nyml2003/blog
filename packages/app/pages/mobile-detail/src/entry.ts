@@ -1,4 +1,5 @@
 import { type Component } from "solid-js";
+import type { NavigationPort } from "@fluvient-loom/port";
 import type { MobilePageContext } from "@blog/mobile-shared";
 import { route } from "@blog/mobile-shared";
 import { removeMobileAppShell } from "@fluvient-loom/page-kit/mobile";
@@ -25,7 +26,7 @@ export function createMobileDetailEntry(context: MobilePageContext): Component {
     api: context.api,
     articleListHref: route(context.routes, "mobile-articles"),
     onBack() {
-      if (canReturnToSite()) {
+      if (canReturnToSite(context.navigation)) {
         context.navigation.back();
         return;
       }
@@ -34,10 +35,11 @@ export function createMobileDetailEntry(context: MobilePageContext): Component {
   });
 }
 
-function canReturnToSite(): boolean {
-  if (window.history.length <= 1 || document.referrer === "") return false;
+function canReturnToSite(navigation: NavigationPort): boolean {
+  const referrer = navigation.referrer();
+  if (!navigation.canGoBack() || referrer === "") return false;
   try {
-    return new URL(document.referrer).origin === window.location.origin;
+    return new URL(referrer).origin === navigation.origin();
   } catch {
     return false;
   }

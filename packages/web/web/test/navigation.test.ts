@@ -9,6 +9,7 @@ function fakeHost() {
     calls,
     history: {
       state: { frame: 7 },
+      length: 2,
       pushState(state: unknown, _unused: string, href: string) {
         calls.push(`push ${href} ${JSON.stringify(state)}`);
       },
@@ -19,7 +20,14 @@ function fakeHost() {
         calls.push("back");
       },
     },
-    location: { pathname: "/m/settings", search: "?x=1" },
+    location: {
+      pathname: "/m/settings",
+      search: "?x=1",
+      origin: "https://blog.test",
+      assign(href: string) {
+        calls.push(`assign ${href}`);
+      },
+    },
     events: {
       addEventListener(type: string, listener: () => void) {
         if (!listeners.has(type)) listeners.set(type, new Set());
@@ -49,12 +57,36 @@ test("web navigation snapshots current and forwards push/replace/back", () => {
   });
   navigation.push("/m/articles", { frame: 8 });
   navigation.replace("/m/articles?cat=a", { frame: 9 });
+  navigation.assign("/admin/index.html");
   navigation.back();
   assert.deepEqual(host.calls, [
     'push /m/articles {"frame":8}',
     'replace /m/articles?cat=a {"frame":9}',
+    "assign /admin/index.html",
     "back",
   ]);
+});
+
+test("return-to-site primitives read history length, referrer and origin", () => {
+  const host = fakeHost();
+  const navigation = createWebNavigation({
+    history: host.history,
+    location: host.location,
+    events: host.events,
+    referrer: "https://blog.test/m/articles/",
+  });
+  assert.equal(navigation.canGoBack(), true);
+  assert.equal(navigation.referrer(), "https://blog.test/m/articles/");
+  assert.equal(navigation.origin(), "https://blog.test");
+
+  const firstEntry = createWebNavigation({
+    history: { ...host.history, length: 1 },
+    location: host.location,
+    events: host.events,
+    referrer: "",
+  });
+  assert.equal(firstEntry.canGoBack(), false);
+  assert.equal(firstEntry.referrer(), "");
 });
 
 test("popstate and pagehide subscriptions dispatch and release", () => {

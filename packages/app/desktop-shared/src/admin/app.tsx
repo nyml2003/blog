@@ -1,16 +1,37 @@
 import {
-  createEffect,
   createSignal,
   For,
   onCleanup,
   onMount,
-  Show,
   type Component,
 } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import type { PageFactory } from "@fluvient-loom/page-kit";
 import { route, type DesktopPageContext } from "../context.ts";
 import "./app.css";
+
+type ViewTransitionDocument = Document & {
+  startViewTransition?: (callback: () => void) => {
+    readonly finished: Promise<void>;
+  };
+};
+
+function prefersReducedMotion(): boolean {
+  return (
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+}
+
+/** 同文档 View Transition：可用且未要求减弱动效时交给浏览器交叉淡化。 */
+function startViewTransition(commit: () => void): boolean {
+  if (prefersReducedMotion()) return false;
+  const candidate = document as ViewTransitionDocument;
+  if (typeof candidate.startViewTransition !== "function") return false;
+  const transition = candidate.startViewTransition(commit);
+  transition.finished.catch(() => undefined);
+  return true;
+}
 
 export interface DesktopAdminView {
   readonly id: string;
@@ -78,66 +99,89 @@ export function createDesktopAdminApp(
       pathToId.set(alias.split("?")[0] ?? alias, view.id);
     }
   }
-  const cached = new Map<string, Promise<Component>>();
+  const components = new Map<string, Component>();
+  const pending = new Map<string, Promise<Component>>();
   const menu = options.views
     .filter((view) => view.nav !== undefined && view.nav.hidden !== true)
     .slice()
     .sort((left, right) => (left.nav?.order ?? 0) - (right.nav?.order ?? 0));
 
-  function loadView(view: DesktopAdminView): Promise<Component> {
-    const existing = cached.get(view.id);
-    if (existing !== undefined) return existing;
-    const pending = view
-      .load()
-      .then((factory) => factory(options.context));
-    cached.set(view.id, pending);
-    return pending;
+  function ensureView(view: DesktopAdminView): Promise<Component> {
+    const loaded = components.get(view.id);
+    if (loaded !== undefined) return Promise.resolve(loaded);
+    const inflight = pending.get(view.id);
+    if (inflight !== undefined) return inflight;
+    const promise = view.load().then((factory) => {
+      const component = factory(options.context);
+      components.set(view.id, component);
+      return component;
+    });
+    pending.set(view.id, promise);
+    return promise;
   }
 
   return function DesktopAdminApp() {
     const [currentId, setCurrentId] = createSignal(options.initialPageId);
     const [collapsed, setCollapsed] = createSignal(readCollapsed());
     const [view, setView] = createSignal<Component>(MissingView);
-    let loadToken = 0;
+    let activation = 0;
 
-    const resolve = (pathname: string): string | undefined => pathToId.get(pathname);
+    const resolve = (pathname: string): string | undefined =>
+      pathToId.get(pathname);
 
-    const current = () => byId.get(currentId());
+    const apply = (id: string): void => {
+      const target = byId.get(id);
+      if (target === undefined) {
+        setView(() => MissingView);
+        return;
+      }
+      document.title = target.title;
+      setView(() => components.get(id) ?? FailedView);
+    };
 
-    const navigate = (href: string, replace = false): void => {
+    const activate = async (
+      id: string,
+      updateUrl?: () => void,
+      animate = true,
+    ): Promise<void> => {
+      const target = byId.get(id);
+      if (target === undefined) return;
+      const token = ++activation;
+      try {
+        await ensureView(target);
+      } catch {
+        // 加载失败也按目标切换，由 apply 渲染 FailedView。
+      }
+      if (activation !== token) return;
+      const commit = (): void => {
+        updateUrl?.();
+        setCurrentId(id);
+        apply(id);
+      };
+      if (!animate || !startViewTransition(commit)) commit();
+    };
+
+    const navigate = (href: string): void => {
       const url = new URL(href, window.location.origin);
       const id = resolve(url.pathname);
       if (id === undefined) {
         window.location.assign(href);
         return;
       }
-      if (replace) window.history.replaceState(null, "", href);
-      else window.history.pushState(null, "", href);
-      setCurrentId(id);
+      void activate(id, () =>
+        window.history.pushState(null, "", href),
+      );
     };
 
-    createEffect(() => {
-      const target = current();
-      if (target === undefined) {
-        setView(() => MissingView);
-        return;
-      }
-      document.title = target.title;
-      const token = ++loadToken;
-      void loadView(target).then(
-        (component) => {
-          if (loadToken === token) setView(() => component);
-        },
-        () => {
-          if (loadToken === token) setView(() => FailedView);
-        },
-      );
-    });
-
     onMount(() => {
+      void activate(
+        resolve(window.location.pathname) ?? options.initialPageId,
+        undefined,
+        false,
+      );
       const onPopState = (): void => {
         const id = resolve(window.location.pathname);
-        if (id !== undefined) setCurrentId(id);
+        if (id !== undefined) void activate(id);
       };
       const onClick = (event: MouseEvent): void => {
         if (
@@ -168,7 +212,7 @@ export function createDesktopAdminApp(
       document.addEventListener("click", onClick);
       // 空闲预取视图 chunk：侧边栏切换不再等网络。
       const idle = window.setTimeout(() => {
-        for (const view of options.views) void loadView(view);
+        for (const view of options.views) void ensureView(view);
       }, 1200);
       onCleanup(() => {
         window.clearTimeout(idle);
@@ -223,8 +267,8 @@ export function createDesktopAdminApp(
                     class="admin-nav-link"
                     href={route(options.context.routes, item.id)}
                     aria-current={currentId() === item.id ? "page" : undefined}
-                    onMouseEnter={() => void loadView(item)}
-                    onFocus={() => void loadView(item)}
+                    onMouseEnter={() => void ensureView(item)}
+                    onFocus={() => void ensureView(item)}
                   >
                     <span class="admin-nav-full">{item.nav?.label}</span>
                     <span class="admin-nav-short" aria-hidden="true">

@@ -1,5 +1,5 @@
 import type { DesktopApi, SiteRoutes } from "@blog/desktop-api";
-import type { NavigationPort } from "@fluvient-loom/port";
+import type { WebDesktopPorts } from "@fluvient-loom/page-kit/desktop";
 export {
   siteRoute as route,
   siteRouteWithQuery as routeWithQuery,
@@ -8,5 +8,7 @@ export {
 export interface DesktopPageContext {
   readonly api: DesktopApi;
   readonly routes: SiteRoutes;
-  readonly navigation: NavigationPort;
+  readonly navigation: WebDesktopPorts["navigation"];
+  readonly dialog: WebDesktopPorts["dialog"];
+  readonly sessionStorage: WebDesktopPorts["sessionStorage"];
 }

@@ -1,4 +1,4 @@
-import { createEffect, createSignal, onCleanup, onMount, Show } from "solid-js";
+import { createEffect, createSignal, Show } from "solid-js";
 import { useDesktopResource } from "@blog/desktop-api";
 import {
   Button,
@@ -18,12 +18,9 @@ import type { HtmlInspection } from "@blog/validation";
 import { inspectHtml } from "@blog/validation";
 import "./page.css";
 import {
-  createBrowserEditorDraftStorage,
   clearEditorSessionDraft,
   takeEditorSessionDraft,
-  writeEditorSessionDraft,
 } from "./persistence.ts";
-import { editorSnapshot } from "./state.ts";
 import { DesktopSourceEditor } from "./source-editor.tsx";
 import {
   desktopAdminArticleEditPage,
@@ -42,7 +39,11 @@ export function createDesktopEditorPage(
   creation: boolean,
 ) {
   return function DesktopEditorPage() {
-    const draftStorage = createBrowserEditorDraftStorage();
+    const draftStorage = context.sessionStorage;
+    const currentPath = (): string => {
+      const snapshot = context.navigation.current();
+      return `${snapshot.pathname}${snapshot.search}`;
+    };
     const entry = creation ? desktopAdminArticleNewPage : desktopAdminArticleEditPage;
     const params = entry.parseParams(context.navigation.current().search);
     const articleId = params.ok ? params.value.id ?? 0 : 0;
@@ -83,10 +84,7 @@ export function createDesktopEditorPage(
       if (!workspaceValue || initialized) return;
       if (creation) {
         setVersion(workspaceValue.version);
-        const draft = takeEditorSessionDraft(
-          draftStorage,
-          `${window.location.pathname}${window.location.search}`,
-        );
+        const draft = takeEditorSessionDraft(draftStorage, currentPath());
         if (draft) {
           setVersion(draft.expectedVersion);
           setTitle(draft.values.title);
@@ -107,10 +105,7 @@ export function createDesktopEditorPage(
       setCategories(detail.article.categoryIds.join(", "));
       setTags(detail.article.tagIds.join(", "));
       setContentHtml(detail.article.contentHtml);
-      const draft = takeEditorSessionDraft(
-        draftStorage,
-        `${window.location.pathname}${window.location.search}`,
-      );
+      const draft = takeEditorSessionDraft(draftStorage, currentPath());
       if (draft) {
         setVersion(draft.expectedVersion);
         setTitle(draft.values.title);
@@ -121,30 +116,6 @@ export function createDesktopEditorPage(
         setMessage("已恢复登录前未保存的文章内容");
       }
       initialized = true;
-    });
-    onMount(() => {
-      const persist = () => {
-        if (!initialized) return;
-        writeEditorSessionDraft(draftStorage, {
-          schemaVersion: 1,
-          returnPath: `${window.location.pathname}${window.location.search}`,
-          expectedVersion: version(),
-          values: {
-            ...editorSnapshot({
-              title: title(),
-              summary: summary(),
-              categoryIds: numberList(categories()),
-              tagIds: numberList(tags()),
-              contentHtml: contentHtml(),
-            }),
-            id: articleId,
-          },
-        });
-      };
-      window.addEventListener("blog:admin-session-expired", persist);
-      onCleanup(() =>
-        window.removeEventListener("blog:admin-session-expired", persist),
-      );
     });
     const save = async () => {
       if (busy() || !initialized || title().trim() === "") {

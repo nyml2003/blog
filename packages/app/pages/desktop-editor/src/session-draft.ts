@@ -1,5 +1,4 @@
 export {
-  createBrowserEditorDraftStorage,
   clearEditorSessionDraft,
   takeEditorSessionDraft,
   writeEditorSessionDraft,

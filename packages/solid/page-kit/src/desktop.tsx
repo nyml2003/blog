@@ -7,9 +7,31 @@ import { requireMountTarget } from "./shared.ts";
 
 // Desktop 浏览器端口装配：宿主适配器只允许在 page-kit 内装配
 // （SPEC-ARCH-BOUNDARY-001）；bootstrap 只组合应用声明并调用本包。
+export interface WebDesktopDialog {
+  confirm(message: string): boolean;
+}
+
+export interface WebDesktopSessionStorage {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+  removeItem(key: string): void;
+}
+
 export interface WebDesktopPorts {
   readonly network: ReturnType<typeof createFetchNetwork>;
   readonly navigation: NavigationPort;
+  readonly dialog: WebDesktopDialog;
+  readonly sessionStorage: WebDesktopSessionStorage | undefined;
+}
+
+function createWebDesktopSessionStorage():
+  | WebDesktopSessionStorage
+  | undefined {
+  try {
+    return window.sessionStorage;
+  } catch {
+    return undefined;
+  }
 }
 
 export function createWebDesktopPorts(): WebDesktopPorts {
@@ -23,7 +45,12 @@ export function createWebDesktopPorts(): WebDesktopPorts {
       history: window.history,
       location: window.location,
       events: window,
+      referrer: window.document.referrer,
     }),
+    dialog: {
+      confirm: (message) => window.confirm(message),
+    },
+    sessionStorage: createWebDesktopSessionStorage(),
   };
 }
 

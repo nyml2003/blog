@@ -9,7 +9,7 @@ export function createDesktopAdminHomePage(
   input: DesktopPageContext,
 ): Component {
   return function DesktopAdminHomePage() {
-    const page = useDesktopAdminHome(input.api);
+    const page = useDesktopAdminHome(input.api, input.dialog);
     const workspaceHref = route(input.routes, "desktop-admin-article-types");
     const newHref = route(input.routes, "desktop-admin-article-new");
     const editHref = (id: number) =>

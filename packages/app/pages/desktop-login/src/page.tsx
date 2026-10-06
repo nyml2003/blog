@@ -11,7 +11,7 @@ export function createDesktopLoginPage(input: DesktopPageContext): Component {
     const submit = async (event: SubmitEvent) => {
       event.preventDefault();
       const result = await login.submit();
-      if (result.ok) window.location.replace(adminHref);
+      if (result.ok) input.navigation.assign(adminHref);
     };
     return (
       <div class="desktop-login">

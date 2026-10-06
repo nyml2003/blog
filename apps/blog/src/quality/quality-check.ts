@@ -24,6 +24,7 @@ export async function runCheck(workspace: Workspace, process: ProcessPort, fs: F
     'packages/cli/cli-kit/src',
     'packages/cli/cli-plugins/src',
     'packages/cli/node/src',
+    'packages/app/pages',
     'apps/blog/src/release',
     'apps/blog/src/delivery',
     'apps/blog/src/quality',
@@ -32,7 +33,7 @@ export async function runCheck(workspace: Workspace, process: ProcessPort, fs: F
     'apps/blog/src/admin',
     'apps/blog/src/content',
   ].map((relative) => path.join(workspace.root, relative));
-  await run('ops lint (await/imports)', 'pnpm', ['-C', 'src/frontend', 'exec', 'oxlint', '-c', path.join(workspace.root, '.oxlintrc.json'), ...lintPaths], workspace.root);
+  await run('ops lint (await/imports/globals)', 'pnpm', ['-C', 'src/frontend', 'exec', 'oxlint', '-c', path.join(workspace.root, '.oxlintrc.json'), ...lintPaths], workspace.root);
   const appFiles = (await Promise.all([fs.files(workspace.appSource), fs.files(workspace.appTests)])).flat().filter((f) => f.endsWith('.ts'));
   for (const file of appFiles) await run(`blog syntax: ${file.replace(`${workspace.root}/`, '')}`, 'node', ['--experimental-strip-types', '--check', file], workspace.root);
   const appTests = appFiles.filter((f) => f.endsWith('.test.ts'));
