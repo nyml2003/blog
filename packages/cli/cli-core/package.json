@@ -8,6 +8,7 @@
     "./*.ts": "./src/*.ts"
   },
   "dependencies": {
-    "@fluvient-cli/cli-kit": "workspace:*"
+    "@fluvient-cli/cli-kit": "workspace:*",
+    "@fluvient-loom/node": "workspace:*"
   }
 }

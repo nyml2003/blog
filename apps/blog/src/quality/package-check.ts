@@ -1,5 +1,7 @@
 import { join } from 'node:path';
 import type { FsPort, ProcessPort, Reporter } from '@fluvient-cli/cli-kit/ports.ts';
+import type { EffectPort } from '@fluvient-cli/cli-kit/effects.ts';
+import { processStepEffect, reportPlan } from '@fluvient-cli/cli-kit/effects.ts';
 import type { Workspace } from '@fluvient-cli/cli-kit/workspace.ts';
 import { checkPackageNeutrality } from './package-guard.ts';
 
@@ -8,6 +10,7 @@ export async function runPackageCheck(
   process: ProcessPort,
   fs: FsPort,
   reporter: Reporter,
+  effects: EffectPort,
 ): Promise<boolean> {
   reporter.section('ops package check');
   let passed = true;
@@ -25,26 +28,21 @@ export async function runPackageCheck(
   }
   if (!violations.length) reporter.ok('platform neutrality guard');
 
-  const smoke = await process.run(
-    'pnpm',
-    ['exec', 'tsx', 'apps/blog/test/packages/package-smoke.ts'],
-    workspace.root,
-  );
-  if (smoke.code !== 0) {
-    passed = false;
-    reporter.fail('package smoke (@fluvient-loom lifecycle + Node adapter)');
-    reporter.info(smoke.stderr || smoke.stdout);
-  } else {
-    reporter.ok('package smoke (@fluvient-loom lifecycle + Node adapter)');
-  }
+  const smoke = await effects.run(processStepEffect({ process, reporter }, {
+    label: 'package smoke (@fluvient-loom lifecycle + Node adapter)',
+    command: 'pnpm',
+    args: ['exec', 'tsx', 'apps/blog/test/packages/package-smoke.ts'],
+    cwd: workspace.root,
+  }, 'pnpm exec tsx apps/blog/test/packages/package-smoke.ts'), undefined);
+  if (!smoke.ok) passed = false;
 
-  const result = await process.run('pnpm', ['run', 'check'], workspace.root);
-  if (result.code !== 0) {
-    passed = false;
-    reporter.fail('pnpm check (typecheck + test)');
-    reporter.info(result.stderr || result.stdout);
-  } else {
-    reporter.ok('pnpm check (typecheck + test)');
-  }
+  const result = await effects.run(processStepEffect({ process, reporter }, {
+    label: 'pnpm check (typecheck + test)',
+    command: 'pnpm',
+    args: ['run', 'check'],
+    cwd: workspace.root,
+  }, 'pnpm run check'), undefined);
+  if (!result.ok) passed = false;
+  reportPlan(effects, reporter);
   return passed;
 }

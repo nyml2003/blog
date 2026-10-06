@@ -7,7 +7,15 @@ export interface CommandContext {
   readonly sequence: number;
 }
 
+/** Human-readable description of a prepared command; `summary` is the plan line. */
+export interface CommandDescription {
+  readonly summary: string;
+  readonly details?: readonly string[];
+}
+
 export interface PreparedCommand<E> {
+  /** Optional: dry-run plan rendering reads this. Missing descriptions fall back to a generic line. */
+  describe?(): CommandDescription;
   execute(): Promise<Result<void, E>>;
   compensate(): Promise<Result<void, E>>;
 }

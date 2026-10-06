@@ -6,7 +6,7 @@ import "./page.css";
 export function createDesktopEditorGuidePage(context: DesktopPageContext) {
   return function DesktopEditorGuidePage() {
     return (
-      <main id="main" class="admin-page editor-guide-page">
+      <div class="admin-page editor-guide-page">
         <header class="admin-page-head">
           <div>
             <Text tone="accent">EDITOR GUIDE</Text>
@@ -40,7 +40,7 @@ export function createDesktopEditorGuidePage(context: DesktopPageContext) {
           <h2>正文建议</h2>
           <p>保持结构清晰，链接使用完整地址，图片和样式由系统主题统一处理。</p>
         </section>
-      </main>
+      </div>
     );
   };
 }

@@ -63,6 +63,16 @@ export function siteRouteWithQuery<Routes extends SiteRoutesLike>(
 
 export type PagePlatform = "desktop" | "mobile";
 
+/** 页面宿主布局：当前只有 desktop 管理端壳（顶栏 + 侧边栏 + 内容区）。 */
+export type PageLayout = "admin";
+
+/** 管理端侧边栏导航声明；hidden 项保留在宿主内但不进菜单（新建/编辑/预览等）。 */
+export interface PageNavMetadata {
+  readonly label: string;
+  readonly order: number;
+  readonly hidden?: boolean;
+}
+
 /** 页面登记元数据：页面存在 ⇔ 页面包声明了这份契约（构建链消费面）。 */
 export interface PageRegistration {
   readonly id: string;
@@ -73,6 +83,8 @@ export interface PageRegistration {
   readonly aliases: readonly string[];
   readonly bootstrap: boolean;
   readonly shell?: AppShellSpec;
+  readonly layout?: PageLayout;
+  readonly nav?: PageNavMetadata;
 }
 
 /** 页面工厂：具体上下文类型由页面包声明，装配点按平台传入标准上下文。 */
@@ -134,6 +146,10 @@ export interface DefinePageInput<
   readonly description?: string;
   readonly bootstrap?: boolean;
   readonly shell?: AppShellSpec;
+  /** 宿主布局；省略 = 独立页面（不挂管理端壳）。 */
+  readonly layout?: PageLayout;
+  /** 侧边栏导航元数据；仅 layout 为 admin 时有效。 */
+  readonly nav?: PageNavMetadata;
   /**
    * 本页的 URL 参数 schema（Standard Schema，必须同步）。
    * 省略 = 本页不读 URL 参数，parseParams 恒返回 ok({})。
@@ -172,6 +188,8 @@ export function definePage<
     aliases: definition.aliases,
     bootstrap: definition.bootstrap ?? false,
     shell: definition.shell,
+    layout: definition.layout,
+    nav: definition.nav,
     params: definition.params,
     load: definition.load,
     parseParams: (search) =>

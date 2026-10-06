@@ -12,6 +12,10 @@ export type DataMode = (typeof DATA_MODES)[number];
 export const MOCK_SCENARIOS = ['default', 'empty', 'slow', 'server-error', 'malformed-response'] as const;
 export type MockScenario = (typeof MOCK_SCENARIOS)[number];
 
+/** 工作台入口在 dev 页面导航中的可见性；与 scenario 一样由 CLI 显式选择、无默认值。 */
+export const ADMIN_ENTRY_MODES = ['on', 'off'] as const;
+export type AdminEntryMode = (typeof ADMIN_ENTRY_MODES)[number];
+
 /**
  * Rust binary names, matching the `[[bin]] name` entries of the workspace crates
  * (`crates/product`, `crates/data`, and the mock crate delivered by WORKSTREAM-MOCK).
@@ -23,6 +27,7 @@ export type MockScenario = (typeof MOCK_SCENARIOS)[number];
  */
 export const INJECTION_ENV = {
   apiOrigin: 'BLOG_API_ORIGIN',
+  adminEntry: 'BLOG_ADMIN_ENTRY',
   dataAddr: 'BLOG_DATA_ADDR',
   webDir: 'BLOG_WEB_DIR',
   databasePath: 'BLOG_DATABASE_PATH',
@@ -58,12 +63,14 @@ export interface ModePlan {
   /** Explicit prod database path; null for mock/test. */
   databasePath: string | null;
   scenario: MockScenario | null;
+  /** 工作台入口可见性；仅 dev 模式有值。 */
+  adminEntry: AdminEntryMode | null;
   watch: boolean;
   contentSource: ContentSource;
 }
 
 export type ModeOptions =
-  | { mode: 'dev'; scenario: MockScenario; webPort: number; mockPort: number }
+  | { mode: 'dev'; scenario: MockScenario; adminEntry: AdminEntryMode; webPort: number; mockPort: number }
   | { mode: 'backend'; dataMode: DataMode; databasePath?: string; productPort: number; dataPort: number; contentSource?: ContentSource }
   | { mode: 'integration'; watch: boolean; productPort: number; dataPort: number; contentSource?: ContentSource };
 
@@ -83,6 +90,9 @@ export function planMode(options: ModeOptions): ModePlan {
     if (!isModelValue({ kind: 'enum', values: MOCK_SCENARIOS }, options.scenario)) {
       throw new Error('invalid runtime scenario');
     }
+    if (!isModelValue({ kind: 'enum', values: ADMIN_ENTRY_MODES }, options.adminEntry)) {
+      throw new Error('invalid runtime admin entry mode');
+    }
     return {
       mode: options.mode,
       services: ['mock', 'web'],
@@ -92,6 +102,7 @@ export function planMode(options: ModeOptions): ModePlan {
       dataMode: null,
       databasePath: null,
       scenario: options.scenario,
+      adminEntry: options.adminEntry,
       watch: false,
       contentSource: 'fixture',
     };
@@ -127,6 +138,7 @@ export function planMode(options: ModeOptions): ModePlan {
     dataMode: options.mode === 'integration' ? 'test' : options.dataMode,
     databasePath,
     scenario: null,
+    adminEntry: null,
     watch,
     contentSource: options.contentSource ?? 'fixture',
   };

@@ -7,7 +7,11 @@
     ".": "./src/index.ts",
     "./*.ts": "./src/*.ts"
   },
+  "scripts": {
+    "test": "tsx --test test/*.test.ts"
+  },
   "dependencies": {
-    "@fluvient/core": "workspace:*"
+    "@fluvient/core": "workspace:*",
+    "@fluvient-loom/port": "workspace:*"
   }
 }

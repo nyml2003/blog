@@ -102,6 +102,44 @@ test("inline bootstrap and app shell are mobile-only capabilities", () => {
   );
 });
 
+test("admin layout is desktop-only and nav metadata needs a format", () => {
+  assert.ok(
+    rulesOf(
+      validatePageRegistry(withPage("mobile-home", { layout: "admin" })),
+    ).has("layout-desktop-only"),
+  );
+  assert.ok(
+    rulesOf(
+      validatePageRegistry(
+        withPage("desktop-home", { nav: { label: "文章", order: 1 } }),
+      ),
+    ).has("nav-format"),
+    "nav without an admin layout is rejected",
+  );
+  assert.ok(
+    rulesOf(
+      validatePageRegistry(
+        withPage("desktop-home", {
+          layout: "admin",
+          nav: { label: "  ", order: 1 },
+        }),
+      ),
+    ).has("nav-format"),
+    "empty nav label is rejected",
+  );
+  assert.ok(
+    rulesOf(
+      validatePageRegistry(
+        withPage("desktop-home", {
+          layout: "admin",
+          nav: { label: "文章", order: Number.NaN },
+        }),
+      ),
+    ).has("nav-format"),
+    "non-finite nav order is rejected",
+  );
+});
+
 test("title is required", () => {
   assert.ok(
     rulesOf(

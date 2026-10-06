@@ -34,6 +34,7 @@ interface BrowserPage {
   addInitScript(script: () => void): Promise<void>;
   addInitScript<T>(script: (arg: T) => void, arg: T): Promise<void>;
   goto(url: string, options?: { waitUntil?: string }): Promise<unknown>;
+  waitForURL(url: string | RegExp | ((url: URL) => boolean), options?: { timeout?: number }): Promise<unknown>;
   getByRole(role: string, options?: { name?: string; exact?: boolean }): BrowserLocator;
   getByLabel(text: string | RegExp, options?: { exact?: boolean }): BrowserLocator;
   getByText(text: string | RegExp, options?: { exact?: boolean }): BrowserLocator;
@@ -176,7 +177,7 @@ export function startStack(
 ): ManagedProcess {
   const runtimeArgs = args.mode === 'integration'
     ? ['runtime', 'integration', '--content-source', 'fixture', '--product-port', String(ports.product), '--data-port', String(ports.data), '--json']
-    : ['runtime', 'dev', '--scenario', args.scenario ?? 'empty', '--web-port', String(ports.web), '--mock-port', String(ports.mock), '--json'];
+    : ['runtime', 'dev', '--scenario', args.scenario ?? 'empty', '--admin-entry', 'off', '--web-port', String(ports.web), '--mock-port', String(ports.mock), '--json'];
   return context.supervisor.spawn({
     role: args.mode === 'integration' ? 'product' : 'web',
     command: process.execPath,
@@ -484,6 +485,11 @@ async function runDevJourney(browser: Browser, origin: string, artifactDir: stri
         if (await verificationCode.inputValue() !== '000000') await verificationCode.pressSequentially('000000');
       }
       await current.getByRole('button', { name: '登录', exact: true }).click();
+      // 登录成功后登录页自行跳转；先等它离开，避免与下一步 goto 抢导航。
+      await current.waitForURL(
+        (url) => !url.pathname.endsWith('/admin/login.html'),
+        { timeout: 10_000 },
+      );
       await current.goto(`${origin}/admin/articles/new.html`, { waitUntil: 'networkidle' });
       await current.getByRole('heading', { name: '新建文章', exact: true }).waitFor();
 
@@ -650,7 +656,12 @@ async function assertPage(
     const isIgnoredStatus = ignoredConsoleStatuses.some((status) => message.text().includes(`status of ${status} (`));
     if (message.type() === 'error' && !isMissingFavicon && !isIgnoredStatus) failures.push(`${name}: console ${message.text()}`);
   });
-  page.on('pageerror', (error: Error) => failures.push(`${name}: pageerror ${error.message}`));
+  page.on('pageerror', (error: Error) => {
+    // 无头浏览器在跨文档导航时可能跳过 View Transition（页面不可见），
+    // 属浏览器环境行为而非页面缺陷；有头/真机验收另行覆盖。
+    if (error.message.startsWith('Transition was skipped')) return;
+    failures.push(`${name}: pageerror ${error.message}`);
+  });
   try {
     await page.goto(url, { waitUntil });
     await checks(page);

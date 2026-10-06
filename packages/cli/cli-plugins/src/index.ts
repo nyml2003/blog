@@ -1,5 +1,7 @@
 import { renderCommandHelp } from '@fluvient-cli/cli-kit/help.ts';
+import { dryRunMiddleware } from '@fluvient-cli/cli-kit/effects.ts';
 import type { CliPlugin } from '@fluvient-cli/cli-kit/plugin.ts';
+import type { CommandArgs } from '@fluvient-cli/cli-kit/commands.ts';
 import type { RunnerEvent } from '@fluvient-cli/cli-kit/runner.ts';
 import type { ParameterSpec } from '@fluvient-cli/cli-kit/parameters.ts';
 import { EXIT_OK, EXIT_USAGE } from '@fluvient-cli/cli-kit/errors.ts';
@@ -125,7 +127,11 @@ export function versionPlugin(): CliPlugin {
 }
 
 export function dryRunPlugin(): CliPlugin {
-  return { name: 'dry-run', globalOptions: [dryRunOption] };
+  return {
+    name: 'dry-run',
+    globalOptions: [dryRunOption],
+    effectMiddlewares: [(globals: CommandArgs) => globals['dry-run'] === true ? dryRunMiddleware() : undefined],
+  };
 }
 
 export function jsonPlugin(): CliPlugin {

@@ -27,6 +27,7 @@ export type {
 } from "./ports/task.ts";
 export type {
   CommandContext,
+  CommandDescription,
   CommandKind,
   IrreversibleCommand,
   OperationIdPort,

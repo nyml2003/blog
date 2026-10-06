@@ -9,7 +9,7 @@ import { runDeployPackage, type DeployPorts } from './delivery/deploy-package.ts
 import { runDeployInstaller } from './delivery/deploy-installer.ts';
 import { runPackageCheck } from './quality/package-check.ts';
 import { runPageCheck } from './page/page-check.ts';
-import { planMode, MOCK_SCENARIOS, DATA_MODES, CONTENT_SOURCES } from './runtime/runtime-plan.ts';
+import { planMode, MOCK_SCENARIOS, ADMIN_ENTRY_MODES, DATA_MODES, CONTENT_SOURCES } from './runtime/runtime-plan.ts';
 import { DEPLOY_TARGETS } from './delivery/deploy-plan.ts';
 import { RELEASE_KINDS, runRelease } from './release/release.ts';
 import { PORT_MIN, PORT_MAX } from '@fluvient-cli/cli-kit/port-allocation.ts';
@@ -53,6 +53,7 @@ function deployPorts(context: CommandContext): DeployPorts {
     fs: context.fs,
     reporter: context.reporter,
     root: context.workspace.root,
+    effects: context.effects,
   };
 }
 
@@ -102,11 +103,11 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     exitCodes: [{ code: 0, meaning: '采样完成或 --dry-run 成功' }, { code: 10, meaning: '参数或命令用法错误' }, FAILURE],
   }, (context, args) => runE2ePerf(context, args).then(commandExitResult)),
   defineCommand({ path: ['workspace', 'doctor'], summary: '检查本地开发依赖', description: '验证 Node、pnpm、Rust 和 Cargo 是否可用。', examples: ['ops workspace doctor'], exitCodes: [{ code: 0, meaning: '依赖齐全' }, { code: 20, meaning: '缺少依赖' }] }, async ({ process: p, workspace, reporter, dryRun }) => { let passed = true; reporter.section(dryRun ? 'workspace doctor dry-run' : 'workspace doctor'); for (const name of ['node', 'pnpm', 'rustc', 'cargo']) { if (dryRun) { reporter.info(`检查命令: ${name}`); continue; } const r = await p.run('sh', ['-c', `command -v ${name}`], workspace.root); if (r.code) { passed = false; reporter.fail(`${name} missing`); } else reporter.ok(`${name} available`); } return commandResult(passed); }),
-  defineCommand({ path: ['quality', 'check'], summary: '执行项目质量检查', description: '运行 Rust 三件套（cargo fmt --all --check、cargo clippy -D warnings、cargo test --workspace）、ops 契约测试、前端 typecheck/lint/format/test/build 和前后端架构边界检查。', examples: ['ops quality check'], exitCodes: [{ code: 0, meaning: '检查通过' }, { code: 20, meaning: '检查失败' }] }, ({ workspace, process, fs, reporter, dryRun }) => { if (dryRun) { reporter.section('quality check dry-run'); reporter.info('将执行 cargo fmt --all --check、cargo clippy --workspace --all-targets -- -D warnings、cargo test --workspace、ops 契约测试、pnpm typecheck/lint/format:check/test:core/build 和前后端架构边界检查'); return commandResult(true); } return runCheck(workspace, process, fs, reporter).then((passed) => commandResult(passed)); }),
-  defineCommand({ path: ['quality', 'lint'], summary: '运行前端 Oxlint', description: '使用 pnpm 执行 blog-web 的 lint 脚本，并将 warning 视为失败。', examples: ['ops quality lint'], exitCodes: [{ code: 0, meaning: 'lint 通过' }, { code: 20, meaning: 'lint 失败' }] }, ({ workspace, process, reporter, dryRun }) => { if (dryRun) { reporter.section('quality lint dry-run'); reporter.info('pnpm -C src/frontend run lint'); return commandResult(true); } return runWebQuality(workspace, process, reporter, 'lint').then((passed) => commandResult(passed)); }),
-  defineCommand({ path: ['quality', 'format'], summary: '格式化前端源文件', description: '不带 --check 时写入 Biome 格式化结果；带 --check 时只检查、不修改文件。', examples: ['ops quality format --check'], options: [{ name: 'check', model: { kind: 'switch' }, description: '只检查格式，不写入文件' }], exitCodes: [{ code: 0, meaning: '格式化通过' }, { code: 20, meaning: '格式化失败或存在未格式化文件' }] }, ({ workspace, process, reporter, dryRun }, args) => { const check = args.check === true; if (dryRun) { reporter.section('quality format dry-run'); reporter.info(`pnpm -C src/frontend run ${check ? 'format:check' : 'format'}`); return commandResult(true); } return runWebQuality(workspace, process, reporter, check ? 'format:check' : 'format').then((passed) => commandResult(passed)); }),
-  defineCommand({ path: ['package', 'check'], summary: '执行 @fluvient-loom 包门禁', description: '平台中立护栏（packages/*/src 零 node/web/solid 依赖）+ package smoke + workspace typecheck/test；独立于 ops quality check。', examples: ['ops package check'], exitCodes: [{ code: 0, meaning: '检查通过' }, FAILURE] }, ({ workspace, process, fs, reporter, dryRun }) => { if (dryRun) { reporter.section('package check dry-run'); reporter.info('将执行平台中立护栏扫描、package smoke（tsx apps/blog/test/packages/package-smoke.ts）与 pnpm run check（typecheck + test）'); return commandResult(true); } return runPackageCheck(workspace, process, fs, reporter).then((passed) => commandResult(passed)); }),
-  defineCommand({ path: ['page', 'check'], summary: '校验页面注册表与路由清单', description: '校验 pages.registry.ts 语义（id/alias/outputPath 唯一、alias 与产物路径交叉冲突、entry 存在、平台世界一致）并确认 site-routes.json 与注册表投影一致；vite 配置加载期与前端测试守卫共用同一校验器。', examples: ['ops page check'], exitCodes: [{ code: 0, meaning: '注册表合法且清单同步' }, { code: 20, meaning: '存在违例或清单漂移' }] }, ({ workspace, process, reporter, dryRun }) => runPageCheck(workspace, process, reporter, { dryRun }).then((passed) => commandResult(passed))),
+  defineCommand({ path: ['quality', 'check'], summary: '执行项目质量检查', description: '运行 Rust 三件套（cargo fmt --all --check、cargo clippy -D warnings、cargo test --workspace）、ops 契约测试、前端 typecheck/lint/format/test/build 和前后端架构边界检查。', examples: ['ops quality check'], exitCodes: [{ code: 0, meaning: '检查通过' }, { code: 20, meaning: '检查失败' }] }, ({ workspace, process, fs, reporter, effects }) => runCheck(workspace, process, fs, reporter, effects).then((passed) => commandResult(passed))),
+  defineCommand({ path: ['quality', 'lint'], summary: '运行前端 Oxlint', description: '使用 pnpm 执行 blog-web 的 lint 脚本，并将 warning 视为失败。', examples: ['ops quality lint'], exitCodes: [{ code: 0, meaning: 'lint 通过' }, { code: 20, meaning: 'lint 失败' }] }, ({ workspace, process, reporter, effects }) => runWebQuality(workspace, process, reporter, effects, 'lint').then((passed) => commandResult(passed))),
+  defineCommand({ path: ['quality', 'format'], summary: '格式化前端源文件', description: '不带 --check 时写入 Biome 格式化结果；带 --check 时只检查、不修改文件。', examples: ['ops quality format --check'], options: [{ name: 'check', model: { kind: 'switch' }, description: '只检查格式，不写入文件' }], exitCodes: [{ code: 0, meaning: '格式化通过' }, { code: 20, meaning: '格式化失败或存在未格式化文件' }] }, ({ workspace, process, reporter, effects }, args) => { const check = args.check === true; return runWebQuality(workspace, process, reporter, effects, check ? 'format:check' : 'format').then((passed) => commandResult(passed)); }),
+  defineCommand({ path: ['package', 'check'], summary: '执行 @fluvient-loom 包门禁', description: '平台中立护栏（packages/*/src 零 node/web/solid 依赖）+ package smoke + workspace typecheck/test；独立于 ops quality check。', examples: ['ops package check'], exitCodes: [{ code: 0, meaning: '检查通过' }, FAILURE] }, ({ workspace, process, fs, reporter, effects }) => runPackageCheck(workspace, process, fs, reporter, effects).then((passed) => commandResult(passed))),
+  defineCommand({ path: ['page', 'check'], summary: '校验页面注册表与路由清单', description: '校验 pages.registry.ts 语义（id/alias/outputPath 唯一、alias 与产物路径交叉冲突、entry 存在、平台世界一致）并确认 site-routes.json 与注册表投影一致；vite 配置加载期与前端测试守卫共用同一校验器。', examples: ['ops page check'], exitCodes: [{ code: 0, meaning: '注册表合法且清单同步' }, { code: 20, meaning: '存在违例或清单漂移' }] }, ({ workspace, process, reporter, effects }) => runPageCheck(workspace, process, reporter, effects).then((passed) => commandResult(passed))),
   defineCommand({
     path: ['admin', 'credentials', 'init'],
     summary: '初始化管理端密码、TOTP 与恢复码',
@@ -142,14 +143,14 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     examples: ['ops delivery package --target x86_64-unknown-linux-musl', 'ops delivery package --target aarch64-unknown-linux-musl --dry-run'],
     options: [{ name: 'target', description: '目标架构(必须显式选择)', model: { kind: 'enum', values: DEPLOY_TARGETS } }],
     exitCodes: [{ code: 0, meaning: '发布包生成成功' }, FAILURE],
-  }, (context, args) => runDeployPackage(args.target, deployPorts(context), { dryRun: context.dryRun }).then(commandExitResult)),
+  }, (context, args) => runDeployPackage(args.target, deployPorts(context)).then(commandExitResult)),
   defineCommand({
     path: ['delivery', 'installer'],
     summary: '打包服务器安装器(单文件 mjs)',
     description: '用 esbuild（nix 提供）把 ops 安装器入口打成 deploy/dist/blog-deploy.mjs：init 生成 /etc/blog 骨架，deploy/redeploy 从公开 Release 下载对应架构发布包并幂等安装；构建后自动做 --help 冒烟。',
     examples: ['ops delivery installer', 'ops delivery installer --dry-run'],
     exitCodes: [{ code: 0, meaning: '安装器生成且 --help 冒烟通过' }, FAILURE],
-  }, (context) => runDeployInstaller(deployPorts(context), { dryRun: context.dryRun }).then(commandExitResult)),
+  }, (context) => runDeployInstaller(deployPorts(context)).then(commandExitResult)),
   defineCommand({
     path: ['release'],
     summary: '预检并发布 Script 或 Build tag',
@@ -161,19 +162,20 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     ],
     examples: ['ops release script --dry-run', 'ops release build --yes', 'ops release both --yes --allow-dirty'],
     exitCodes: [{ code: 0, meaning: '预检成功或 tag 已推送' }, { code: 10, meaning: '参数或命令用法错误' }, FAILURE],
-  }, (context, args) => runRelease(args.kind, { process: context.process, reporter: context.reporter, root: context.workspace.root }, { dryRun: context.dryRun, confirmed: args.yes, allowDirty: args['allow-dirty'] }).then(commandExitResult)),
+  }, (context, args) => runRelease(args.kind, { process: context.process, reporter: context.reporter, root: context.workspace.root, effects: context.effects }, { confirmed: args.yes, allowDirty: args['allow-dirty'] }).then(commandExitResult)),
   defineCommand({
     path: ['runtime', 'dev'],
     summary: '前端开发栈: Vite + Mock Product API',
-    description: '启动 Mock（--scenario 选择命名场景）与 Vite dev server，并把 Mock 实际地址注入 BLOG_API_ORIGIN；不启动 Product/Data，页面数据只来自 Mock。最终访问地址是 Vite 地址。',
-    examples: ['ops runtime dev --scenario default --web-port 5173 --mock-port 9090', 'ops runtime dev --scenario empty --web-port 5173 --mock-port 9090 --dry-run', 'ops runtime dev --scenario slow --web-port 5173 --mock-port 9090 --json'],
+    description: '启动 Mock（--scenario 选择命名场景）与 Vite dev server，并把 Mock 实际地址注入 BLOG_API_ORIGIN、把 --admin-entry 注入工作台入口开关；不启动 Product/Data，页面数据只来自 Mock。最终访问地址是 Vite 地址。',
+    examples: ['ops runtime dev --scenario default --admin-entry on --web-port 5173 --mock-port 9090', 'ops runtime dev --scenario empty --admin-entry off --web-port 5173 --mock-port 9090 --dry-run', 'ops runtime dev --scenario slow --admin-entry off --web-port 5173 --mock-port 9090 --json'],
     options: [
       { name: 'scenario', description: 'Mock 命名场景（必须显式选择）', model: { kind: 'enum', values: MOCK_SCENARIOS } },
+      { name: 'admin-entry', description: '工作台入口在公开页导航的可见性（必须显式选择）', model: { kind: 'enum', values: ADMIN_ENTRY_MODES } },
       portOption('web-port', 'Vite 候选端口'),
       portOption('mock-port', 'Mock 候选端口'),
     ],
     exitCodes: [{ code: 0, meaning: '--dry-run 打印计划（运行中的模式没有 0 退出路径，正常停止只能是 130/143）' }, FAILURE, SIGINT, SIGTERM],
-  }, (context, args) => runRuntimeMode(planMode({ mode: 'dev', scenario: args.scenario, webPort: args['web-port'], mockPort: args['mock-port'] }), runtimePorts(context), { dryRun: context.dryRun, json: context.json }).then(commandExitResult)),
+  }, (context, args) => runRuntimeMode(planMode({ mode: 'dev', scenario: args.scenario, adminEntry: args['admin-entry'], webPort: args['web-port'], mockPort: args['mock-port'] }), runtimePorts(context), { dryRun: context.dryRun, json: context.json }).then(commandExitResult)),
   defineCommand({
     path: ['runtime', 'backend'],
     summary: '后端 API 栈: Product + Data（无页面）',

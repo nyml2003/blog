@@ -1,7 +1,6 @@
 import { For, Show, type Component } from "solid-js";
-import { Button, Field, Heading, Link, Text, Textarea } from "@blog/desktop-atoms";
+import { Button, Field, Heading, Text, Textarea } from "@blog/desktop-atoms";
 import type { DesktopPageContext } from "@blog/desktop-shared";
-import { route } from "@blog/desktop-shared";
 import { useDesktopTaxonomy } from "./feature";
 import "./page.css";
 
@@ -10,19 +9,10 @@ export function createDesktopTaxonomyPage(
 ): Component {
   return function DesktopTaxonomyPage() {
     const page = useDesktopTaxonomy(input.api);
-    const adminHref = route(input.routes, "desktop-admin-home");
     const state = () => page.current();
     return (
-      <div class="desktop-login desktop-taxonomy">
-        <header>
-          <a class="brand" href={adminHref}>
-            <span>管理台</span>
-            <strong>技术知识库</strong>
-          </a>
-          <Link href={adminHref}>返回文章管理</Link>
-        </header>
-        <main id="main">
-          <header>
+      <div class="admin-page desktop-taxonomy">
+        <header class="admin-page-head">
             <Text tone="accent">CONTENT WORKSPACE</Text>
             <Heading level={1}>分类树与发布批次</Heading>
             <Text tone="muted">
@@ -100,7 +90,6 @@ export function createDesktopTaxonomyPage(
               </>
             )}
           </Show>
-        </main>
       </div>
     );
   };

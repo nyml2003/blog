@@ -145,7 +145,7 @@ test('dev starts mock before vite and injects the mock address vite must use', a
     BLOG_TAXONOMY_MODEL_PROVIDER: 'claude-cli',
     BLOG_TAXONOMY_MODEL_COMMAND: '/private/model-command',
   };
-  const pending = runRuntimeMode(planMode({ mode: 'dev', scenario: 'default', webPort: 5173, mockPort: 9090 }), harness.ports(), options());
+  const pending = runRuntimeMode(planMode({ mode: 'dev', scenario: 'default', adminEntry: 'on', webPort: 5173, mockPort: 9090 }), harness.ports(), options());
   await tick();
   const specs = harness.spawns;
   assert.deepEqual(specs.map((process) => process.role), ['mock', 'web']);
@@ -162,6 +162,8 @@ test('dev starts mock before vite and injects the mock address vite must use', a
   assert.equal(specs[1]!.command, 'pnpm');
   assert.match(specs[1]!.args.join(' '), /-C src\/frontend run dev/);
   assert.equal(specs[1]!.env?.BLOG_API_ORIGIN, 'http://127.0.0.1:9090');
+  assert.equal(specs[1]!.env?.BLOG_ADMIN_ENTRY, 'true');
+  assert.equal(specs[0]!.env?.BLOG_ADMIN_ENTRY, undefined);
   for (const request of specs) {
     assert.equal(request.env?.BLOG_TAXONOMY_MODEL_PROVIDER, undefined);
     assert.equal(request.env?.BLOG_TAXONOMY_MODEL_COMMAND, undefined);
@@ -175,6 +177,15 @@ test('dev starts mock before vite and injects the mock address vite must use', a
   harness.emit('SIGINT');
   assert.equal(await pending, 130, 'a running mode only ends through a signal');
   assert.deepEqual(harness.killed, ['mock', 'web']);
+});
+
+test('dev hides the workbench entry when admin entry is off', async () => {
+  const harness = new Harness();
+  const pending = runRuntimeMode(planMode({ mode: 'dev', scenario: 'default', adminEntry: 'off', webPort: 5173, mockPort: 9090 }), harness.ports(), options());
+  await tick();
+  assert.equal(harness.spawns[1]?.env?.BLOG_ADMIN_ENTRY, 'false');
+  harness.emit('SIGINT');
+  assert.equal(await pending, 130);
 });
 
 test('backend allocates data first and points product at the actual data address', async () => {
@@ -420,7 +431,7 @@ test('a failed frontend build never starts the stack and reports BUILD_FAILED', 
 test('a missing service binary is a SERVICE_START_FAILED without spawning anything else', async () => {
   const harness = new Harness();
   harness.binaries = new Set();
-  const code = await runRuntimeMode(planMode({ mode: 'dev', scenario: 'default', webPort: 5173, mockPort: 9090 }), harness.ports(), options({ json: true }));
+  const code = await runRuntimeMode(planMode({ mode: 'dev', scenario: 'default', adminEntry: 'off', webPort: 5173, mockPort: 9090 }), harness.ports(), options({ json: true }));
   assert.equal(code, 20);
   assert.equal(harness.spawns.length, 0);
   assert.match(harness.errors.join('\n'), /mock/);
@@ -469,7 +480,7 @@ test('a service that dies during startup stops the rest and reports its name and
 test('a service that never becomes ready fails without being reported as reachable', async () => {
   const harness = new Harness();
   harness.readyWhen = () => false;
-  const code = await runRuntimeMode(planMode({ mode: 'dev', scenario: 'default', webPort: 5173, mockPort: 9090 }), harness.ports(), options({ json: true }));
+  const code = await runRuntimeMode(planMode({ mode: 'dev', scenario: 'default', adminEntry: 'off', webPort: 5173, mockPort: 9090 }), harness.ports(), options({ json: true }));
   assert.equal(code, 20);
   assert.deepEqual(harness.killed, ['mock']);
   assert.match(harness.errors.join('\n'), /服务启动失败: mock 未在期限内监听 127\.0\.0\.1:9090/);
@@ -479,7 +490,7 @@ test('a service that never becomes ready fails without being reported as reachab
 
 test('a child that leaves after a healthy start stops the mode with CHILD_EXITED', async () => {
   const harness = new Harness();
-  const pending = runRuntimeMode(planMode({ mode: 'dev', scenario: 'default', webPort: 5173, mockPort: 9090 }), harness.ports(), options({ json: true }));
+  const pending = runRuntimeMode(planMode({ mode: 'dev', scenario: 'default', adminEntry: 'off', webPort: 5173, mockPort: 9090 }), harness.ports(), options({ json: true }));
   await tick();
   (harness.group.members[1] as FakeProcess).finish({ code: 7, signal: null });
   const code = await pending;
@@ -512,7 +523,7 @@ test('a service that exits 0 on its own is still CHILD_EXITED and stops the rest
 test('a mode never reports success from its own run loop, only through a signal', async () => {
   for (const [signal, expected] of [['SIGINT', 130], ['SIGTERM', 143]] as const) {
     const harness = new Harness();
-    const pending = runRuntimeMode(planMode({ mode: 'dev', scenario: 'default', webPort: 5173, mockPort: 9090 }), harness.ports(), options());
+    const pending = runRuntimeMode(planMode({ mode: 'dev', scenario: 'default', adminEntry: 'off', webPort: 5173, mockPort: 9090 }), harness.ports(), options());
     await tick();
     harness.emit(signal);
     assert.equal(await pending, expected);
@@ -524,7 +535,7 @@ test('a mode never reports success from its own run loop, only through a signal'
 
 test('addresses are only reported once every service passed its readiness check', async () => {
   const harness = new Harness();
-  const pending = runRuntimeMode(planMode({ mode: 'dev', scenario: 'default', webPort: 5173, mockPort: 9090 }), harness.ports(), options());
+  const pending = runRuntimeMode(planMode({ mode: 'dev', scenario: 'default', adminEntry: 'off', webPort: 5173, mockPort: 9090 }), harness.ports(), options());
   await tick();
   const readyLines = harness.logLines.filter((line) => line.includes('就绪'));
   assert.match(readyLines.join('\n'), /mock 就绪: http:\/\/127\.0\.0\.1:9090/);
@@ -541,7 +552,7 @@ test('a signal stops every child and maps to 130 or 143', async () => {
     const harness = new Harness();
     let listener: ((signal: NodeJS.Signals) => void) | undefined;
     const ports = { ...harness.ports(), signals: { onSignal: (handler: (signal: NodeJS.Signals) => void) => { listener = handler; return () => { listener = undefined; }; } } };
-    const pending = runRuntimeMode(planMode({ mode: 'dev', scenario: 'default', webPort: 5173, mockPort: 9090 }), ports, options());
+    const pending = runRuntimeMode(planMode({ mode: 'dev', scenario: 'default', adminEntry: 'off', webPort: 5173, mockPort: 9090 }), ports, options());
     await tick();
     listener?.(signal);
     assert.equal(await pending, expected);
@@ -553,7 +564,7 @@ test('a signal stops every child and maps to 130 or 143', async () => {
 
 test('dry run describes the plan and performs no side effect', async () => {
   const harness = new Harness();
-  const code = await runRuntimeMode(planMode({ mode: 'dev', scenario: 'default', webPort: 5173, mockPort: 9190 }), harness.ports(), { dryRun: true, json: false });
+  const code = await runRuntimeMode(planMode({ mode: 'dev', scenario: 'default', adminEntry: 'off', webPort: 5173, mockPort: 9190 }), harness.ports(), { dryRun: true, json: false });
   assert.equal(code, 0);
   assert.equal(harness.spawns.length, 0);
   assert.equal(harness.runs.length, 0);

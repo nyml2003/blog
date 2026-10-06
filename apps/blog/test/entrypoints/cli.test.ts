@@ -170,7 +170,7 @@ test('e2e requires an explicit mode and validates scenario combinations before b
 });
 
 test('dry run prints the plan without binding ports or spawning processes', async () => {
-  const dev = await capture(['runtime', 'dev', '--scenario', 'default', '--web-port', '5173', '--mock-port', '9090', '--dry-run']);
+  const dev = await capture(['runtime', 'dev', '--scenario', 'default', '--admin-entry', 'on', '--web-port', '5173', '--mock-port', '9090', '--dry-run']);
   assert.equal(dev.code, 0);
   assert.match(dev.output, /dry-run: runtime dev/);
   assert.match(dev.output, /\[mock\] 候选端口 9090/);

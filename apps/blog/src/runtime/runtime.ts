@@ -110,7 +110,7 @@ async function cleanupTempDatabase(plan: ModePlan, ports: RuntimePorts): Promise
 export async function runDeliveryBuild(ports: RuntimePorts, options: RunOptions): Promise<number> {
   const command = 'delivery build';
   const steps = await deliverySteps(ports);
-  const plan: ModePlan = { mode: 'dev', services: [], candidates: {}, builds: steps, entry: null, dataMode: null, databasePath: null, scenario: null, watch: false, contentSource: 'fixture' };
+  const plan: ModePlan = { mode: 'dev', services: [], candidates: {}, builds: steps, entry: null, dataMode: null, databasePath: null, scenario: null, adminEntry: null, watch: false, contentSource: 'fixture' };
   if (options.dryRun) {
     printPlan(ports, options, command, plan);
     if (options.json) ports.output?.result({ status: 'success', command, exitCode: EXIT_OK, code: 'OK', data: { dryRun: true } });
@@ -261,6 +261,8 @@ async function spawnRequest(plan: ModePlan, ports: RuntimePorts, role: ServiceRo
   if (role === 'web') {
     const mock = requiredPort(allocated.get('mock'), 'mock');
     env[INJECTION_ENV.apiOrigin] = origin(mock);
+    if (plan.adminEntry === null) throw new Error('runtime plan missing admin entry mode');
+    env[INJECTION_ENV.adminEntry] = plan.adminEntry === 'on' ? 'true' : 'false';
     return { role, command: 'pnpm', args: ['-C', 'src/frontend', 'run', 'dev', '--port', String(port)], cwd: ports.root, env };
   }
 

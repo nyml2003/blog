@@ -1,0 +1,22 @@
+{
+  "$schema": "https://oxc.rs/schema/oxlintrc.json",
+  "jsPlugins": [{ "name": "fluvient", "specifier": "./tools/oxlint/no-bare-await.mjs" }],
+  "overrides": [
+    {
+      "files": [
+        "packages/cli/cli-kit/src/**/*.ts",
+        "packages/cli/cli-plugins/src/**/*.ts",
+        "packages/cli/node/src/**/*.ts",
+        "apps/blog/src/release/**/*.ts",
+        "apps/blog/src/delivery/**/*.ts",
+        "apps/blog/src/quality/**/*.ts",
+        "apps/blog/src/page/**/*.ts",
+        "apps/blog/src/admin/**/*.ts",
+        "apps/blog/src/content/**/*.ts"
+      ],
+      "rules": {
+        "fluvient/no-bare-await": "error"
+      }
+    }
+  ]
+}

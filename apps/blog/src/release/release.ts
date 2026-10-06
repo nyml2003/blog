@@ -1,4 +1,6 @@
+import { ok, err, type Result } from '@fluvient/core';
 import type { ProcessPort, Reporter } from '@fluvient-cli/cli-kit/ports.ts';
+import { effectFailure, reversibleEffect, reportPlan, type EffectFailure, type EffectPort } from '@fluvient-cli/cli-kit/effects.ts';
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from '@fluvient-cli/cli-kit/errors.ts';
 
 export const RELEASE_KINDS = ['script', 'build', 'both'] as const;
@@ -9,10 +11,10 @@ export interface ReleasePorts {
   process: ProcessPort;
   reporter: Reporter;
   root: string;
+  effects: EffectPort;
 }
 
 interface ReleaseOptions {
-  dryRun: boolean;
   confirmed: boolean;
   /** --allow-dirty：跳过工作树干净检查；tag 仍指向 HEAD，未提交改动不会进入发布物。 */
   allowDirty: boolean;
@@ -130,32 +132,76 @@ function workflowUrls(remote: string, kind: ReleaseKind): string[] {
   return workflows.map((workflow) => `https://github.com/${match[1]}/${match[2]}/actions/workflows/${workflow}`);
 }
 
+function tagCommand(ports: ReleasePorts) {
+  return reversibleEffect<{ tag: string; sha: string }, EffectFailure>({
+    describe: ({ tag }) => ({ summary: `创建 tag ${tag}` }),
+    execute: async ({ tag, sha }): Promise<Result<void, EffectFailure>> => {
+      const created = await git(ports, ['tag', tag, sha]);
+      if (created.code === 0) return ok(undefined);
+      return err(effectFailure(`创建 tag 失败: ${tag}: ${created.stderr.trim() || `exit ${created.code}`}`));
+    },
+    compensate: async ({ tag }) => {
+      const removed = await git(ports, ['tag', '-d', tag]);
+      if (removed.code === 0) return ok(undefined);
+      return err(effectFailure(`删除 tag 失败: ${tag}: ${removed.stderr.trim() || `exit ${removed.code}`}`));
+    },
+  });
+}
+
+function pushCommand(ports: ReleasePorts) {
+  return reversibleEffect<{ tags: readonly string[] }, EffectFailure>({
+    describe: ({ tags }) => ({ summary: `推送 tag ${tags.join(', ')}` }),
+    execute: async ({ tags }): Promise<Result<void, EffectFailure>> => {
+      const pushed = await git(ports, ['push', 'origin', ...tags]);
+      if (pushed.code === 0) return ok(undefined);
+      return err(effectFailure(`推送 tag 失败: ${pushed.stderr.trim() || `exit ${pushed.code}`}`));
+    },
+  });
+}
+
+/**
+ * Confirmation is an effect, not a pre-check: the dry-run middleware skips it, while a real run
+ * executes it before any tag exists and fails with a usage error when --yes is missing.
+ */
+function confirmationEffect(confirmed: boolean) {
+  return reversibleEffect<void, EffectFailure>({
+    describe: () => ({ summary: '确认发布（--yes）' }),
+    execute: async () => confirmed ? ok(undefined) : err(effectFailure('推送前需要显式确认，请重新执行并添加 --yes')),
+  });
+}
+
 export async function runRelease(kind: ReleaseKind, ports: ReleasePorts, options: ReleaseOptions): Promise<number> {
-  ports.reporter.section(options.dryRun ? 'release dry-run' : 'release');
+  ports.reporter.section('release');
   const plan = await buildPlan(kind, ports, options.allowDirty);
   if (!plan) return EXIT_FAILURE;
 
   ports.reporter.info(`远程仓库: ${plan.remote}`);
   ports.reporter.info(`提交: ${plan.sha}`);
   ports.reporter.info(`将创建 tag: ${plan.tags.join(', ')}`);
-  if (options.dryRun) return EXIT_OK;
-  if (!options.confirmed) {
-    ports.reporter.fail('推送前需要显式确认，请重新执行并添加 --yes');
+
+  const confirmed = await ports.effects.run(confirmationEffect(options.confirmed), undefined);
+  if (!confirmed.ok) {
+    ports.reporter.fail(confirmed.error.message);
     return EXIT_USAGE;
   }
 
-  for (const tag of plan.tags) {
-    const created = await git(ports, ['tag', tag, plan.sha]);
-    if (created.code !== 0) {
-      ports.reporter.fail(`创建 tag 失败: ${tag}: ${created.stderr.trim() || `exit ${created.code}`}`);
-      return EXIT_FAILURE;
-    }
-  }
-  const pushed = await git(ports, ['push', 'origin', ...plan.tags]);
-  if (pushed.code !== 0) {
-    ports.reporter.fail(`推送 tag 失败: ${pushed.stderr.trim() || `exit ${pushed.code}`}`);
+  const fail = async (message: string): Promise<number> => {
+    ports.reporter.fail(message);
+    const report = await ports.effects.rollback();
+    for (const failure of report.failures) ports.reporter.info(`回滚失败: ${failure.error.message}`);
     return EXIT_FAILURE;
+  };
+  const create = tagCommand(ports);
+  for (const tag of plan.tags) {
+    const created = await ports.effects.run(create, { tag, sha: plan.sha });
+    if (!created.ok) return fail(created.error.message);
   }
+  const pushed = await ports.effects.run(pushCommand(ports), { tags: plan.tags });
+  if (!pushed.ok) return fail(pushed.error.message);
+
+  reportPlan(ports.effects, ports.reporter);
+  // A non-empty journal means middleware short-circuited the run; only real executions report success.
+  if (ports.effects.plan.length > 0) return EXIT_OK;
   ports.reporter.ok(`已推送 ${plan.tags.join(', ')}`);
   for (const url of workflowUrls(plan.remote, plan.kind)) ports.reporter.info(`GitHub Actions: ${url}`);
   ports.reporter.info('远程构建是异步的，请检查 Release 资产和下载结果');

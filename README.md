@@ -30,7 +30,7 @@ nix develop ./nix
 启动前端开发栈（Vite + Mock Product API）：
 
 ```sh
-ops runtime dev --scenario default --web-port 5173 --mock-port 9090
+ops runtime dev --scenario default --admin-entry on --web-port 5173 --mock-port 9090
 ```
 
 终端会打印实际绑定的访问地址；候选端口被占用时，地址可能不是命令中给出的端口。使用 `Ctrl-C` 停止服务。
@@ -41,7 +41,7 @@ ops runtime dev --scenario default --web-port 5173 --mock-port 9090
 | --- | --- |
 | 查看当前命令与参数 | `ops help`、`ops <path> --help` |
 | 检查开发依赖 | `ops workspace doctor` |
-| 启动前端与 Mock 数据 | `ops runtime dev --scenario default --web-port 5173 --mock-port 9090` |
+| 启动前端与 Mock 数据 | `ops runtime dev --scenario default --admin-entry on --web-port 5173 --mock-port 9090` |
 | 启动纯后端 API 栈 | `ops runtime backend --data test --content-source fixture --product-port 8080 --data-port 8081` |
 | 启动同源集成栈 | `ops runtime integration --content-source fixture --product-port 8080 --data-port 8081` |
 | 运行全项目质量检查 | `ops quality check` |

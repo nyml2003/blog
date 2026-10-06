@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@blog/desktop-api": "workspace:*",
+    "@blog/desktop-atoms": "workspace:*",
     "@blog/desktop-shared": "workspace:*",
     "@fluvient-loom/page-kit": "workspace:*",
     "lucide-solid": "1.48.0",

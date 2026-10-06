@@ -553,7 +553,7 @@ test('PORT-002/PORT-005 + ENV-001 + MODE-001: dev injects the incremented mock a
   const mockActual = base + 2;
   const blocker = await hold(mockPort);
   const before = await testDbFiles();
-  const run = OpsRun.start(['runtime', 'dev', '--scenario', 'default', '--web-port', String(webPort), '--mock-port', String(mockPort), '--json'], {
+  const run = OpsRun.start(['runtime', 'dev', '--scenario', 'default', '--admin-entry', 'off', '--web-port', String(webPort), '--mock-port', String(mockPort), '--json'], {
     BLOG_API_ORIGIN: 'http://127.0.0.1:9999',
   });
   t.after(async () => { blocker.close(); await run.dispose(); });
@@ -777,7 +777,7 @@ test('MODE-001/PLAN 验收 1: dev --scenario empty switches the named scenario o
   const webPort = base;
   const mockPort = base + 1;
   const before = await testDbFiles();
-  const run = OpsRun.start(['runtime', 'dev', '--scenario', 'empty', '--web-port', String(webPort), '--mock-port', String(mockPort), '--json']);
+  const run = OpsRun.start(['runtime', 'dev', '--scenario', 'empty', '--admin-entry', 'off', '--web-port', String(webPort), '--mock-port', String(mockPort), '--json']);
   t.after(() => run.dispose());
 
   const payload = await run.ready();

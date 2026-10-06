@@ -1,4 +1,6 @@
 import type { ProcessPort, Reporter } from '@fluvient-cli/cli-kit/ports.ts';
+import type { EffectPort } from '@fluvient-cli/cli-kit/effects.ts';
+import { processStepEffect, reportPlan } from '@fluvient-cli/cli-kit/effects.ts';
 import type { Workspace } from '@fluvient-cli/cli-kit/workspace.ts';
 
 // 与 quality/commands.ts 的 runWebQuality 同构：包装
@@ -9,20 +11,11 @@ export async function runPageCheck(
   workspace: Workspace,
   process: ProcessPort,
   reporter: Reporter,
-  options: { readonly dryRun: boolean },
+  effects: EffectPort,
 ): Promise<boolean> {
   reporter.section('ops page check');
-  if (options.dryRun) {
-    reporter.info('pnpm -C src/frontend run page:check');
-    return true;
-  }
-  const label = 'pnpm page:check';
-  const result = await process.run('pnpm', ['-C', 'src/frontend', 'run', 'page:check'], workspace.root);
-  if (result.code !== 0) {
-    reporter.fail(label);
-    reporter.info(result.stderr || result.stdout);
-    return false;
-  }
-  reporter.ok(label);
-  return true;
+  const step = { label: 'pnpm page:check', command: 'pnpm', args: ['-C', 'src/frontend', 'run', 'page:check'], cwd: workspace.root };
+  const result = await effects.run(processStepEffect({ process, reporter }, step, 'pnpm -C src/frontend run page:check'), undefined);
+  reportPlan(effects, reporter);
+  return result.ok;
 }

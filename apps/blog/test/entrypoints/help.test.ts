@@ -52,6 +52,7 @@ test('every leaf advertises the unified exit codes, never the retired 1 and 2', 
 test('field models generate required values, complete choices and switch semantics', () => {
   const dev = renderCommandHelp(registry, ['runtime', 'dev']);
   assert.match(dev, /--scenario <enum>/);
+  assert.match(dev, /--admin-entry <enum>/);
   assert.match(dev, /--web-port <int32>/);
   assert.match(dev, /必填/);
   assert.match(dev, /1024-65535/);

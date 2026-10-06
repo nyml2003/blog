@@ -10,29 +10,13 @@ export function createDesktopAdminHomePage(
 ): Component {
   return function DesktopAdminHomePage() {
     const page = useDesktopAdminHome(input.api);
-    const homeHref = route(input.routes, "desktop-public-home");
-    const adminHref = route(input.routes, "desktop-admin-home");
     const workspaceHref = route(input.routes, "desktop-admin-article-types");
     const newHref = route(input.routes, "desktop-admin-article-new");
     const editHref = (id: number) =>
       routeWithQuery(input.routes, "desktop-admin-article-edit", { id });
     return (
-      <div class="desktop-login desktop-admin-home">
-        <header>
-          <a class="brand" href={adminHref}>
-            <span>管理台</span>
-            <strong>技术知识库</strong>
-          </a>
-          <nav>
-            <a href={homeHref}>返回站点</a>
-            <a href={adminHref} aria-current="page">
-              文章
-            </a>
-            <a href={workspaceHref}>分类工作台</a>
-          </nav>
-        </header>
-        <main id="main">
-          <header class="admin-page-head">
+      <div class="admin-page admin-home-page">
+        <header class="admin-page-head">
             <div>
               <Text tone="accent">CONTENT WORKSPACE</Text>
               <Heading level={1}>文章管理</Heading>
@@ -104,7 +88,6 @@ export function createDesktopAdminHomePage(
               )}
             </Show>
           </Show>
-        </main>
       </div>
     );
   };

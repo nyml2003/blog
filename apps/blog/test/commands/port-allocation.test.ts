@@ -50,22 +50,22 @@ test('exhausting the window raises PORT_EXHAUSTED with every attempted port', as
 });
 
 test('mode plans fix the dependency order, data semantics and candidate ports', () => {
-  assert.deepEqual(planMode({ mode: 'dev', scenario: 'default', webPort: 5173, mockPort: 9090 }).services, ['mock', 'web']);
-  assert.deepEqual(planMode({ mode: 'dev', scenario: 'default', webPort: 5173, mockPort: 9090 }).candidates, { mock: 9090, web: 5173 });
+  assert.deepEqual(planMode({ mode: 'dev', scenario: 'default', adminEntry: 'off', webPort: 5173, mockPort: 9090 }).services, ['mock', 'web']);
+  assert.deepEqual(planMode({ mode: 'dev', scenario: 'default', adminEntry: 'off', webPort: 5173, mockPort: 9090 }).candidates, { mock: 9090, web: 5173 });
   assert.deepEqual(planMode({ mode: 'backend', dataMode: 'mock', productPort: 8080, dataPort: 8081 }).services, ['data', 'product']);
   assert.deepEqual(planMode({ mode: 'integration', watch: false, productPort: 8080, dataPort: 8081 }).services, ['data', 'product']);
-  assert.equal(planMode({ mode: 'dev', scenario: 'default', webPort: 5173, mockPort: 9090 }).entry, 'web');
+  assert.equal(planMode({ mode: 'dev', scenario: 'default', adminEntry: 'off', webPort: 5173, mockPort: 9090 }).entry, 'web');
   assert.equal(planMode({ mode: 'backend', dataMode: 'mock', productPort: 8080, dataPort: 8081 }).entry, null);
   assert.equal(planMode({ mode: 'integration', watch: false, productPort: 8080, dataPort: 8081 }).entry, 'product');
   assert.equal(planMode({ mode: 'backend', dataMode: 'mock', productPort: 8080, dataPort: 8081 }).dataMode, 'mock');
   assert.equal(planMode({ mode: 'backend', dataMode: 'test', productPort: 8080, dataPort: 8081 }).dataMode, 'test');
   assert.equal(planMode({ mode: 'integration', watch: false, productPort: 8080, dataPort: 8081 }).dataMode, 'test');
-  assert.deepEqual(planMode({ mode: 'dev', scenario: 'default', webPort: 5173, mockPort: 9090 }).builds, []);
+  assert.deepEqual(planMode({ mode: 'dev', scenario: 'default', adminEntry: 'off', webPort: 5173, mockPort: 9090 }).builds, []);
   assert.equal(planMode({ mode: 'integration', watch: false, productPort: 8080, dataPort: 8081 }).builds.length, 1);
   assert.equal(planMode({ mode: 'integration', watch: true, productPort: 8080, dataPort: 8081 }).watchBuild?.label, 'pnpm -C src/frontend run build --watch');
-  assert.equal(planMode({ mode: 'dev', scenario: 'empty', webPort: 5173, mockPort: 9090 }).scenario, 'empty');
-  assert.equal(planMode({ mode: 'dev', scenario: 'default', webPort: 5173, mockPort: 9090 }).scenario, 'default');
-  assert.deepEqual(planMode({ mode: 'dev', scenario: 'default', webPort: 5273, mockPort: 9190 }).candidates, { mock: 9190, web: 5273 });
+  assert.equal(planMode({ mode: 'dev', scenario: 'empty', adminEntry: 'off', webPort: 5173, mockPort: 9090 }).scenario, 'empty');
+  assert.equal(planMode({ mode: 'dev', scenario: 'default', adminEntry: 'off', webPort: 5173, mockPort: 9090 }).scenario, 'default');
+  assert.deepEqual(planMode({ mode: 'dev', scenario: 'default', adminEntry: 'off', webPort: 5273, mockPort: 9190 }).candidates, { mock: 9190, web: 5273 });
   assert.deepEqual(planMode({ mode: 'backend', dataMode: 'mock', productPort: 18080, dataPort: 18081 }).candidates, { data: 18081, product: 18080 });
 });
 
@@ -90,6 +90,7 @@ test('runtime planning never repairs missing or invalid business input', () => {
   for (const input of [
     { mode: 'dev', scenario: 'default', webPort: 5173 },
     { mode: 'dev', scenario: 'unknown', webPort: 5173, mockPort: 9090 },
+    { mode: 'dev', scenario: 'default', adminEntry: 'unknown', webPort: 5173, mockPort: 9090 },
     { mode: 'backend', dataMode: 'unknown', productPort: 8080, dataPort: 8081 },
     { mode: 'integration', productPort: 8080, dataPort: 8081 },
     { mode: 'backend', dataMode: 'mock', productPort: 0, dataPort: 8081 },

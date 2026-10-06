@@ -22,6 +22,7 @@ export const desktopAdminArticleNewPage = definePage({
   outputPath: "desktop/pages/admin-article-new/index.html",
   title: "新建文章 - 管理台",
   aliases: ["/admin/articles/new.html"],
+  layout: "admin",
   params,
   load: () =>
     import("./page.tsx").then(
@@ -36,6 +37,7 @@ export const desktopAdminArticleEditPage = definePage({
   outputPath: "desktop/pages/admin-article-edit/index.html",
   title: "编辑文章 - 管理台",
   aliases: ["/admin/articles/edit.html"],
+  layout: "admin",
   params,
   load: () =>
     import("./page.tsx").then(

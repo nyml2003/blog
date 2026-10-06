@@ -201,6 +201,9 @@ importers:
       '@blog/desktop-api':
         specifier: workspace:*
         version: link:../../desktop-api
+      '@blog/desktop-atoms':
+        specifier: workspace:*
+        version: link:../../desktop-atoms
       '@blog/desktop-shared':
         specifier: workspace:*
         version: link:../../desktop-shared
@@ -523,9 +526,15 @@ importers:
       '@fluvient-cli/cli-kit':
         specifier: workspace:*
         version: link:../cli-kit
+      '@fluvient-loom/node':
+        specifier: workspace:*
+        version: link:../node
 
   packages/cli/cli-kit:
     dependencies:
+      '@fluvient-loom/port':
+        specifier: workspace:*
+        version: link:../../ts/port
       '@fluvient/core':
         specifier: workspace:*
         version: link:../../ts/core

@@ -22,7 +22,7 @@ ops delivery build
 ops release script --dry-run
 ops release build --yes
 ops release both --yes
-ops runtime dev --scenario default --web-port 5173 --mock-port 9090
+ops runtime dev --scenario default --admin-entry on --web-port 5173 --mock-port 9090
 ops runtime backend --content-source fixture --data mock --product-port 8080 --data-port 8081
 ops runtime backend --content-source github --data prod --database-path ~/.local/state/blog/prod.db --product-port 18080 --data-port 18081
 ops runtime integration --content-source fixture --product-port 8080 --data-port 8081
@@ -39,7 +39,7 @@ BLOG_CONTENT_REPO=owner/repository BLOG_CONTENT_TOKEN=... ops content repository
 
 | 命令 | 进程 | 数据来源 | 页面入口 |
 | --- | --- | --- | --- |
-| `ops runtime dev --scenario <NAME> --web-port <PORT> --mock-port <PORT>` | Vite dev + Mock Product API | Mock（`default`/`empty`/`slow`/`server-error`/`malformed-response`） | Vite 实际绑定地址 |
+| `ops runtime dev --scenario <NAME> --admin-entry <on\|off> --web-port <PORT> --mock-port <PORT>` | Vite dev + Mock Product API | Mock（`default`/`empty`/`slow`/`server-error`/`malformed-response`） | Vite 实际绑定地址；`--admin-entry on` 时公开页导航显示工作台入口（不是访问控制） |
 | `ops runtime backend --content-source <fixture\|github> --data <mock\|test\|prod> [--database-path <PATH>] --product-port <PORT> --data-port <PORT>` | Rust Product API-only + Rust Data | Data 为 `mock`（内存夹具）、`test`（临时 SQLite）或 `prod`（显式路径 SQLite，必须提供 `--database-path`，自动迁移、不加载 seed、退出不删除） | 无，API 基址即 Product 地址 |
 | `ops runtime integration --content-source <fixture\|github> --product-port <PORT> --data-port <PORT> [--watch]` | 先构建 `src/frontend/dist`，再启动 Rust Product（挂载 `src/frontend/dist`）+ Rust Data(test) | Data 固定为 `test`；内容来源单独显式选择 | Product 地址，页面与 `/api` 同源 |
 | `ops local install` | 注册并启动本地常驻服务（macOS LaunchAgent / Linux systemd 用户单元，守护本体 `deploy/local/serve.mjs`，配置 `~/.local/state/blog/local-deploy/local.json`）；幂等，运行中执行即重启 | Data(prod) + 打包产物，`ops local uninstall` 卸载（保留配置与数据） | Product 地址，页面与 `/api` 同源 |

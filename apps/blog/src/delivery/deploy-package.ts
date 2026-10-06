@@ -1,6 +1,8 @@
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
+import { err, ok, type Result } from '@fluvient/core';
 import type { ProcessPort, FsPort, Reporter } from '@fluvient-cli/cli-kit/ports.ts';
+import { effectFailure, reversibleEffect, reportPlan, type EffectFailure, type EffectPort } from '@fluvient-cli/cli-kit/effects.ts';
 import { EXIT_FAILURE, EXIT_OK } from '@fluvient-cli/cli-kit/errors.ts';
 import {
   RELEASE_BINARIES,
@@ -20,6 +22,7 @@ export interface DeployPorts {
   fs: FsPort;
   reporter: Reporter;
   root: string;
+  effects: EffectPort;
 }
 
 function requireFilePorts(fs: FsPort): Required<Pick<FsPort, 'write' | 'copy' | 'readBytes'>> {
@@ -31,20 +34,12 @@ function requireFilePorts(fs: FsPort): Required<Pick<FsPort, 'write' | 'copy' | 
 // 2000 字符会把 undefined symbol 等关键行截掉,导致 CI 上无法定位。
 const FAILURE_DETAIL_CHARS = 12_000;
 
-async function runStep(step: PackageStep, ports: DeployPorts): Promise<number> {
-  const result = await ports.process.run(step.command, [...step.args], step.cwd);
-  if (result.code === EXIT_OK) {
-    ports.reporter.ok(step.label);
-    return EXIT_OK;
+function reportFailureDetail(ports: DeployPorts, output: string): void {
+  const detail = output.trim();
+  if (!detail) return;
+  for (const line of detail.slice(-FAILURE_DETAIL_CHARS).split('\n')) {
+    ports.reporter.info(line);
   }
-  ports.reporter.fail(`${step.label}(exit ${result.code})`);
-  const detail = (result.stderr || result.stdout).trim();
-  if (detail) {
-    for (const line of detail.slice(-FAILURE_DETAIL_CHARS).split('\n')) {
-      ports.reporter.info(line);
-    }
-  }
-  return EXIT_FAILURE;
 }
 
 function sha256(content: Buffer): string {
@@ -59,62 +54,84 @@ export function archivePath(root: string, target: DeployTarget): string {
   return join(root, 'deploy', 'dist', releaseArchiveName(target, stamp()));
 }
 
+function stepEffect(ports: DeployPorts, step: PackageStep) {
+  return reversibleEffect<void, EffectFailure>({
+    describe: () => ({ summary: step.label }),
+    execute: async (): Promise<Result<void, EffectFailure>> => {
+      // 工具链走 nix develop 时,命令本身需要完整环境;失败详情原样保留留给人工定位。
+      const result = await ports.process.run(step.command, [...step.args], step.cwd);
+      if (result.code === EXIT_OK) {
+        ports.reporter.ok(step.label);
+        return ok(undefined);
+      }
+      ports.reporter.fail(`${step.label}(exit ${result.code})`);
+      reportFailureDetail(ports, result.stderr || result.stdout);
+      return err(effectFailure(`${step.label}(exit ${result.code})`));
+    },
+  });
+}
+
+function assembleEffect(ports: DeployPorts, target: DeployTarget, archive: string) {
+  // 批量等待互相独立的文件操作；显式 `Promise<void>` 注解表明这些调用没有可读的返回值。
+  const applyAll = (operations: readonly Promise<unknown>[]): Promise<void> => Promise.all(operations).then(() => undefined);
+  return reversibleEffect<void, EffectFailure>({
+    describe: () => ({ summary: `组装发布包 ${archive.split('/').pop()}` }),
+    execute: async (): Promise<Result<void, EffectFailure>> => {
+      const fs = requireFilePorts(ports.fs);
+      const staging = packageStagingDir(ports.root);
+      try {
+        const cleaned = await ports.process.run('rm', ['-rf', staging], ports.root);
+        if (cleaned.code !== EXIT_OK) return err(effectFailure(`清理 staging 失败(exit ${cleaned.code})`));
+        const targetDir = join(ports.root, 'src', 'target', target, 'release');
+        const distRoot = join(ports.root, 'src', 'frontend', 'dist');
+        const distFiles = await ports.fs.files(distRoot);
+        await applyAll([
+          ...['bin', 'web/dist', 'systemd', 'nginx'].map((dir) => ports.fs.mkdir(join(staging, dir))),
+          ...RELEASE_BINARIES.map((name) => fs.copy(join(targetDir, name), join(staging, 'bin', name))),
+          ...distFiles.map((file) => fs.copy(file, join(staging, 'web', 'dist', file.slice(distRoot.length + 1)))),
+          ...RELEASE_UNITS.map((name) => fs.copy(join(ports.root, 'deploy', 'systemd', name), join(staging, 'systemd', name))),
+          fs.copy(join(ports.root, 'deploy', 'nginx', RELEASE_NGINX), join(staging, 'nginx', RELEASE_NGINX)),
+        ]);
+
+        const artifacts = releaseArtifacts();
+        const sha256Map: Record<string, string> = {};
+        for (const relative of artifacts) {
+          sha256Map[relative] = sha256(await fs.readBytes(join(staging, relative)));
+        }
+        const manifest: ReleaseManifest = {
+          format: 1,
+          target,
+          createdAt: new Date().toISOString(),
+          sha256: sha256Map,
+        };
+        await applyAll([
+          fs.write(join(staging, 'SHA256SUMS'), `${artifacts.map((relative) => `${sha256Map[relative]}  ${relative}`).join('\n')}\n`),
+          fs.write(join(staging, 'MANIFEST.json'), `${JSON.stringify(manifest, null, 2)}\n`),
+        ]);
+        return ok(undefined);
+      } catch (error) {
+        ports.reporter.fail(`组装发布包失败:${error instanceof Error ? error.message : String(error)}`);
+        return err(effectFailure('组装发布包失败'));
+      }
+    },
+  });
+}
+
 /** 构建并产出环境无关的发布包;包内不含任何秘密或部署配置。 */
-export async function runDeployPackage(target: DeployTarget, ports: DeployPorts, options: { dryRun: boolean }): Promise<number> {
+export async function runDeployPackage(target: DeployTarget, ports: DeployPorts): Promise<number> {
   const archive = archivePath(ports.root, target);
-  const staging = packageStagingDir(ports.root);
   const steps = packageSteps(target, ports.root, archive);
-  if (options.dryRun) {
-    ports.reporter.info(`发布包将写入 ${archive}`);
-    for (const step of steps) ports.reporter.info(`- ${step.label}`);
-    return EXIT_OK;
-  }
-  const fs = requireFilePorts(ports.fs);
-  for (const step of steps.slice(0, 2)) {
-    const code = await runStep(step, ports);
-    if (code !== 0) return code;
-  }
 
-  try {
-    await ports.process.run('rm', ['-rf', staging], ports.root);
-    for (const dir of ['bin', 'web/dist', 'systemd', 'nginx']) await ports.fs.mkdir(join(staging, dir));
-    const targetDir = join(ports.root, 'src', 'target', target, 'release');
-    for (const name of RELEASE_BINARIES) {
-      await fs.copy(join(targetDir, name), join(staging, 'bin', name));
-    }
-    const distRoot = join(ports.root, 'src', 'frontend', 'dist');
-    for (const file of await ports.fs.files(distRoot)) {
-      const relative = file.slice(distRoot.length + 1);
-      await fs.copy(file, join(staging, 'web', 'dist', relative));
-    }
-    for (const name of RELEASE_UNITS) {
-      await fs.copy(join(ports.root, 'deploy', 'systemd', name), join(staging, 'systemd', name));
-    }
-    await fs.copy(join(ports.root, 'deploy', 'nginx', RELEASE_NGINX), join(staging, 'nginx', RELEASE_NGINX));
-
-    const artifacts = releaseArtifacts();
-    const sha256Map: Record<string, string> = {};
-    for (const relative of artifacts) {
-      sha256Map[relative] = sha256(await fs.readBytes(join(staging, relative)));
-    }
-    await fs.write(
-      join(staging, 'SHA256SUMS'),
-      `${artifacts.map((relative) => `${sha256Map[relative]}  ${relative}`).join('\n')}\n`,
-    );
-    const manifest: ReleaseManifest = {
-      format: 1,
-      target,
-      createdAt: new Date().toISOString(),
-      sha256: sha256Map,
-    };
-    await fs.write(join(staging, 'MANIFEST.json'), `${JSON.stringify(manifest, null, 2)}\n`);
-    const code = await runStep(steps[2]!, ports);
-    if (code !== 0) return code;
-    await ports.process.run('rm', ['-rf', staging], ports.root);
-    ports.reporter.info(`发布包:${archive}`);
-    return EXIT_OK;
-  } catch (error) {
-    ports.reporter.fail(`组装发布包失败:${error instanceof Error ? error.message : String(error)}`);
-    return EXIT_FAILURE;
+  for (const step of [steps[0]!, steps[1]!]) {
+    const built = await ports.effects.run(stepEffect(ports, step), undefined);
+    if (!built.ok) return EXIT_FAILURE;
   }
+  const assembled = await ports.effects.run(assembleEffect(ports, target, archive), undefined);
+  if (!assembled.ok) return EXIT_FAILURE;
+  const packed = await ports.effects.run(stepEffect(ports, steps[2]!), undefined);
+  if (!packed.ok) return EXIT_FAILURE;
+
+  reportPlan(ports.effects, ports.reporter);
+  ports.reporter.info(`发布包:${archive}`);
+  return EXIT_OK;
 }

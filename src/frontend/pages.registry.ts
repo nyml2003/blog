@@ -25,6 +25,7 @@ import type { DesktopPageContext } from "@blog/desktop-shared";
 import type { MobilePageContext } from "@blog/mobile-shared";
 import type {
   PageFactory,
+  PageNavMetadata,
   PagePlatform,
   PageRegistration,
   PageRoute,
@@ -74,6 +75,32 @@ export function desktopPageLoaders(): ReadonlyMap<
     if (page.platform === "desktop") loaders.set(page.id, page.load);
   }
   return loaders;
+}
+
+/** 管理端 SPA 宿主的视图清单：出页面注册表（layout === "admin"），菜单只看 nav。 */
+export interface DesktopAdminPageView {
+  readonly id: string;
+  readonly title: string;
+  readonly aliases: readonly string[];
+  readonly nav: PageNavMetadata | undefined;
+  readonly load: () => Promise<PageFactory<DesktopPageContext>>;
+}
+
+type PageRegistryEntry = (typeof pageRegistry)[number];
+type DesktopPageEntry = Extract<PageRegistryEntry, { platform: "desktop" }>;
+
+function isDesktopAdminPage(page: PageRegistryEntry): page is DesktopPageEntry {
+  return page.platform === "desktop" && page.layout === "admin";
+}
+
+export function desktopAdminPageViews(): readonly DesktopAdminPageView[] {
+  return pageRegistry.filter(isDesktopAdminPage).map((page) => ({
+    id: page.id,
+    title: page.title,
+    aliases: page.aliases,
+    nav: page.nav,
+    load: page.load,
+  }));
 }
 
 /** 同 desktopPageLoaders，供 mobile 入口使用。 */

@@ -3,7 +3,7 @@ kind: spec
 id: SPEC-OPS-RUNTIME-001
 status: accepted
 owner: product
-last_reviewed: 2026-10-01
+last_reviewed: 2026-10-06
 ---
 
 # 运行模式、命令与进程契约
@@ -40,7 +40,7 @@ last_reviewed: 2026-10-01
 
 | 命令 | 参数 | 缺省行为 | 说明 |
 | --- | --- | --- | --- |
-| `ops runtime dev` | `--scenario <NAME>`、`--web-port <PORT>`、`--mock-port <PORT>`、全局 `--help`/`--dry-run`/`--json` | 有值参数全部必填，无默认值 | Vite dev + Mock Product API；不启动 Product/Data |
+| `ops runtime dev` | `--scenario <NAME>`、`--admin-entry <on\|off>`、`--web-port <PORT>`、`--mock-port <PORT>`、全局 `--help`/`--dry-run`/`--json` | 有值参数全部必填，无默认值 | Vite dev + Mock Product API；不启动 Product/Data；`--admin-entry` 控制公开页导航里的工作台入口可见性 |
 | `ops runtime backend` | `--data <mock\|test\|prod>`、`--database-path <PATH>`（可选，仅 prod 合法且必填）、`--content-source <fixture\|github>`、`--product-port <PORT>`、`--data-port <PORT>` | 有值参数除 `--database-path`（可选）外全部必填，无默认值 | Product API-only + Data Server；不挂载前端，无 Vite |
 | `ops runtime integration` | `--content-source <fixture\|github>`、`[--watch]`、`--product-port <PORT>`、`--data-port <PORT>` | content-source 与端口必填；watch 缺省 false | 前端构建（或 build `--watch`）+ Product + Data(test)；Product 挂载 `src/frontend/dist` |
 | `ops delivery build` | 全局 `--dry-run`、`--json` | — | 构建 `src/frontend/dist` 与 Rust Product/Data/Mock 交付 binary，不启动任何服务 |
@@ -56,14 +56,15 @@ last_reviewed: 2026-10-01
 - 本期**不提供** `--host`/`--listen`。被删除的 `ops runtime serve --listen`（原 env `BLOG_LISTEN_ADDR`）不复活；监听地址固定 `127.0.0.1`（本 Spec 不覆盖公网监听）。
 - 端口覆盖参数命名为 `--web-port`/`--product-port`/`--data-port`/`--mock-port`，取值范围 `1024`–`65535`；不支持 `0`（系统临时端口）。越界或非整数按用法错误处理。
 - `--scenario` 只接受当前 Mock runtime 注册的命名场景；未知场景名按用法错误处理，不做前缀匹配或模糊回退。
+- `--admin-entry` 只接受 `on`/`off`，必须显式选择、无默认值；它决定 `dev` 的 Vite 进程收到的 `BLOG_ADMIN_ENTRY`（`on` → `true`，`off` → `false`），只影响公开页导航是否渲染工作台入口，不是访问控制（管理端真正的门是后端鉴权）。
 - session 隔离（`X-Blog-Mock-Session`）是**请求头**，不是 CLI 参数，也不提供 `--session` 之类选项。
 
 ### 示例
 
 ```text
-ops runtime dev --scenario default --web-port 5173 --mock-port 9090
-ops runtime dev --scenario empty --web-port 5173 --mock-port 9090
-ops runtime dev --scenario slow --web-port 5173 --mock-port 9090
+ops runtime dev --scenario default --admin-entry on --web-port 5173 --mock-port 9090
+ops runtime dev --scenario empty --admin-entry off --web-port 5173 --mock-port 9090
+ops runtime dev --scenario slow --admin-entry off --web-port 5173 --mock-port 9090
 ops runtime backend --content-source fixture --data mock --product-port 8080 --data-port 8081
 ops runtime backend --content-source fixture --data test --product-port 8080 --data-port 8081
 ops runtime backend --content-source github --data prod --database-path ~/.local/state/blog/prod.db --product-port 18080 --data-port 18081
@@ -114,6 +115,7 @@ ops runtime backend --content-source fixture --data mock --product-port 8080 --d
 | 变量 | 注入目标 | 值 | 说明 |
 | --- | --- | --- | --- |
 | `BLOG_API_ORIGIN` | Vite 进程（`dev` 模式） | Mock 实际绑定地址，如 `http://127.0.0.1:9090` | 复用既有接缝 `src/frontend/vite.config.ts`；缺省值 `http://127.0.0.1:8080` 仅在非 ops 直跑 Vite 时生效 |
+| `BLOG_ADMIN_ENTRY` | Vite 进程（`dev` 模式） | `true`/`false` | 由必填 `--admin-entry on\|off` 决定；控制公开页导航的工作台入口可见性，不是访问控制 |
 | `BLOG_DATA_ADDR` | Product 进程 | `http://127.0.0.1:<data 实际端口>` | Data 实际地址 → Product；显式参数 `--data-addr` 可覆盖 |
 | `BLOG_WEB_DIR` | Product 进程（`integration` 模式） | 仓库内 `src/frontend/dist` 绝对路径 | 沿用既有环境变量名；显式参数 `--web-dir` 可覆盖。integration 由 Product 挂载静态目录 |
 | `BLOG_DATABASE_PATH` | Data 进程（仅 `--data test`） | `target/test-dbs/<PID>` | 显式参数 `--data-database-path` 可覆盖；`mock` 语义下 Data 不读取该变量、不创建任何文件。prod 的库路径不走该变量，由 CLI `--database-path` 转写为 Data 进程参数 `--data-database-path` |
@@ -127,6 +129,7 @@ ops runtime backend --content-source fixture --data mock --product-port 8080 --d
 
 - **运行地址由 ops 决定**：`BLOG_API_ORIGIN`、`BLOG_DATA_ADDR`、`BLOG_WEB_DIR` 与 `BLOG_DATABASE_PATH`（test）由 ops 计算并覆盖调用者同名值；prod 的库路径由 CLI `--database-path` 显式提供；repo/token 与模型配置只在对应模式按调用环境中实际存在的值定向传给 Product。需要手工控制连接地址的开发者不使用 `ops runtime`，直接驱动子进程。
 - **`--scenario` 只走 CLI**：必须显式选择，`default` 仅是合法名称；不读取环境变量、不读取配置文件。Mock 子进程通过命令行参数（而非环境变量）收到场景名。会话头 `X-Blog-Mock-Session` 由前端 Client interceptor 附加，不属于 ops 注入面。
+- **`--admin-entry` 只走 CLI**：必须显式选择，无默认值；调用环境中的同名 `BLOG_ADMIN_ENTRY` 不被读取，Vite 子进程收到的是 ops 按 `on`/`off` 计算后的 `true`/`false`。
 - **注入面收敛**：ops 注入的运行配置只在 composition root / 进程启动参数层面被消费；页面与领域模型不出现 Mock 专用类型或 Mock 专用环境变量。
 - **内容来源隔离**：fixture 模式清除环境中的 repo/token；GitHub 模式只把实际存在的 repo/token 传给 Product。缺失凭证不让 ops 暗中切换来源，Product 按内容仓库契约从 last-good 快照启动并让远程管理操作失败关闭。
 - `mock` 语义下 Data 不创建、不打开任何 SQLite 文件；`test` 语义下每次运行使用全新临时 SQLite，自动迁移并加载稳定 seed。库文件位于 `target/test-dbs/`、以运行进程 PID 命名：**正常退出即删除，异常退出保留供诊断**。迁移不提供独立命令，由 Data 启动时自动执行。
@@ -211,7 +214,7 @@ Then 帮助能区分三种运行模式的目的、是否连接真实后端、是
 
 Given 项目环境已激活
 When 执行 `ops runtime dev`（无参数）
-Then 退出 10，提示缺少必填字段且不启动任何进程；显式提供 `--scenario default --web-port 5173 --mock-port 9090` 后才启动 Vite 与 Mock，不启动 Product 或 Data。
+Then 退出 10，提示缺少必填字段且不启动任何进程；显式提供 `--scenario default --admin-entry off --web-port 5173 --mock-port 9090` 后才启动 Vite 与 Mock，不启动 Product 或 Data。
 
 #### SPEC-OPS-RUNTIME-001-CMD-003
 
@@ -381,6 +384,14 @@ Given Product/Data/Mock 子进程需要运行配置
 When ops 启动它们
 Then 模式所需的运行连接和内容来源都通过明确命名的参数或环境变量注入，标识符按本节与附录 A 命名；不得依赖子进程隐式默认值自连。管理凭证等其他已定义注入面仍由各自 Spec/指南约束。
 
+#### SPEC-OPS-RUNTIME-001-ENV-005
+
+强度：Acceptance
+
+Given 调用者环境中已导出 `BLOG_ADMIN_ENTRY`（任意值），且未传 `--admin-entry`
+When 执行 `ops runtime dev`
+Then 退出 10 并提示缺少必填参数，不读取调用环境的值；显式传 `--admin-entry on` 时 Vite 收到 `BLOG_ADMIN_ENTRY=true`，传 `off` 时收到 `false`，且该变量只注入 Vite 进程。
+
 ### 进程生命周期与失败
 
 #### SPEC-OPS-RUNTIME-001-FAIL-001
@@ -508,6 +519,7 @@ Then 行为遵循「静态挂载路由契约」：①精确映射（`/`、`/m`�
 | 标识符 | 方向 | 值形态 | 消费方 |
 | --- | --- | --- | --- |
 | `BLOG_DATA_ADDR` | Data 实际地址 → Product | `http://127.0.0.1:<port>`（含 scheme，无尾随斜杠） | Product |
+| `BLOG_ADMIN_ENTRY` | `--admin-entry` → Vite | `true`/`false` | Vite（`dev`，仅入口可见性） |
 | `BLOG_WEB_DIR` | `src/frontend/dist` 路径 → Product | 绝对路径 | Product（`integration`） |
 | `BLOG_DATABASE_PATH` | test 数据库路径 → Data | 绝对路径（ops 传 `target/test-dbs/<PID>`） | Data（仅 `test` 语义） |
 | `BLOG_CONTENT_REPO` | 调用环境 → Product | `owner/repository` | Product（仅 GitHub 来源且值存在） |
@@ -524,7 +536,7 @@ Then 行为遵循「静态挂载路由契约」：①精确映射（`/`、`/m`�
 
 | Spec 场景 | 证据 | Owner |
 | --- | --- | --- |
-| `CMD-001`–`CMD-009`、`PORT-001`、`PORT-004`、`ENV-001`–`ENV-004`、`LOG-001`、`LOG-002` | ops 契约测试（`apps/blog/test/**/*.test.ts`） | testing / frontend-core |
+| `CMD-001`–`CMD-009`、`PORT-001`、`PORT-004`、`ENV-001`–`ENV-005`、`LOG-001`、`LOG-002` | ops 契约测试（`apps/blog/test/**/*.test.ts`） | testing / frontend-core |
 | `MODE-001`–`MODE-004`、`PORT-002`、`PORT-003`、`PORT-005`、`FAIL-001`–`FAIL-007` | ops runtime 集成测试（子进程真实启停） | testing |
 | `FAIL-008`、`FAIL-009` | Rust Data/Product 测试与运行证据 | backend |
 | `MODE-002`、`MODE-003` | Rust 契约/夹具测试与运行证据 | backend |

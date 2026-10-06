@@ -14,6 +14,8 @@ export const pageValidationRules = [
   "platform-consistency",
   "bootstrap-mobile-only",
   "shell-mobile-only",
+  "layout-desktop-only",
+  "nav-format",
 ] as const;
 
 export type PageValidationRule = (typeof pageValidationRules)[number];
@@ -152,6 +154,36 @@ export function validatePageRegistry(
         pageId: page.id,
         message: `配置 shell 的页面必须是 mobile（${MOBILE_ONLY_BUILD_CAPABILITIES}）`,
       });
+    }
+    if (page.layout !== undefined && page.platform !== "desktop") {
+      violations.push({
+        rule: "layout-desktop-only",
+        pageId: page.id,
+        message: "layout 宿主壳当前只在 desktop 平台提供",
+      });
+    }
+    if (page.nav !== undefined) {
+      if (page.layout !== "admin") {
+        violations.push({
+          rule: "nav-format",
+          pageId: page.id,
+          message: "nav 元数据只在 layout 为 admin 的页面有效",
+        });
+      }
+      if (page.nav.label.trim() === "") {
+        violations.push({
+          rule: "nav-format",
+          pageId: page.id,
+          message: "nav.label 不能为空（侧边栏用它显示菜单）",
+        });
+      }
+      if (!Number.isFinite(page.nav.order)) {
+        violations.push({
+          rule: "nav-format",
+          pageId: page.id,
+          message: "nav.order 必须是有限数字（决定菜单排序）",
+        });
+      }
     }
   }
 

@@ -1,4 +1,4 @@
-import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE, errorFromUnknown, OpsError, type OpsFailure } from './errors.ts';
+import { EXIT_OK, EXIT_USAGE, errorFromUnknown, OpsError, type OpsFailure } from './errors.ts';
 import type { CommandArgs, CommandContext, CommandDefinition, GroupDefinition } from './commands.ts';
 import type { ParameterSpec } from './parameters.ts';
 import type { Reporter } from './ports.ts';

@@ -1,4 +1,4 @@
-.desktop-taxonomy > main textarea {
+.desktop-taxonomy textarea {
   box-sizing: border-box;
   width: 100%;
   border: 1px solid var(--border);
@@ -7,7 +7,7 @@
   background: var(--surface);
   color: var(--ink);
 }
-.desktop-taxonomy > main textarea {
+.desktop-taxonomy textarea {
   min-height: 520px;
   margin-top: 8px;
   resize: vertical;

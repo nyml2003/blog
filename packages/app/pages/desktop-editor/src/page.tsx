@@ -199,7 +199,7 @@ export function createDesktopEditorPage(
       workspace.state().status === "loading" ||
       (!creation && article.state().status === "loading");
     return (
-      <main id="main" class="admin-page editor-page">
+      <div class="admin-page editor-page">
         <header class="admin-page-head">
           <div>
             <Text tone="accent">WORKSPACE ARTICLE</Text>
@@ -298,7 +298,7 @@ export function createDesktopEditorPage(
             </Form>
           </Show>
         </Show>
-      </main>
+      </div>
     );
   };
 }

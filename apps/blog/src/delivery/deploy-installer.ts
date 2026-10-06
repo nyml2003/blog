@@ -1,6 +1,8 @@
 import { join } from 'node:path';
-import type { DeployPorts } from './deploy-package.ts';
+import { err, ok, type Result } from '@fluvient/core';
+import { effectFailure, reversibleEffect, reportPlan, type EffectFailure } from '@fluvient-cli/cli-kit/effects.ts';
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from '@fluvient-cli/cli-kit/errors.ts';
+import type { DeployPorts } from './deploy-package.ts';
 
 // 与 deploy-package 保持一致:失败输出保留足够长度,避免截断吞掉关键错误行。
 const FAILURE_DETAIL_CHARS = 12_000;
@@ -14,7 +16,7 @@ function reportFailureDetail(ports: DeployPorts, output: string): void {
 }
 
 /** 把服务器安装器打包成单文件 mjs(esbuild 走 nix,不改仓库依赖)。 */
-export async function runDeployInstaller(ports: DeployPorts, options: { dryRun: boolean }): Promise<number> {
+export async function runDeployInstaller(ports: DeployPorts): Promise<number> {
   const entry = join(ports.root, 'apps', 'blog-deploy', 'src', 'main.ts');
   const output = join(ports.root, 'deploy', 'dist', 'blog-deploy.mjs');
   const args = [
@@ -36,23 +38,32 @@ export async function runDeployInstaller(ports: DeployPorts, options: { dryRun: 
     }
     args.push(`--define:__BLOG_DEPLOY_RELEASE_VERSION__=${JSON.stringify(releaseVersion)}`);
   }
-  if (options.dryRun) {
-    ports.reporter.info(`nix ${args.join(' ')}`);
-    return EXIT_OK;
-  }
-  await ports.fs.mkdir(join(ports.root, 'deploy', 'dist'));
-  const build = await ports.process.run('nix', args, ports.root);
-  if (build.code !== 0) {
-    ports.reporter.fail(`installer 打包失败(exit ${build.code})`);
-    reportFailureDetail(ports, build.stderr || build.stdout);
-    return EXIT_FAILURE;
-  }
-  const smoke = await ports.process.run('node', [output, '--help'], ports.root);
-  if (smoke.code !== 0) {
-    ports.reporter.fail(`installer --help 冒烟失败(exit ${smoke.code})`);
-    reportFailureDetail(ports, smoke.stderr || smoke.stdout);
-    return EXIT_FAILURE;
-  }
-  ports.reporter.ok(`安装器已生成:${output}`);
+
+  // 显式 `Promise<void>` 注解表明端口方法没有可读的返回值。
+  const ensureDirectory = (path: string): Promise<void> => ports.fs.mkdir(path);
+  const pack = reversibleEffect<void, EffectFailure>({
+    describe: () => ({ summary: `nix ${args.join(' ')}` }),
+    execute: async (): Promise<Result<void, EffectFailure>> => {
+      await ensureDirectory(join(ports.root, 'deploy', 'dist'));
+      const build = await ports.process.run('nix', args, ports.root);
+      if (build.code !== 0) {
+        ports.reporter.fail(`installer 打包失败(exit ${build.code})`);
+        reportFailureDetail(ports, build.stderr || build.stdout);
+        return err(effectFailure(`installer 打包失败(exit ${build.code})`));
+      }
+      const smoke = await ports.process.run('node', [output, '--help'], ports.root);
+      if (smoke.code !== 0) {
+        ports.reporter.fail(`installer --help 冒烟失败(exit ${smoke.code})`);
+        reportFailureDetail(ports, smoke.stderr || smoke.stdout);
+        return err(effectFailure(`installer --help 冒烟失败(exit ${smoke.code})`));
+      }
+      ports.reporter.ok(`安装器已生成:${output}`);
+      return ok(undefined);
+    },
+  });
+
+  const packed = await ports.effects.run(pack, undefined);
+  if (!packed.ok) return EXIT_FAILURE;
+  reportPlan(ports.effects, ports.reporter);
   return EXIT_OK;
 }

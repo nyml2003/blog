@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { basename } from 'node:path';
 import type { FsPort, ProcessPort, ProcessResult, Reporter } from '@fluvient-cli/cli-kit/ports.ts';
+import { createEffectPort } from '@fluvient-cli/cli-kit/effects.ts';
 import { releaseArtifacts, type ReleaseManifest } from '../../src/delivery/deploy-plan.ts';
 import { runDeployPackage, type DeployPorts } from '../../src/delivery/deploy-package.ts';
 
@@ -57,15 +58,22 @@ class PackageWorld {
     readBytes: async (path) => Buffer.from(this.files.get(path) ?? ''),
   };
 
-  ports(reporter: Reporter): DeployPorts {
-    return { process: this.process, fs: this.fs, reporter, root: ROOT };
+  ports(reporter: Reporter, dryRun = false): DeployPorts {
+    let operation = 0;
+    return {
+      process: this.process,
+      fs: this.fs,
+      reporter,
+      root: ROOT,
+      effects: createEffectPort({ dryRun, operationIds: { next: () => `op-${operation += 1}` } }),
+    };
   }
 }
 
 test('package assembles an environment-independent release with checksums and no secrets', async () => {
   const world = new PackageWorld();
   const { reporter, lines } = captureReporter();
-  const code = await runDeployPackage(TARGET, world.ports(reporter), { dryRun: false });
+  const code = await runDeployPackage(TARGET, world.ports(reporter));
   assert.equal(code, 0, lines.join('\n'));
 
   const product = world.files.get(`${ROOT}/deploy/dist/.staging/systemd/blog-product.service`) ?? '';
@@ -93,10 +101,11 @@ test('package assembles an environment-independent release with checksums and no
 test('package dry-run performs no build or file writes', async () => {
   const world = new PackageWorld();
   const { reporter, lines } = captureReporter();
-  const code = await runDeployPackage(TARGET, world.ports(reporter), { dryRun: true });
+  const code = await runDeployPackage(TARGET, world.ports(reporter, true));
   assert.equal(code, 0);
   assert.equal(world.commands.length, 0);
-  assert.match(lines.join('\n'), /发布包将写入/);
+  assert.match(lines.join('\n'), /发布包:/);
+  assert.match(lines.join('\n'), /DRY-RUN: 组装发布包/);
 });
 
 test('package failure keeps linker error lines that fall outside the old 2000-char window', async () => {
@@ -105,7 +114,7 @@ test('package failure keeps linker error lines that fall outside the old 2000-ch
   const world = new PackageWorld({ command: 'nix', stderr: [marker, ...noise].join('\n') });
   const { reporter, lines } = captureReporter();
 
-  const code = await runDeployPackage(TARGET, world.ports(reporter), { dryRun: false });
+  const code = await runDeployPackage(TARGET, world.ports(reporter));
 
   assert.equal(code, 20);
   const output = lines.join('\n');

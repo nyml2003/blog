@@ -37,6 +37,7 @@ export interface CommandContext {
   binaries: import('./ports.ts').BinaryResolver;
   signals?: import('./ports.ts').SignalPort;
   environment: Readonly<Record<string, string | undefined>>;
+  effects: import('./effects.ts').EffectPort;
   dryRun: boolean;
   json: boolean;
 }

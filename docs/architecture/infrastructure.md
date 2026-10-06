@@ -3,7 +3,7 @@ kind: architecture
 id: ARCH-INFRASTRUCTURE
 status: current
 owner: infrastructure
-last_reviewed: 2026-10-01
+last_reviewed: 2026-10-06
 ---
 
 # Infrastructure 架构
@@ -22,7 +22,7 @@ last_reviewed: 2026-10-01
 
 ## 运行与交付
 
-- `ops runtime dev --scenario <NAME> --web-port <PORT> --mock-port <PORT>`：Vite + Mock Product API，页面数据只来自 Mock（Vite 代理目标由 ops 注入 `BLOG_API_ORIGIN`）；
+- `ops runtime dev --scenario <NAME> --admin-entry <on|off> --web-port <PORT> --mock-port <PORT>`：Vite + Mock Product API，页面数据只来自 Mock（Vite 代理目标由 ops 注入 `BLOG_API_ORIGIN`；工作台入口可见性由 ops 注入 `BLOG_ADMIN_ENTRY`）；
 - `ops runtime backend --content-source <fixture|github> --data <mock|test|prod> --product-port <PORT> --data-port <PORT> [--database-path <PATH>]`：Rust Product + Rust Data，无页面入口；`--database-path` 仅 `--data prod` 时必填且合法；
 - `ops runtime integration --content-source <fixture|github> --product-port <PORT> --data-port <PORT> [--watch]`：先构建 `src/frontend/dist`，由 Product 同源挂载页面与 `/api`；
 - `ops delivery build`：构建 `src/frontend/dist` 与 Product/Data/Mock 三个 Rust binary；

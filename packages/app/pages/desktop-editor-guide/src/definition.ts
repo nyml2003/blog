@@ -7,6 +7,8 @@ export const desktopAdminEditorGuidePage = definePage({
   outputPath: "desktop/pages/admin-editor-guide/index.html",
   title: "编辑器使用指南 - 管理台",
   aliases: ["/admin/editor-guide/index.html"],
+  layout: "admin",
+  nav: { label: "编辑器指南", order: 3 },
   load: () =>
     import("./page.tsx").then(
       (m) => (context: DesktopPageContext) =>

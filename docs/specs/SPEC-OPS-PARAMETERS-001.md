@@ -3,7 +3,7 @@ kind: spec
 id: SPEC-OPS-PARAMETERS-001
 status: accepted
 owner: infrastructure
-last_reviewed: 2026-09-29
+last_reviewed: 2026-10-06
 ---
 
 # Ops 字段参数模型
@@ -37,7 +37,7 @@ last_reviewed: 2026-09-29
 
 | 命令 | 字段 |
 | --- | --- |
-| `runtime dev` | 必填 `--scenario` enum: default, empty, slow, server-error, malformed-response；必填 `--web-port`、`--mock-port` int32 |
+| `runtime dev` | 必填 `--scenario` enum: default, empty, slow, server-error, malformed-response；必填 `--admin-entry` enum: on, off；必填 `--web-port`、`--mock-port` int32 |
 | `runtime backend` | 必填 `--data` enum: mock, test, prod；可选 `--database-path` path（仅 `--data prod` 时必填且只允许出现）；必填 `--content-source` enum: fixture, github；必填 `--product-port`、`--data-port` int32 |
 | `runtime integration` | `--watch` switch；必填 `--content-source` enum: fixture, github；必填 `--product-port`、`--data-port` int32 |
 | `e2e` | 必填 `--mode` enum: integration, dev；可选 `--scenario` enum: empty, slow, server-error, malformed-response（仅 dev）；必填 `--playwright-module`、`--chromium-path` path |
@@ -62,3 +62,5 @@ last_reviewed: 2026-09-29
 2026-09-06 用户确认：整体优化 ops 参数机制，路由保留；仅实现当前实际需要的模型；暂不支持自定义解析；switch 以存在性取值，check 也采用 switch。旧的端口、场景和数据模式默认值不保留兼容写法。
 
 2026-09-26 用户确认：新增 `path` 值模型与 `optional` 有值参数，为 `runtime backend` 放行 `--data prod` 与 `--database-path`；路径显式传入、无默认值；组合校验失败以 10 退出。
+
+2026-10-06 用户确认：`runtime dev` 新增必填 `--admin-entry` enum: on, off，控制工作台入口在公开页导航的可见性；由 CLI 显式选择、无默认值，`on` 注入 `BLOG_ADMIN_ENTRY=true`，`off` 注入 `false`。

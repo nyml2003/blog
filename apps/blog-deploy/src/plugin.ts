@@ -1,4 +1,6 @@
 import type { CliPlugin } from '@fluvient-cli/cli-kit/plugin.ts';
+import type { CommandArgs, CommandContext } from '@fluvient-cli/cli-kit/commands.ts';
+import type { EffectPort } from '@fluvient-cli/cli-kit/effects.ts';
 import { createHttpKernel } from '@fluvient/core/http';
 import type { FetchLike } from './installer/release.ts';
 import { installerDefinitions } from './installer/registry.ts';
@@ -14,7 +16,8 @@ export function installerPlugin(fetchImpl: FetchLike): CliPlugin {
       const workspace = container.get<import('@fluvient-cli/cli-kit/workspace.ts').Workspace>('workspace');
       const fs = container.get<import('@fluvient-cli/cli-kit/ports.ts').FsPort>('fs');
       container.bind('binaries', new WorkspaceBinaries(fs, workspace.root));
-      container.bind('commandContext', (globals: Record<string, string | number | boolean>) => ({
+      const effectsFor = container.get<(globals: CommandArgs) => EffectPort>('effectsPolicy');
+      container.bind('commandContext', (globals: CommandArgs): CommandContext => ({
         workspace,
         process: container.get('process'),
         supervisor: container.get('supervisor'),
@@ -27,6 +30,7 @@ export function installerPlugin(fetchImpl: FetchLike): CliPlugin {
         binaries: container.get('binaries'),
         signals: container.get('signals'),
         environment: container.get('environment'),
+        effects: effectsFor(globals),
         dryRun: globals['dry-run'] === true,
         json: globals.json === true,
       }));

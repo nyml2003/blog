@@ -1,4 +1,5 @@
 import { resolveWorkspace, type Workspace } from '@fluvient-cli/cli-kit/workspace.ts';
+import { createNodeOperationId } from '@fluvient-loom/node';
 import { NodeFs } from './fs.ts';
 import { NodeProcess, NodeProcessSupervisor, ConsoleRuntimeLog, NodeSignals } from './process.ts';
 import { TcpPortProbe, TcpReadiness } from './net.ts';
@@ -21,6 +22,7 @@ export function corePlugin(options: { workspace?: Workspace } = {}) {
       container.bind('probe', new TcpPortProbe());
       container.bind('readiness', new TcpReadiness());
       container.bind('signals', new NodeSignals());
+      container.bind('operationIds', createNodeOperationId());
       container.bind('environment', Object.freeze({ ...process.env }));
       container.bind('runtimeLog', (json: boolean) => new ConsoleRuntimeLog(json));
     },

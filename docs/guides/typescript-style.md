@@ -3,7 +3,7 @@ kind: guide
 id: GUIDE-TYPESCRIPT-STYLE
 status: current
 owner: project-manager
-last_reviewed: 2026-09-19
+last_reviewed: 2026-10-06
 ---
 
 # TypeScript 可读性规范
@@ -207,6 +207,23 @@ useArticle(result.value);
 - 启动异步操作时必须能看出谁负责等待、取消或处理拒绝。
 - 重试、超时和取消属于协调层职责，不在渲染表达式中隐式触发。
 - 不得通过未等待的 Promise 隐藏副作用或错误。
+- **必须**读取 `await` 的返回值：不得写裸 `await call();`。需要结果时读取并使用它（判断 `Result.ok`、检查进程退出码、读取文件内容）；确实没有可处理的返回值时，写 `void (await call());` 并在必要时注释说明丢弃意图。
+
+```ts
+const result = await effects.run(command, input);
+if (!result.ok) {
+  reporter.fail(result.error.message);
+  return EXIT_FAILURE;
+}
+```
+
+反例：
+
+```ts
+await effects.run(command, input);
+```
+
+该规则由 `tools/oxlint/no-bare-await.mjs` 提供，覆盖 `packages/cli/**/src`（宿主适配层 `packages/cli/cli-core` 除外）与 `apps/blog/src` 的 release/delivery/quality/page/admin/content 目录，并在 `ops quality check` 中执行。显式声明返回 `Promise<void>` 的本地函数（如内部步骤 helper）没有返回值可读，`await` 它们不受此规则限制。
 
 简单的纯异步映射可以保持简洁；当回调同时包含校验、转换和副作用时，拆成命名函数。
 

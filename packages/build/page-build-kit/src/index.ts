@@ -1,6 +1,8 @@
 export {
   type PageEntry,
   type PageFactory,
+  type PageLayout,
+  type PageNavMetadata,
   type PagePlatform,
   type PageRegistration,
   type PageRoute,
