@@ -29,6 +29,8 @@ export function blogPlugin(): CliPlugin {
         process: container.get('process'),
         supervisor: container.get('supervisor'),
         fs,
+        path: container.get('path'),
+        hash: container.get('hash'),
         reporter: container.get('reporter'),
         output: container.get<OutputPort>('output'),
         log: new OutputRuntimeLog(container.get<OutputPort>('output')),

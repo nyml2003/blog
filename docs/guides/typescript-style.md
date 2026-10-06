@@ -223,7 +223,9 @@ if (!result.ok) {
 await effects.run(command, input);
 ```
 
-该规则由 `tools/oxlint/no-bare-await.mjs` 提供，覆盖 `packages/cli/**/src`（宿主适配层 `packages/cli/cli-core` 除外）与 `apps/blog/src` 的 release/delivery/quality/page/admin/content 目录，并在 `ops quality check` 中执行。显式声明返回 `Promise<void>` 的本地函数（如内部步骤 helper）没有返回值可读，`await` 它们不受此规则限制。
+该规则由 `tools/oxlint/no-bare-await.mjs` 提供，覆盖 `packages/cli/**/src`（宿主适配层 `packages/cli/cli-core` 除外）与 `apps/blog/src` 的 release/delivery/quality/stats/page/admin/content 目录，并在 `ops quality check` 中执行。显式声明返回 `Promise<void>` 的本地函数（如内部步骤 helper）没有返回值可读，`await` 它们不受此规则限制。
+
+同一插件还提供 `fluvient/no-node-imports`：命令代码不得直连 `node:*`，宿主能力通过 ports（`process`/`fs`/`path`/`hash` 等）注入。当前覆盖 release/delivery/quality/stats/page/content，宿主适配层 `packages/cli/cli-core` 负责实现这些端口。
 
 简单的纯异步映射可以保持简洁；当回调同时包含校验、转换和副作用时，拆成命名函数。
 

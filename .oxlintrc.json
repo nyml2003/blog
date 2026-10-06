@@ -10,12 +10,26 @@
         "apps/blog/src/release/**/*.ts",
         "apps/blog/src/delivery/**/*.ts",
         "apps/blog/src/quality/**/*.ts",
+        "apps/blog/src/stats/**/*.ts",
         "apps/blog/src/page/**/*.ts",
         "apps/blog/src/admin/**/*.ts",
         "apps/blog/src/content/**/*.ts"
       ],
       "rules": {
         "fluvient/no-bare-await": "error"
+      }
+    },
+    {
+      "files": [
+        "apps/blog/src/release/**/*.ts",
+        "apps/blog/src/delivery/**/*.ts",
+        "apps/blog/src/quality/**/*.ts",
+        "apps/blog/src/stats/**/*.ts",
+        "apps/blog/src/page/**/*.ts",
+        "apps/blog/src/content/**/*.ts"
+      ],
+      "rules": {
+        "fluvient/no-node-imports": "error"
       }
     }
   ]

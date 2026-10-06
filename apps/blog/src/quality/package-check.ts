@@ -1,5 +1,4 @@
-import { join } from 'node:path';
-import type { FsPort, ProcessPort, Reporter } from '@fluvient-cli/cli-kit/ports.ts';
+import type { FsPort, PathPort, ProcessPort, Reporter } from '@fluvient-cli/cli-kit/ports.ts';
 import type { EffectPort } from '@fluvient-cli/cli-kit/effects.ts';
 import { processStepEffect, reportPlan } from '@fluvient-cli/cli-kit/effects.ts';
 import type { Workspace } from '@fluvient-cli/cli-kit/workspace.ts';
@@ -9,13 +8,14 @@ export async function runPackageCheck(
   workspace: Workspace,
   process: ProcessPort,
   fs: FsPort,
+  path: PathPort,
   reporter: Reporter,
   effects: EffectPort,
 ): Promise<boolean> {
   reporter.section('ops package check');
   let passed = true;
 
-  const packagesRoot = join(workspace.root, 'packages');
+  const packagesRoot = path.join(workspace.root, 'packages');
   const files = (await fs.files(packagesRoot)).filter(
     (file) => file.endsWith('.ts') && !file.includes('node_modules'),
   );

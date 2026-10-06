@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { basename } from 'node:path';
 import type { FsPort, ProcessPort, ProcessResult, Reporter } from '@fluvient-cli/cli-kit/ports.ts';
 import { createEffectPort } from '@fluvient-cli/cli-kit/effects.ts';
+import { NodeHash } from '@fluvient-cli/cli-core/hash.ts';
+import { NodePath } from '@fluvient-cli/cli-core/path.ts';
 import { releaseArtifacts, type ReleaseManifest } from '../../src/delivery/deploy-plan.ts';
 import { runDeployPackage, type DeployPorts } from '../../src/delivery/deploy-package.ts';
 
@@ -63,6 +65,8 @@ class PackageWorld {
     return {
       process: this.process,
       fs: this.fs,
+      path: new NodePath(),
+      hash: new NodeHash(),
       reporter,
       root: ROOT,
       effects: createEffectPort({ dryRun, operationIds: { next: () => `op-${operation += 1}` } }),

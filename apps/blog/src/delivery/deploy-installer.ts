@@ -1,4 +1,3 @@
-import { join } from 'node:path';
 import { err, ok, type Result } from '@fluvient/core';
 import { effectFailure, reversibleEffect, reportPlan, type EffectFailure } from '@fluvient-cli/cli-kit/effects.ts';
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from '@fluvient-cli/cli-kit/errors.ts';
@@ -17,8 +16,9 @@ function reportFailureDetail(ports: DeployPorts, output: string): void {
 
 /** 把服务器安装器打包成单文件 mjs(esbuild 走 nix,不改仓库依赖)。 */
 export async function runDeployInstaller(ports: DeployPorts): Promise<number> {
-  const entry = join(ports.root, 'apps', 'blog-deploy', 'src', 'main.ts');
-  const output = join(ports.root, 'deploy', 'dist', 'blog-deploy.mjs');
+  const { path } = ports;
+  const entry = path.join(ports.root, 'apps', 'blog-deploy', 'src', 'main.ts');
+  const output = path.join(ports.root, 'deploy', 'dist', 'blog-deploy.mjs');
   const args = [
     'run',
     'nixpkgs#esbuild',
@@ -40,11 +40,11 @@ export async function runDeployInstaller(ports: DeployPorts): Promise<number> {
   }
 
   // 显式 `Promise<void>` 注解表明端口方法没有可读的返回值。
-  const ensureDirectory = (path: string): Promise<void> => ports.fs.mkdir(path);
+  const ensureDirectory = (directory: string): Promise<void> => ports.fs.mkdir(directory);
   const pack = reversibleEffect<void, EffectFailure>({
     describe: () => ({ summary: `nix ${args.join(' ')}` }),
     execute: async (): Promise<Result<void, EffectFailure>> => {
-      await ensureDirectory(join(ports.root, 'deploy', 'dist'));
+      await ensureDirectory(path.join(ports.root, 'deploy', 'dist'));
       const build = await ports.process.run('nix', args, ports.root);
       if (build.code !== 0) {
         ports.reporter.fail(`installer 打包失败(exit ${build.code})`);

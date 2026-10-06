@@ -5,6 +5,21 @@ export interface ProcessPort {
   /** Sensitive helpers inherit the terminal; credentials are read from the TTY, never argv. */
   runInteractive?(command: string, args: string[], cwd: string, env?: Readonly<Record<string, string>>): Promise<number>
 }
+
+/** Deterministic path arithmetic; command code must not import `node:path` directly. */
+export interface PathPort {
+  join(...parts: string[]): string
+  normalize(path: string): string
+  dirname(path: string): string
+  basename(path: string): string
+  extname(path: string): string
+}
+
+/** Hashing capability; command code must not import `node:crypto` directly. */
+export interface HashPort {
+  /** Lowercase hex SHA-256 of the given bytes. */
+  sha256(content: Uint8Array): string
+}
 export interface FileMetadata { kind: 'file' | 'directory' | 'symlink' | 'other'; mode: number; uid: number }
 export interface SecureFile { content: string; metadata: FileMetadata }
 export interface FsPort {

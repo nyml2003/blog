@@ -42,6 +42,7 @@ last_reviewed: 2026-10-06
 | `runtime integration` | `--watch` switch；必填 `--content-source` enum: fixture, github；必填 `--product-port`、`--data-port` int32 |
 | `e2e` | 必填 `--mode` enum: integration, dev；可选 `--scenario` enum: empty, slow, server-error, malformed-response（仅 dev）；必填 `--playwright-module`、`--chromium-path` path |
 | `quality format` | `--check` switch；缺省写入格式化结果，出现时只检查 |
+| `stats lines` | 可选 `--top` int32（1–200）；缺省显示全部扩展名 |
 | 全局 | `--help`、`--dry-run`、`--json` switch，保留原有职责 |
 
 全部端口范围明确声明为 1024–65535。`default` 是场景名称，不是缺省值。integration 固定 test 数据，backend/integration 的内容来源必须显式选择；dev 固定使用内置 fixture。回环监听和端口有界重试属于运行契约，不是参数补值。`--database-path` 是首个可选有值参数：未出现时键缺失；prod 缺路径、或非 prod 提供路径，都由组合校验以 10 退出。

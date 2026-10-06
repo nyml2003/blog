@@ -93,6 +93,9 @@ last_reviewed: 2026-10-06
   - 通过：cli-kit 33 项（新增 rollback 聚合、异常转换、next 防护、作用域隔离）、apps/blog 121 项（108 通过、13 跳过、0 失败）、blog-deploy 21 项；类型检查无新增错误；release/quality 真实 dry-run 冒烟不变；`git diff --check` 通过。
 - 2026-10-06（裸 await 门禁）：新增 `tools/oxlint/no-bare-await.mjs`（本地 oxlint JS 插件）与根 `.oxlintrc.json`，要求读取 `await` 返回值；显式声明 `Promise<void>` 的本地函数豁免，宿主适配层 `packages/cli/cli-core` 整层豁免。作用域内 26 处裸 await 全部整改：`effects` 失败补偿读取 `Result.ok` 并合并补偿失败信息、release 补偿读取 `git` 退出码、delivery 以显式 `Promise<void>` 的 `applyAll`/`ensureDirectory` 包装文件操作。`ops quality check` 增加 `ops lint (no bare await)` 步骤。
   - 通过：作用域 lint exit 0，注入探针裸 await 变红（exit 1）；cli-kit 33、apps/blog 121、blog-deploy 21、类型检查无新增错误、`git diff --check`。
+- 2026-10-06（宿主端口与导入门禁）：`CommandContext` 新增 `path: PathPort`、`hash: HashPort`，`cli-core` 提供 `NodePath`/`NodeHash`；`stats`、delivery package/installer、quality（含 `architecture.ts` 的 normalize）改为端口注入，不再直连 `node:path`/`node:crypto`。本地插件新增 `fluvient/no-node-imports`，覆盖 release/delivery/quality/stats/page/content；`ops quality check` 的 lint 步骤更名为 `ops lint (await/imports)`。
+  - 通过：作用域 lint exit 0，注入 `import 'node:path'` 探针变红；`stats lines` 对已删除但仍被 git 列出的文件降级跳过（新增用例）；apps/blog 125 项（112 通过、13 跳过、0 失败）、cli-kit 33、blog-deploy 21；真实 `stats lines`、`delivery package --dry-run` 正常；类型检查无新增错误、`git diff --check`。
+  - 剩余直连（未纳入导入门禁）：`admin-auth.ts`（`loadAdminCredentialEnvironment` 被 runtime.ts 消费，待其写集空闲）、`runtime`/`local-deploy`/`e2e`/`perf`/`main.ts` 与 `blog-deploy` installer、`packages/ts`。
 
 ## 集成验收
 

@@ -46,6 +46,7 @@ ops runtime dev --scenario default --admin-entry on --web-port 5173 --mock-port 
 | 启动同源集成栈 | `ops runtime integration --content-source fixture --product-port 8080 --data-port 8081` |
 | 运行全项目质量检查 | `ops quality check` |
 | 验证 `@fluvient-loom` 包 | `ops package check` |
+| 统计代码行数 | `ops stats lines` |
 | 构建交付物 | `ops delivery build` |
 
 所有有值参数都应显式提供。运行模式、参数、退出码和管理命令的完整说明见[开发与运维指南](docs/guides/operations.md)；参数契约见 [SPEC-OPS-PARAMETERS-001](docs/specs/SPEC-OPS-PARAMETERS-001.md)。

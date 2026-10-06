@@ -31,6 +31,7 @@ ops e2e --mode dev --scenario empty --playwright-module playwright-core/index.mj
 ops admin credentials init
 ops admin recovery regenerate
 BLOG_CONTENT_REPO=owner/repository BLOG_CONTENT_TOKEN=... ops content repository init
+ops stats lines
 ```
 
 帮助入口等价：`ops help <path>`、`ops <path> --help` 和 `ops <path> help`。直接运行已知分组（例如 `ops quality`）会展示该分组帮助。
@@ -67,6 +68,10 @@ BLOG_CONTENT_REPO=owner/repository BLOG_CONTENT_TOKEN=... ops content repository
 - 顶层退出码全局统一：`0` 成功、`10` 用法/配置错误、`20` 执行失败（端口耗尽、服务启动失败、构建失败或子进程退出）、`130` SIGINT、`143` SIGTERM。运行中的模式没有 `0` 退出路径：正常停止只能通过信号（130/143）；任一服务子进程在运行态自行退出——含 `exit 0`——都算 `CHILD_EXITED`/`20` 并停止其余服务。Ctrl-C 会传播到所有子进程并等待退出（限期 5s，超限 SIGKILL）。
 - `--dry-run` 只打印将启动的进程、候选端口与构建步骤，无副作用；`--json` 的 stdout 使用统一 NDJSON 事件（每行一个 JSON 对象），包括帮助、参数错误、服务地址、dry-run、子进程行和最终终止结果。机器消费者把最后一个 JSON 对象视为最终结果，并按 `schemaVersion/event/command/code/exitCode/message` 解析；日志事件额外保留 `source/channel`。人类模式才渲染成文本并分别使用 stdout/stderr。
 - ops 内部命令结果使用结构化 `Result`，输出通过统一事件端口交给终端或 NDJSON 适配器；JSON runtime 事件带 `schemaVersion`、`event`、`code`、`exitCode` 和 `message`。埋点事件默认不进入终端输出，后续可接入独立收集器。
+
+## 统计
+
+`ops stats lines [--top <N>]` 用 `git ls-files`（含未跟踪文件、遵循 .gitignore）列出仓库文件，按扩展名统计文件数与行数；`--top` 只显示行数最多的前 N 个扩展名（int32，1–200，缺省显示全部）。命令是只读观察，`--dry-run` 与真实运行都执行统计且结果一致。
 
 ## 发布
 

@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { checkArchitectureBoundaries } from "../../src/quality/architecture.ts";
+import { NodePath } from "@fluvient-cli/cli-core/path.ts";
+
+const path = new NodePath();
 
 function check(file: string, source: string): readonly string[] {
-  return checkArchitectureBoundaries([file], () => source).map(
+  return checkArchitectureBoundaries([file], () => source, path).map(
     (violation) => violation.message,
   );
 }

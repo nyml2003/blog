@@ -1,12 +1,11 @@
 /**
- * Local oxlint (ESLint-compatible) plugin: disallow bare `await expr;` statements.
+ * Local oxlint (ESLint-compatible) plugin with the project's command-layer rules.
  *
- * Every awaited result must be consumed — assigned, returned, branched on, or explicitly
- * discarded with `void (await expr);`.
- *
- * Exemption: awaiting a call to a locally declared function whose explicit return type is
- * `Promise<void>` has no result to consume and is allowed. The annotation is the declaration
- * of intent; unannotated helpers stay flagged.
+ * - `no-bare-await`: every awaited result must be consumed — assigned, returned, branched on, or
+ *   explicitly discarded with `void (await expr);`. Awaiting a call to a locally declared function
+ *   whose explicit return type is `Promise<void>` is allowed: there is no result to consume.
+ * - `no-node-imports`: command code must not import host APIs (`node:*`) directly; host
+ *   capabilities arrive through ports (process/fs/path/hash/...).
  */
 
 const VOID_TYPE = 'TSVoidKeyword';
@@ -48,6 +47,10 @@ function collectVoidFunctions(program) {
   return names;
 }
 
+function nodeSpecifier(value) {
+  return typeof value === 'string' && value.startsWith('node:') ? value : undefined;
+}
+
 export default {
   meta: { name: 'fluvient' },
   rules: {
@@ -72,6 +75,31 @@ export default {
             const awaited = node.expression.argument;
             if (awaited.type === 'CallExpression' && awaited.callee.type === 'Identifier' && voidFunctions.has(awaited.callee.name)) return;
             context.report({ node: node.expression, messageId: 'bareAwait' });
+          },
+        };
+      },
+    },
+    'no-node-imports': {
+      meta: {
+        type: 'problem',
+        docs: {
+          description: 'Command code must receive host capabilities through ports, not `node:*` imports.',
+        },
+        messages: {
+          nodeImport: '命令代码不得直连 {{source}}；宿主能力应通过 ports 注入。',
+        },
+      },
+      create(context) {
+        const report = (node) => {
+          const source = nodeSpecifier(node.source && node.source.value);
+          if (source !== undefined) context.report({ node: node.source, messageId: 'nodeImport', data: { source } });
+        };
+        return {
+          ImportDeclaration: report,
+          ExportNamedDeclaration: report,
+          ExportAllDeclaration: report,
+          ImportExpression(node) {
+            if (node.source && node.source.type === 'Literal') report(node);
           },
         };
       },

@@ -1,6 +1,8 @@
 import { resolveWorkspace, type Workspace } from '@fluvient-cli/cli-kit/workspace.ts';
 import { createNodeOperationId } from '@fluvient-loom/node';
 import { NodeFs } from './fs.ts';
+import { NodePath } from './path.ts';
+import { NodeHash } from './hash.ts';
 import { NodeProcess, NodeProcessSupervisor, ConsoleRuntimeLog, NodeSignals } from './process.ts';
 import { TcpPortProbe, TcpReadiness } from './net.ts';
 import { TerminalReporter } from './reporter.ts';
@@ -14,6 +16,8 @@ export function corePlugin(options: { workspace?: Workspace } = {}) {
       const workspace = options.workspace ?? resolveWorkspace(import.meta.url);
       container.bind('workspace', workspace);
       container.bind('fs', fs);
+      container.bind('path', new NodePath());
+      container.bind('hash', new NodeHash());
       container.bind('process', new NodeProcess());
       container.bind('supervisor', new NodeProcessSupervisor());
       const output = new ConsoleOutputPort();

@@ -1,12 +1,12 @@
-import { normalize } from "node:path";
+import type { PathPort } from "@fluvient-cli/cli-kit/ports.ts";
 
 export interface Violation {
   file: string;
   message: string;
 }
 
-function normalized(file: string): string {
-  return normalize(file).replaceAll("\\", "/");
+function normalized(file: string, path: PathPort): string {
+  return path.normalize(file).replaceAll("\\", "/");
 }
 
 // 源码内容扫描（前端 import 建图、Rust 内容启发式）已于 2026-10-04 退役；
@@ -54,9 +54,10 @@ function checkCargoManifest(file: string, source: string): Violation[] {
 export function checkArchitectureBoundaries(
   files: readonly string[],
   source: (file: string) => string,
+  path: PathPort,
 ): Violation[] {
   return files.flatMap((rawFile) => {
-    const file = normalized(rawFile);
+    const file = normalized(rawFile, path);
     if (!file.endsWith("Cargo.toml")) return [];
     return checkCargoManifest(file, source(rawFile));
   });

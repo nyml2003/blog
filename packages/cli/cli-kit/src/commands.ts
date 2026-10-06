@@ -1,5 +1,21 @@
 import { isModelValue, validateParameter, type ParameterSpec, type PositionalSpec, type ModelValue, type CommandArgs } from './parameters.ts';
+import type { EffectPort } from './effects.ts';
+import type { OpsFailure } from './errors.ts';
 import type { OutputPort } from './output.ts';
+import type {
+  BinaryResolver,
+  FsPort,
+  HashPort,
+  PathPort,
+  PortProbe,
+  ProcessPort,
+  ProcessSupervisor,
+  ReadinessProbe,
+  Reporter,
+  RuntimeLog,
+  SignalPort,
+} from './ports.ts';
+import type { Workspace } from './workspace.ts';
 import type { Result } from '@fluvient/core';
 export type { CommandArgs, PositionalSpec } from './parameters.ts';
 export type OptionSpec = ParameterSpec;
@@ -25,23 +41,25 @@ export type ParsedArgs<M extends CommandMeta> = {
   [F in Fields<M> as F extends { optional: true } ? F['name'] : never]?: ModelValue<F['model']>;
 };
 export interface CommandContext {
-  workspace: import('./workspace.ts').Workspace;
-  process: import('./ports.ts').ProcessPort;
-  supervisor: import('./ports.ts').ProcessSupervisor;
-  fs: import('./ports.ts').FsPort;
-  reporter: import('./ports.ts').Reporter;
+  workspace: Workspace;
+  process: ProcessPort;
+  supervisor: ProcessSupervisor;
+  fs: FsPort;
+  path: PathPort;
+  hash: HashPort;
+  reporter: Reporter;
   output: OutputPort;
-  log: import('./ports.ts').RuntimeLog;
-  probe: import('./ports.ts').PortProbe;
-  readiness: import('./ports.ts').ReadinessProbe;
-  binaries: import('./ports.ts').BinaryResolver;
-  signals?: import('./ports.ts').SignalPort;
+  log: RuntimeLog;
+  probe: PortProbe;
+  readiness: ReadinessProbe;
+  binaries: BinaryResolver;
+  signals?: SignalPort;
   environment: Readonly<Record<string, string | undefined>>;
-  effects: import('./effects.ts').EffectPort;
+  effects: EffectPort;
   dryRun: boolean;
   json: boolean;
 }
-export type CommandOutcome = Result<{ readonly exitCode?: number }, import('./errors.ts').OpsFailure>;
+export type CommandOutcome = Result<{ readonly exitCode?: number }, OpsFailure>;
 export type CommandHandler = (context: CommandContext, args: CommandArgs) => Promise<CommandOutcome> | CommandOutcome;
 export interface CommandDefinition { readonly meta: CommandMeta; readonly handler: CommandHandler }
 export interface GroupDefinition { readonly meta: GroupMeta }

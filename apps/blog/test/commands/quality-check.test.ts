@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { runCheck } from '../../src/quality/quality-check.ts';
 import { createEffectPort } from '@fluvient-cli/cli-kit/effects.ts';
+import { NodePath } from '@fluvient-cli/cli-core/path.ts';
 import type { FsPort, ProcessPort, Reporter } from '@fluvient-cli/cli-kit/ports.ts';
 import type { Workspace } from '@fluvient-cli/cli-kit/workspace.ts';
 
@@ -33,12 +34,13 @@ function harness(code = 0) {
     info: (value) => messages.push(`info:${value}`),
   };
   const effects = createEffectPort({ dryRun: false, operationIds: { next: () => 'op' } });
-  return { process, calls, messages, reporter, effects, labels: () => calls.map((call) => `${call.command} ${call.args.join(' ')}`) };
+  const path = new NodePath();
+  return { process, calls, messages, reporter, path, effects, labels: () => calls.map((call) => `${call.command} ${call.args.join(' ')}`) };
 }
 
 test('quality check runs the rust gate and drops the retired go gate', async () => {
   const h = harness();
-  const passed = await runCheck(workspace, h.process, stubFs({ cargo: true, web: false }), h.reporter, h.effects);
+  const passed = await runCheck(workspace, h.process, stubFs({ cargo: true, web: false }), h.path, h.reporter, h.effects);
   assert.equal(passed, true);
   const labels = h.labels();
   assert.deepEqual(labels.slice(0, 3), [
@@ -53,7 +55,7 @@ test('quality check runs the rust gate and drops the retired go gate', async () 
 
 test('a missing cargo workspace fails the rust gate instead of passing silently', async () => {
   const h = harness();
-  const passed = await runCheck(workspace, h.process, stubFs({ cargo: false, web: false }), h.reporter, h.effects);
+  const passed = await runCheck(workspace, h.process, stubFs({ cargo: false, web: false }), h.path, h.reporter, h.effects);
   assert.equal(passed, false);
   assert.equal(h.labels().some((label) => label.startsWith('cargo ')), false);
   assert.ok(h.messages.includes('fail:cargo workspace'));
@@ -62,14 +64,14 @@ test('a missing cargo workspace fails the rust gate instead of passing silently'
 
 test('a failing rust command fails the whole check', async () => {
   const h = harness(1);
-  const passed = await runCheck(workspace, h.process, stubFs({ cargo: true, web: false }), h.reporter, h.effects);
+  const passed = await runCheck(workspace, h.process, stubFs({ cargo: true, web: false }), h.path, h.reporter, h.effects);
   assert.equal(passed, false);
   assert.ok(h.messages.includes('fail:cargo fmt'));
 });
 
 test('quality check includes the frontend core test suite', async () => {
   const h = harness();
-  const passed = await runCheck(workspace, h.process, stubFs({ cargo: true, web: true }), h.reporter, h.effects);
+  const passed = await runCheck(workspace, h.process, stubFs({ cargo: true, web: true }), h.path, h.reporter, h.effects);
   assert.equal(passed, true);
   assert.ok(h.labels().includes('pnpm -C src/frontend run test:core'));
 });

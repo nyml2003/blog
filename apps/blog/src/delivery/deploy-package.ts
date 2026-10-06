@@ -1,7 +1,5 @@
-import { createHash } from 'node:crypto';
-import { join } from 'node:path';
 import { err, ok, type Result } from '@fluvient/core';
-import type { ProcessPort, FsPort, Reporter } from '@fluvient-cli/cli-kit/ports.ts';
+import type { ProcessPort, FsPort, HashPort, PathPort, Reporter } from '@fluvient-cli/cli-kit/ports.ts';
 import { effectFailure, reversibleEffect, reportPlan, type EffectFailure, type EffectPort } from '@fluvient-cli/cli-kit/effects.ts';
 import { EXIT_FAILURE, EXIT_OK } from '@fluvient-cli/cli-kit/errors.ts';
 import {
@@ -20,6 +18,8 @@ import {
 export interface DeployPorts {
   process: ProcessPort;
   fs: FsPort;
+  path: PathPort;
+  hash: HashPort;
   reporter: Reporter;
   root: string;
   effects: EffectPort;
@@ -42,16 +42,12 @@ function reportFailureDetail(ports: DeployPorts, output: string): void {
   }
 }
 
-function sha256(content: Buffer): string {
-  return createHash('sha256').update(content).digest('hex');
-}
-
 function stamp(): string {
   return new Date().toISOString().replace(/[-:]/g, '').replace(/\..+/, 'Z');
 }
 
-export function archivePath(root: string, target: DeployTarget): string {
-  return join(root, 'deploy', 'dist', releaseArchiveName(target, stamp()));
+export function archivePath(path: PathPort, root: string, target: DeployTarget): string {
+  return path.join(root, 'deploy', 'dist', releaseArchiveName(target, stamp()));
 }
 
 function stepEffect(ports: DeployPorts, step: PackageStep) {
@@ -78,25 +74,26 @@ function assembleEffect(ports: DeployPorts, target: DeployTarget, archive: strin
     describe: () => ({ summary: `组装发布包 ${archive.split('/').pop()}` }),
     execute: async (): Promise<Result<void, EffectFailure>> => {
       const fs = requireFilePorts(ports.fs);
+      const { path } = ports;
       const staging = packageStagingDir(ports.root);
       try {
         const cleaned = await ports.process.run('rm', ['-rf', staging], ports.root);
         if (cleaned.code !== EXIT_OK) return err(effectFailure(`清理 staging 失败(exit ${cleaned.code})`));
-        const targetDir = join(ports.root, 'src', 'target', target, 'release');
-        const distRoot = join(ports.root, 'src', 'frontend', 'dist');
+        const targetDir = path.join(ports.root, 'src', 'target', target, 'release');
+        const distRoot = path.join(ports.root, 'src', 'frontend', 'dist');
         const distFiles = await ports.fs.files(distRoot);
         await applyAll([
-          ...['bin', 'web/dist', 'systemd', 'nginx'].map((dir) => ports.fs.mkdir(join(staging, dir))),
-          ...RELEASE_BINARIES.map((name) => fs.copy(join(targetDir, name), join(staging, 'bin', name))),
-          ...distFiles.map((file) => fs.copy(file, join(staging, 'web', 'dist', file.slice(distRoot.length + 1)))),
-          ...RELEASE_UNITS.map((name) => fs.copy(join(ports.root, 'deploy', 'systemd', name), join(staging, 'systemd', name))),
-          fs.copy(join(ports.root, 'deploy', 'nginx', RELEASE_NGINX), join(staging, 'nginx', RELEASE_NGINX)),
+          ...['bin', 'web/dist', 'systemd', 'nginx'].map((dir) => ports.fs.mkdir(path.join(staging, dir))),
+          ...RELEASE_BINARIES.map((name) => fs.copy(path.join(targetDir, name), path.join(staging, 'bin', name))),
+          ...distFiles.map((file) => fs.copy(file, path.join(staging, 'web', 'dist', file.slice(distRoot.length + 1)))),
+          ...RELEASE_UNITS.map((name) => fs.copy(path.join(ports.root, 'deploy', 'systemd', name), path.join(staging, 'systemd', name))),
+          fs.copy(path.join(ports.root, 'deploy', 'nginx', RELEASE_NGINX), path.join(staging, 'nginx', RELEASE_NGINX)),
         ]);
 
         const artifacts = releaseArtifacts();
         const sha256Map: Record<string, string> = {};
         for (const relative of artifacts) {
-          sha256Map[relative] = sha256(await fs.readBytes(join(staging, relative)));
+          sha256Map[relative] = ports.hash.sha256(await fs.readBytes(path.join(staging, relative)));
         }
         const manifest: ReleaseManifest = {
           format: 1,
@@ -105,8 +102,8 @@ function assembleEffect(ports: DeployPorts, target: DeployTarget, archive: strin
           sha256: sha256Map,
         };
         await applyAll([
-          fs.write(join(staging, 'SHA256SUMS'), `${artifacts.map((relative) => `${sha256Map[relative]}  ${relative}`).join('\n')}\n`),
-          fs.write(join(staging, 'MANIFEST.json'), `${JSON.stringify(manifest, null, 2)}\n`),
+          fs.write(path.join(staging, 'SHA256SUMS'), `${artifacts.map((relative) => `${sha256Map[relative]}  ${relative}`).join('\n')}\n`),
+          fs.write(path.join(staging, 'MANIFEST.json'), `${JSON.stringify(manifest, null, 2)}\n`),
         ]);
         return ok(undefined);
       } catch (error) {
@@ -119,7 +116,7 @@ function assembleEffect(ports: DeployPorts, target: DeployTarget, archive: strin
 
 /** 构建并产出环境无关的发布包;包内不含任何秘密或部署配置。 */
 export async function runDeployPackage(target: DeployTarget, ports: DeployPorts): Promise<number> {
-  const archive = archivePath(ports.root, target);
+  const archive = archivePath(ports.path, ports.root, target);
   const steps = packageSteps(target, ports.root, archive);
 
   for (const step of [steps[0]!, steps[1]!]) {
