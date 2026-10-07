@@ -5,6 +5,18 @@ import { build } from "esbuild";
 const root = resolve(import.meta.dirname);
 const out = resolve(root, "../../target/weapp");
 const check = process.argv.includes("--check");
+const environmentIndex = process.argv.indexOf("--environment");
+const environment = environmentIndex >= 0 ? process.argv[environmentIndex + 1] : "test";
+const apiOriginIndex = process.argv.indexOf("--api-origin");
+const apiOrigin = apiOriginIndex >= 0 ? process.argv[apiOriginIndex + 1] : undefined;
+if (environment !== "test" && environment !== "production") {
+  console.error("weapp --environment must be test or production");
+  process.exit(1);
+}
+if (apiOriginIndex >= 0 && (!apiOrigin || apiOrigin.startsWith("--"))) {
+  console.error("weapp --api-origin requires a non-empty value");
+  process.exitCode = 1;
+}
 const required = ["app.json", "app.ts", "app.wxss", "pages/home/home.wxml", "pages/articles/articles.wxml", "pages/detail/detail.wxml", "pages/settings/settings.wxml"];
 for (const file of required) {
   try { await readFile(join(root, file)); } catch { console.error(`weapp missing ${file}`); process.exitCode = 1; }
@@ -13,15 +25,28 @@ if (!check && !process.exitCode) {
   await rm(out, { recursive: true, force: true });
   await mkdir(out, { recursive: true });
   await cp(root, out, { recursive: true, filter: (source) => !source.includes("/node_modules/") && !source.endsWith("/node_modules") && !source.includes("/test/") && !source.endsWith("/test") && !source.endsWith("/build.mjs") && !source.endsWith("/package.json") && !source.includes("/src/") && !source.endsWith("/src") && !source.endsWith(".ts") && !source.endsWith(".d.ts") && !source.endsWith("/tsconfig.json") });
-  const apiOrigin = process.env.BLOG_WEAPP_API_ORIGIN ?? "http://127.0.0.1:8080";
+  const resolvedApiOrigin = apiOrigin ?? (environment === "test" ? "http://127.0.0.1:8080" : undefined);
+  if (!resolvedApiOrigin) {
+    console.error("production builds require --api-origin");
+    process.exit(1);
+  }
   await build({
     entryPoints: [join(root, "app.ts")],
     bundle: false,
     platform: "browser",
     format: "iife",
       outfile: join(out, "app.js"),
-      define: { "__BLOG_WEAPP_API_ORIGIN__": JSON.stringify(apiOrigin) },
+      define: { "__BLOG_WEAPP_API_ORIGIN__": JSON.stringify(resolvedApiOrigin) },
       minify: true,
+  });
+  await build({
+    entryPoints: [join(root, "src/weapp-script.ts")],
+    bundle: true,
+    platform: "node",
+    format: "esm",
+    outfile: join(out, "../weapp-script.mjs"),
+    legalComments: "none",
+    minify: true,
   });
   await build({
     entryPoints: [join(root, "src/runtime.ts")],
@@ -80,6 +105,6 @@ if (!check && !process.exitCode) {
     console.error(`weapp main bundle exceeds 2 MiB: ${bundleSize}`);
     process.exitCode = 1;
   }
-  await writeFile(join(out, "README.txt"), `Open this directory in微信开发者工具. API origin: ${apiOrigin}. Configure request domains or use a local proxy.\n`);
+  await writeFile(join(out, "README.txt"), `Environment: ${environment}. Open this directory in微信开发者工具. API origin: ${resolvedApiOrigin}.\n`);
   console.log(`weapp built: ${out}`);
 } else if (!process.exitCode) console.log("weapp source check passed");
