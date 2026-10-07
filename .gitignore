@@ -8,3 +8,4 @@ deploy/dist/
 .direnv/
 *.log
 .DS_Store
+.opencode/
