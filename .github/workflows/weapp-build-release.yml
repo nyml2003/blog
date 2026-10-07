@@ -2,12 +2,21 @@ name: weapp-build-release
 
 on:
   push:
-    tags: ['weapp-v*']
+    tags: ['weapp-v*', 'weapp-test-v*']
   workflow_dispatch:
     inputs:
       version:
         description: Release version, for example 0.1.0
         required: true
+        type: string
+      environment:
+        description: test or production when manually dispatched
+        required: true
+        type: choice
+        options: [test, production]
+      api_origin:
+        description: API origin for production builds
+        required: false
         type: string
 
 permissions:
@@ -26,17 +35,30 @@ jobs:
       - name: Install workspace dependencies
         run: nix develop ./nix -c pnpm install --frozen-lockfile
       - name: Build WeChat mini-program
+        env:
+          RELEASE_ENVIRONMENT: ${{ inputs.environment }}
+          RELEASE_API_ORIGIN: ${{ inputs.api_origin }}
         run: |
           nix develop ./nix -c pnpm exec tsc --noEmit -p apps/weapp/tsconfig.script.json
-          nix develop ./nix -c node apps/weapp/build.mjs --api-origin http://127.0.0.1:8080
+          if [[ "$GITHUB_REF_NAME" == weapp-test-v* ]]; then environment=test; else environment="$RELEASE_ENVIRONMENT"; fi
+          if [[ "$environment" == production ]]; then api_origin="$RELEASE_API_ORIGIN"; test -n "$api_origin"; else api_origin=http://127.0.0.1:8080; fi
+          nix develop ./nix -c node apps/weapp/build.mjs --environment "$environment" --api-origin "$api_origin"
       - name: Package WeChat mini-program
+        env:
+          RELEASE_ENVIRONMENT: ${{ inputs.environment }}
+          RELEASE_VERSION: ${{ inputs.version }}
         run: |
-          if [[ "$GITHUB_REF_NAME" == weapp-v* ]]; then
+          if [[ "$GITHUB_REF_NAME" == weapp-test-v* ]]; then
+            environment=test
+            version="${GITHUB_REF_NAME#weapp-test-v}"
+          elif [[ "$GITHUB_REF_NAME" == weapp-v* ]]; then
+            environment=production
             version="${GITHUB_REF_NAME#weapp-v}"
           else
-            version="${{ inputs.version }}"
+            environment="$RELEASE_ENVIRONMENT"
+            version="$RELEASE_VERSION"
           fi
-          archive="deploy/dist/blog-weapp-${version}.tar.gz"
+          archive="deploy/dist/blog-weapp-${environment}-${version}.tar.gz"
           mkdir -p deploy/dist
           tar -czf "$archive" -C target weapp
           sha256sum "$archive" > "${archive}.sha256"

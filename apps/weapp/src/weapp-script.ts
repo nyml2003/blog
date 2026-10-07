@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
@@ -15,6 +15,8 @@ for (let index = 2; index < process.argv.length; index += 1) {
 
 const repo = args.get("repo") ?? "nyml2003/blog";
 const version = args.get("version");
+const environment = args.get("environment") ?? "test";
+if (environment !== "test" && environment !== "production") fail("--environment must be test or production");
 const destination = resolve(args.get("out") ?? "weapp");
 const api = `https://api.github.com/repos/${repo}/releases?per_page=100`;
 
@@ -34,12 +36,12 @@ const releases = await fetch(api).then(async (response) => {
   return await response.json() as Release[];
 });
 const candidates = releases
-  .filter((release) => !release.draft && !release.prerelease && /^weapp-v\d+\.\d+\.\d+$/.test(release.tag_name))
-  .filter((release) => version === undefined || release.tag_name === `weapp-v${version}`)
+  .filter((release) => !release.draft && !release.prerelease && new RegExp(`^weapp${environment === "test" ? "-test" : ""}-v\\d+\\.\\d+\\.\\d+$`).test(release.tag_name))
+  .filter((release) => version === undefined || release.tag_name === `weapp${environment === "test" ? "-test" : ""}-v${version}`)
   .sort((left, right) => right.tag_name.localeCompare(left.tag_name, undefined, { numeric: true }));
 const release = candidates[0];
 if (!release) fail(version === undefined ? "没有可用的 weapp Release" : `找不到 weapp-v${version}`);
-const archive = release.assets.find((asset) => asset.name === `blog-weapp-${release.tag_name.slice(6)}.tar.gz`);
+const archive = release.assets.find((asset) => asset.name === `blog-weapp-${environment}-${release.tag_name.split("-v")[1]}.tar.gz`);
 const checksum = release.assets.find((asset) => asset.name === `${archive?.name}.sha256`);
 if (!archive || !checksum) fail(`Release ${release.tag_name} 缺少小程序包或校验和`);
 

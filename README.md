@@ -44,16 +44,16 @@ ops runtime dev --scenario default --admin-entry on --web-port 5173 --mock-port 
 | 启动前端与 Mock 数据 | `ops runtime dev --scenario default --admin-entry on --web-port 5173 --mock-port 9090` |
 | 启动纯后端 API 栈 | `ops runtime backend --data test --content-source fixture --product-port 8080 --data-port 8081` |
 | 启动同源集成栈 | `ops runtime integration --content-source fixture --product-port 8080 --data-port 8081` |
-
-发布 `weapp-vX.Y.Z` tag 时，GitHub Actions 会单独构建并发布微信小程序包；资产名为 `blog-weapp-X.Y.Z.tar.gz`，导入微信开发者工具前解压其中的 `weapp/` 目录。后端仍使用独立的 `build-vX.Y.Z` 发布线，微信平台提交和真机验收需在发布前人工完成。
-
-同一个 Release 还提供 `weapp-script.mjs`。在安装了 Node.js 22+ 的 Windows PowerShell 或终端中执行 `node weapp-script.mjs --repo nyml2003/blog --out .\weapp`，脚本会自动选择最新 `weapp-v*` Release、下载并校验 `blog-weapp-*.tar.gz`，再解压为可导入微信开发者工具的 `weapp/` 目录；可用 `--version 0.1.0` 固定版本。
 | 运行全项目质量检查 | `ops quality check` |
 | 验证 `@fluvient-loom` 包 | `ops package check` |
 | 统计代码行数 | `ops stats lines` |
 | 构建交付物 | `ops delivery build` |
 
 所有有值参数都应显式提供。运行模式、参数、退出码和管理命令的完整说明见[开发与运维指南](docs/guides/operations.md)；参数契约见 [SPEC-OPS-PARAMETERS-001](docs/specs/SPEC-OPS-PARAMETERS-001.md)。
+
+发布 `weapp-test-vX.Y.Z` tag 会生成测试环境包 `blog-weapp-test-X.Y.Z.tar.gz`；发布 `weapp-vX.Y.Z` tag 会生成线上候选包 `blog-weapp-production-X.Y.Z.tar.gz`。测试包供微信开发者工具联调，线上候选包供微信平台发布前验证。
+
+同一个 Release 还提供 `weapp-script.mjs`。在安装了 Node.js 22+ 的 Windows PowerShell 或终端中执行 `node weapp-script.mjs --repo nyml2003/blog --environment test --out .\weapp`，脚本会自动选择对应环境的最新 Release、下载并校验压缩包，再解压为可导入微信开发者工具的 `weapp/` 目录；可用 `--environment production --version 0.1.0` 固定线上候选版本。
 
 ## 目录地图
 

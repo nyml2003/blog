@@ -5,8 +5,14 @@ import { build } from "esbuild";
 const root = resolve(import.meta.dirname);
 const out = resolve(root, "../../target/weapp");
 const check = process.argv.includes("--check");
+const environmentIndex = process.argv.indexOf("--environment");
+const environment = environmentIndex >= 0 ? process.argv[environmentIndex + 1] : "test";
 const apiOriginIndex = process.argv.indexOf("--api-origin");
 const apiOrigin = apiOriginIndex >= 0 ? process.argv[apiOriginIndex + 1] : undefined;
+if (environment !== "test" && environment !== "production") {
+  console.error("weapp --environment must be test or production");
+  process.exit(1);
+}
 if (apiOriginIndex >= 0 && (!apiOrigin || apiOrigin.startsWith("--"))) {
   console.error("weapp --api-origin requires a non-empty value");
   process.exitCode = 1;
@@ -19,7 +25,11 @@ if (!check && !process.exitCode) {
   await rm(out, { recursive: true, force: true });
   await mkdir(out, { recursive: true });
   await cp(root, out, { recursive: true, filter: (source) => !source.includes("/node_modules/") && !source.endsWith("/node_modules") && !source.includes("/test/") && !source.endsWith("/test") && !source.endsWith("/build.mjs") && !source.endsWith("/package.json") && !source.includes("/src/") && !source.endsWith("/src") && !source.endsWith(".ts") && !source.endsWith(".d.ts") && !source.endsWith("/tsconfig.json") });
-  const resolvedApiOrigin = apiOrigin ?? "http://127.0.0.1:8080";
+  const resolvedApiOrigin = apiOrigin ?? (environment === "test" ? "http://127.0.0.1:8080" : undefined);
+  if (!resolvedApiOrigin) {
+    console.error("production builds require --api-origin");
+    process.exit(1);
+  }
   await build({
     entryPoints: [join(root, "app.ts")],
     bundle: false,
@@ -95,6 +105,6 @@ if (!check && !process.exitCode) {
     console.error(`weapp main bundle exceeds 2 MiB: ${bundleSize}`);
     process.exitCode = 1;
   }
-  await writeFile(join(out, "README.txt"), `Open this directory in微信开发者工具. API origin: ${resolvedApiOrigin}. Configure request domains or use a local proxy.\n`);
+  await writeFile(join(out, "README.txt"), `Environment: ${environment}. Open this directory in微信开发者工具. API origin: ${resolvedApiOrigin}.\n`);
   console.log(`weapp built: ${out}`);
 } else if (!process.exitCode) console.log("weapp source check passed");

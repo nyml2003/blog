@@ -50,6 +50,13 @@ test('weapp release uses the independent weapp tag stream', async () => {
   assert.match(h.lines.join('\n'), /weapp-v0\.2\.4/);
 });
 
+test('weapp-test release uses the test tag stream', async () => {
+  const h = world('weapp-test', { tags: 'weapp-test-v0.1.2\n', dryRun: true });
+  const code = await runRelease(h.kind, h.ports, { confirmed: false, allowDirty: false });
+  assert.equal(code, 0);
+  assert.match(h.lines.join('\n'), /weapp-test-v0\.1\.3/);
+});
+
 test('release refuses a dirty worktree before checking tags', async () => {
   const h = world('script', { dirty: ' M apps/blog/src/release/release.ts\n' });
   const code = await runRelease(h.kind, h.ports, { confirmed: true, allowDirty: false });
