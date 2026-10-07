@@ -44,6 +44,8 @@ ops runtime dev --scenario default --admin-entry on --web-port 5173 --mock-port 
 | 启动前端与 Mock 数据 | `ops runtime dev --scenario default --admin-entry on --web-port 5173 --mock-port 9090` |
 | 启动纯后端 API 栈 | `ops runtime backend --data test --content-source fixture --product-port 8080 --data-port 8081` |
 | 启动同源集成栈 | `ops runtime integration --content-source fixture --product-port 8080 --data-port 8081` |
+
+发布 `weapp-vX.Y.Z` tag 时，GitHub Actions 会单独构建并发布微信小程序包；资产名为 `blog-weapp-X.Y.Z.tar.gz`，导入微信开发者工具前解压其中的 `weapp/` 目录。后端仍使用独立的 `build-vX.Y.Z` 发布线，微信平台提交和真机验收需在发布前人工完成。
 | 运行全项目质量检查 | `ops quality check` |
 | 验证 `@fluvient-loom` 包 | `ops package check` |
 | 统计代码行数 | `ops stats lines` |
