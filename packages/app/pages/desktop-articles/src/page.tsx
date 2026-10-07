@@ -3,7 +3,7 @@ import { findTextMatches } from "@fluvient-loom/text-highlight";
 import { type Component, For, Show } from "solid-js";
 import type { DesktopApi, SiteRoutes, TShelf } from "@blog/desktop-api";
 import { useDesktopSearch } from "@blog/desktop-shared";
-import { siteRoute, siteRouteWithQuery } from "@fluvient-loom/page-kit";
+import { siteRoute, siteRouteWithQuery } from "@fluvient-loom/page-contract";
 import type { NavigationPort } from "@fluvient-loom/port";
 import { useDesktopArticles } from "./feature.ts";
 import "./page.css";

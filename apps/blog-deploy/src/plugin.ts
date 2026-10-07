@@ -1,7 +1,7 @@
 import type { CliPlugin } from '@fluvient-cli/cli-kit/plugin.ts';
 import type { CommandArgs, CommandContext } from '@fluvient-cli/cli-kit/commands.ts';
 import type { EffectPort } from '@fluvient-cli/cli-kit/effects.ts';
-import { createHttpKernel } from '@fluvient/core/http';
+import { createHttpKernel } from '@fluvient-loom/web-http';
 import type { FetchLike } from './installer/release.ts';
 import { installerDefinitions } from './installer/registry.ts';
 import { runInstallerCommand } from './installer/main.ts';

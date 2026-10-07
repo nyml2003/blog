@@ -1,5 +1,5 @@
 import { err, ok } from "@fluvient/core";
-import { createDataTask } from "@fluvient-loom/query";
+import { createDataTask, encodeQuery } from "@fluvient-loom/query";
 import { cancellationFailure, toErrorInfo } from "@fluvient/core";
 import {
   type DataTask,
@@ -110,11 +110,7 @@ function requestPath(
   sceneCode: string,
   parameters: Record<string, string | undefined>,
 ): string {
-  const search = new URLSearchParams({ sceneCode });
-  for (const [key, value] of Object.entries(parameters)) {
-    if (value !== undefined && value !== "") search.set(key, value);
-  }
-  return `${endpoint}?${search}`;
+  return `${endpoint}?${encodeQuery({ sceneCode, ...parameters })}`;
 }
 
 function failure(

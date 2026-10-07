@@ -1,0 +1,8 @@
+{
+  "name": "@blog/weapp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "build": "node ./build.mjs", "check": "node ./build.mjs --check && tsc --noEmit -p tsconfig.json", "test": "node ./build.mjs && node --test test/*.test.mjs" },
+  "dependencies": { "@blog/mobile-api": "workspace:*", "@blog/weapp-host": "workspace:*", "@fluvient-loom/mobile-foundation": "workspace:*", "@fluvient-loom/port": "workspace:*", "@fluvient-loom/query": "workspace:*", "@fluvient/core": "workspace:*", "esbuild": "0.28.2" }
+}

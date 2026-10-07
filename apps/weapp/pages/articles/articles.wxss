@@ -1,0 +1,5 @@
+.page { padding-bottom: 120rpx; }
+input { background: #fff; padding: 20rpx; margin-bottom: 20rpx; }
+.category-picker { padding: 16rpx 0; color: #555; }
+.title-part-match { color: #b0442e; font-weight: 700; }
+.title-part-text { display: inline; }

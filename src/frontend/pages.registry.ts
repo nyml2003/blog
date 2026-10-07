@@ -33,7 +33,7 @@ import type {
 // 运行时值来自 page-kit（纯契约包）：本模块现在会被 bootstrap 入口静态引入
 // 浏览器图，不能出现对 page-build-kit 的值导入（那会把 vite/postcss/node:fs
 // 整条构建链拖进浏览器包，实测 vite build 报警 externalized for browser）。
-import { pageRoutes as flattenPageRoutes } from "@fluvient-loom/page-kit";
+import { pageRoutes as flattenPageRoutes } from "@fluvient-loom/page-contract";
 
 export type { PagePlatform, PageRegistration, PageRoute };
 

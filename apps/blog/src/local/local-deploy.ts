@@ -78,6 +78,7 @@ async function loadOrCreateConfig(ports: LocalDeployPorts): Promise<LocalConfig 
       contentToken: '',
       adminAuth: 'bypass',
     };
+    if (ports.fs.write === undefined) return null;
     await ports.fs.write(configPath, `${JSON.stringify(template, null, 2)}\n`);
     await run(ports, 'chmod', ['600', configPath]);
     ports.reporter.info(`已生成默认配置: ${configPath}（0600，fixture 内容源；切 GitHub 真源见 deploy/local/README.md）`);
@@ -177,6 +178,7 @@ async function installDarwin(ports: LocalDeployPorts, uid: number, nodePath: str
 </dict>
 </plist>
 `;
+  if (ports.fs.write === undefined) return false;
   await ports.fs.write(plistPath, plist);
 
   // 重装幂等：先等旧注册真正消失、端口真正释放（bootout 异步收尾），再注入新单元
@@ -238,6 +240,7 @@ StandardError=append:${join(logsDir, 'systemd.err.log')}
 [Install]
 WantedBy=default.target
 `;
+  if (ports.fs.write === undefined) return false;
   await ports.fs.write(unitPath, unit);
   if ((await run(ports, 'systemctl', ['--user', 'daemon-reload'])).code !== 0) return false;
   // enable 只建链接；restart 统一覆盖首次启动与重装（systemctl restart 会先停旧实例再起新的）
@@ -293,7 +296,7 @@ export async function runLocalDeploy(ports: LocalDeployPorts, action: LocalDeplo
 
   if (action === 'uninstall') {
     return process.platform === 'darwin'
-      ? (await uninstallDarwin(ports, process.getuid()) ? EXIT_OK : EXIT_FAILURE)
+      ? (await uninstallDarwin(ports, process.getuid?.() ?? ports.fs.effectiveUid?.() ?? -1) ? EXIT_OK : EXIT_FAILURE)
       : (await uninstallLinux(ports) ? EXIT_OK : EXIT_FAILURE);
   }
 
@@ -304,7 +307,7 @@ export async function runLocalDeploy(ports: LocalDeployPorts, action: LocalDeplo
   }
   const config = await loadOrCreateConfig(ports);
   if (config === null) return EXIT_FAILURE;
-  const uid = process.getuid();
+  const uid = process.getuid?.() ?? ports.fs.effectiveUid?.() ?? -1;
   if (!await assertForeignPortsFree(ports, config, await ownServiceRunning(ports, uid))) return EXIT_FAILURE;
   const nodePath = resolveNodePath();
   ports.reporter.info(`node: ${nodePath}（nvm 切换/升级默认 node 后需重跑 ops local install 重新钉住路径）`);

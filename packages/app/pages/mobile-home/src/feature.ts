@@ -7,17 +7,17 @@ import {
   type MobileApi,
   type MobileApiFailure,
   type MobileNavigation,
-  type TShelf,
   type TShelfInput,
 } from "@blog/mobile-api";
 import type { TaskFailure } from "@fluvient-loom/port";
-import { useMobileResource } from "@blog/mobile-api";
+import { useMobileResource } from "@blog/mobile-resource";
+import { toTShelfModel, type TShelfModel } from "@fluvient-loom/mobile-foundation";
 
 export interface MobileHomeLogicInput {
   readonly api: Pick<MobileApi, "page">;
 }
 interface MobileHomePayload {
-  readonly data: TShelf;
+  readonly data: TShelfModel;
   readonly navigation: MobileNavigation | undefined;
 }
 
@@ -54,7 +54,7 @@ export function useMobileHome(input: MobileHomeLogicInput) {
           });
         return {
           ok: true as const,
-          value: { data, navigation: navigationFromPage(result.value) },
+          value: { data: toTShelfModel(data), navigation: navigationFromPage(result.value) },
         };
       },
       mapRejected() {

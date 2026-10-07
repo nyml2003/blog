@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { DesktopPageContext } from "@blog/desktop-shared";
-import { definePage } from "@fluvient-loom/page-kit";
+import { definePage } from "@fluvient-loom/page-contract";
 
 /**
  * URL 参数：id 可选——缺失或非法都按"新建文章"处理（页面用 `?? 0` 作哨兵）；

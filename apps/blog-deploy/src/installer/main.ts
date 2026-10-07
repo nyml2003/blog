@@ -13,7 +13,7 @@ import { access, chmod, copyFile, mkdir, readFile, rename, rm, readdir, writeFil
 import { dirname, join, basename } from 'node:path';
 import { apexAlias, configTemplate, parseBlogConfig, seedFromLegacy, type BlogConfig } from './config.ts';
 import { EXIT_FAILURE, EXIT_LOCKED, EXIT_OK, EXIT_USAGE, type OpsErrorCode } from '@fluvient-cli/cli-kit/errors.ts';
-import type { HttpKernel } from '@fluvient/core/http';
+import type { HttpKernel } from '@fluvient-loom/web-http';
 import {
   BIN_DIR,
   CONFIG_DIR,
@@ -495,5 +495,4 @@ export async function runInstallerCommand(
   deps.reporter.fail(`未知命令:${command}`);
   return { exitCode: EXIT_USAGE, code: 'USAGE' };
 }
-
 

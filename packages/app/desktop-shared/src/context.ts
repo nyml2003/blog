@@ -3,7 +3,7 @@ import type { WebDesktopPorts } from "@fluvient-loom/page-kit/desktop";
 export {
   siteRoute as route,
   siteRouteWithQuery as routeWithQuery,
-} from "@fluvient-loom/page-kit";
+} from "@fluvient-loom/page-contract";
 
 export interface DesktopPageContext {
   readonly api: DesktopApi;

@@ -1,0 +1,9 @@
+{
+  "pages": ["pages/home/home", "pages/articles/articles", "pages/detail/detail", "pages/settings/settings"],
+  "window": { "navigationBarTitleText": "Blog", "navigationBarBackgroundColor": "#ffffff", "navigationBarTextStyle": "black" },
+  "style": "v2",
+  "renderer": "skyline",
+  "componentFramework": "glass-easel",
+  "lazyCodeLoading": "requiredComponents",
+  "networkTimeout": { "request": 10000, "connectSocket": 10000, "uploadFile": 10000, "downloadFile": 10000 }
+}

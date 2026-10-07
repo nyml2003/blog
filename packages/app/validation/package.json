@@ -7,6 +7,8 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@fluvient-loom/query": "workspace:*",
+    "@fluvient/core": "workspace:*",
     "zod": "^4.5.4"
   },
   "scripts": {

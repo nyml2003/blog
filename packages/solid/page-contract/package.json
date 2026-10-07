@@ -1,0 +1,23 @@
+{
+  "name": "@fluvient-loom/page-contract",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/shared.ts",
+      "import": "./src/shared.ts"
+    }
+  },
+  "files": ["src", "package.json"],
+  "dependencies": {
+    "@fluvient-loom/app-shell": "workspace:*",
+    "@fluvient-loom/query": "workspace:*",
+    "@fluvient-loom/serde": "workspace:*",
+    "@fluvient/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "26.4.1",
+    "typescript": "7.0.2"
+  }
+}

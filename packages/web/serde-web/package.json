@@ -17,7 +17,9 @@
     "smoke": "test -s src/index.ts"
   },
   "dependencies": {
-    "@fluvient-loom/serde": "workspace:*",
+    "@fluvient-loom/serde": "workspace:*"
+  },
+  "devDependencies": {
     "@fluvient/core": "workspace:*"
   }
 }

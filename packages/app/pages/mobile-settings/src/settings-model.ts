@@ -1,5 +1,5 @@
-export type MobileTheme = "paper" | "dark" | "sepia";
-export type MobileFont = "sans" | "serif" | "mono";
+export { defaultMobileSettings, normalizeMobileSettings, type MobileFont, type MobileTheme } from "@fluvient-loom/mobile-foundation";
+import type { MobileFont, MobileTheme } from "@fluvient-loom/mobile-foundation";
 
 export interface MobileSettings {
   readonly theme: MobileTheme;
@@ -17,11 +17,6 @@ export const mobileSettingsKeys = {
   theme: "blog.mobile.theme",
   font: "blog.mobile.font",
 } as const;
-
-export const defaultMobileSettings: MobileSettings = {
-  theme: "paper",
-  font: "sans",
-};
 
 export const mobileSettingsOptions = {
   themes: [
@@ -42,14 +37,4 @@ export function isMobileTheme(value: unknown): value is MobileTheme {
 
 export function isMobileFont(value: unknown): value is MobileFont {
   return mobileSettingsOptions.fonts.some((option) => option.value === value);
-}
-
-export function normalizeMobileSettings(
-  theme: unknown,
-  font: unknown,
-): MobileSettings {
-  return {
-    theme: isMobileTheme(theme) ? theme : defaultMobileSettings.theme,
-    font: isMobileFont(font) ? font : defaultMobileSettings.font,
-  };
 }

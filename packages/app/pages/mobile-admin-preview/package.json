@@ -9,8 +9,9 @@
   },
   "dependencies": {
     "@blog/mobile-api": "workspace:*",
+    "@blog/mobile-resource": "workspace:*",
     "@blog/mobile-shared": "workspace:*",
-    "@fluvient-loom/page-kit": "workspace:*",
+    "@fluvient-loom/page-contract": "workspace:*",
     "lucide-solid": "1.48.0",
     "zod": "^4.5.4"
   },

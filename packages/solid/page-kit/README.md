@@ -1,6 +1,7 @@
 # @fluvient-loom/page-kit
 
-页面接入框架的运行时半边 + **页面契约模块**（页面包的唯一依赖点）。
+页面接入框架的运行时装配半边。页面登记与路由契约位于
+`@fluvient-loom/page-contract`，本包只提供浏览器宿主适配器。
 
 ## 接入一个新页面（接口而非模板）
 
@@ -26,8 +27,7 @@
 
 ## 契约与运行时导出
 
-- `.`（shared，纯）：`PageRegistration`/`PageEntry`/`PageFactory`/`PagePlatform`/`PageRoute`/`pageRoutes()` 契约，
-  `definePage()` 作者入口（含 `params` schema 与产出的 `parseParams()`），`siteRoute()`/`siteRouteWithQuery()` 语义路由，挂载点解析；
+- `.`（shared，纯）：re-export `@fluvient-loom/page-contract` 的页面登记、路由和参数解析契约；
 - `./mobile`：Mobile 浏览器端口装配（`createWebMobilePorts`）、`mountMobileApplication`、
   app shell 移除；
 - `./desktop`：Desktop 浏览器端口装配与挂载。
@@ -35,7 +35,7 @@
 设计约束（SPEC-ARCH-BOUNDARY-001）：
 
 - 本包是宿主适配器的唯一装配点；宿主 bootstrap 是唯一调用点，只组合应用声明；
-- root 导出只含纯逻辑；两端组件各留各的子路径，Desktop/Mobile UI 隔离在包内成立；
+- root 导出只含契约 re-export；挂载点解析和浏览器端口只在两端子路径装配；
 - 页面的抽象单位是接口：没有模板、没有生成器、没有工具改人的源文件。
 
 构建链半边（校验/生成/vite 插件）见 `@fluvient-loom/page-build-kit`。

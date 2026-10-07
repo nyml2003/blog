@@ -11,8 +11,5 @@
     "@fluvient-loom/port": "workspace:*",
     "@fluvient-loom/query": "workspace:*",
     "zod": "^4.5.4"
-  },
-  "peerDependencies": {
-    "solid-js": "^1.9.0"
   }
 }

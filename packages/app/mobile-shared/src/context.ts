@@ -5,7 +5,7 @@ import type { WebMobilePorts } from "@fluvient-loom/page-kit/mobile";
 export {
   siteRoute as route,
   siteRouteWithQuery as routeWithQuery,
-} from "@fluvient-loom/page-kit";
+} from "@fluvient-loom/page-contract";
 
 export interface MobileRouteContext {
   readonly routes: SiteRoutes;

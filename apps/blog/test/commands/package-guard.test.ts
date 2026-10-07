@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { checkPackageNeutrality } from '../../src/quality/package-guard.ts';
+import { checkPackageDependencies, checkPackageNeutrality } from '../../src/quality/package-guard.ts';
 
 function guard(entries: Record<string, string>): ReturnType<typeof checkPackageNeutrality> {
   const sources = new Map(Object.entries(entries));
@@ -37,6 +37,16 @@ test('web domain: platform globals allowed (host adapters by nature)', () => {
     '/ws/packages/web/web/src/navigation.ts':
       'import { createWebNavigation } from "@fluvient-loom/port";\nconst h = window.history;',
   }), []);
+});
+
+test('weapp domain: wx is allowed but web globals and non-scope imports are rejected', () => {
+  assert.deepEqual(guard({
+    '/ws/packages/weapp/mobile-host/src/index.ts': 'import type { NetworkPort } from "@fluvient-loom/port"; const r = wx.request({});',
+  }), []);
+  const violations = guard({
+    '/ws/packages/weapp/mobile-host/src/bad.ts': 'const r = window.fetch; import { createSignal } from "solid-js";',
+  });
+  assert.equal(violations.length, 2);
 });
 
 test('solid domain: solid-js allowed alongside scope imports and platform globals', () => {
@@ -90,4 +100,46 @@ test('unknown category fails closed (placement is the policy)', () => {
   });
   assert.equal(violations.length, 1);
   assert.ok(violations[0].message.includes('未知包类别'));
+});
+
+test('dependency guard rejects a direct import missing from package.json', () => {
+  const violations = checkPackageDependencies(
+    ['/ws/packages/app/example/src/index.ts'],
+    () => 'import { createDataTask } from "@fluvient-loom/query";',
+    [
+      { file: '/ws/packages/app/example/package.json', name: '@blog/example', dependencies: new Set() },
+      { file: '/ws/packages/ts/query/package.json', name: '@fluvient-loom/query', dependencies: new Set() },
+    ],
+  );
+  assert.equal(violations.length, 1);
+  assert.match(violations[0].message, /未声明直接依赖/);
+});
+
+test('development dependencies cannot satisfy source imports; peer dependencies can', () => {
+  const manifest = {
+    file: '/ws/packages/app/example/package.json',
+    name: '@blog/example',
+    dependencies: new Set<string>(),
+    development: new Set(['fixture']),
+    peers: new Set(['solid-js']),
+  };
+  const files = ['/ws/packages/app/example/src/index.ts', '/ws/packages/app/example/test/index.ts'];
+  const violations = checkPackageDependencies(files, (file) => file.includes('/test/')
+    ? 'import fixture from "fixture";'
+    : 'import fixture from "fixture"; import { createSignal } from "solid-js";', [manifest]);
+  assert.equal(violations.length, 1);
+  assert.equal(violations[0].file, files[0]);
+});
+
+test('dependency usage includes CSS subpaths and reports unused declarations', () => {
+  const manifest = {
+    file: '/ws/packages/app/example/package.json', name: '@blog/example',
+    dependencies: new Set(['atoms', 'unused']),
+  };
+  const violations = checkPackageDependencies(
+    ['/ws/packages/app/example/src/styles.css'],
+    () => '@import "atoms/styles.css";', [manifest],
+  );
+  assert.equal(violations.length, 1);
+  assert.match(violations[0].message, /声明但未使用.*unused/);
 });

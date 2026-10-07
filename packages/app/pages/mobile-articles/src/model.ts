@@ -6,14 +6,13 @@ import {
   categoryShelfFromPageModule,
   navigationFromPage,
   type MobileApi,
-  type CategoryShelf,
   type MobileApiFailure,
   type MobileNavigation,
 } from "@blog/mobile-api";
 import { type DeepReadonly } from "@fluvient/core";
 import { type NavigationPort } from "@fluvient-loom/port";
 import type { MobileRouteContext } from "@blog/mobile-shared";
-import { useMobileResource } from "@blog/mobile-api";
+import { useMobileResource } from "@blog/mobile-resource";
 import {
   categoryHref,
   categoryRequestId,
@@ -21,6 +20,7 @@ import {
   type CategorySelection,
 } from "./category.ts";
 import { mobileArticlesPage } from "./definition.ts";
+import { toFShelfModel, type FShelfModel } from "@fluvient-loom/mobile-foundation";
 
 /**
  * 从当前 URL 读取分类筛选 id；缺失/非法 → undefined（无过滤，回退首个根分类）。
@@ -36,7 +36,7 @@ export interface MobileArticlesLogicInput extends MobileRouteContext {
 }
 
 interface MobileArticlesPayload {
-  readonly data: CategoryShelf;
+  readonly data: FShelfModel;
   readonly navigation: MobileNavigation | undefined;
 }
 
@@ -87,7 +87,7 @@ export function useMobileArticles(input: MobileArticlesLogicInput) {
           });
         return {
           ok: true as const,
-          value: { data, navigation: navigationFromPage(result.value) },
+          value: { data: toFShelfModel(data), navigation: navigationFromPage(result.value) },
         };
       },
       mapRejected() {
@@ -144,16 +144,16 @@ export function useMobileArticles(input: MobileArticlesLogicInput) {
 }
 
 export function rootCategoryName(
-  model: DeepReadonly<CategoryShelf>,
+  model: DeepReadonly<FShelfModel>,
   categoryId: number | undefined,
 ): string | undefined {
   if (categoryId === undefined) return undefined;
-  let current = model.taxonomy.categories.find(
+  let current = model.categories.find(
     (category) => category.id === categoryId,
   );
   while (current !== undefined && current.parentId !== undefined) {
     const parentId = current.parentId;
-    current = model.taxonomy.categories.find(
+    current = model.categories.find(
       (category) => category.id === parentId,
     );
   }

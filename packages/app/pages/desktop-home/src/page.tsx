@@ -1,7 +1,7 @@
 import { type DeepReadonly } from "@fluvient/core";
 import { type Component, For, Show } from "solid-js";
 import type { DesktopApi, SiteRoutes, TShelf } from "@blog/desktop-api";
-import { siteRoute } from "@fluvient-loom/page-kit";
+import { siteRoute } from "@fluvient-loom/page-contract";
 import { useDesktopHome } from "./feature.ts";
 import "./page.css";
 

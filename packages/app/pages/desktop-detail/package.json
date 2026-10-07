@@ -10,7 +10,8 @@
   "dependencies": {
     "@blog/desktop-api": "workspace:*",
     "@blog/desktop-shared": "workspace:*",
-    "@fluvient-loom/page-kit": "workspace:*",
+    "@fluvient-loom/page-contract": "workspace:*",
+    "@fluvient-loom/port": "workspace:*",
     "lucide-solid": "1.48.0",
     "zod": "^4.5.4"
   },

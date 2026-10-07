@@ -2,7 +2,7 @@ import { ArrowLeft } from "lucide-solid";
 import { type Component, For, Show } from "solid-js";
 import type { DesktopApi, SiteRoutes } from "@blog/desktop-api";
 import { ArticleBody } from "@blog/desktop-shared";
-import { siteRoute } from "@fluvient-loom/page-kit";
+import { siteRoute } from "@fluvient-loom/page-contract";
 import type { NavigationPort } from "@fluvient-loom/port";
 import { useDesktopArticle } from "./feature.ts";
 import { desktopDetailPage } from "./definition.ts";

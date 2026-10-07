@@ -25,12 +25,9 @@
     "smoke": "test -s src/mobile.tsx && test -s src/desktop.tsx"
   },
   "dependencies": {
-    "@fluvient/core": "workspace:*",
-    "@fluvient-loom/app-shell": "workspace:*",
+    "@fluvient-loom/page-contract": "workspace:*",
     "@fluvient-loom/net": "workspace:*",
     "@fluvient-loom/port": "workspace:*",
-    "@fluvient-loom/serde": "workspace:*",
-    "@fluvient-loom/serde-web": "workspace:*",
     "@fluvient-loom/web": "workspace:*"
   },
   "peerDependencies": {

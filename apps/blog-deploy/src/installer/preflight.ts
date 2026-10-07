@@ -1,7 +1,7 @@
 import { promises as dns } from 'node:dns';
 import { connect as tcpConnect } from 'node:net';
 import { connect as tlsConnect } from 'node:tls';
-import type { HttpKernel } from '@fluvient/core/http';
+import type { HttpKernel } from '@fluvient-loom/web-http';
 import type { Reporter } from './reporter.ts';
 
 export interface PreflightCheck {
@@ -267,4 +267,3 @@ function labelOf(name: PreflightCheck['name']): string {
   if (name === 'api') return 'Release API';
   return '资产可达';
 }
-

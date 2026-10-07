@@ -1,5 +1,5 @@
 import type { DesktopPageContext } from "@blog/desktop-shared";
-import { definePage } from "@fluvient-loom/page-kit";
+import { definePage } from "@fluvient-loom/page-contract";
 
 export const desktopHomePage = definePage({
   id: "desktop-public-home",

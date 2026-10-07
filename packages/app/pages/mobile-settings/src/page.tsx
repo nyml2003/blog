@@ -21,8 +21,8 @@ import {
   navigationFromPage,
 } from "@blog/mobile-api";
 import type { MobileRouteContext } from "@blog/mobile-shared";
-import { useMobileResource } from "@blog/mobile-api";
-import { Field, Heading, Select, Text } from "@blog/mobile-shared";
+import { useMobileResource } from "@blog/mobile-resource";
+import { Field, Select, Text } from "@blog/mobile-shared";
 import { BottomNav } from "@blog/mobile-shared";
 import { StandardNavigator } from "@blog/mobile-shared";
 
@@ -77,15 +77,13 @@ export function createMobileSettingsPage(
         <StandardNavigator
           context={input}
           navigation={page.state()?.snapshot}
+          title="设置"
           browserNavigation={input.navigation}
           persistence={input.persistence}
           document={input.document}
           share={input.share}
         />
         <main id="main" class="mobile-main">
-          <header class="page-heading">
-            <Heading content="设置" options={{ as: "h1", size: "page" }} />
-          </header>
           <div class="settings-fields">
             <Field
               label="主题风格"

@@ -1,5 +1,5 @@
 import { err, ok } from "@fluvient/core";
-import { createDataTask } from "@fluvient-loom/query";
+import { createDataTask, encodeQuery } from "@fluvient-loom/query";
 import { cancellationFailure, toErrorInfo } from "@fluvient/core";
 import {
   type DataTask,
@@ -20,6 +20,7 @@ import {
   type TShelfInput,
 } from "./types.ts";
 import { z } from "zod";
+
 
 const envelopeSchema = z.object({
   code: z.string(),
@@ -56,11 +57,7 @@ const route = {
 } as const;
 
 function query(parameters: Record<string, string | undefined>): string {
-  const search = new URLSearchParams();
-  for (const [key, value] of Object.entries(parameters)) {
-    if (value !== undefined && value !== "") search.set(key, value);
-  }
-  return search.toString();
+  return encodeQuery(parameters);
 }
 
 function path(
@@ -137,21 +134,12 @@ function request<T>(
   return createDataTask<T, MobileApiFailure>({
     async execute(signal) {
       const response = await network.request({ ...requestInput, signal });
-      if (!response.ok) {
-        if (response.error.kind === "cancelled")
-          return err(cancellationFailure());
-        return err(
-          failure(
-            response.error.kind === "timeout" ? "timeout" : response.error.kind,
-            response.error.message,
-            {
-              status: undefined,
-              cause: response.error.cause,
-            },
-          ),
-        );
-      }
-      return decode(response.value.body, response.value.status, schema);
+      if (response.ok) return decode(response.value.body, response.value.status, schema);
+      if (response.error.kind === "cancelled") return err(cancellationFailure());
+      return err(failure(response.error.kind, response.error.message, {
+        status: undefined,
+        cause: response.error.cause,
+      }));
     },
     mapRejected(cause) {
       return failure("network", messageFrom(cause), {
@@ -166,7 +154,7 @@ const getRequest = (pathValue: string): Omit<NetworkRequest, "signal"> => ({
   method: "GET",
   headers: {},
   body: undefined,
-  timeoutMs: undefined,
+  timeoutMs: 10_000,
 });
 
 export function createMobileApi(network: NetworkPort): MobileApi {

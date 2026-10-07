@@ -12,7 +12,6 @@ export {
   supportedNavigationIcons,
   tShelfFromPageModule,
 } from "./types.ts";
-export { useMobileResource } from "./resource.ts";
 export type {
   AdminArticle,
   ArticleSearch,

@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { apexAlias, configTemplate, parseBlogConfig, seedFromLegacy } from '../src/installer/config.ts';
 import { renderTemplate } from '../src/installer/render.ts';
-import { createHttpKernel } from '@fluvient/core/http';
+import { createHttpKernel } from '@fluvient-loom/web-http';
 import { fetchReleases, pickAsset, pickBuildRelease, pickChecksumAsset, pickScriptAsset, pickScriptRelease, targetForArch, verifyAssetChecksum, verifyChecksums } from '../src/installer/release.ts';
 import { main } from '../src/main.ts';
 import { parseBuildVersion, parseScriptVersion, serializeBuildVersion, serializeScriptVersion } from '../src/installer/version.ts';

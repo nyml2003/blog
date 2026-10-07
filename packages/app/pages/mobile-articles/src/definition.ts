@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { MobilePageContext } from "@blog/mobile-shared";
-import { definePage } from "@fluvient-loom/page-kit";
+import { definePage } from "@fluvient-loom/page-contract";
 
 /**
  * URL 参数：category_id 可选（缺失/非法按"无过滤"消费，回退首个根分类）；

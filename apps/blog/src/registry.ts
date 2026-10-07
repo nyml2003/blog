@@ -14,6 +14,7 @@ import { planMode, MOCK_SCENARIOS, ADMIN_ENTRY_MODES, DATA_MODES, CONTENT_SOURCE
 import { DEPLOY_TARGETS } from './delivery/deploy-plan.ts';
 import { RELEASE_KINDS, runRelease } from './release/release.ts';
 import { PORT_MIN, PORT_MAX } from '@fluvient-cli/cli-kit/port-allocation.ts';
+import { runWeapp } from './weapp/weapp.ts';
 import { E2E_MODES, E2E_SCENARIOS, runE2e } from './e2e/e2e.ts';
 import { E2E_PERF_PROFILES, runE2ePerf } from './e2e/perf.ts';
 import { err, ok, type Result } from '@fluvient/core';
@@ -74,6 +75,20 @@ function portOption<const N extends string>(name: N, description: string) {
 }
 
 export const commandDefinitions: readonly CommandDefinition[] = [
+  defineCommand({
+    path: ['weapp', 'build'],
+    summary: '构建微信小程序开发产物',
+    description: '校验原生 WXML/WXSS/JS 工程并复制到 target/weapp，产物可直接用微信开发者工具打开。',
+    examples: ['ops weapp build', 'ops weapp build --dry-run'],
+    exitCodes: [{ code: 0, meaning: '小程序产物构建成功' }, FAILURE],
+  }, (context) => runWeapp(context.workspace, context.process, context.reporter, context.effects, false).then((passed) => commandResult(passed))),
+  defineCommand({
+    path: ['weapp', 'check'],
+    summary: '检查微信小程序工程',
+    description: '检查四个公开页和小程序入口文件是否齐全，不生成产物。',
+    examples: ['ops weapp check'],
+    exitCodes: [{ code: 0, meaning: '小程序工程检查通过' }, FAILURE],
+  }, (context) => runWeapp(context.workspace, context.process, context.reporter, context.effects, true).then((passed) => commandResult(passed))),
   defineCommand({
     path: ['e2e'],
     summary: '运行浏览器端到端测试',
@@ -231,6 +246,7 @@ export const commandDefinitions: readonly CommandDefinition[] = [
 ];
 
 export const groupDefinitions = [
+  defineGroup({ path: ['weapp'], summary: '小程序', description: '构建与检查。', order: 61, workflow: '本地开发' }),
   defineGroup({ path: ['workspace'], summary: '检查', description: '确认本地开发依赖是否齐全。', order: 10, workflow: '首次进入仓库' }),
   defineGroup({ path: ['stats'], summary: '统计', description: '统计仓库代码规模等只读指标。', order: 15, workflow: '代码规模盘点' }),
   defineGroup({ path: ['quality'], summary: '质量', description: '运行格式、静态检查、测试和前端质量任务。', order: 20, workflow: '提交前验证' }),

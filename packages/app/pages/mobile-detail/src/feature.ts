@@ -18,7 +18,7 @@ import {
   navigationFromModule,
 } from "@blog/mobile-api";
 import type { MobileRouteContext } from "@blog/mobile-shared";
-import { useMobileResource } from "@blog/mobile-api";
+import { useMobileResource } from "@blog/mobile-resource";
 import type { FavoriteStore } from "./favorites.ts";
 
 export interface MobileDetailInput {

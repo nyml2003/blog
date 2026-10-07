@@ -3,7 +3,8 @@ import { createFetchNetwork } from "@fluvient-loom/net";
 import { createWebNavigation } from "@fluvient-loom/web";
 import { type Component, createComponent } from "solid-js";
 import { render } from "solid-js/web";
-import { requireMountTarget } from "./shared.ts";
+import { requireMountTarget } from "./mount.ts";
+import type { PageView } from "./shared.ts";
 
 // Desktop 浏览器端口装配：宿主适配器只允许在 page-kit 内装配
 // （SPEC-ARCH-BOUNDARY-001）；bootstrap 只组合应用声明并调用本包。
@@ -69,7 +70,7 @@ export interface MountApplicationOptions<Ctx> {
   readonly context:
     | { readonly ok: true; readonly value: Ctx }
     | { readonly ok: false; readonly error: unknown };
-  readonly createPage: (context: Ctx) => Component;
+  readonly createPage: (context: Ctx) => PageView;
   /** context 创建失败时的附加清理。 */
   readonly onContextFailure?: () => void;
   /** 挂载成功后的增强动作（失败不阻塞页面）。 */
@@ -85,7 +86,7 @@ export function mountDesktopApplication<Ctx>(
     render(() => createComponent(DesktopStartupError, {}), mount);
     return;
   }
-  const Page = options.createPage(options.context.value);
+  const Page = options.createPage(options.context.value) as Component;
   render(() => createComponent(Page, {}), mount);
   options.afterMount?.();
 }

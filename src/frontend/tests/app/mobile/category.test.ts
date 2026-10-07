@@ -7,7 +7,7 @@ import {
   mobileArticlesPage,
 } from "@blog/page-mobile-articles";
 import { desktopArticlesPage } from "@blog/page-desktop-articles";
-import { displayDate } from "@blog/mobile-shared/date";
+import { displayDate } from "@fluvient-loom/mobile-foundation/date";
 
 /** 页面参数的读取辅助：非法/缺失 id 归一为 undefined，便于断言。 */
 function readCategoryId(search: string): number | undefined {

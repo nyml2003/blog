@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { open, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { CancellationFailure } from '@fluvient/core';
-import { httpStatusError, withHttpRetry, type HttpError, type HttpKernel, type HttpRetryPolicy } from '@fluvient/core/http';
+import { httpStatusError, withHttpRetry, type HttpError, type HttpKernel, type HttpRetryPolicy } from '@fluvient-loom/web-http';
 import { compareBuildVersion, parseBuildVersion, parseScriptVersion, type BuildVersion } from './version.ts';
 import type { Reporter } from './reporter.ts';
 

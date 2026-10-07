@@ -10,6 +10,7 @@ Plan 面向一个跨职能、可验收的产品结果，不面向单个文件或
 
 当前 active：
 
+- [PLAN-MOBILE-WEAPP-001](./active/PLAN-MOBILE-WEAPP-001/PLAN.md)：Mobile 微信小程序支持与包边界净化——开发任务：先拆包后接端，把 URLSearchParams/Intl/fetch 内核等 Web 宿主原语从"平台中立"包清出，拆开 mobile-api/page-kit/mobile-shared 混装包，依赖精准化并扩展门禁；再以原生小程序语法让 home/articles/detail/settings 四页在开发者工具中对 Mock/Product 调通。红线：不允许一段代码同时兼容 web 和小程序，也不为两端统一发明抽象；部署发布不在本次范围。2026-10-07 立项，状态 ready。
 
 - [PLAN-LOCAL-RESIDENT-DEPLOY-001](./active/PLAN-LOCAL-RESIDENT-DEPLOY-001/PLAN.md)：本地常驻部署——打包产物在个人机器常驻（`ops local install|uninstall`：macOS LaunchAgent / Linux systemd 用户单元，配置驱动零环境变量），GitHub 真源启动同步，构建期工作台入口开关与 loopback 免 GUI 登录（bypass）；macOS 主路径已跑通（崩溃自愈、幂等重装、3 篇线上文章同步、bypass 验证），Linux/浏览器验收与收尾待做；与 PLAN-DELIVERY-COMPONENT-RELEASE-001 在 `deploy/` 有潜在写集交叉。2026-10-05 立项，状态 in_progress。
 - [PLAN-MOBILE-REVEAL-EXPERIENCE-001](./active/PLAN-MOBILE-REVEAL-EXPERIENCE-001/PLAN.md)：移动端骨架揭幕体验——撤壳时序优化（双 rAF 门控 + 正文单次解析，已随 `5a20cec` 交付并验证）与用户报告的"骨架→空白→线→内容→tag 慢"分层现象的复现归因：受控复现（headless Chromium 6× 节流）未重现，待观察环境确认（H1 旧构建）与真机光栅证据（H2），候选修复含"内容预绘制/交叉淡入"；承接 PLAN-FRONTEND-APP-SHELL-001 的 visual feedback 反馈。2026-10-05 立项，状态 in-progress。

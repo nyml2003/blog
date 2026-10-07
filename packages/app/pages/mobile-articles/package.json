@@ -9,8 +9,12 @@
   },
   "dependencies": {
     "@blog/mobile-api": "workspace:*",
+    "@blog/mobile-resource": "workspace:*",
     "@blog/mobile-shared": "workspace:*",
-    "@fluvient-loom/page-kit": "workspace:*",
+    "@fluvient-loom/page-contract": "workspace:*",
+    "@fluvient-loom/mobile-foundation": "workspace:*",
+    "@fluvient-loom/port": "workspace:*",
+    "@fluvient-loom/query": "workspace:*",
     "@fluvient-loom/text-highlight": "workspace:*",
     "@fluvient/core": "workspace:*",
     "zod": "^4.5.4"

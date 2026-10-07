@@ -42,6 +42,7 @@ export function createMobileHomePage(input: MobileHomePageInput): Component {
         persistence={input.persistence}
         document={input.document}
         share={input.share}
+        rightIcons={["search", "more"]}
       >
         <header class="page-heading">
           <Text

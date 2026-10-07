@@ -47,7 +47,7 @@ packages/app/                mobile-api desktop-api desktop-shared mobile-shared
 
 层序意图（切片纵深、同层隔离、两端隔离）随页面迁入包内：包内不设路径级限制，跨端硬隔离由包的依赖面承载。
 
-**宿主适配器装配点（2026-10-04 修订）**：`@fluvient-loom/web`/`net` 等宿主适配器只允许在 `@fluvient-loom/page-kit`（`./mobile`、`./desktop` 子路径）内装配；bootstrap 不得直接装配适配器。端口形状的唯一声明在 page-kit（`WebMobilePorts`/`WebDesktopPorts`），端内 context 经 type-only 继承追加应用声明。构建链半边（校验/生成/插件/脚手架）在 `@fluvient-loom/page-build-kit`。
+**宿主适配器装配点（2026-10-07 修订）**：每个宿主有独立装配点。Web 宿主的 `@fluvient-loom/web`/`net` 等适配器只允许在 `@fluvient-loom/page-kit`（`./mobile`、`./desktop` 子路径）内装配；bootstrap 不得直接装配适配器。小程序宿主适配器位于 `packages/weapp/mobile-host`，由 `apps/weapp` 入口显式组合；不得把 `wx` 能力带入契约、协议或 Web 装配包。页面契约的唯一声明位于 `@fluvient-loom/page-contract`，端口形状在各自宿主装配包声明。构建链半边（校验/生成/插件/脚手架）在 `@fluvient-loom/page-build-kit`。
 
 依赖方向：`bootstrap → 平台世界（pages → widgets → features → foundation）→ kernel/domain/protocol/validation`，同层 slice 互不 import，跨端零 import。2026-10-04 起层序不再由源码扫描门禁拦截（`source-layout.test.ts` 已删除）：包内导入不设路径级限制，跨端硬隔离由 workspace 包（`packages/app/`）承载，kernel 宿主纯度仍由 `tests/app/kernel/tsconfig.json`（无 DOM lib）编译保证。
 

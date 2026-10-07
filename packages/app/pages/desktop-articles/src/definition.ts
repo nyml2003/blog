@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { DesktopPageContext } from "@blog/desktop-shared";
-import { definePage } from "@fluvient-loom/page-kit";
+import { definePage } from "@fluvient-loom/page-contract";
 
 /**
  * URL 参数：type_id 是筛选 id 的字符串形态（非空数字串且 > 0），缺失/非法回退 "all"；

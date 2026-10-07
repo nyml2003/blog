@@ -10,6 +10,11 @@
     "@fluvient-cli/cli-kit": "workspace:*",
     "@fluvient-cli/cli-core": "workspace:*",
     "@fluvient-cli/cli-plugins": "workspace:*",
-    "@fluvient/core": "workspace:*"
+    "@fluvient/core": "workspace:*",
+    "@fluvient-loom/app-shell": "workspace:*",
+    "@fluvient-loom/command": "workspace:*",
+    "@fluvient-loom/node": "workspace:*",
+    "@fluvient-loom/port": "workspace:*",
+    "@fluvient-loom/query": "workspace:*"
   }
 }

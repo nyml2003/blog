@@ -7,7 +7,7 @@ import type {
   MobileApiFailure,
   ArticleSearch,
 } from "@blog/mobile-api";
-import { useMobileResource } from "@blog/mobile-api";
+import { useMobileResource } from "@blog/mobile-resource";
 
 export function useMobileSearch(input: {
   readonly api: Pick<MobileApi, "search">;

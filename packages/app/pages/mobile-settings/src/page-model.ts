@@ -15,7 +15,7 @@ import {
   readMobileSettings,
   type MobileSettingsError,
 } from "./model.ts";
-import { useMobileResource } from "@blog/mobile-api";
+import { useMobileResource } from "@blog/mobile-resource";
 
 export interface MobileSettingsLogicInput extends MobileRouteContext {
   readonly persistence: PersistencePort;

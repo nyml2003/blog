@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { MobilePageContext } from "@blog/mobile-shared";
-import { definePage } from "@fluvient-loom/page-kit";
+import { definePage } from "@fluvient-loom/page-contract";
 
 /**
  * URL 参数：id 必须是安全正整数（缺失/非法 → 页面按 invalid 态消费）；

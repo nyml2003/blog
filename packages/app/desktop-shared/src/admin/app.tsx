@@ -6,7 +6,7 @@ import {
   type Component,
 } from "solid-js";
 import { Dynamic } from "solid-js/web";
-import type { PageFactory } from "@fluvient-loom/page-kit";
+import type { PageFactory } from "@fluvient-loom/page-contract";
 import { route, type DesktopPageContext } from "../context.ts";
 import "./app.css";
 
@@ -112,7 +112,9 @@ export function createDesktopAdminApp(
     const inflight = pending.get(view.id);
     if (inflight !== undefined) return inflight;
     const promise = view.load().then((factory) => {
-      const component = factory(options.context);
+      // page-contract intentionally keeps the renderer opaque; this browser
+      // assembly point narrows it to Solid's component type.
+      const component = factory(options.context) as unknown as Component;
       components.set(view.id, component);
       return component;
     });

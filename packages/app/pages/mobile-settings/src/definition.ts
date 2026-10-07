@@ -1,5 +1,5 @@
 import type { MobilePageContext } from "@blog/mobile-shared";
-import { definePage } from "@fluvient-loom/page-kit";
+import { definePage } from "@fluvient-loom/page-contract";
 
 export const mobileSettingsPage = definePage({
   id: "mobile-settings",

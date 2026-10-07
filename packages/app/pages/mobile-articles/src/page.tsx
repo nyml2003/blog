@@ -11,7 +11,8 @@ import { rootCategoryName, useMobileArticles } from "./model.ts";
 import { mobileArticlesPage } from "./definition.ts";
 import "./page.css";
 import { useMobileSearch } from "@blog/mobile-shared";
-import type { CategoryShelf, MobileApi } from "@blog/mobile-api";
+import type { MobileApi } from "@blog/mobile-api";
+import type { FShelfModel } from "@fluvient-loom/mobile-foundation";
 import type { MobileRouteContext } from "@blog/mobile-shared";
 import { routeWithQuery } from "@blog/mobile-shared";
 import { ChipGroup } from "@blog/mobile-shared";
@@ -212,16 +213,12 @@ function HighlightedText(props: {
 }
 
 function ForCategories(props: {
-  readonly model: DeepReadonly<CategoryShelf>;
+    readonly model: DeepReadonly<FShelfModel>;
   readonly selection: CategorySelection;
   readonly onSelect: (selection: CategorySelection) => void;
 }) {
-  const roots = props.model.taxonomy.categories.filter(
-    (category) => category.parentId === undefined,
-  );
-  const children = props.model.taxonomy.categories.filter(
-    (category) => category.parentId === props.selection.rootId,
-  );
+  const roots = props.model.roots;
+  const children = roots.find((root) => root.id === props.selection.rootId)?.children ?? [];
   return (
     <div class="category-controls">
       <div class="category-root-list">

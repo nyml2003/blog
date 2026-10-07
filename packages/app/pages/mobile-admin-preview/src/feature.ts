@@ -1,5 +1,5 @@
 import type { MobileApi } from "@blog/mobile-api";
-import { useMobileResource } from "@blog/mobile-api";
+import { useMobileResource } from "@blog/mobile-resource";
 
 export function useMobileAdminPreview(
   api: Pick<MobileApi, "adminArticle">,

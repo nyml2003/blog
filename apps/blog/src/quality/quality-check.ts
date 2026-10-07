@@ -32,6 +32,7 @@ export async function runCheck(workspace: Workspace, process: ProcessPort, fs: F
     'apps/blog/src/page',
     'apps/blog/src/admin',
     'apps/blog/src/content',
+    'apps/weapp',
   ].map((relative) => path.join(workspace.root, relative));
   await run('ops lint (await/imports/globals)', 'pnpm', ['-C', 'src/frontend', 'exec', 'oxlint', '-c', path.join(workspace.root, '.oxlintrc.json'), ...lintPaths], workspace.root);
   const appFiles = (await Promise.all([fs.files(workspace.appSource), fs.files(workspace.appTests)])).flat().filter((f) => f.endsWith('.ts'));
@@ -44,6 +45,9 @@ export async function runCheck(workspace: Workspace, process: ProcessPort, fs: F
     await run('pnpm format:check', 'pnpm', ['-C', 'src/frontend', 'run', 'format:check'], workspace.root);
     await run('pnpm test:core', 'pnpm', ['-C', 'src/frontend', 'run', 'test:core'], workspace.root);
     await run('pnpm build', 'pnpm', ['-C', 'src/frontend', 'run', 'build'], workspace.root);
+  }
+  if (await fs.exists(path.join(workspace.root, 'apps', 'weapp', 'package.json'))) {
+    await run('weapp check', 'pnpm', ['--filter', '@blog/weapp', 'check'], workspace.root);
   }
   const isProjectSource = (file: string) => !/[\\/](?:node_modules|dist|target|\.generated)[\\/]/.test(file);
   const manifestFiles = (await fs.files(path.join(workspace.root, 'src'))).filter((file) => isProjectSource(file) && file.endsWith('Cargo.toml'));

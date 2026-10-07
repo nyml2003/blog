@@ -58,7 +58,7 @@ export function Navigator<Context extends object>(
   });
 
   return (
-    <Show when={allIcons().length > 0}>
+    <Show when={allIcons().length > 0 || props.title !== undefined}>
       <a class="skip-link" href="#main">
         跳到主要内容
       </a>
@@ -71,7 +71,7 @@ export function Navigator<Context extends object>(
             href={props.leftHref}
           />
           <Show when={props.title !== undefined}>
-            <span class="mobile-header-title">{props.title}</span>
+            <h1 class="mobile-header-title">{props.title}</h1>
           </Show>
           <div class="mobile-actions-right">
             <NavigatorActions icons={rightIcons()} contextFor={contextFor} />
