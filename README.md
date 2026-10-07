@@ -55,7 +55,7 @@ ops runtime dev --scenario default --admin-entry on --web-port 5173 --mock-port 
 
 线上 API 地址只在本次构建命令中通过 `--api-origin` 注入小程序产物，不配置仓库级 API 地址变量，也不使用运行时环境变量。
 
-同一个 Release 还提供 `weapp-script.mjs`。在安装了 Node.js 22+ 的 Windows PowerShell 或终端中执行 `node weapp-script.mjs --repo nyml2003/blog --environment test --out .\weapp`，脚本会自动选择对应环境的最新 Release、下载并校验压缩包，再解压为可导入微信开发者工具的 `weapp/` 目录；可用 `--environment production --version 0.1.0` 固定线上候选版本。
+小程序构建统一由 `ops` 参数协议驱动：测试包执行 `ops weapp build --environment test`，线上候选包执行 `ops weapp build --environment production --api-origin https://你的线上 API 地址`。Release 下载和解压也应接入 `ops weapp`，不再维护独立的 `weapp-script.mjs`。
 
 ## 目录地图
 

@@ -40,15 +40,6 @@ if (!check && !process.exitCode) {
       minify: true,
   });
   await build({
-    entryPoints: [join(root, "src/weapp-script.ts")],
-    bundle: true,
-    platform: "node",
-    format: "esm",
-    outfile: join(out, "../weapp-script.mjs"),
-    legalComments: "none",
-    minify: true,
-  });
-  await build({
     entryPoints: [join(root, "src/runtime.ts")],
     bundle: true,
     platform: "browser",

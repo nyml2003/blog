@@ -39,14 +39,14 @@ jobs:
           RELEASE_ENVIRONMENT: ${{ inputs.environment }}
           RELEASE_API_ORIGIN: ${{ inputs.api_origin }}
         run: |
-          nix develop ./nix -c pnpm exec tsc --noEmit -p apps/weapp/tsconfig.script.json
+          nix develop ./nix -c pnpm exec tsc --noEmit -p apps/weapp/tsconfig.json
           if [[ "$GITHUB_REF_NAME" == weapp-test-v* ]]; then
             environment=test
           else
             environment="$RELEASE_ENVIRONMENT"
           fi
           if [[ "$environment" == production ]]; then api_origin="$RELEASE_API_ORIGIN"; test -n "$api_origin"; else api_origin=http://127.0.0.1:8080; fi
-          nix develop ./nix -c node apps/weapp/build.mjs --environment "$environment" --api-origin "$api_origin"
+          nix develop ./nix -c ops weapp build --environment "$environment" --api-origin "$api_origin"
       - name: Package WeChat mini-program
         env:
           RELEASE_ENVIRONMENT: ${{ inputs.environment }}
@@ -66,14 +66,12 @@ jobs:
           test -s "$archive"
           tar -tzf "$archive" | grep -Eq '^weapp/app\.json$'
           tar -tzf "$archive" | grep -Eq '^weapp/lib/runtime\.js$'
-          test -s target/weapp-script.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: blog-weapp-${{ github.ref_name }}
           path: |
             deploy/dist/blog-weapp-*.tar.gz
             deploy/dist/blog-weapp-*.tar.gz.sha256
-            target/weapp-script.mjs
       - name: Publish WeChat mini-program release asset
         if: startsWith(github.ref, 'refs/tags/') || inputs.environment == 'production'
         uses: softprops/action-gh-release@v2
@@ -82,4 +80,3 @@ jobs:
           files: |
             deploy/dist/blog-weapp-*.tar.gz
             deploy/dist/blog-weapp-*.tar.gz.sha256
-            target/weapp-script.mjs

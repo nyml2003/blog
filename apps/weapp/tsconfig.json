@@ -5,6 +5,5 @@
     "types": [],
     "noEmit": true
   },
-  "include": ["app.ts", "pages/**/*.ts", "src/**/*.ts", "types/**/*.d.ts"],
-  "exclude": ["src/weapp-script.ts"]
+  "include": ["app.ts", "pages/**/*.ts", "src/**/*.ts", "types/**/*.d.ts"]
 }

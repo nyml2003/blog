@@ -79,9 +79,13 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     path: ['weapp', 'build'],
     summary: '构建微信小程序开发产物',
     description: '校验原生 WXML/WXSS/JS 工程并复制到 target/weapp，产物可直接用微信开发者工具打开。',
-    examples: ['ops weapp build', 'ops weapp build --dry-run'],
+    options: [
+      { name: 'environment', description: '构建环境', model: { kind: 'enum', values: ['test', 'production'] as const } },
+      { name: 'api-origin', description: 'production 构建写入的小程序 API 地址', model: { kind: 'path' }, optional: true },
+    ],
+    examples: ['ops weapp build --environment test', 'ops weapp build --environment production --api-origin https://api.example.com'],
     exitCodes: [{ code: 0, meaning: '小程序产物构建成功' }, FAILURE],
-  }, (context) => runWeapp(context.workspace, context.process, context.reporter, context.effects, false).then((passed) => commandResult(passed))),
+  }, (context, args) => runWeapp(context.workspace, context.process, context.reporter, context.effects, false, args).then((passed) => commandResult(passed))),
   defineCommand({
     path: ['weapp', 'check'],
     summary: '检查微信小程序工程',
