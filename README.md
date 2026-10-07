@@ -46,6 +46,8 @@ ops runtime dev --scenario default --admin-entry on --web-port 5173 --mock-port 
 | 启动同源集成栈 | `ops runtime integration --content-source fixture --product-port 8080 --data-port 8081` |
 
 发布 `weapp-vX.Y.Z` tag 时，GitHub Actions 会单独构建并发布微信小程序包；资产名为 `blog-weapp-X.Y.Z.tar.gz`，导入微信开发者工具前解压其中的 `weapp/` 目录。后端仍使用独立的 `build-vX.Y.Z` 发布线，微信平台提交和真机验收需在发布前人工完成。
+
+同一个 Release 还提供 `weapp-script.mjs`。在安装了 Node.js 22+ 的 Windows PowerShell 或终端中执行 `node weapp-script.mjs --repo nyml2003/blog --out .\weapp`，脚本会自动选择最新 `weapp-v*` Release、下载并校验 `blog-weapp-*.tar.gz`，再解压为可导入微信开发者工具的 `weapp/` 目录；可用 `--version 0.1.0` 固定版本。
 | 运行全项目质量检查 | `ops quality check` |
 | 验证 `@fluvient-loom` 包 | `ops package check` |
 | 统计代码行数 | `ops stats lines` |
