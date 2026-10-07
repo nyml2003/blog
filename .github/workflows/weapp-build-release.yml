@@ -2,7 +2,7 @@ name: weapp-build-release
 
 on:
   push:
-    tags: ['weapp-v*', 'weapp-test-v*']
+    tags: ['weapp-test-v*']
   workflow_dispatch:
     inputs:
       version:
@@ -37,13 +37,11 @@ jobs:
       - name: Build WeChat mini-program
         env:
           RELEASE_ENVIRONMENT: ${{ inputs.environment }}
-          RELEASE_API_ORIGIN: ${{ inputs.api_origin || vars.WEAPP_PRODUCTION_API_ORIGIN }}
+          RELEASE_API_ORIGIN: ${{ inputs.api_origin }}
         run: |
           nix develop ./nix -c pnpm exec tsc --noEmit -p apps/weapp/tsconfig.script.json
           if [[ "$GITHUB_REF_NAME" == weapp-test-v* ]]; then
             environment=test
-          elif [[ "$GITHUB_REF_NAME" == weapp-v* ]]; then
-            environment=production
           else
             environment="$RELEASE_ENVIRONMENT"
           fi
@@ -57,9 +55,6 @@ jobs:
           if [[ "$GITHUB_REF_NAME" == weapp-test-v* ]]; then
             environment=test
             version="${GITHUB_REF_NAME#weapp-test-v}"
-          elif [[ "$GITHUB_REF_NAME" == weapp-v* ]]; then
-            environment=production
-            version="${GITHUB_REF_NAME#weapp-v}"
           else
             environment="$RELEASE_ENVIRONMENT"
             version="$RELEASE_VERSION"
@@ -83,6 +78,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || format('weapp-v{0}', inputs.version) }}
           files: |
             deploy/dist/blog-weapp-*.tar.gz
             deploy/dist/blog-weapp-*.tar.gz.sha256

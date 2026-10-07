@@ -43,13 +43,6 @@ test('release dry-run computes independent next patch tags without writing', asy
   assert.equal(h.calls.some(({ args }) => args[0] === 'push' || args[0] === 'tag' && args[1] !== '--list'), false);
 });
 
-test('weapp release uses the independent weapp tag stream', async () => {
-  const h = world('weapp', { tags: 'weapp-v0.2.3\n', dryRun: true });
-  const code = await runRelease(h.kind, h.ports, { confirmed: false, allowDirty: false });
-  assert.equal(code, 0);
-  assert.match(h.lines.join('\n'), /weapp-v0\.2\.4/);
-});
-
 test('weapp-test release uses the test tag stream', async () => {
   const h = world('weapp-test', { tags: 'weapp-test-v0.1.2\n', dryRun: true });
   const code = await runRelease(h.kind, h.ports, { confirmed: false, allowDirty: false });

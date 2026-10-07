@@ -51,9 +51,9 @@ ops runtime dev --scenario default --admin-entry on --web-port 5173 --mock-port 
 
 所有有值参数都应显式提供。运行模式、参数、退出码和管理命令的完整说明见[开发与运维指南](docs/guides/operations.md)；参数契约见 [SPEC-OPS-PARAMETERS-001](docs/specs/SPEC-OPS-PARAMETERS-001.md)。
 
-发布 `weapp-test-vX.Y.Z` tag 会生成测试环境包 `blog-weapp-test-X.Y.Z.tar.gz`；发布 `weapp-vX.Y.Z` tag 会生成线上候选包 `blog-weapp-production-X.Y.Z.tar.gz`。测试包供微信开发者工具联调，线上候选包供微信平台发布前验证。
+发布 `weapp-test-vX.Y.Z` tag 会生成测试环境包 `blog-weapp-test-X.Y.Z.tar.gz`。线上候选包通过 `weapp-build-release` 手动触发，填写 `environment=production`、`version` 和 `api_origin`，生成 `blog-weapp-production-X.Y.Z.tar.gz`。测试包供微信开发者工具联调，线上候选包供微信平台发布前验证。
 
-线上 `weapp-vX.Y.Z` tag 需要在 GitHub 仓库 Variables 中配置 `WEAPP_PRODUCTION_API_ORIGIN`；手动运行 workflow 时也可以在 `api_origin` 输入框传入地址。workflow 会把这个构建参数写入小程序产物，不使用运行时环境变量。
+线上 API 地址只在本次构建命令中通过 `--api-origin` 注入小程序产物，不配置仓库级 API 地址变量，也不使用运行时环境变量。
 
 同一个 Release 还提供 `weapp-script.mjs`。在安装了 Node.js 22+ 的 Windows PowerShell 或终端中执行 `node weapp-script.mjs --repo nyml2003/blog --environment test --out .\weapp`，脚本会自动选择对应环境的最新 Release、下载并校验压缩包，再解压为可导入微信开发者工具的 `weapp/` 目录；可用 `--environment production --version 0.1.0` 固定线上候选版本。
 

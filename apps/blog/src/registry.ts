@@ -179,14 +179,14 @@ export const commandDefinitions: readonly CommandDefinition[] = [
   }, (context) => runDeployInstaller(deployPorts(context)).then(commandExitResult)),
   defineCommand({
     path: ['release'],
-    summary: '预检并发布 Script、Build 或 Weapp 环境 tag',
+    summary: '预检并发布 Script、Build 或 Weapp 测试环境 tag',
     description: '检查 main 分支和干净工作树（--allow-dirty 跳过后者），按发布类型自动递增 patch 版本，预览 tag 后在 --yes 下创建并推送；不会修改服务器。',
     positionals: [{ name: 'kind', description: '发布类型', model: { kind: 'enum', values: RELEASE_KINDS } }],
     options: [
       { name: 'yes', model: { kind: 'switch' }, description: '确认创建并推送 tag' },
       { name: 'allow-dirty', model: { kind: 'switch' }, description: '跳过工作树干净检查（tag 指向 HEAD，未提交改动不会进入发布物）' },
     ],
-    examples: ['ops release script --dry-run', 'ops release build --yes', 'ops release weapp-test --yes', 'ops release weapp --yes', 'ops release both --yes --allow-dirty'],
+    examples: ['ops release script --dry-run', 'ops release build --yes', 'ops release weapp-test --yes', 'ops release both --yes --allow-dirty'],
     exitCodes: [{ code: 0, meaning: '预检成功或 tag 已推送' }, { code: 10, meaning: '参数或命令用法错误' }, FAILURE],
   }, (context, args) => runRelease(args.kind, { process: context.process, reporter: context.reporter, root: context.workspace.root, effects: context.effects }, { confirmed: args.yes, allowDirty: args['allow-dirty'] }).then(commandExitResult)),
   defineCommand({

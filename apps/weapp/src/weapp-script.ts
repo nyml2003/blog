@@ -40,7 +40,7 @@ const candidates = releases
   .filter((release) => version === undefined || release.tag_name === `weapp${environment === "test" ? "-test" : ""}-v${version}`)
   .sort((left, right) => right.tag_name.localeCompare(left.tag_name, undefined, { numeric: true }));
 const release = candidates[0];
-if (!release) fail(version === undefined ? "没有可用的 weapp Release" : `找不到 weapp-v${version}`);
+if (!release) fail(version === undefined ? `没有可用的 ${environment} weapp Release` : `找不到 ${environment} weapp 版本 ${version}`);
 const archive = release.assets.find((asset) => asset.name === `blog-weapp-${environment}-${release.tag_name.split("-v")[1]}.tar.gz`);
 const checksum = release.assets.find((asset) => asset.name === `${archive?.name}.sha256`);
 if (!archive || !checksum) fail(`Release ${release.tag_name} 缺少小程序包或校验和`);

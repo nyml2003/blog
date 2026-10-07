@@ -3,7 +3,7 @@ import type { ProcessPort, Reporter } from '@fluvient-cli/cli-kit/ports.ts';
 import { effectFailure, reversibleEffect, reportPlan, type EffectFailure, type EffectPort } from '@fluvient-cli/cli-kit/effects.ts';
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from '@fluvient-cli/cli-kit/errors.ts';
 
-export const RELEASE_KINDS = ['script', 'build', 'weapp-test', 'weapp', 'both'] as const;
+export const RELEASE_KINDS = ['script', 'build', 'weapp-test', 'both'] as const;
 export type ReleaseKind = (typeof RELEASE_KINDS)[number];
 type ReleasePrefix = Exclude<ReleaseKind, 'both'>;
 
@@ -34,7 +34,7 @@ interface ReleasePlan {
 }
 
 const VERSION_PATTERN = /^(\d+)\.(\d+)\.(\d+)$/;
-const TAG_PATTERN = /^(script|build|weapp-test|weapp)-v(\d+)\.(\d+)\.(\d+)$/;
+const TAG_PATTERN = /^(script|build|weapp-test)-v(\d+)\.(\d+)\.(\d+)$/;
 const TARGET_BRANCH = 'main';
 
 function parseVersion(value: string): Version | undefined {
@@ -130,7 +130,7 @@ function workflowUrls(remote: string, kind: ReleaseKind): string[] {
   if (!match) return [];
   const workflows = kind === 'both'
     ? ['script-release.yml', 'build-release.yml']
-    : [kind === 'weapp' || kind === 'weapp-test' ? 'weapp-build-release.yml' : `${kind}-release.yml`];
+    : [kind === 'weapp-test' ? 'weapp-build-release.yml' : `${kind}-release.yml`];
   return workflows.map((workflow) => `https://github.com/${match[1]}/${match[2]}/actions/workflows/${workflow}`);
 }
 
