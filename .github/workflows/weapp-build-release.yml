@@ -75,7 +75,7 @@ jobs:
             deploy/dist/blog-weapp-*.tar.gz.sha256
             target/weapp-script.mjs
       - name: Publish WeChat mini-program release asset
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') || inputs.environment == 'production'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || format('weapp-v{0}', inputs.version) }}
