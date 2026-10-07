@@ -37,10 +37,16 @@ jobs:
       - name: Build WeChat mini-program
         env:
           RELEASE_ENVIRONMENT: ${{ inputs.environment }}
-          RELEASE_API_ORIGIN: ${{ inputs.api_origin }}
+          RELEASE_API_ORIGIN: ${{ inputs.api_origin || vars.WEAPP_PRODUCTION_API_ORIGIN }}
         run: |
           nix develop ./nix -c pnpm exec tsc --noEmit -p apps/weapp/tsconfig.script.json
-          if [[ "$GITHUB_REF_NAME" == weapp-test-v* ]]; then environment=test; else environment="$RELEASE_ENVIRONMENT"; fi
+          if [[ "$GITHUB_REF_NAME" == weapp-test-v* ]]; then
+            environment=test
+          elif [[ "$GITHUB_REF_NAME" == weapp-v* ]]; then
+            environment=production
+          else
+            environment="$RELEASE_ENVIRONMENT"
+          fi
           if [[ "$environment" == production ]]; then api_origin="$RELEASE_API_ORIGIN"; test -n "$api_origin"; else api_origin=http://127.0.0.1:8080; fi
           nix develop ./nix -c node apps/weapp/build.mjs --environment "$environment" --api-origin "$api_origin"
       - name: Package WeChat mini-program
