@@ -3,7 +3,7 @@ kind: guide
 id: GUIDE-OPERATIONS
 status: current
 owner: operations
-last_reviewed: 2026-09-29
+last_reviewed: 2026-10-07
 ---
 
 # 开发与运维指南
@@ -26,6 +26,9 @@ ops runtime dev --scenario default --admin-entry on --web-port 5173 --mock-port 
 ops runtime backend --content-source fixture --data mock --product-port 8080 --data-port 8081
 ops runtime backend --content-source github --data prod --database-path ~/.local/state/blog/prod.db --product-port 18080 --data-port 18081
 ops runtime integration --content-source fixture --product-port 8080 --data-port 8081
+ops weapp build --environment test
+ops weapp build --environment production --api-origin https://你的线上API地址
+ops weapp check
 ops e2e --mode integration --playwright-module playwright-core/index.mjs --chromium-path /nix/store/.../chromium
 ops e2e --mode dev --scenario empty --playwright-module playwright-core/index.mjs --chromium-path /nix/store/.../chromium
 ops admin credentials init
@@ -72,6 +75,24 @@ ops stats lines
 ## 统计
 
 `ops stats lines [--top <N>]` 用 `git ls-files`（含未跟踪文件、遵循 .gitignore）列出仓库文件，按扩展名统计文件数与行数；`--top` 只显示行数最多的前 N 个扩展名（int32，1–200，缺省显示全部）。命令是只读观察，`--dry-run` 与真实运行都执行统计且结果一致。
+
+## 微信小程序
+
+构建产物写入 `target/weapp`，可直接用微信开发者工具打开：
+
+- `ops weapp build --environment test`：测试包，API 缺省指向 `http://127.0.0.1:8080`（开发者工具本地联调用，需在工具中关闭合法域名校验或配置本地代理）；
+- `ops weapp build --environment production --api-origin <URL>`：线上候选包，`--api-origin` 必填，且只在本次构建命令中注入产物，不写仓库级变量、不读运行时环境变量；
+- `ops weapp check`：文件齐全性检查 + `apps/weapp` 的 `tsc --noEmit`（`ops quality check` 已包含）。
+
+构建细节：四页共享的协议与纯逻辑打包为 `lib/runtime.js` 一次，产物总 JS 有 2 MiB 门禁；构建脚本 `apps/weapp/build.mjs` 全量校验目标目录文件大小。
+
+发布：
+
+- 推送 `weapp-test-vX.Y.Z` tag 自动触发 `weapp-build-release` workflow，产出 `blog-weapp-test-X.Y.Z.tar.gz`（附 `.sha256`）并作为 GitHub Release 资产发布；
+- 线上候选包手动触发同一 workflow，填写 `environment=production`、`version` 与非空 `api_origin`，产出 `blog-weapp-production-X.Y.Z.tar.gz`，以 `weapp-vX.Y.Z` 为 tag 发布资产；
+- 包内结构固定为 `weapp/`（app 入口与四页），安装进微信开发者工具前应校验 SHA256。
+
+当前没有 `ops weapp download` 命令：原独立下载脚本（`weapp-script.mjs`）已删除，Release 资产目前由人工下载解压。
 
 ## 发布
 

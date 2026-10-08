@@ -3,12 +3,12 @@ kind: architecture
 id: ARCH-CODEC-PERSISTENCE
 status: current
 owner: frontend
-last_reviewed: 2026-10-04
+last_reviewed: 2026-10-07
 ---
 
 # Codec/Persistence 架构
 
-依据：[PLAN-FRONTEND-CODEC-PERSISTENCE-001](../plans/active/PLAN-FRONTEND-CODEC-PERSISTENCE-001/PLAN.md)。本文记录当前已生效的分层与契约；未决决策单列一节，不与已生效内容混排。
+本文记录当前已生效的分层与契约；未决决策单列一节，不与已生效内容混排。
 
 ## 分层边界
 

@@ -132,7 +132,7 @@ Then dry-run 下确认效果被短路、不要求 `--yes`；真实执行时确�
 - 中间件收集顺序与插件组合：`packages/cli/cli-kit/test/plugin.test.ts`。
 - release 纵切片（dry-run 零写、补偿路径、确认效果）：`apps/blog/test/commands/release.test.ts`。
 - 类型与共享包兼容：`packages/ts/port` typecheck、`apps/blog/test/packages/package-smoke.ts`。
-- 后续门禁（另由 `PLAN-OPS-EFFECTS-001` 跟踪）：全命令 dry-run 一致性测试、命令域架构扫描。
+- 尚未纳入门禁：全命令 dry-run 一致性测试、命令域架构扫描。
 
 ## 决策
 

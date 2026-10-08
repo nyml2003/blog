@@ -5,7 +5,7 @@
 ## 分域文档
 
 - [UI/UX](./ui-ux.md)：视觉系统、页面边界和交互原则；
-- [Frontend](./frontend.md)：Solid/Vite、多应用壳和前端依赖边界；
+- [Frontend](./frontend.md)：H5（Solid/Vite）与微信小程序、页面边界和前端依赖；
 - [Backend](./backend.md)：Rust 服务、领域层和业务状态；
 - [Infrastructure](./infrastructure.md)：Nix、SQLite、构建和运行环境；
 - [Data and API](./data-and-api.md)：数据模型、API 契约和可见性；

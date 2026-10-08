@@ -55,4 +55,4 @@ Then 引导过程不发起 `/api/public/site-routes` 请求；e2e 对桌面旅�
 
 ## 修订记录
 
-- 2026-10-03（PLAN-PAGE-ONBOARDING-001）：清单从"git 跟踪的手工维护文件 + 测试集合守卫"改为"注册表生成物 + 逐字节比对守卫"；canonical 取值从人工挑选改为 `aliases[0]` 约定；Desktop 从运行时拉取改为构建期内嵌（对齐 Mobile，PLAN-MOBILE-EXPERIENCE-OPTIMIZATION-001 的先例），端点保留；场景 003 从"网络失败"改为"内嵌清单协议不符"，新增场景 004。
+- 2026-10-03：清单从"git 跟踪的手工维护文件 + 测试集合守卫"改为"注册表生成物 + 逐字节比对守卫"；canonical 取值从人工挑选改为 `aliases[0]` 约定；Desktop 从运行时拉取改为构建期内嵌（对齐 Mobile 先例），端点保留；场景 003 从"网络失败"改为"内嵌清单协议不符"，新增场景 004。

@@ -3,7 +3,7 @@ kind: architecture
 id: ARCH-DATA-API
 status: current
 owner: backend
-last_reviewed: 2026-09-19
+last_reviewed: 2026-10-07
 ---
 
 # Data and API 架构
@@ -39,10 +39,16 @@ Data 不解释 HTML；它提供仅草稿可更新和按检查过的完整原文�
 
 推荐只引用已发布文章。MVP 当前推荐规则为最近更新的 6 篇文章，由管理端手动替换生效集合。
 
+## Mobile 页面聚合 BFF
+
+- H5 移动端页面通过 `GET /api/public/mobile/page?sceneCode=public.mobile_page&page=<name>` 一次取回页面所需的全部数据；`page` 取 `home`、`article-list`、`article-detail`、`settings`；
+- 响应为 `{ modules: [{ moduleKey, data }] }`，恒含 `mobile.navigation`（左/右图标与可选 `shareUrl`），其余按页面追加：`home` 附 `mobile.t-shelf`，`article-list` 附 `mobile.category-shelf`，`article-detail` 附 `mobile.article-detail`，`settings` 附空数据模块；
+- 文章不存在或未发布时详情模块被省略、外层仍为 200 OK，由前端按"模块缺失"渲染"文章不存在或暂不可见"；
+- 小程序端只复用其中 `page=home`；文章列表/搜索/详情在小程序直接使用 `category-shelf`、`article_search` 与 `article_detail` 端点（同协议客户端），语义一致但请求路径不同。
+
 ## Mobile 分类货架 BFF
 
-- `/m/articles/index.html` 与 `/m/articles/list.html` 使用
-  `GET /api/public/mobile/category-shelf?sceneCode=public.mobile_category_shelf&category_id=<ID>`；
+- `GET /api/public/mobile/category-shelf?sceneCode=public.mobile_category_shelf&category_id=<ID>` 也作为独立端点保留；
 - 响应包含 taxonomy、最终选中的分类 ID、文章卡片和总数，卡片不返回正文 HTML；
 - 选择一级分类时汇总其全部后代叶子分类，选择二级分类时汇总该分支下的叶子分类；
   同一篇文章属于多个命中叶子时只返回一次，且只返回已发布文章；
@@ -52,7 +58,7 @@ Data 不解释 HTML；它提供仅草稿可更新和按检查过的完整原文�
 
 ## 公开 T 型货架 BFF
 
-- Mobile 首页推荐等 T 型展示通过 `GET /api/public/t-shelf?sceneCode=public.t_shelf` 读取模型；两个 Mobile 文章入口使用上面的分类货架，不混用两种筛选语义；
+- Desktop 首页、文章列表等 T 型展示通过 `GET /api/public/t-shelf?sceneCode=public.t_shelf` 读取模型；Mobile 首页的同类数据经 `mobile/page?page=home` 的 `mobile.t-shelf` 模块下发，两个 Mobile 文章入口使用分类货架，不混用两种筛选语义；
 - `surface` 为必填参数：`recommendation` 仅在当前推荐集合内筛选，`archive` 在全部公开文章内筛选；
 - `filter_id` 可省略，默认选择稳定首项 `all`；其他值为正整数文章类型 id。响应的 `filters` 始终返回完整有序列表，首项固定为 `{ "id": "all", "name": "全部" }`，后续项沿用 Data 返回的文章类型顺序；
 - 初次请求一次返回 `filters`、`selectedFilterId`、当前筛选的 `articles` 与截断前 `total`。切换筛选时用新的 `filter_id` 重新请求；请求竞态由客户端按最新选择处理；

@@ -2,6 +2,11 @@
 
 Plan 面向一个跨职能、可验收的产品结果，不面向单个文件或单个技术动作。
 
+## 与稳定文档的关系
+
+- 方向单向：Plan 可以引用 FACTS/architecture/specs/guides；反之不成立——稳定文档不引用 Plan。
+- Plan 收尾时，把仍有效的行为契约与决策合并进对应的 Spec、architecture 或 FACTS，再迁入 `archive/`；归档后的 Plan 只作历史证据。
+
 ## 目录
 
 - `active/`：当前执行中的计划；

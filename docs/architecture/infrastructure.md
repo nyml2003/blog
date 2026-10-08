@@ -3,7 +3,7 @@ kind: architecture
 id: ARCH-INFRASTRUCTURE
 status: current
 owner: infrastructure
-last_reviewed: 2026-10-06
+last_reviewed: 2026-10-07
 ---
 
 # Infrastructure 架构
@@ -18,7 +18,7 @@ last_reviewed: 2026-10-06
 - `ops` 是项目本地开发与质量入口；
 - 前端使用 pnpm 安装、类型检查、构建和格式检查；
 - 后端使用 Cargo workspace（`src/core` 与 `src/backend`，workspace 根在 `src/Cargo.toml`）测试和构建。
-- 前端 `dev`/`build` 先编译 `article-html-wasm` 的 `wasm32-unknown-unknown` release 产物，再通过 wasm-bindgen 生成 `src/frontend/validation/generated/`。生成文件不手工修改、不纳入 git 跟踪、不纳入手写 TS 格式检查；Rust crate 与 Flake CLI 版本必须同步。
+- 前端 `dev`/`build` 先编译 `article-html-wasm` 的 `wasm32-unknown-unknown` release 产物，再通过 wasm-bindgen 生成 `packages/app/validation/src/generated/`。生成文件不手工修改、不纳入 git 跟踪、不纳入手写 TS 格式检查；Rust crate 与 Flake CLI 版本必须同步。
 
 ## 运行与交付
 
@@ -26,6 +26,9 @@ last_reviewed: 2026-10-06
 - `ops runtime backend --content-source <fixture|github> --data <mock|test|prod> --product-port <PORT> --data-port <PORT> [--database-path <PATH>]`：Rust Product + Rust Data，无页面入口；`--database-path` 仅 `--data prod` 时必填且合法；
 - `ops runtime integration --content-source <fixture|github> --product-port <PORT> --data-port <PORT> [--watch]`：先构建 `src/frontend/dist`，由 Product 同源挂载页面与 `/api`；
 - `ops delivery build`：构建 `src/frontend/dist` 与 Product/Data/Mock 三个 Rust binary；
+- `ops weapp build --environment <test|production> [--api-origin <URL>]`：构建微信小程序产物到 `target/weapp`（公共协议与纯逻辑打包为共享 `lib/runtime.js`）；test 缺省指向 `http://127.0.0.1:8080`，production 必须显式提供 `--api-origin` 且只在该次构建命令中注入产物；
+- `ops weapp check`：校验小程序工程文件齐全，并对 `apps/weapp` 执行 `tsc --noEmit`；
+- 小程序发布：`weapp-test-v*` tag 由 `weapp-build-release` workflow 自动产出 `blog-weapp-test-<version>.tar.gz`（含 SHA256）并发布为 Release 资产；production 包通过手动触发同一 workflow（`environment=production`、`version`、`api_origin`）产出 `blog-weapp-production-<version>.tar.gz`。产物解压到微信开发者工具直接打开的目录，不影响 Product/Data 的线上部署链；
 - 数据库迁移由 Data Server 启动时自动执行（`sqlx::migrate!()`），无独立迁移命令；
 - 参数采用声明式 int32 / enum / switch 内置模型；有值参数无默认值，端口候选必须显式提供；冲突时自候选值起有界递增（+0…+9），以实际绑定结果注入依赖；监听固定 `127.0.0.1`；
 - 顶层退出码全局统一：`0` 成功、`10` 用法/配置错误、`20` 执行失败、`130` SIGINT、`143` SIGTERM；

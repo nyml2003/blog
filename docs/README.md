@@ -21,6 +21,11 @@
 - 当前实现快照必须能回到源码、配置或测试，不把旧讨论当成现状；
 - 计划属于可选的工作记录。计划可以部分完成、暂停或被替代，归档不等于全部交付。
 
+## 稳定文档与 Plan 的关系
+
+- **方向单向**：Plan 可以引用 FACTS/architecture/specs/guides；稳定文档（FACTS、architecture、specs、guides、CODEMAP、GLOSSARY）不引用 Plan，不依赖 Plan 才能读懂；
+- Plan 收尾时，把仍有效的行为契约与决策合并进对应的 Spec、architecture 或 FACTS，再迁入 `archive/`；归档后的 Plan 只作历史证据，不承担当前契约职责。
+
 ## 变更规则
 
 产品负责人确认产品目标、永久事实和公共契约。文档变更应说明依据：源码/测试、稳定事实、有效 Spec
